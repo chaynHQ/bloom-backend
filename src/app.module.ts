@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
+import { isProduction } from './constants';
 import { LoggerModule } from './logger/logger.module';
 
 @Module({
@@ -9,7 +10,7 @@ import { LoggerModule } from './logger/logger.module';
     ConfigModule.forRoot({
       envFilePath: `.env.${process.env.NODE_ENV}`,
       isGlobal: true,
-      ignoreEnvFile: process.env.NODE_ENV === 'production',
+      ignoreEnvFile: isProduction,
       cache: true,
     }),
     LoggerModule,
