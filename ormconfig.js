@@ -1,26 +1,28 @@
-const dbConfig = {};
-
 const isProduction = process.env.NODE_ENV === 'production';
+
+const dbConfig = {
+  type: 'postgres',
+  host: process.env.DB_HOST,
+  port: process.env.DB_PORT,
+  username: process.env.DB_USERNAME,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_DATABASE,
+  migrationsRun: !isProduction,
+  entities: ['src/**/**.entity{.ts}'],
+  synchronize: !isProduction,
+};
 
 switch (process.env.NODE_ENV) {
   case 'test':
   case 'development':
+    dbConfig;
+    break;
   case 'staging':
   case 'production':
     Object.assign(dbConfig, {
-      type: 'postgres',
-      host: process.env.DB_HOST,
-      port: process.env.DB_PORT,
-      username: process.env.DB_USERNAME,
-      password: process.env.DB_PASSWORD,
-      database: process.env.DB_DATABASE,
-      migrationsRun: !isProduction,
-      entities: [],
       ssl: {
         rejectUnauthorized: isProduction,
       },
-      autoLoadEntities: true,
-      synchronize: !isProduction,
     });
     break;
   default:
