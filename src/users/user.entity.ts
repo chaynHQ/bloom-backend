@@ -1,24 +1,25 @@
 import { Base } from 'src/Base';
-import { PartnerAccessEntity } from 'src/partnersAccess/partner.access.entity';
-import { Column, Entity, OneToOne } from 'typeorm';
+import { PartnerAdminEntity } from 'src/partner-admin/partner-admin.entity';
+import { PartnerAccessEntity } from 'src/partners-access/partner-access.entity';
+import { Column, Entity, ManyToOne, OneToOne } from 'typeorm';
 
 enum LANGUAGE_DEFAULT {
-  ENG = 'ENGLISH',
-  SPN = 'SPANISH',
+  EN = 'en',
+  SN = 'sn',
 }
 
 @Entity()
 export class UserEntity extends Base {
-  @Column({ unique: true, nullable: false })
+  @Column({ unique: true })
   firebaseUid: string;
 
-  @Column({ nullable: false })
+  @Column()
   firstName: string;
 
   @Column()
   lastName: string;
 
-  @Column({ unique: true, nullable: false })
+  @Column({ unique: true })
   email: string;
 
   @Column()
@@ -28,4 +29,9 @@ export class UserEntity extends Base {
     eager: true,
   })
   partnerAccess: PartnerAccessEntity;
+
+  @ManyToOne(() => PartnerAdminEntity, (partnerAdmin) => partnerAdmin.user, {
+    eager: true,
+  })
+  partnerAdmin?: PartnerAdminEntity;
 }

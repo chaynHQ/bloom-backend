@@ -1,10 +1,11 @@
 import { Base } from 'src/Base';
-import { PartnerAccessEntity } from 'src/partnersAccess/partner.access.entity';
+import { PartnerAdminEntity } from 'src/partner-admin/partner-admin.entity';
+import { PartnerAccessEntity } from 'src/partners-access/partner-access.entity';
 import { Column, Entity, OneToMany } from 'typeorm';
 
 @Entity()
 export class PartnerEntity extends Base {
-  @Column({ nullable: false })
+  @Column()
   name: string;
 
   @Column({ nullable: true })
@@ -12,6 +13,12 @@ export class PartnerEntity extends Base {
 
   @Column({ nullable: true })
   primaryColour: string;
+
+  @OneToMany(() => PartnerAdminEntity, (partnerAdminEntity) => partnerAdminEntity.partner, {
+    onDelete: 'CASCADE',
+    eager: true,
+  })
+  partnerAdmin: PartnerAdminEntity[];
 
   @OneToMany(() => PartnerAccessEntity, (partnerAccess) => partnerAccess.user, {
     onDelete: 'CASCADE',

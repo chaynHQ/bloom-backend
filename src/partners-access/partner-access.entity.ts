@@ -1,14 +1,12 @@
 import { Base } from 'src/Base';
-import { PartnerAdminEntity } from 'src/partners/partner.admin.entity';
+import { PartnerAdminEntity } from 'src/partner-admin/partner-admin.entity';
 import { PartnerEntity } from 'src/partners/partner.entity';
 import { UserEntity } from 'src/users/user.entity';
 import { Column, Entity, ManyToOne, OneToOne } from 'typeorm';
 
 @Entity()
 export class PartnerAccessEntity extends Base {
-  @OneToOne(() => UserEntity, (userEntity) => userEntity.partnerAccess, {
-    eager: true,
-  })
+  @OneToOne(() => UserEntity, (userEntity) => userEntity.partnerAccess)
   user?: UserEntity;
 
   @ManyToOne(() => PartnerEntity, (partnerEntity) => partnerEntity.partnerAccess, {
@@ -21,7 +19,7 @@ export class PartnerAccessEntity extends Base {
   createdBy: PartnerAdminEntity;
 
   @Column({ nullable: true })
-  activatedAt: string;
+  activatedAt: Date;
 
   @Column()
   featureLiveChat: boolean;
