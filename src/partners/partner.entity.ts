@@ -21,7 +21,6 @@ export class PartnerEntity extends Base {
   partnerAdmin: PartnerAdminEntity[];
 
   @OneToMany(() => PartnerAccessEntity, (partnerAccess) => partnerAccess.user, {
-    onDelete: 'CASCADE',
     eager: true,
   })
   partnerAccess: PartnerAccessEntity[];

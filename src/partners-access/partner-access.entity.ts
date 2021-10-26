@@ -10,7 +10,6 @@ export class PartnerAccessEntity extends Base {
   user?: UserEntity;
 
   @ManyToOne(() => PartnerEntity, (partnerEntity) => partnerEntity.partnerAccess, {
-    onDelete: 'CASCADE',
     eager: true,
   })
   partner: PartnerEntity;
