@@ -5,7 +5,7 @@ import { Column, Entity, ManyToOne, OneToOne } from 'typeorm';
 
 enum LANGUAGE_DEFAULT {
   EN = 'en',
-  SN = 'sn',
+  ES = 'es',
 }
 
 @Entity()
@@ -14,10 +14,7 @@ export class UserEntity extends Base {
   firebaseUid: string;
 
   @Column()
-  firstName: string;
-
-  @Column()
-  lastName: string;
+  name: string;
 
   @Column({ unique: true })
   email: string;
@@ -28,9 +25,9 @@ export class UserEntity extends Base {
   @OneToOne(() => PartnerAccessEntity, (partnerAccess) => partnerAccess.user, {
     eager: true,
   })
-  partnerAccess: PartnerAccessEntity;
+  partnerAccess?: PartnerAccessEntity;
 
-  @ManyToOne(() => PartnerAdminEntity, (partnerAdmin) => partnerAdmin.user, {
+  @OneToOne(() => PartnerAdminEntity, (partnerAdmin) => partnerAdmin.user, {
     eager: true,
   })
   partnerAdmin?: PartnerAdminEntity;
