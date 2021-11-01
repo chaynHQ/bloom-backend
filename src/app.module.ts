@@ -2,7 +2,12 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
+import { isProduction } from './constants';
 import { LoggerModule } from './logger/logger.module';
+import { PartnerAdminEntity } from './partner-admin/partner-admin.entity';
+import { PartnerAccessEntity } from './partners-access/partner-access.entity';
+import { PartnerEntity } from './partners/partner.entity';
+import { UserEntity } from './users/user.entity';
 
 @Module({
   imports: [
@@ -17,9 +22,9 @@ import { LoggerModule } from './logger/logger.module';
         username: configService.get('DB_USERNAME'),
         password: configService.get('DB_PASSWORD'),
         database: configService.get('DB_DATABASE'),
-        synchronize: false,
-        migrationsRun: true,
-        entities: [],
+        synchronize: !isProduction,
+        migrationsRun: isProduction,
+        entities: [UserEntity, PartnerEntity, PartnerAdminEntity, PartnerAccessEntity],
       }),
     }),
     LoggerModule,
