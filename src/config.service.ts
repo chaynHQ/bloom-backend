@@ -42,6 +42,7 @@ class ConfigService {
       entities: [join(__dirname, '**', '*.entity.{ts,js}')],
       migrationsTableName: 'migration',
       migrations: ['migrations/*.ts'],
+      migrationsRun: true,
       cli: {
         migrationsDir: 'migrations',
       },
