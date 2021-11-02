@@ -6,8 +6,7 @@ services:
     container_name: bloom-backend
     build:
       context: .
-      target: development
-      dockerfile: ./Dockerfile
+      dockerfile: Dockerfile
     command: yarn start:dev
     environment:
       DB_HOST: host.docker.internal
