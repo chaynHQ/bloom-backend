@@ -37,6 +37,3 @@ lerna-debug.log*
 .env
 ormconfig.json
 
-#Scripts
-write-type-orm-config.ts
-
