@@ -9,6 +9,7 @@ The purpose of this app is to allow users register and use a free, web-based sup
 - TypeORM is an Object Relational Mapper library running in NodeJs and written in TypeScript. 
 - Docker - open source containerization platform.
 - Heroku - Heroku is a platform as a service (PaaS) that enables developers to build, run, and operate applications entirely in the cloud.
+- GitHub Actions - GitHub Actions makes it easy to automate all your software workflows, now with world-class CI/CD.
 
 ## Setting up your local environment
 
@@ -52,6 +53,12 @@ A migration in TypeORM is a single file with SQL queries to update a database sc
 
 3. Revert Migration
 - `typeorm:migration:revert` - Reverting a migration runs the down method in the migration file. This is useful in case we made a schema change we no longer want.
+
+## Deployment 
+
+There is no need to run the build command when pushing changes to GitHub. Simply create a pull request (PR) for the feature/bug fix you're working on and the GitHub Actions implemented will handle building the application and Heroku will handle to deployment of the changes automatically. The automatic deployment is set to work with the Staging and Production environment respectively. *Note: There are rules set for each branch. You wont be able to merge your changes without your PR being reveiwed*
+
+`If for any reason a new environment variable is created please reach out to Anna Hughes to add the variable to the staging and production environment as needed.` 
 
 ## Stay in touch
 
