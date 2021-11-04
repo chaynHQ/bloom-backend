@@ -26,17 +26,31 @@ Look at `.env.example` for reference.
 
 To run the project without Docker, you'll need to make sure PostgreSQL is installed and running on your system. The `.env` variables may need to be updated to the credentials used on your local system. To install [PostgreSQL](https://www.PostgreSQLql.org/download/) on your mamchine 
 
-- Run `yarn start:dev`
-- You should see this in the shell output:
-   ```shell
-   Listening on localhost:3000, CTRL+C to stop
-   ```
+- Skip these steps if this is not your first time running the app locally
+
+   - Create a database in your local database and name it `bloom`
+      `CREATE DATABASE bloom WITH OWNER = postgres ENCODING = 'UTF8' CONNECTION LIMIT = -1;`
+   - Generate an ormconfig.json file 
+      `yarn typeorm:migration:generate -- bloom_backend`
+      if ```
+      No changes in database schema were found - cannot generate a migration. To create a new empty migration use "typeorm migration:create" command
+      ``` is shown in the cli that's okay. A new ormconfig.json shoudlve been generated.
+
+- Don't skip these steps:
+
+   - Run `yarn typeorm:migration:run`
+   - Run `yarn start:dev`
+   - You should see this in the shell output:
+      ```shell
+      Listening on localhost:3000, CTRL+C to stop
+      ```
 
 ## Starting the app (with Docker)
 
 The project is containerized and can be run solely in docker - both the PostgreSQL database and NestJs app. To use Docker, make sure it is already installed on your machine. For more information on how to install [docker](https://www.docker.com/get-started)
 
 - Run `docker-compose up -d`
+- Run `yarn typeorm:migration:run`
 
 *Note: you can use an application like Postman to test the apis locally*
 

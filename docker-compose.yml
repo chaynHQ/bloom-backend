@@ -7,19 +7,18 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    command: yarn start:dev
+    command: node dist/main
     environment:
-      DB_HOST: host.docker.internal
-      DB_USERNAME: postgres
-      DB_PASSWORD: postgres
-      DB_DATABASE: bloom
+      POSTGRES_HOST: host.docker.internal
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DATABASE: bloom
     ports:
       - 3000:3000
     depends_on:
       - db
     volumes:
       - .:/app
-      - /app/node_modules
 
   db: 
     image: postgres:14.0
@@ -28,11 +27,10 @@ services:
     ports:
       - 5432:5432
     environment:
-      POSTGRES_DB: bloom
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     volumes:
-      - ~/dbdata:/var/lib/postgresql/data
+      - ./docker-postgres-init.sql:/docker-entrypoint-initdb.d/docker-postgres-init.sql
     
     
 volumes:
