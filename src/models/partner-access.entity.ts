@@ -1,11 +1,11 @@
-import { Base } from 'src/Base';
-import { PartnerAdminEntity } from 'src/partner-admin/partner-admin.entity';
-import { PartnerEntity } from 'src/partners/partner.entity';
-import { UserEntity } from 'src/users/user.entity';
+import { PartnerAdminEntity } from 'src/models/partner-admin.entity';
+import { PartnerEntity } from 'src/models/partner.entity';
+import { UserEntity } from 'src/models/user.entity';
 import { Column, Entity, ManyToOne, OneToOne } from 'typeorm';
+import { BaseEntity } from './base.entity';
 
 @Entity()
-export class PartnerAccessEntity extends Base {
+export class PartnerAccessEntity extends BaseEntity {
   @OneToOne(() => UserEntity, (userEntity) => userEntity.partnerAccess)
   user?: UserEntity;
 
