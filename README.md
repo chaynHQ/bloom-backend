@@ -28,13 +28,19 @@ To run the project without Docker, you'll need to make sure PostgreSQL is instal
 
 - Skip these steps if this is not your first time running the app locally
 
-   - Create a database in your local database and name it `bloom`
-      `CREATE DATABASE bloom WITH OWNER = postgres ENCODING = 'UTF8' CONNECTION LIMIT = -1;`
+   - Create a database in your local database and name it `bloom` 
+      SQL statement: `CREATE DATABASE bloom WITH OWNER = postgres ENCODING = 'UTF8' CONNECTION LIMIT = -1;`
+
    - Generate an ormconfig.json file 
       `yarn typeorm:migration:generate -- bloom_backend`
-      if ```shell
-      No changes in database schema were found - cannot generate a migration. To create a new empty migration use "typeorm migration:create" command
-      ``` is shown in the cli that's okay. A new ormconfig.json shoudlve been generated.
+
+      if the message above is returned the message below, that's okay:
+
+      ```shell
+      No changes in database schema were found - cannot generate a migration. To create a new empty migration use typeorm migration:create command
+      ``` 
+
+
 
 - Don't skip these steps:
 
