@@ -28,8 +28,8 @@ To run the project without Docker, you'll need to make sure PostgreSQL is instal
 
 - Skip these steps if this is not your first time running the app locally
 
-   - Create a database in your local database and name it `bloom` 
-      SQL statement: `CREATE DATABASE bloom WITH OWNER = postgres ENCODING = 'UTF8' CONNECTION LIMIT = -1;`
+   - Create a database in your local database and name it `bloom`.
+      (You can use this SQL statement: `CREATE DATABASE bloom WITH OWNER = postgres ENCODING = 'UTF8' CONNECTION LIMIT = -1;`)
 
    - Generate an ormconfig.json file 
       `yarn typeorm:migration:generate -- bloom_backend`
