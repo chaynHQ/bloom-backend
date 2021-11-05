@@ -32,6 +32,7 @@
     "@nestjs/config": "^1.0.2",
     "@nestjs/core": "^8.0.0",
     "@nestjs/platform-express": "^8.0.0",
+    "@nestjs/swagger": "^5.1.4",
     "@nestjs/typeorm": "^8.0.2",
     "dotenv": "^10.0.0",
     "pg": "^8.7.1",
@@ -39,6 +40,7 @@
     "rimraf": "^3.0.2",
     "rollbar": "^2.24.0",
     "rxjs": "^7.2.0",
+    "swagger-ui-express": "^4.1.6",
     "typeorm": "^0.2.38"
   },
   "devDependencies": {
