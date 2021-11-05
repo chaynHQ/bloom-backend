@@ -7,7 +7,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    command: node dist/main
+    # command: yarn start:dev
     environment:
       POSTGRES_HOST: host.docker.internal
       POSTGRES_USER: postgres

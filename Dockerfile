@@ -1,24 +1,19 @@
-FROM node:12 As builder
+FROM node:12.14.1-alpine
 
 WORKDIR /app
 
-COPY package.json yarn.lock ./
+COPY package.json ./
 
-RUN yarn install --frozen-lockfile --non-interactive
+COPY yarn.lock ./
 
-COPY . .
+COPY tsconfig*.json ./
 
-RUN yarn build
+RUN yarn
 
-FROM node:12-alpine
+COPY . ./
 
-WORKDIR /app
-
-COPY --from=builder /app/package.json /app/
-COPY --from=builder /app/dist/ /app/dist/
-COPY --from=builder /app/node_modules/ /app/node_modules/
-COPY .env .
+RUN yarn pretypeorm
 
 EXPOSE 3000
 
-CMD ["node", "dist/main"]
+CMD ["yarn", "start:dev"]
