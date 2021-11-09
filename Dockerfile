@@ -1,19 +1,11 @@
 FROM node:12.14.1-alpine
 
+ENV NODE_ENV=development
+
 WORKDIR /app
 
-COPY package.json ./
+RUN yarn install --frozen-lockfile --non-interactive
 
-COPY yarn.lock ./
-
-COPY tsconfig*.json ./
-
-RUN yarn
-
-COPY . ./
-
-RUN yarn pretypeorm
-
-EXPOSE 3000
+COPY . .
 
 CMD ["yarn", "start:dev"]

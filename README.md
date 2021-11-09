@@ -24,55 +24,48 @@ Look at `.env.example` for reference.
 
 ## Starting the app (without Docker)
 
-To run the project without Docker, you'll need to make sure PostgreSQL is installed and running on your system. The `.env` variables may need to be updated to the credentials used on your local system. To install [PostgreSQL](https://www.PostgreSQLql.org/download/) on your mamchine 
+To run the project without Docker, you'll need to make sure PostgreSQL is installed and running on your system. The `.env` variables may need to be updated to the credentials used on your local system. To install [PostgreSQL](https://www.PostgreSQLql.org/download/) on your machine 
 
-- Skip these steps if this is not your first time running the app locally
+   Follow these steps the first ever time youre running this project on your machine:
 
    - Create a database in your local database and name it `bloom`.
       (You can use this SQL statement: `CREATE DATABASE bloom WITH OWNER = postgres ENCODING = 'UTF8' CONNECTION LIMIT = -1;`)
+   - Run `cat ./bloom_db_local.sql | docker exec -i bloom-local-db pg_restore --verbose --clean --no-acl --no-owner -U postgres -d bloom`
 
-   - Generate an ormconfig.json file 
-      `yarn typeorm:migration:generate -- bloom_backend`
+   Follow these steps to run the project:
 
-      if the message above is returned the message below, that's okay:
-
-      ```shell
-      No changes in database schema were found - cannot generate a migration. To create a new empty migration use typeorm migration:create command
-      ``` 
-
-
-
-- Don't skip these steps:
-
-   - Run `yarn typeorm:migration:run`
    - Run `yarn start:dev`
    - You should see this in the shell output:
       ```shell
       Listening on localhost:3000, CTRL+C to stop
       ```
 
-## Starting the app (with Docker)
+## Starting the app (with Docker) - RECOMMENDED
 
-The project is containerized and can be run solely in docker - both the PostgreSQL database and NestJs app. To use Docker, make sure it is already installed on your machine. For more information on how to install [docker](https://www.docker.com/get-started)
+The project is containerized and can be run solely in docker - both the PostgreSQL database and NestJs app. To use Docker, make sure it is already installed and running on your machine. For more information on how to install [docker](https://www.docker.com/get-started)
 
-- Run `docker-compose up -d`
-- Run `yarn typeorm:migration:run`
+- Run `docker-compose up`
+- You should see this in the shell output in docker:
+      ```shell
+      Listening on localhost:3000, CTRL+C to stop
+      ```
+  *To populate the database run the command below in a new terminal*
+- Run `cat ./bloom_db_local.sql | docker exec -i bloom-local-db pg_restore --verbose --clean --no-acl --no-owner -U postgres -d bloom`
 
 *Note: you can use an application like Postman to test the apis locally*
-
 
 ## TypeOrm Migrations 
 
 A migration in TypeORM is a single file with SQL queries to update a database schema as needed. To get started with migrations:
 
 1. Generate Migration
-- `yarn typeorm:migration:generate -- bloom_backend` - This command generates the necessary `ormconfig.json` file and sql queries 
+- `yarn migration:generate -- bloom_backend` - This command generates sql queries. 
 
 2. Run Migration
-- `yarn typeorm:migration:run` - This command updates the database schema   
+- `yarn migration:run` - This command updates the database schema   
 
 3. Revert Migration
-- `typeorm:migration:revert` - Reverting a migration runs the down method in the migration file. This is useful in case we made a schema change we no longer want.
+- `yarn migration:revert` - Reverting a migration runs the down method in the migration file. This is useful in case we made a schema change we no longer want.
 
 ## Deployment 
 

@@ -1,6 +1,6 @@
-import { BaseEntity } from 'src/models/base.entity';
-import { PartnerAdminEntity } from 'src/models/partner-admin.entity';
-import { PartnerAccessEntity } from 'src/models/partner-access.entity';
+import { BaseEntity } from 'src/entities/base.entity';
+import { PartnerAdminEntity } from 'src/entities/partner-admin.entity';
+import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { Column, Entity, OneToMany } from 'typeorm';
 
 @Entity()
@@ -16,10 +16,9 @@ export class PartnerEntity extends BaseEntity {
 
   @OneToMany(() => PartnerAdminEntity, (partnerAdminEntity) => partnerAdminEntity.partner, {
     onDelete: 'CASCADE',
-    eager: true,
   })
-  partnersAdmin: PartnerAdminEntity[];
+  partnerAdmins: PartnerAdminEntity[];
 
-  @OneToMany(() => PartnerAccessEntity, (partnerAccess) => partnerAccess.user)
+  @OneToMany(() => PartnerAccessEntity, (partnerAccess) => partnerAccess.partner)
   partnerAccess: PartnerAccessEntity[];
 }
