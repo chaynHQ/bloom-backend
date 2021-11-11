@@ -31,11 +31,11 @@ export class PartnerAccessService {
     partnerId: string,
     partnerAdminId: string,
   ): Promise<PartnerAccessEntity> {
-    const accessCodeDetails = this.partnerAccessRepository.create(createPartnerAccessDto);
-    accessCodeDetails.partnerAdminId = partnerAdminId;
-    accessCodeDetails.partnerId = partnerId;
-    accessCodeDetails.accessCode = await this.generateAccessCode(6);
+    const partnerAccessDetails = this.partnerAccessRepository.create(createPartnerAccessDto);
+    partnerAccessDetails.partnerAdminId = partnerAdminId;
+    partnerAccessDetails.partnerId = partnerId;
+    partnerAccessDetails.accessCode = await this.generateAccessCode(6);
 
-    return await this.partnerAccessRepository.save(accessCodeDetails);
+    return await this.partnerAccessRepository.save(partnerAccessDetails);
   }
 }
