@@ -1,8 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm/dist/common';
-import { PartnerAdminRepository } from 'src/partner-admin/partner-admin.repository';
-import { PartnerRepository } from 'src/partner/partner.repository';
-import { CreateAccessCodeDto } from './dto/create-access-code.dto';
+import { CreatePartnerAccessDto } from './dto/create-partner-access.dto';
 import { PartnerAccessRepository } from './partner-access.repository';
 import _ from 'lodash';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
@@ -12,10 +10,6 @@ export class PartnerAccessService {
   constructor(
     @InjectRepository(PartnerAccessRepository)
     private partnerAccessRepository: PartnerAccessRepository,
-    @InjectRepository(PartnerRepository)
-    private partnerRepository: PartnerRepository,
-    @InjectRepository(PartnerAdminRepository)
-    private partnerAdminRepository: PartnerAdminRepository,
   ) {}
 
   private async accessCodeCheck(accessCode: string): Promise<boolean> {
@@ -32,12 +26,12 @@ export class PartnerAccessService {
     return accessCode;
   }
 
-  async createPartnerAccessCode(
-    createAccessCodeDto: CreateAccessCodeDto,
+  async createPartnerAccess(
+    createPartnerAccessDto: CreatePartnerAccessDto,
     partnerId: string,
     partnerAdminId: string,
   ): Promise<PartnerAccessEntity> {
-    const accessCodeDetails = this.partnerAccessRepository.create(createAccessCodeDto);
+    const accessCodeDetails = this.partnerAccessRepository.create(createPartnerAccessDto);
     accessCodeDetails.partnerAdminId = partnerAdminId;
     accessCodeDetails.partnerId = partnerId;
     accessCodeDetails.accessCode = await this.generateAccessCode(6);
