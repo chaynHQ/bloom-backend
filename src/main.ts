@@ -4,7 +4,7 @@ import { Logger } from './logger/logger';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap() {
-  const PORT = process.env.PORT || 3000;
+  const PORT = process.env.PORT || 35001;
   const app = await NestFactory.create(AppModule);
 
   app.setGlobalPrefix('api');

@@ -10,6 +10,7 @@ The purpose of this app is to allow users register and use a free, web-based sup
 - Docker - open source containerization platform.
 - Heroku - Heroku is a platform as a service (PaaS) that enables developers to build, run, and operate applications entirely in the cloud.
 - GitHub Actions - GitHub Actions makes it easy to automate all your software workflows, now with world-class CI/CD.
+- Swagger - API documentation
 
 ## Setting up your local environment
 
@@ -37,7 +38,7 @@ To run the project without Docker, you'll need to make sure PostgreSQL is instal
    - Run `yarn start:dev`
    - You should see this in the shell output:
       ```shell
-      Listening on localhost:3000, CTRL+C to stop
+      Listening on localhost:35001, CTRL+C to stop
       ```
 
 ## Starting the app (with Docker) - RECOMMENDED
@@ -47,12 +48,21 @@ The project is containerized and can be run solely in docker - both the PostgreS
 - Run `docker-compose up`
 - You should see this in the shell output in docker:
       ```shell
-      Listening on localhost:3000, CTRL+C to stop
+      Listening on localhost:35001, CTRL+C to stop
       ```
   *To populate the database run the command below in a new terminal*
 - Run `cat ./bloom_db_local.sql | docker exec -i bloom-local-db pg_restore --verbose --clean --no-acl --no-owner -U postgres -d bloom`
 
 *Note: you can use an application like Postman to test the apis locally*
+
+## Swagger 
+
+Swagger automatically reflects all the endpoints that have been created. It also gives details of an api's url and exposes a JSON object needed to make a request and also what an api's response looks like.
+
+To access Swagger simply run the project and visit: 
+   ```shell
+   http://localhost:35001/api/
+   ```
 
 ## TypeOrm Migrations 
 
