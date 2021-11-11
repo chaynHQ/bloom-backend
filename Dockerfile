@@ -10,6 +10,6 @@ RUN yarn install --frozen-lockfile --non-interactive
 
 COPY . .
 
-EXPOSE 3000
+EXPOSE 35001
 
-CMD ["node", "dist/main"] 
+CMD ["node", "dist/src/main"] 
