@@ -1,6 +1,6 @@
 import { PartnerAdminEntity } from 'src/entities/partner-admin.entity';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
-import { Column, Entity, OneToOne } from 'typeorm';
+import { Column, Entity, OneToOne, PrimaryGeneratedColumn } from 'typeorm';
 import { BaseEntity } from './base.entity';
 
 export enum LANGUAGE_DEFAULT {
@@ -8,8 +8,11 @@ export enum LANGUAGE_DEFAULT {
   ES = 'es',
 }
 
-@Entity()
+@Entity({ name: 'user' })
 export class UserEntity extends BaseEntity {
+  @PrimaryGeneratedColumn('uuid', { name: 'userId' })
+  id: string;
+
   @Column({ unique: true })
   firebaseUid: string;
 
@@ -22,9 +25,7 @@ export class UserEntity extends BaseEntity {
   @Column()
   languageDefault: LANGUAGE_DEFAULT;
 
-  @OneToOne(() => PartnerAccessEntity, (partnerAccess) => partnerAccess.user, {
-    eager: true,
-  })
+  @OneToOne(() => PartnerAccessEntity, (partnerAccess) => partnerAccess.user)
   partnerAccess: PartnerAccessEntity;
 
   @OneToOne(() => PartnerAdminEntity, (partnerAdmin) => partnerAdmin.user)

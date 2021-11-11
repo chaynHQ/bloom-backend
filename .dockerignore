@@ -1,5 +1,4 @@
 .git
 /node_modules
-ormconfig.json
 /dist
 /test

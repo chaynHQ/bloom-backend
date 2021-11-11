@@ -1,8 +1,8 @@
 import { Body, Controller, Post } from '@nestjs/common';
-import { ApiConsumes, ApiProduces, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBody, ApiConsumes, ApiProduces, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { CreateAccessCodeDto } from './dto/create-access-code.dto';
 import { PartnerAccessService } from './partner-access.service';
-import { IPartnerAccess } from './partner-access.model';
+import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 
 @ApiTags('Partner Access')
 @ApiConsumes('application/json')
@@ -19,9 +19,14 @@ export class PartnerAccessController {
   }
 
   @Post('generate')
+  @ApiBody({ type: CreateAccessCodeDto })
   async generatePartnerAccessCode(
     @Body() createAccessCodeDto: CreateAccessCodeDto,
-  ): Promise<IPartnerAccess> {
-    return await this.partnerAccessService.createPartnerAccessCode(createAccessCodeDto);
+  ): Promise<PartnerAccessEntity> {
+    return await this.partnerAccessService.createPartnerAccessCode(
+      createAccessCodeDto,
+      '4bb986f2-9208-4da0-b1c6-9899838a8558',
+      '64870e3b-7144-4cf9-99a5-fb2b6deea5f3',
+    );
   }
 }

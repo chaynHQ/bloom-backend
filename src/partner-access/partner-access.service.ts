@@ -5,7 +5,7 @@ import { PartnerRepository } from 'src/partner/partner.repository';
 import { CreateAccessCodeDto } from './dto/create-access-code.dto';
 import { PartnerAccessRepository } from './partner-access.repository';
 import _ from 'lodash';
-import { IPartnerAccess } from './partner-access.model';
+import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 
 @Injectable()
 export class PartnerAccessService {
@@ -32,53 +32,16 @@ export class PartnerAccessService {
     return accessCode;
   }
 
-  async createPartnerAccessCode(createAccessCodeDto: CreateAccessCodeDto): Promise<IPartnerAccess> {
-    const {
-      featureLiveChat,
-      featureTherapy,
-      therapySessionsRedeemed,
-      therapySessionsRemaining,
-      partnerId,
-      partnerAdminId,
-    } = createAccessCodeDto;
+  async createPartnerAccessCode(
+    createAccessCodeDto: CreateAccessCodeDto,
+    partnerId: string,
+    partnerAdminId: string,
+  ): Promise<PartnerAccessEntity> {
+    const accessCodeDetails = this.partnerAccessRepository.create(createAccessCodeDto);
+    accessCodeDetails.partnerAdminId = partnerAdminId;
+    accessCodeDetails.partnerId = partnerId;
+    accessCodeDetails.accessCode = await this.generateAccessCode(6);
 
-    const partner = await this.partnerRepository.findOne({
-      id: partnerId,
-    });
-
-    const createdBy = await this.partnerAdminRepository.findOne({
-      id: partnerAdminId,
-    });
-
-    const accessCodeDetails = this.partnerAccessRepository.create({
-      partner,
-      createdBy,
-      featureLiveChat,
-      featureTherapy,
-      accessCode: await this.generateAccessCode(6),
-      therapySessionsRedeemed,
-      therapySessionsRemaining,
-    });
-
-    const accessCodeReponse = await this.partnerAccessRepository.save(accessCodeDetails);
-    return {
-      id: accessCodeReponse.id,
-      createdBy: {
-        id: accessCodeReponse.createdBy.id,
-        name: accessCodeReponse.createdBy.user.name,
-        email: accessCodeReponse.createdBy.user.email,
-      },
-      partner: {
-        id: accessCodeReponse.partner.id,
-        name: accessCodeReponse.partner.name,
-        logo: accessCodeReponse.partner.logo,
-        primaryColour: accessCodeReponse.partner.primaryColour,
-      },
-      accessCode: accessCodeReponse.accessCode,
-      featureLiveChat,
-      featureTherapy,
-      therapySessionsRemaining,
-      therapySessionsRedeemed,
-    };
+    return await this.partnerAccessRepository.save(accessCodeDetails);
   }
 }

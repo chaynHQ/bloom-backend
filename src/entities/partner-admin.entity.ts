@@ -1,18 +1,38 @@
 import { PartnerEntity } from 'src/entities/partner.entity';
 import { UserEntity } from 'src/entities/user.entity';
-import { Entity, JoinColumn, ManyToOne, OneToMany, OneToOne } from 'typeorm';
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  JoinTable,
+  ManyToOne,
+  OneToMany,
+  OneToOne,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 import { BaseEntity } from './base.entity';
 import { PartnerAccessEntity } from './partner-access.entity';
 
-@Entity()
+@Entity({ name: 'partner_admin' })
 export class PartnerAdminEntity extends BaseEntity {
-  @OneToOne(() => UserEntity, (userEntity) => userEntity.partnerAdmin, { eager: true })
-  @JoinColumn()
+  @PrimaryGeneratedColumn('uuid', { name: 'partnerAdminId' })
+  id: string;
+
+  @Column({ nullable: true })
+  userId: string;
+  @OneToOne(() => UserEntity, (userEntity) => userEntity.partnerAdmin, {
+    primary: true,
+    eager: true,
+  })
+  @JoinColumn({ name: 'userId' })
   user: UserEntity;
 
-  @ManyToOne(() => PartnerEntity, (partnerAdmin) => partnerAdmin.partnerAdmins)
+  @Column()
+  partnerId: string;
+  @ManyToOne(() => PartnerEntity, (partnerEntity) => partnerEntity.partnerAdmin)
+  @JoinTable({ name: 'partner', joinColumn: { name: 'partnerId' } })
   partner: PartnerEntity;
 
-  @OneToMany(() => PartnerAccessEntity, (partnerAccess) => partnerAccess.createdBy)
-  admin: PartnerAccessEntity[];
+  @OneToMany(() => PartnerAccessEntity, (partnerAccess) => partnerAccess.partnerAdmin)
+  partnerAccess: PartnerAccessEntity[];
 }

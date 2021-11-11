@@ -13,7 +13,6 @@ async function bootstrap() {
     .setTitle('Bloom backend API')
     .setDescription('Bloom backend API')
     .setVersion('1.0.0')
-    .addBearerAuth({ type: 'http', scheme: 'bearer', bearerFormat: 'Bearer' }, 'access-token')
     .build();
 
   const document = SwaggerModule.createDocument(app, options);
