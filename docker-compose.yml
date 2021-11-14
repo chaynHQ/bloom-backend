@@ -7,32 +7,25 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    command: node dist/main
     environment:
       POSTGRES_HOST: host.docker.internal
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DATABASE: bloom
     ports:
-      - 3000:3000
+      - 35001:3000
     depends_on:
       - db
     volumes:
-      - .:/app
+      - ./:/app
 
   db: 
-    image: postgres:14.0
+    image: postgres:14-alpine
     container_name: bloom-local-db
     restart: unless-stopped
     ports:
-      - 5432:5432
+      - 35000:5432
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-    volumes:
-      - ./docker-postgres-init.sql:/docker-entrypoint-initdb.d/docker-postgres-init.sql
-    
-    
-volumes:
-  postgresql_data:
-  postgres_db:
+      POSTGRES_DB: bloom

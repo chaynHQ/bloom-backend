@@ -1,4 +1,6 @@
-FROM node:12 As builder
+FROM node:12.14.1-alpine
+
+ENV NODE_ENV=development
 
 WORKDIR /app
 
@@ -8,17 +10,6 @@ RUN yarn install --frozen-lockfile --non-interactive
 
 COPY . .
 
-RUN yarn build
+EXPOSE 35001
 
-FROM node:12-alpine
-
-WORKDIR /app
-
-COPY --from=builder /app/package.json /app/
-COPY --from=builder /app/dist/ /app/dist/
-COPY --from=builder /app/node_modules/ /app/node_modules/
-COPY .env .
-
-EXPOSE 3000
-
-CMD ["node", "dist/main"]
+CMD ["node", "dist/src/main"] 
