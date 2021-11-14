@@ -1,6 +1,6 @@
-import { PartnerAdminEntity } from 'src/entities/partner-admin.entity';
-import { PartnerEntity } from 'src/entities/partner.entity';
-import { UserEntity } from 'src/entities/user.entity';
+import { PartnerAdminEntity } from '../entities/partner-admin.entity';
+import { PartnerEntity } from '../entities/partner.entity';
+import { UserEntity } from '../entities/user.entity';
 import {
   Column,
   Entity,

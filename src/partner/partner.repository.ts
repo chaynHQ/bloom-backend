@@ -1,4 +1,4 @@
-import { PartnerEntity } from 'src/entities/partner.entity';
+import { PartnerEntity } from '../entities/partner.entity';
 import { EntityRepository, Repository } from 'typeorm';
 
 @EntityRepository(PartnerEntity)

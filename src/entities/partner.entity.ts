@@ -1,6 +1,6 @@
-import { BaseEntity } from 'src/entities/base.entity';
-import { PartnerAdminEntity } from 'src/entities/partner-admin.entity';
-import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
+import { BaseEntity } from '../entities/base.entity';
+import { PartnerAdminEntity } from '../entities/partner-admin.entity';
+import { PartnerAccessEntity } from '../entities/partner-access.entity';
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity({ name: 'partner' })

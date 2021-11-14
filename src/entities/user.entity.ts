@@ -1,5 +1,5 @@
-import { PartnerAdminEntity } from 'src/entities/partner-admin.entity';
-import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
+import { PartnerAdminEntity } from '../entities/partner-admin.entity';
+import { PartnerAccessEntity } from '../entities/partner-access.entity';
 import { Column, Entity, OneToOne, PrimaryGeneratedColumn } from 'typeorm';
 import { BaseEntity } from './base.entity';
 
