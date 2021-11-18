@@ -9,6 +9,7 @@ import { PartnerAccessService } from './partner-access.service';
 describe('PartnerAccessController', () => {
   let controller: PartnerAccessController;
   let mockPartnerAccessService: Partial<PartnerAccessService>;
+  const date = Date.now();
 
   const dto: CreatePartnerAccessDto = {
     featureLiveChat: true,
@@ -31,8 +32,8 @@ describe('PartnerAccessController', () => {
           accessCode: '000AAA',
           userId: '',
           activatedAt: null,
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
+          createdAt: date,
+          updatedAt: date,
           id: '00000000-0000-0000-0000-000000000000',
         } as unknown as PartnerAccessEntity);
       },
@@ -69,8 +70,8 @@ describe('PartnerAccessController', () => {
       accessCode: '000AAA',
       userId: '',
       activatedAt: null,
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
+      createdAt: date,
+      updatedAt: date,
       id: '00000000-0000-0000-0000-000000000000',
     });
   });
