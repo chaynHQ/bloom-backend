@@ -6,7 +6,7 @@ import { LoggerModule } from './logger/logger.module';
 import { PartnerAccessModule } from './partner-access/partner-access.module';
 import { AuthModule } from './auth/auth.module';
 import config from '../ormconfig';
-import { FirebaseAuthStrategy } from './auth/firebase-auth.strategy';
+import { UserModule } from './user/user.module';
 
 @Module({
   imports: [
@@ -15,8 +15,9 @@ import { FirebaseAuthStrategy } from './auth/firebase-auth.strategy';
     LoggerModule,
     PartnerAccessModule,
     AuthModule,
+    UserModule,
   ],
   controllers: [AppController],
-  providers: [FirebaseAuthStrategy],
+  providers: [],
 })
 export class AppModule {}
