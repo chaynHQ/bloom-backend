@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
-import { isProduction } from './constants';
 import { LoggerModule } from './logger/logger.module';
 import { PartnerAccessModule } from './partner-access/partner-access.module';
 import config from '../ormconfig';
