@@ -3,7 +3,7 @@ import { Request } from 'express';
 import { ApiBody, ApiConsumes, ApiProduces, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { CreatePartnerAccessDto } from './dto/create-partner-access.dto';
 import { PartnerAccessService } from './partner-access.service';
-import { PartnerAdminAuthGuard } from 'src/partner-admin/partner-admin-auth.guard';
+import { PartnerAdminAuthGuard } from '../partner-admin/partner-admin-auth.guard';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
 
 @ApiTags('Partner Access')
