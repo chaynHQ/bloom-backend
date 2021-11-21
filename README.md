@@ -11,6 +11,7 @@ The purpose of this app is to allow users register and use a free, web-based sup
 - Heroku - Heroku is a platform as a service (PaaS) that enables developers to build, run, and operate applications entirely in the cloud.
 - GitHub Actions - GitHub Actions makes it easy to automate all your software workflows, now with world-class CI/CD.
 - Swagger - API documentation
+- Firebase - User Authentication
 
 ## Setting up your local environment
 
@@ -63,6 +64,10 @@ To access Swagger simply run the project and visit:
    ```shell
    http://localhost:35001/api/
    ```
+
+## Firebase 
+
+Authentication is an essential part of any application, but can be quite stressful to set up from scratch. This is one problem Firebase solves with its authentication product. To learn more about [Firebase](https://firebase.google.com/)
 
 ## TypeOrm Migrations 
 

@@ -1,9 +1,8 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { Test, TestingModule } from '@nestjs/testing';
-import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
+import { PartnerAccessEntity } from '../entities/partner-access.entity';
 import { CreatePartnerAccessDto } from './dto/create-partner-access.dto';
 import { PartnerAccessController } from './partner-access.controller';
-import { PartnerAccessRepository } from './partner-access.repository';
 import { PartnerAccessService } from './partner-access.service';
 
 describe('PartnerAccessController', () => {
