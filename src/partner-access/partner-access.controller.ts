@@ -5,6 +5,7 @@ import { CreatePartnerAccessDto } from './dto/create-partner-access.dto';
 import { PartnerAccessService } from './partner-access.service';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
 import { ValidatePartnerAccessCodeDto } from './dto/validate-partner-access.dto';
+import { PartnerAccessCodeStatusEnum } from 'src/utils/constants';
 
 @ApiTags('Partner Access')
 @ApiConsumes('application/json')
@@ -36,7 +37,7 @@ export class PartnerAccessController {
   @ApiBody({ type: ValidatePartnerAccessCodeDto })
   async validateCode(
     @Body() { partnerAccessCode }: ValidatePartnerAccessCodeDto,
-  ): Promise<boolean> {
-    return this.partnerAccessService.validatePartnerAccessCode(partnerAccessCode);
+  ): Promise<{ status: PartnerAccessCodeStatusEnum }> {
+    return this.partnerAccessService.validatePartnerAccessCode(partnerAccessCode.toUpperCase());
   }
 }
