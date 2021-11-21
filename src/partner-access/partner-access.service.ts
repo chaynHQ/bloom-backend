@@ -38,4 +38,8 @@ export class PartnerAccessService {
 
     return await this.partnerAccessRepository.save(partnerAccessDetails);
   }
+
+  async validatePartnerAccessCode(partnerAccessCode: string): Promise<boolean> {
+    return !!(await this.partnerAccessRepository.findOne({ accessCode: partnerAccessCode }));
+  }
 }
