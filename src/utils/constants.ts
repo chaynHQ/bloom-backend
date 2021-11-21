@@ -12,14 +12,14 @@ export const formatUserObject = (userObject: UserEntity): GetUserDto => {
       languageDefault: userObject.languageDefault,
     },
     partner:
-      userObject.partnerAdmin && userObject.partnerAdmin.partner
+      userObject.partnerAccess && userObject.partnerAccess.partner
         ? {
-            id: userObject.partnerAdmin.partner.id,
-            createdAt: userObject.partnerAdmin.partner.createdAt,
-            updatedAt: userObject.partnerAdmin.partner.updatedAt,
-            name: userObject.partnerAdmin.partner.name,
-            logo: userObject.partnerAdmin.partner.logo,
-            primaryColour: userObject.partnerAdmin.partner.primaryColour,
+            id: userObject.partnerAccess.partner.id,
+            createdAt: userObject.partnerAccess.partner.createdAt,
+            updatedAt: userObject.partnerAccess.partner.updatedAt,
+            name: userObject.partnerAccess.partner.name,
+            logo: userObject.partnerAccess.partner.logo,
+            primaryColour: userObject.partnerAccess.partner.primaryColour,
           }
         : {},
     partnerAccess: userObject.partnerAccess
@@ -31,15 +31,6 @@ export const formatUserObject = (userObject: UserEntity): GetUserDto => {
           accessCode: userObject.partnerAccess.accessCode,
           therapySessionsRemaining: Number(userObject.partnerAccess.therapySessionsRemaining),
           therapySessionsRedeemed: Number(userObject.partnerAccess.therapySessionsRedeemed),
-        }
-      : {},
-    partnerAdmin: userObject.partnerAdmin
-      ? {
-          id: userObject.partnerAdmin.id,
-          createdAt: userObject.partnerAdmin.createdAt,
-          updatedAt: userObject.partnerAdmin.updatedAt,
-          userId: userObject.partnerAdmin.userId,
-          partnerId: userObject.partnerAdmin.partnerId,
         }
       : {},
   };
