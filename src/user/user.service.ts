@@ -1,5 +1,5 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
-import { IFirebaseUser } from '../interfaces/firebase-user.interface';
+import { IFirebaseUser } from '../firebase/firebase-user.interface';
 import { UserRepository } from './user.repository';
 import { InjectRepository } from '@nestjs/typeorm';
 import { formatUserObject } from '../utils/constants';
@@ -16,8 +16,7 @@ export class UserService {
     const queryResult = await this.userRepository
       .createQueryBuilder('user')
       .leftJoinAndSelect('user.partnerAccess', 'partnerAccess')
-      .leftJoinAndSelect('user.partnerAdmin', 'partnerAdmin')
-      .leftJoinAndSelect('partnerAdmin.partner', 'partner')
+      .leftJoinAndSelect('partnerAccess.partner', 'partner')
       .where('user.firebaseUid = :uid', { uid })
       .getOne();
 

@@ -1,7 +1,7 @@
-import { IPartnerAccess } from 'src/interfaces/partner-access.interface';
-import { IPartnerAdmin } from 'src/interfaces/partner-admin.interface';
-import { IPartner } from 'src/interfaces/partner.interface';
-import { IUser } from 'src/interfaces/user.interface';
+import { IPartnerAccess } from '../../partner-access/partner-access.interface';
+import { IPartnerAdmin } from '../../partner-admin/partner-admin.interface';
+import { IPartner } from '../../partner/partner.interface';
+import { IUser } from '../user.interface';
 
 export class GetUserDto {
   user: IUser;

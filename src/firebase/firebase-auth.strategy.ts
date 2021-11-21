@@ -6,8 +6,7 @@ import { FirebaseServices } from './firebase.types';
 import { DecodedIdToken } from 'firebase-admin/lib/auth/token-verifier';
 
 @Injectable()
-export class FirebaseAuthStrategy extends PassportStrategy(Strategy, 'firebase-auth',
-) {
+export class FirebaseAuthStrategy extends PassportStrategy(Strategy, 'firebase-auth') {
   constructor(@Inject(FIREBASE) private firebase: FirebaseServices) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
