@@ -4,7 +4,7 @@ import { CreatePartnerAccessDto } from './dto/create-partner-access.dto';
 import { PartnerAccessRepository } from './partner-access.repository';
 import _ from 'lodash';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
-import { PartnerAccessCodeStatusEnum } from 'src/utils/constants';
+import { PartnerAccessCodeStatusEnum } from '../utils/constants';
 
 @Injectable()
 export class PartnerAccessService {

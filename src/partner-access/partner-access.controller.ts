@@ -5,7 +5,7 @@ import { CreatePartnerAccessDto } from './dto/create-partner-access.dto';
 import { PartnerAccessService } from './partner-access.service';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
 import { ValidatePartnerAccessCodeDto } from './dto/validate-partner-access.dto';
-import { PartnerAccessCodeStatusEnum } from 'src/utils/constants';
+import { PartnerAccessCodeStatusEnum } from '../utils/constants';
 
 @ApiTags('Partner Access')
 @ApiConsumes('application/json')
