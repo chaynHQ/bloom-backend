@@ -14,4 +14,4 @@ RUN yarn build
 
 EXPOSE 35001
 
-CMD ["node", "dist/src/main"] 
+CMD ["yarn", "start:dev"] 

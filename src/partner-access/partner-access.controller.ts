@@ -20,8 +20,8 @@ import { PartnerAccessCodeStatusEnum } from '../utils/constants';
 export class PartnerAccessController {
   constructor(private readonly partnerAccessService: PartnerAccessService) {}
 
-  @Post('generate')
   @UseGuards(PartnerAdminAuthGuard)
+  @Post('generate')
   @ApiBody({ type: CreatePartnerAccessDto })
   async generatePartnerAccess(
     @Body() createPartnerAccessDto: CreatePartnerAccessDto,
