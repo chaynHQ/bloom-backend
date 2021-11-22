@@ -36,7 +36,7 @@ export class PartnerAccessController {
 
   @Post('validate-code')
   @ApiBody({ type: ValidatePartnerAccessCodeDto })
-  async validateCode(
+  async validatePartnerAccessCode(
     @Body() { partnerAccessCode }: ValidatePartnerAccessCodeDto,
   ): Promise<{ status: PartnerAccessCodeStatusEnum }> {
     return this.partnerAccessService.validatePartnerAccessCode(partnerAccessCode.toUpperCase());
