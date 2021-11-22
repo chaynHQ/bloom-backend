@@ -4,6 +4,7 @@ import { CreatePartnerAccessDto } from './dto/create-partner-access.dto';
 import { PartnerAccessRepository } from './partner-access.repository';
 import _ from 'lodash';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
+import { PartnerAccessCodeStatusEnum } from '../utils/constants';
 
 @Injectable()
 export class PartnerAccessService {
@@ -26,6 +27,28 @@ export class PartnerAccessService {
     return accessCode;
   }
 
+  private async checkCodeStatus(partnerAccessCode: string): Promise<PartnerAccessCodeStatusEnum> {
+    const format = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/;
+
+    if (format.test(partnerAccessCode) || partnerAccessCode.length !== 6) {
+      return PartnerAccessCodeStatusEnum.INVALID_CODE;
+    }
+
+    const codeDetails = await this.partnerAccessRepository.findOne({
+      accessCode: partnerAccessCode,
+    });
+
+    if (codeDetails === undefined) {
+      return PartnerAccessCodeStatusEnum.DOES_NOT_EXIST;
+    }
+
+    if (!!codeDetails.userId) {
+      return PartnerAccessCodeStatusEnum.ALREADY_IN_USE;
+    }
+
+    return PartnerAccessCodeStatusEnum.VALID;
+  }
+
   async createPartnerAccess(
     createPartnerAccessDto: CreatePartnerAccessDto,
     partnerId: string,
@@ -37,5 +60,14 @@ export class PartnerAccessService {
     partnerAccessDetails.accessCode = await this.generateAccessCode(6);
 
     return await this.partnerAccessRepository.save(partnerAccessDetails);
+  }
+
+  async validatePartnerAccessCode(
+    partnerAccessCode: string,
+  ): Promise<{ status: PartnerAccessCodeStatusEnum }> {
+    const PartnerAccessCodeStatusEnum = await this.checkCodeStatus(partnerAccessCode);
+    return {
+      status: PartnerAccessCodeStatusEnum,
+    };
   }
 }

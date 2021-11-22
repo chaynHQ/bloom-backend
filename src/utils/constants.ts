@@ -1,6 +1,13 @@
 import { UserEntity } from '../entities/user.entity';
 import { GetUserDto } from '../user/dto/get-user.dto';
 
+export enum PartnerAccessCodeStatusEnum {
+  VALID = 'VALID',
+  INVALID_CODE = 'INVALID_CODE',
+  DOES_NOT_EXIST = 'DOES_NOT_EXIST',
+  ALREADY_IN_USE = 'ALREADY_IN_USE',
+}
+
 export const formatUserObject = (userObject: UserEntity): GetUserDto => {
   return {
     user: {
