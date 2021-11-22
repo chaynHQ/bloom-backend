@@ -4,6 +4,8 @@ import { ApiBody, ApiConsumes, ApiProduces, ApiResponse, ApiTags } from '@nestjs
 import { CreatePartnerAccessDto } from './dto/create-partner-access.dto';
 import { PartnerAccessService } from './partner-access.service';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
+import { ValidatePartnerAccessCodeDto } from './dto/validate-partner-access.dto';
+import { PartnerAccessCodeStatusEnum } from '../utils/constants';
 
 @ApiTags('Partner Access')
 @ApiConsumes('application/json')
@@ -29,5 +31,13 @@ export class PartnerAccessController {
       partnerId,
       partnerAdminId,
     );
+  }
+
+  @Post('validate-code')
+  @ApiBody({ type: ValidatePartnerAccessCodeDto })
+  async validateCode(
+    @Body() { partnerAccessCode }: ValidatePartnerAccessCodeDto,
+  ): Promise<{ status: PartnerAccessCodeStatusEnum }> {
+    return this.partnerAccessService.validatePartnerAccessCode(partnerAccessCode.toUpperCase());
   }
 }
