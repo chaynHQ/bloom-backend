@@ -1,8 +1,9 @@
-/* eslint-disable @typescript-eslint/no-inferrable-types */
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
+import { Request } from 'express';
 import { ApiBody, ApiConsumes, ApiProduces, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { CreatePartnerAccessDto } from './dto/create-partner-access.dto';
 import { PartnerAccessService } from './partner-access.service';
+import { PartnerAdminAuthGuard } from '../partner-admin/partner-admin-auth.guard';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
 import { ValidatePartnerAccessCodeDto } from './dto/validate-partner-access.dto';
 import { PartnerAccessCodeStatusEnum } from '../utils/constants';
@@ -20,16 +21,16 @@ export class PartnerAccessController {
   constructor(private readonly partnerAccessService: PartnerAccessService) {}
 
   @Post('generate')
+  @UseGuards(PartnerAdminAuthGuard)
   @ApiBody({ type: CreatePartnerAccessDto })
   async generatePartnerAccess(
     @Body() createPartnerAccessDto: CreatePartnerAccessDto,
-    partnerId: string = '4bb986f2-9208-4da0-b1c6-9899838a8558',
-    partnerAdminId: string = '64870e3b-7144-4cf9-99a5-fb2b6deea5f3',
+    @Req() req: Request,
   ): Promise<PartnerAccessEntity> {
     return await this.partnerAccessService.createPartnerAccess(
       createPartnerAccessDto,
-      partnerId,
-      partnerAdminId,
+      req['partnerId'],
+      req['partnerAdminId'],
     );
   }
 
