@@ -5,6 +5,7 @@ import { PartnerAccessRepository } from './partner-access.repository';
 import _ from 'lodash';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
 import { PartnerAccessCodeStatusEnum } from '../utils/constants';
+import moment from 'moment';
 
 @Injectable()
 export class PartnerAccessService {
@@ -44,6 +45,10 @@ export class PartnerAccessService {
 
     if (!!codeDetails.userId) {
       return PartnerAccessCodeStatusEnum.ALREADY_IN_USE;
+    }
+
+    if (moment(codeDetails.createdAt).add(1, 'year').isSameOrBefore(Date.now())) {
+      return PartnerAccessCodeStatusEnum.CODE_EXPIRED;
     }
 
     return PartnerAccessCodeStatusEnum.VALID;

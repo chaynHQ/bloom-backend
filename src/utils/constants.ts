@@ -6,6 +6,7 @@ export enum PartnerAccessCodeStatusEnum {
   INVALID_CODE = 'INVALID_CODE',
   DOES_NOT_EXIST = 'DOES_NOT_EXIST',
   ALREADY_IN_USE = 'ALREADY_IN_USE',
+  CODE_EXPIRED = 'CODE_EXPIRED',
 }
 
 export const formatUserObject = (userObject: UserEntity): GetUserDto => {
