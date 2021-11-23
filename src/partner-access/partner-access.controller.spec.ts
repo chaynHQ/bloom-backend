@@ -1,15 +1,24 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { Test, TestingModule } from '@nestjs/testing';
-import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
-import { CreatePartnerAccessDto } from './dto/create-partner-access.dto';
+import { PartnerAccessEntity } from '../entities/partner-access.entity';
+import { CreatePartnerAccessDto } from './dtos/create-partner-access.dto';
 import { PartnerAccessController } from './partner-access.controller';
-import { PartnerAccessRepository } from './partner-access.repository';
 import { PartnerAccessService } from './partner-access.service';
+import { createMock, DeepMocked } from '@golevelup/ts-jest';
+import { Request } from 'express';
+import { PartnerAdminAuthGuard } from '../partner-admin/partner-admin-auth.guard';
+import { AuthService } from '../auth/auth.service';
+
+const mockRequestObject = () => {
+  return createMock<Request>();
+};
 
 describe('PartnerAccessController', () => {
   let controller: PartnerAccessController;
   let mockPartnerAccessService: Partial<PartnerAccessService>;
+  let mockAuthService: DeepMocked<AuthService>;
   const date = Date.now();
+  let authGuard: DeepMocked<PartnerAdminAuthGuard>;
 
   const dto: CreatePartnerAccessDto = {
     featureLiveChat: true,
@@ -19,6 +28,8 @@ describe('PartnerAccessController', () => {
   };
 
   beforeEach(async () => {
+    authGuard = createMock<PartnerAdminAuthGuard>();
+    mockAuthService = createMock<AuthService>();
     mockPartnerAccessService = {
       createPartnerAccess: (
         createPartnerAccessDto: CreatePartnerAccessDto,
@@ -41,8 +52,14 @@ describe('PartnerAccessController', () => {
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [PartnerAccessController],
-      providers: [{ provide: PartnerAccessService, useValue: mockPartnerAccessService }],
-    }).compile();
+      providers: [
+        { provide: PartnerAccessService, useValue: mockPartnerAccessService },
+        { provide: AuthService, useValue: mockAuthService },
+      ],
+    })
+      .overrideGuard(PartnerAdminAuthGuard)
+      .useValue(authGuard)
+      .compile();
 
     controller = module.get<PartnerAccessController>(PartnerAccessController);
   });
@@ -52,8 +69,9 @@ describe('PartnerAccessController', () => {
   });
 
   it('Generate Partner Access', async () => {
-    const partnerId = '00000000-0000-0000-0000-000000000000';
-    const partnerAdminId = '00000000-0000-0000-0000-000000000000';
+    const request: Request = mockRequestObject();
+    request['partnerId'] = '00000000-0000-0000-0000-000000000000';
+    request['partnerAdminId'] = '00000000-0000-0000-0000-000000000000';
     const dto: CreatePartnerAccessDto = {
       featureLiveChat: true,
       featureTherapy: false,
@@ -61,12 +79,12 @@ describe('PartnerAccessController', () => {
       therapySessionsRemaining: 5,
     };
 
-    const partnerAccess = await controller.generatePartnerAccess(dto, partnerId, partnerAdminId);
+    const partnerAccess = await controller.generatePartnerAccess(dto, request);
 
     expect(partnerAccess).toMatchObject({
       ...dto,
-      partnerId,
-      partnerAdminId,
+      partnerId: '00000000-0000-0000-0000-000000000000',
+      partnerAdminId: '00000000-0000-0000-0000-000000000000',
       accessCode: '000AAA',
       userId: '',
       activatedAt: null,
