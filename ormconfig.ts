@@ -1,4 +1,4 @@
-import { isProduction } from 'src/utils/constants';
+import { isProduction } from './src/utils/constants';
 import { PostgresConnectionOptions } from 'typeorm/driver/postgres/PostgresConnectionOptions';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 require('dotenv').config();
