@@ -1,6 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm/dist/common';
-import { CreatePartnerAccessDto } from './dto/create-partner-access.dto';
+import { CreatePartnerAccessDto } from './dtos/create-partner-access.dto';
 import { PartnerAccessRepository } from './partner-access.repository';
 import _ from 'lodash';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
@@ -14,15 +14,14 @@ export class PartnerAccessService {
     private partnerAccessRepository: PartnerAccessRepository,
   ) {}
 
-  private async accessCodeCheck(accessCode: string): Promise<boolean> {
-    const codeExists = await this.partnerAccessRepository.findOne({ accessCode });
-    return !!codeExists;
+  private async findPartnerAccessCode(accessCode: string): Promise<PartnerAccessEntity> {
+    return await this.partnerAccessRepository.findOne({ accessCode });
   }
 
   private async generateAccessCode(length: number): Promise<string> {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUFWXYZ1234567890';
     const accessCode = _.sampleSize(chars, length || 6).join('');
-    if (await this.accessCodeCheck(accessCode)) {
+    if (!!(await this.findPartnerAccessCode(accessCode))) {
       this.generateAccessCode(6);
     }
     return accessCode;
@@ -32,23 +31,21 @@ export class PartnerAccessService {
     const format = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/;
 
     if (format.test(partnerAccessCode) || partnerAccessCode.length !== 6) {
-      return PartnerAccessCodeStatusEnum.INVALID_CODE;
+      throw new HttpException(PartnerAccessCodeStatusEnum.INVALID_CODE, HttpStatus.BAD_REQUEST);
     }
 
-    const codeDetails = await this.partnerAccessRepository.findOne({
-      accessCode: partnerAccessCode,
-    });
+    const codeDetails = await this.findPartnerAccessCode(partnerAccessCode);
 
     if (codeDetails === undefined) {
-      return PartnerAccessCodeStatusEnum.DOES_NOT_EXIST;
+      throw new HttpException(PartnerAccessCodeStatusEnum.DOES_NOT_EXIST, HttpStatus.BAD_REQUEST);
     }
 
     if (!!codeDetails.userId) {
-      return PartnerAccessCodeStatusEnum.ALREADY_IN_USE;
+      throw new HttpException(PartnerAccessCodeStatusEnum.ALREADY_IN_USE, HttpStatus.CONFLICT);
     }
 
     if (moment(codeDetails.createdAt).add(1, 'year').isSameOrBefore(Date.now())) {
-      return PartnerAccessCodeStatusEnum.CODE_EXPIRED;
+      throw new HttpException(PartnerAccessCodeStatusEnum.CODE_EXPIRED, HttpStatus.BAD_REQUEST);
     }
 
     return PartnerAccessCodeStatusEnum.VALID;
@@ -74,5 +71,28 @@ export class PartnerAccessService {
     return {
       status: PartnerAccessCodeStatusEnum,
     };
+  }
+
+  async updatePartnerAccessCode(
+    partnerAccessCode: string,
+    userId: string,
+  ): Promise<PartnerAccessEntity> {
+    await this.checkCodeStatus(partnerAccessCode);
+
+    const partnerAccessCodeDetails = await this.findPartnerAccessCode(partnerAccessCode);
+
+    const partnerAccessCodeUpdateDetails = {
+      userId,
+      activatedAt: moment(Date.now()).format('YYYY-MM-DD hh:mm:ss'),
+    };
+
+    try {
+      return await this.partnerAccessRepository.save({
+        ...partnerAccessCodeDetails,
+        ...partnerAccessCodeUpdateDetails,
+      });
+    } catch (error) {
+      return error;
+    }
   }
 }

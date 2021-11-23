@@ -1,5 +1,13 @@
+import { GetUserDto } from '../user/dtos/get-user.dto';
 import { UserEntity } from '../entities/user.entity';
-import { GetUserDto } from '../user/dto/get-user.dto';
+
+export const isProduction = process.env.NODE_ENV === 'production';
+export const isDevelopment = process.env.NODE_ENV === 'development';
+
+export enum LANGUAGE_DEFAULT {
+  EN = 'en',
+  ES = 'es',
+}
 
 export enum PartnerAccessCodeStatusEnum {
   VALID = 'VALID',
