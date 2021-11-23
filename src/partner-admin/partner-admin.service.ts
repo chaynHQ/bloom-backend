@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { PartnerAdminEntity } from 'src/entities/partner-admin.entity';
 import { CreatePartnerAdminDto } from './dtos/create-partner-admin.dto';
@@ -18,6 +18,9 @@ export class PartnerAdminService {
       const createPartnerAdminObject = this.partnerAdminRepository.create(createPartnerAdminDto);
       return await this.partnerAdminRepository.save(createPartnerAdminObject);
     } catch (error) {
+      if (error.code === '23505') {
+        throw new HttpException(error.detail, HttpStatus.BAD_REQUEST);
+      }
       return error;
     }
   }
