@@ -1,5 +1,8 @@
-import { UserEntity } from '../entities/user.entity';
 import { GetUserDto } from '../user/dtos/get-user.dto';
+import { UserEntity } from '../entities/user.entity';
+
+export const isProduction = process.env.NODE_ENV === 'production';
+export const isDevelopment = process.env.NODE_ENV === 'development';
 
 export enum LANGUAGE_DEFAULT {
   EN = 'en',
