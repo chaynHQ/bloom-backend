@@ -1,6 +1,11 @@
 import { UserEntity } from '../entities/user.entity';
 import { GetUserDto } from '../user/dto/get-user.dto';
 
+export enum LANGUAGE_DEFAULT {
+  EN = 'en',
+  ES = 'es',
+}
+
 export enum PartnerAccessCodeStatusEnum {
   VALID = 'VALID',
   INVALID_CODE = 'INVALID_CODE',

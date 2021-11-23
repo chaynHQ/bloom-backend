@@ -1,4 +1,4 @@
-import { LANGUAGE_DEFAULT } from '../entities/user.entity';
+import { LANGUAGE_DEFAULT } from '../utils/constants';
 
 export interface IUser {
   id: string;
