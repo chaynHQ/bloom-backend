@@ -1,5 +1,5 @@
-import { Body, Controller, Post } from '@nestjs/common';
-import { ApiTags, ApiConsumes, ApiProduces, ApiResponse } from '@nestjs/swagger';
+import { Body, Controller, Get, Post } from '@nestjs/common';
+import { ApiTags, ApiConsumes, ApiProduces, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { PartnerEntity } from 'src/entities/partner.entity';
 import { CreatePartnerDto } from './dtos/create-partner.dto';
 import { PartnerService } from './partner.service';
@@ -17,9 +17,15 @@ export class PartnerController {
   constructor(private partnerService: PartnerService) {}
 
   @Post()
+  @ApiBody({ type: CreatePartnerDto })
   async createPartner(
     @Body() createPartnerDto: CreatePartnerDto,
   ): Promise<PartnerEntity | unknown> {
     return this.partnerService.createPartner(createPartnerDto);
+  }
+
+  @Get()
+  async fetchPartners(): Promise<PartnerEntity[]> {
+    return this.partnerService.fetchPartners();
   }
 }

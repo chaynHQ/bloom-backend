@@ -19,4 +19,8 @@ export class PartnerService {
       return error;
     }
   }
+
+  async fetchPartners(): Promise<PartnerEntity[]> {
+    return await this.partnerRepository.find();
+  }
 }
