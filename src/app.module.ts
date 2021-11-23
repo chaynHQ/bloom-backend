@@ -7,6 +7,7 @@ import { PartnerAccessModule } from './partner-access/partner-access.module';
 import { AuthModule } from './auth/auth.module';
 import config from '../ormconfig';
 import { UserModule } from './user/user.module';
+import { PartnerAdminModule } from './partner-admin/partner-admin.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { UserModule } from './user/user.module';
     PartnerAccessModule,
     AuthModule,
     UserModule,
+    PartnerAdminModule,
   ],
   controllers: [AppController],
   providers: [],
