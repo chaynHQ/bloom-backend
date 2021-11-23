@@ -1,3 +1,4 @@
+import { isProduction } from 'src/utils/constants';
 import { PostgresConnectionOptions } from 'typeorm/driver/postgres/PostgresConnectionOptions';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 require('dotenv').config();
@@ -15,6 +16,10 @@ const config: PostgresConnectionOptions = {
   migrations: ['dist/src/migrations/*.js'],
   cli: {
     migrationsDir: 'src/migrations',
+  },
+  ssl: isProduction,
+  extra: {
+    ssl: isProduction ? { rejectUnauthorized: false } : null,
   },
 };
 
