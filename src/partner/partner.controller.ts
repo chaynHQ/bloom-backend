@@ -1,13 +1,25 @@
 import { Body, Controller, Post } from '@nestjs/common';
+import { ApiTags, ApiConsumes, ApiProduces, ApiResponse } from '@nestjs/swagger';
+import { PartnerEntity } from 'src/entities/partner.entity';
 import { CreatePartnerDto } from './dtos/create-partner.dto';
 import { PartnerService } from './partner.service';
 
-@Controller('partner')
+@ApiTags('Partner')
+@ApiConsumes('application/json')
+@ApiProduces('application/json')
+@ApiResponse({ status: 201, description: 'The record has been successfully created.' })
+@ApiResponse({ status: 400, description: 'Incorrect payload sent.' })
+@ApiResponse({ status: 401, description: 'Unauthorized.' })
+@ApiResponse({ status: 403, description: 'Forbidden.' })
+@ApiResponse({ status: 500, description: 'Internal Server Error.' })
+@Controller('/v1/partner')
 export class PartnerController {
   constructor(private partnerService: PartnerService) {}
 
   @Post()
-  async createPartner(@Body() createPartnerDto: CreatePartnerDto) {
+  async createPartner(
+    @Body() createPartnerDto: CreatePartnerDto,
+  ): Promise<PartnerEntity | unknown> {
     return this.partnerService.createPartner(createPartnerDto);
   }
 }

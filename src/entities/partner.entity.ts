@@ -8,7 +8,7 @@ export class PartnerEntity extends BaseEntity {
   @PrimaryGeneratedColumn('uuid', { name: 'partnerId' })
   id: string;
 
-  @Column()
+  @Column({ unique: true })
   name: string;
 
   @Column({ nullable: true })

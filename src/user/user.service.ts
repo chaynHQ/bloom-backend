@@ -3,7 +3,7 @@ import { IFirebaseUser } from '../firebase/firebase-user.interface';
 import { UserRepository } from './user.repository';
 import { InjectRepository } from '@nestjs/typeorm';
 import { formatUserObject } from '../utils/constants';
-import { GetUserDto } from './dto/get-user.dto';
+import { GetUserDto } from './dtos/get-user.dto';
 
 @Injectable()
 export class UserService {
