@@ -3,13 +3,13 @@ import { IFirebaseUser } from '../firebase/firebase-user.interface';
 import { UserRepository } from './user.repository';
 import { InjectRepository } from '@nestjs/typeorm';
 import { formatUserObject } from '../utils/constants';
-import { GetUserDto } from './dto/get-user.dto';
-import { CreateUserDto } from './dto/create-user.dto';
-import { UserEntity } from 'src/entities/user.entity';
-import { PartnerAccessService } from 'src/partner-access/partner-access.service';
-import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
-import { PartnerEntity } from 'src/entities/partner.entity';
-import { PartnerRepository } from 'src/partner/partner.repository';
+import { GetUserDto } from './dtos/get-user.dto';
+import { CreateUserDto } from './dtos/create-user.dto';
+import { UserEntity } from '../entities/user.entity';
+import { PartnerAccessService } from '../partner-access/partner-access.service';
+import { PartnerAccessEntity } from '../entities/partner-access.entity';
+import { PartnerEntity } from '../entities/partner.entity';
+import { PartnerRepository } from '../partner/partner.repository';
 
 @Injectable()
 export class UserService {

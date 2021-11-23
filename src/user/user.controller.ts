@@ -11,11 +11,11 @@ import {
   ApiBearerAuth,
   ApiBody,
 } from '@nestjs/swagger';
-import { GetUserDto } from './dto/get-user.dto';
-import { CreateUserDto } from './dto/create-user.dto';
+import { GetUserDto } from './dtos/get-user.dto';
+import { CreateUserDto } from './dtos/create-user.dto';
 import { UserEntity } from 'src/entities/user.entity';
-import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
-import { PartnerEntity } from 'src/entities/partner.entity';
+import { PartnerAccessEntity } from '../entities/partner-access.entity';
+import { PartnerEntity } from '../entities/partner.entity';
 
 @ApiTags('Users')
 @ApiConsumes('application/json')

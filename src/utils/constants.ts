@@ -1,5 +1,5 @@
 import { UserEntity } from '../entities/user.entity';
-import { GetUserDto } from '../user/dto/get-user.dto';
+import { GetUserDto } from '../user/dtos/get-user.dto';
 
 export enum LANGUAGE_DEFAULT {
   EN = 'en',

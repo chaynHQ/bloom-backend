@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { Test, TestingModule } from '@nestjs/testing';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
-import { CreatePartnerAccessDto } from './dto/create-partner-access.dto';
+import { CreatePartnerAccessDto } from './dtos/create-partner-access.dto';
 import { PartnerAccessController } from './partner-access.controller';
 import { PartnerAccessService } from './partner-access.service';
 import { createMock, DeepMocked } from '@golevelup/ts-jest';
