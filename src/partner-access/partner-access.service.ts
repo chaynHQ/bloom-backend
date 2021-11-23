@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm/dist/common';
-import { CreatePartnerAccessDto } from './dto/create-partner-access.dto';
+import { CreatePartnerAccessDto } from './dtos/create-partner-access.dto';
 import { PartnerAccessRepository } from './partner-access.repository';
 import _ from 'lodash';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';

@@ -1,11 +1,11 @@
 import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
 import { Request } from 'express';
 import { ApiBody, ApiConsumes, ApiProduces, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { CreatePartnerAccessDto } from './dto/create-partner-access.dto';
+import { CreatePartnerAccessDto } from './dtos/create-partner-access.dto';
 import { PartnerAccessService } from './partner-access.service';
 import { PartnerAdminAuthGuard } from '../partner-admin/partner-admin-auth.guard';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
-import { ValidatePartnerAccessCodeDto } from './dto/validate-partner-access.dto';
+import { ValidatePartnerAccessCodeDto } from './dtos/validate-partner-access.dto';
 import { PartnerAccessCodeStatusEnum } from '../utils/constants';
 
 @ApiTags('Partner Access')

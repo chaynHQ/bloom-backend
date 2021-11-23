@@ -4,7 +4,7 @@ import { IFirebaseUser } from '../firebase/firebase-user.interface';
 import { UserService } from './user.service';
 import { Request } from 'express';
 import { ApiTags, ApiConsumes, ApiProduces, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
-import { GetUserDto } from './dto/get-user.dto';
+import { GetUserDto } from './dtos/get-user.dto';
 
 @ApiTags('Users')
 @ApiConsumes('application/json')
