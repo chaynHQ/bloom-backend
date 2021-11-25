@@ -9,8 +9,9 @@ import { Request } from 'express';
 import { PartnerAdminAuthGuard } from '../partner-admin/partner-admin-auth.guard';
 import { AuthService } from '../auth/auth.service';
 import { PartnerAccessRepository } from './partner-access.repository';
+import { UserRepository } from 'src/user/user.repository';
 
-const mockTaskRepository = () => ({});
+const mockUserRepository = () => ({});
 
 const mockRequestObject = () => {
   return createMock<Request>();
@@ -59,8 +60,8 @@ describe('PartnerAccessController', () => {
         { provide: PartnerAccessService, useValue: mockPartnerAccessService },
         { provide: AuthService, useValue: mockAuthService },
         {
-          provide: PartnerAccessRepository,
-          useFactory: mockTaskRepository,
+          provide: UserRepository,
+          useFactory: mockUserRepository,
         },
       ],
     })
