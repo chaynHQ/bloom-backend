@@ -8,8 +8,7 @@ import { createMock, DeepMocked } from '@golevelup/ts-jest';
 import { Request } from 'express';
 import { PartnerAdminAuthGuard } from '../partner-admin/partner-admin-auth.guard';
 import { AuthService } from '../auth/auth.service';
-import { PartnerAccessRepository } from './partner-access.repository';
-import { UserRepository } from 'src/user/user.repository';
+import { UserRepository } from '../user/user.repository';
 
 const mockUserRepository = () => ({});
 
