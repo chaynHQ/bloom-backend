@@ -41,4 +41,9 @@ export class PartnerAccessController {
   ): Promise<{ status: PartnerAccessCodeStatusEnum }> {
     return this.partnerAccessService.validatePartnerAccessCode(partnerAccessCode.toUpperCase());
   }
+
+  @Post('webhooks/simplybook')
+  async zapierWebhook() {
+    return '';
+  }
 }
