@@ -8,6 +8,9 @@ import { createMock, DeepMocked } from '@golevelup/ts-jest';
 import { Request } from 'express';
 import { PartnerAdminAuthGuard } from '../partner-admin/partner-admin-auth.guard';
 import { AuthService } from '../auth/auth.service';
+import { PartnerAccessRepository } from './partner-access.repository';
+
+const mockTaskRepository = () => ({});
 
 const mockRequestObject = () => {
   return createMock<Request>();
@@ -55,6 +58,10 @@ describe('PartnerAccessController', () => {
       providers: [
         { provide: PartnerAccessService, useValue: mockPartnerAccessService },
         { provide: AuthService, useValue: mockAuthService },
+        {
+          provide: PartnerAccessRepository,
+          useFactory: mockTaskRepository,
+        },
       ],
     })
       .overrideGuard(PartnerAdminAuthGuard)
