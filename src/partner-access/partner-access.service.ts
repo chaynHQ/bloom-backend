@@ -7,7 +7,7 @@ import { PartnerAccessEntity } from '../entities/partner-access.entity';
 import { PartnerAccessCodeStatusEnum, ZAPIER_ACTION_ENUM } from '../utils/constants';
 import moment from 'moment';
 import { ZapierBodyDto } from './dtos/zapier-body.dto';
-import { UserRepository } from 'src/user/user.repository';
+import { UserRepository } from '../user/user.repository';
 
 @Injectable()
 export class PartnerAccessService {
