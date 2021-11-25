@@ -4,6 +4,11 @@ import { UserEntity } from '../entities/user.entity';
 export const isProduction = process.env.NODE_ENV === 'production';
 export const isDevelopment = process.env.NODE_ENV === 'development';
 
+export enum ZAPIER_ACTION_ENUM {
+  NEW_BOOKING = 'NEW_BOOKING',
+  CANCELED_BOOKING = 'CANCELED_BOOKING',
+}
+
 export enum LANGUAGE_DEFAULT {
   EN = 'en',
   ES = 'es',

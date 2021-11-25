@@ -1,10 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsDefined, IsEnum, IsNotEmpty, IsString } from 'class-validator';
-
-enum ZAPIER_ACTION_ENUM {
-  NEW_BOOKING = 'NEW_BOOKING',
-  CANCELED_BOOKING = 'CANCELED_BOOKING',
-}
+import { IsDefined, IsEmail, IsEnum, IsNotEmpty, IsString } from 'class-validator';
+import { ZAPIER_ACTION_ENUM } from '../../utils/constants';
 
 export class ZapierBodyDto {
   @IsNotEmpty()
@@ -15,8 +11,8 @@ export class ZapierBodyDto {
   action: ZAPIER_ACTION_ENUM;
 
   @IsNotEmpty()
-  @IsString()
+  @IsEmail()
   @IsDefined()
   @ApiProperty({ type: String })
-  partnerAccessCode: string;
+  client_email: string;
 }
