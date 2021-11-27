@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { AppController } from './app.controller';
 import { LoggerModule } from './logger/logger.module';
 import { PartnerAccessModule } from './partner-access/partner-access.module';
 import { AuthModule } from './auth/auth.module';
@@ -21,7 +20,5 @@ import { PartnerModule } from './partner/partner.module';
     PartnerAdminModule,
     PartnerModule,
   ],
-  controllers: [AppController],
-  providers: [],
 })
 export class AppModule {}

@@ -1,6 +1,13 @@
 import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
 import { Request } from 'express';
-import { ApiBody, ApiConsumes, ApiProduces, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
+  ApiProduces,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { CreatePartnerAccessDto } from './dtos/create-partner-access.dto';
 import { PartnerAccessService } from './partner-access.service';
 import { PartnerAdminAuthGuard } from '../partner-admin/partner-admin-auth.guard';
@@ -20,6 +27,7 @@ import { PartnerAccessCodeStatusEnum } from '../utils/constants';
 export class PartnerAccessController {
   constructor(private readonly partnerAccessService: PartnerAccessService) {}
 
+  @ApiBearerAuth()
   @UseGuards(PartnerAdminAuthGuard)
   @Post('generate')
   @ApiBody({ type: CreatePartnerAccessDto })
