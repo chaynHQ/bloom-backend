@@ -23,10 +23,6 @@ export class AuthService {
 
     const decodedToken = await this.parseAndValidateToken(idToken);
 
-    if (!decodedToken.email_verified) {
-      throw new ForbiddenException('Forbidden: user email not verified');
-    }
-
     return decodedToken;
   }
 
