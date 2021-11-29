@@ -1,8 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { UserRepository } from '../user/user.repository';
 import { PartnerAccessRepository } from './partner-access.repository';
 import { PartnerAccessService } from './partner-access.service';
 
 const mockTaskRepository = () => ({});
+
+const mockUserRepository = () => ({});
 
 describe('PartnerAccessService', () => {
   let service: Partial<PartnerAccessService>;
@@ -15,6 +18,7 @@ describe('PartnerAccessService', () => {
           provide: PartnerAccessRepository,
           useFactory: mockTaskRepository,
         },
+        { provide: UserRepository, useFactory: mockUserRepository },
       ],
     }).compile();
 
