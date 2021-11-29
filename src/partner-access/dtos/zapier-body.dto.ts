@@ -1,14 +1,14 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsDefined, IsEmail, IsEnum, IsNotEmpty, IsString } from 'class-validator';
-import { ZAPIER_ACTION_ENUM } from '../../utils/constants';
+import { SIMPLYBOOK_ACTION_ENUM } from '../../utils/constants';
 
-export class ZapierBodyDto {
+export class SimplybookBodyDto {
   @IsNotEmpty()
   @IsString()
   @IsDefined()
-  @IsEnum(ZAPIER_ACTION_ENUM)
+  @IsEnum(SIMPLYBOOK_ACTION_ENUM)
   @ApiProperty({ type: String })
-  action: ZAPIER_ACTION_ENUM;
+  action: SIMPLYBOOK_ACTION_ENUM;
 
   @IsNotEmpty()
   @IsEmail()

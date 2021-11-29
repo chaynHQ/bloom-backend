@@ -4,9 +4,9 @@ import { CreatePartnerAccessDto } from './dtos/create-partner-access.dto';
 import { PartnerAccessRepository } from './partner-access.repository';
 import _ from 'lodash';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
-import { PartnerAccessCodeStatusEnum, ZAPIER_ACTION_ENUM } from '../utils/constants';
+import { PartnerAccessCodeStatusEnum, SIMPLYBOOK_ACTION_ENUM } from '../utils/constants';
 import moment from 'moment';
-import { ZapierBodyDto } from './dtos/zapier-body.dto';
+import { SimplybookBodyDto } from './dtos/zapier-body.dto';
 import { UserRepository } from '../user/user.repository';
 
 @Injectable()
@@ -100,7 +100,7 @@ export class PartnerAccessService {
     }
   }
 
-  async updatePartnerAccessBooking({ action, client_email }: ZapierBodyDto): Promise<string> {
+  async updatePartnerAccessBooking({ action, client_email }: SimplybookBodyDto): Promise<string> {
     const userDetails = await this.userRepository.findOne({ email: client_email });
 
     if (!userDetails) {
@@ -117,7 +117,7 @@ export class PartnerAccessService {
 
     let partnerAccessUpdateDetails = {};
 
-    if (action === ZAPIER_ACTION_ENUM.NEW_BOOKING) {
+    if (action === SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING) {
       if (Number(partnerAccessDetails.therapySessionsRemaining) === 0) {
         throw new HttpException('No therapy sessions remaining', HttpStatus.FORBIDDEN);
       }
@@ -128,7 +128,7 @@ export class PartnerAccessService {
       };
     }
 
-    if (action === ZAPIER_ACTION_ENUM.CANCELED_BOOKING) {
+    if (action === SIMPLYBOOK_ACTION_ENUM.CANCELED_BOOKING) {
       partnerAccessUpdateDetails = {
         therapySessionsRemaining: Number(partnerAccessDetails.therapySessionsRemaining) + 1,
         therapySessionsRedeemed: Number(partnerAccessDetails.therapySessionsRedeemed) - 1,

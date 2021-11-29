@@ -7,7 +7,7 @@ import { PartnerAdminAuthGuard } from '../partner-admin/partner-admin-auth.guard
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
 import { ValidatePartnerAccessCodeDto } from './dtos/validate-partner-access.dto';
 import { PartnerAccessCodeStatusEnum } from '../utils/constants';
-import { ZapierBodyDto } from './dtos/zapier-body.dto';
+import { SimplybookBodyDto } from './dtos/zapier-body.dto';
 import { ZapierAuthGuard } from './zapier-auth.guard';
 
 @ApiTags('Partner Access')
@@ -46,8 +46,8 @@ export class PartnerAccessController {
 
   @UseGuards(ZapierAuthGuard)
   @Post('webhooks/simplybook')
-  @ApiBody({ type: ZapierBodyDto })
-  async updatePartnerAccessBooking(@Body() zapierBodyDto: ZapierBodyDto): Promise<string> {
-    return this.partnerAccessService.updatePartnerAccessBooking(zapierBodyDto);
+  @ApiBody({ type: SimplybookBodyDto })
+  async updatePartnerAccessBooking(@Body() simplybookBodyDto: SimplybookBodyDto): Promise<string> {
+    return this.partnerAccessService.updatePartnerAccessBooking(simplybookBodyDto);
   }
 }
