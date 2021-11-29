@@ -6,7 +6,7 @@ export const isDevelopment = process.env.NODE_ENV === 'development';
 
 export enum SIMPLYBOOK_ACTION_ENUM {
   NEW_BOOKING = 'NEW_BOOKING',
-  CANCELED_BOOKING = 'CANCELED_BOOKING',
+  CANCELLED_BOOKING = 'CANCELLED_BOOKING',
 }
 
 export enum LANGUAGE_DEFAULT {

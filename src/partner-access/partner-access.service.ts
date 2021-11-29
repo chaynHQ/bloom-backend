@@ -128,7 +128,7 @@ export class PartnerAccessService {
       };
     }
 
-    if (action === SIMPLYBOOK_ACTION_ENUM.CANCELED_BOOKING) {
+    if (action === SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING) {
       partnerAccessUpdateDetails = {
         therapySessionsRemaining: Number(partnerAccessDetails.therapySessionsRemaining) + 1,
         therapySessionsRedeemed: Number(partnerAccessDetails.therapySessionsRedeemed) - 1,
