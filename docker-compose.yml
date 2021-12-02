@@ -1,0 +1,31 @@
+version: '3.9'
+
+services:
+
+  api:
+    container_name: bloom-backend
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      POSTGRES_HOST: host.docker.internal
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DATABASE: bloom
+    ports:
+      - 35001:35001
+    depends_on:
+      - db
+    volumes:
+      - .:/app
+
+  db: 
+    image: postgres:14-alpine
+    container_name: bloom-local-db
+    restart: unless-stopped
+    ports:
+      - 35000:5432
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: bloom
