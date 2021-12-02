@@ -31,7 +31,7 @@ export class PartnerAccessController {
 
   @ApiBearerAuth()
   @UseGuards(PartnerAdminAuthGuard)
-  @Post('generate')
+  @Post()
   @ApiBody({ type: CreatePartnerAccessDto })
   async generatePartnerAccess(
     @Body() createPartnerAccessDto: CreatePartnerAccessDto,
