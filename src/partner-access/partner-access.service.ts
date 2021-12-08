@@ -146,4 +146,11 @@ export class PartnerAccessService {
       return error;
     }
   }
+
+  async getPartnerAccessCodes(): Promise<PartnerAccessEntity[]> {
+    return await this.partnerAccessRepository
+      .createQueryBuilder('partnerAccess')
+      .leftJoinAndSelect('partnerAccess.partner', 'partner')
+      .getMany();
+  }
 }
