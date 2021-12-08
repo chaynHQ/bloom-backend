@@ -3,7 +3,7 @@ import { Request, Response } from 'express';
 import { Logger } from '../logger/logger';
 
 @Catch()
-export class AllExceptionsFilter implements ExceptionFilter {
+export class ExceptionsFilter implements ExceptionFilter {
   private logger = new Logger('Interceptor');
 
   catch(exception: unknown, host: ArgumentsHost): void {
