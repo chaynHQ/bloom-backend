@@ -7,10 +7,10 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { PartnerAdminEntity } from 'src/entities/partner-admin.entity';
-import { SuperUserAuthGuard } from 'src/user/super-user-auth.guard';
+import { PartnerAdminEntity } from '../entities/partner-admin.entity';
 import { CreatePartnerAdminDto } from './dtos/create-partner-admin.dto';
 import { PartnerAdminService } from './partner-admin.service';
+import { SuperAdminAuthGuard } from './super-admin-auth.guard';
 
 @ApiTags('Partner Admin')
 @ApiConsumes('application/json')
@@ -25,7 +25,7 @@ export class PartnerAdminController {
   constructor(private partnerAdminService: PartnerAdminService) {}
 
   @ApiBearerAuth()
-  @UseGuards(SuperUserAuthGuard)
+  @UseGuards(SuperAdminAuthGuard)
   @Post()
   @ApiBody({ type: CreatePartnerAdminDto })
   async createPartnerAdmin(

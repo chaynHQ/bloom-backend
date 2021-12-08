@@ -7,8 +7,8 @@ import {
   ApiBody,
   ApiBearerAuth,
 } from '@nestjs/swagger';
-import { PartnerEntity } from 'src/entities/partner.entity';
-import { SuperUserAuthGuard } from 'src/user/super-user-auth.guard';
+import { PartnerEntity } from '../entities/partner.entity';
+import { SuperAdminAuthGuard } from '../partner-admin/super-admin-auth.guard';
 import { CreatePartnerDto } from './dtos/create-partner.dto';
 import { PartnerService } from './partner.service';
 
@@ -25,7 +25,7 @@ export class PartnerController {
   constructor(private partnerService: PartnerService) {}
 
   @ApiBearerAuth()
-  @UseGuards(SuperUserAuthGuard)
+  @UseGuards(SuperAdminAuthGuard)
   @Post()
   @ApiBody({ type: CreatePartnerDto })
   async createPartner(
@@ -35,7 +35,7 @@ export class PartnerController {
   }
 
   @ApiBearerAuth()
-  @UseGuards(SuperUserAuthGuard)
+  @UseGuards(SuperAdminAuthGuard)
   @Get()
   async fetchPartners(): Promise<PartnerEntity[]> {
     return this.partnerService.fetchPartners();

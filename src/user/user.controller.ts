@@ -13,7 +13,7 @@ import {
 } from '@nestjs/swagger';
 import { GetUserDto } from './dtos/get-user.dto';
 import { CreateUserDto } from './dtos/create-user.dto';
-import { UserEntity } from 'src/entities/user.entity';
+import { UserEntity } from '../entities/user.entity';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
 import { PartnerEntity } from '../entities/partner.entity';
 

@@ -1,6 +1,6 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { PartnerEntity } from 'src/entities/partner.entity';
+import { PartnerEntity } from '../entities/partner.entity';
 import { CreatePartnerDto } from './dtos/create-partner.dto';
 import { PartnerRepository } from './partner.repository';
 

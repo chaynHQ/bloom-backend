@@ -16,7 +16,7 @@ import { ValidatePartnerAccessCodeDto } from './dtos/validate-partner-access.dto
 import { PartnerAccessCodeStatusEnum } from '../utils/constants';
 import { SimplybookBodyDto } from './dtos/zapier-body.dto';
 import { ZapierAuthGuard } from './zapier-auth.guard';
-import { SuperUserAuthGuard } from '../user/super-user-auth.guard';
+import { SuperAdminAuthGuard } from '../partner-admin/super-admin-auth.guard';
 
 @ApiTags('Partner Access')
 @ApiConsumes('application/json')
@@ -46,7 +46,7 @@ export class PartnerAccessController {
   }
 
   @ApiBearerAuth()
-  @UseGuards(SuperUserAuthGuard)
+  @UseGuards(SuperAdminAuthGuard)
   @Get()
   async getPartnerAccessCodes(): Promise<PartnerAccessEntity[]> {
     return this.partnerAccessService.getPartnerAccessCodes();
