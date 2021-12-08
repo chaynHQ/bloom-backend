@@ -74,7 +74,8 @@ export class UserService {
     const queryResult = await this.userRepository
       .createQueryBuilder('user')
       .leftJoinAndSelect('user.partnerAccess', 'partnerAccess')
-      .leftJoinAndSelect('partnerAccess.partner', 'partner')
+      .leftJoinAndSelect('user.partnerAdmin', 'partnerAdmin')
+      .leftJoinAndSelect('partnerAdmin.partner', 'partner')
       .where('user.firebaseUid = :uid', { uid })
       .getOne();
 
