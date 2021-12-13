@@ -1,4 +1,4 @@
-import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
 import { Request } from 'express';
 import { ApiBearerAuth, ApiBody, ApiTags } from '@nestjs/swagger';
 import { CreatePartnerAccessDto } from './dtos/create-partner-access.dto';
@@ -9,6 +9,7 @@ import { ValidatePartnerAccessCodeDto } from './dtos/validate-partner-access.dto
 import { PartnerAccessCodeStatusEnum } from '../utils/constants';
 import { SimplybookBodyDto } from './dtos/zapier-body.dto';
 import { ZapierAuthGuard } from './zapier-auth.guard';
+import { SuperAdminAuthGuard } from '../partner-admin/super-admin-auth.guard';
 import { ControllerDecorator } from '../utils/controller.decorator';
 
 @ApiTags('Partner Access')
@@ -30,6 +31,13 @@ export class PartnerAccessController {
       req['partnerId'],
       req['partnerAdminId'],
     );
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(SuperAdminAuthGuard)
+  @Get()
+  async getPartnerAccessCodes(): Promise<PartnerAccessEntity[]> {
+    return this.partnerAccessService.getPartnerAccessCodes();
   }
 
   @Post('validate-code')
