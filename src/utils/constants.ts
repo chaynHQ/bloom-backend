@@ -29,8 +29,6 @@ const getPartnerDetails = (userObject: UserEntity) => {
 
   return {
     id: object.id,
-    createdAt: object.createdAt,
-    updatedAt: object.updatedAt,
     name: object.name,
     logo: object.logo,
     primaryColour: object.primaryColour,
