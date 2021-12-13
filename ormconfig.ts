@@ -11,8 +11,8 @@ const config: PostgresConnectionOptions = {
   password: process.env.POSTGRES_PASSWORD,
   database: process.env.POSTGRES_DATABASE,
   entities: ['dist/src/**/*.entity.js'],
-  synchronize: false,
-  migrationsRun: true,
+  synchronize: !isProduction,
+  migrationsRun: isProduction,
   migrations: ['dist/src/migrations/*.js'],
   cli: {
     migrationsDir: 'src/migrations',

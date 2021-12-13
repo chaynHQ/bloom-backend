@@ -1,13 +1,6 @@
 import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
 import { Request } from 'express';
-import {
-  ApiBearerAuth,
-  ApiBody,
-  ApiConsumes,
-  ApiProduces,
-  ApiResponse,
-  ApiTags,
-} from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiTags } from '@nestjs/swagger';
 import { CreatePartnerAccessDto } from './dtos/create-partner-access.dto';
 import { PartnerAccessService } from './partner-access.service';
 import { PartnerAdminAuthGuard } from '../partner-admin/partner-admin-auth.guard';
@@ -17,15 +10,10 @@ import { PartnerAccessCodeStatusEnum } from '../utils/constants';
 import { SimplybookBodyDto } from './dtos/zapier-body.dto';
 import { ZapierAuthGuard } from './zapier-auth.guard';
 import { SuperAdminAuthGuard } from '../partner-admin/super-admin-auth.guard';
+import { ControllerDecorator } from '../utils/controller.decorator';
 
 @ApiTags('Partner Access')
-@ApiConsumes('application/json')
-@ApiProduces('application/json')
-@ApiResponse({ status: 201, description: 'The record has been successfully created.' })
-@ApiResponse({ status: 400, description: 'Incorrect payload sent.' })
-@ApiResponse({ status: 401, description: 'Unauthorized.' })
-@ApiResponse({ status: 403, description: 'Forbidden.' })
-@ApiResponse({ status: 500, description: 'Internal Server Error.' })
+@ControllerDecorator()
 @Controller('/v1/partner-access')
 export class PartnerAccessController {
   constructor(private readonly partnerAccessService: PartnerAccessService) {}

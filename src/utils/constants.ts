@@ -22,6 +22,19 @@ export enum PartnerAccessCodeStatusEnum {
   CODE_EXPIRED = 'CODE_EXPIRED',
 }
 
+const getPartnerDetails = (userObject: UserEntity) => {
+  const object = userObject.partnerAccess
+    ? userObject.partnerAccess.partner
+    : userObject.partnerAdmin.partner;
+
+  return {
+    id: object.id,
+    name: object.name,
+    logo: object.logo,
+    primaryColour: object.primaryColour,
+  };
+};
+
 export const formatUserObject = (userObject: UserEntity): GetUserDto => {
   return {
     user: {
@@ -32,17 +45,7 @@ export const formatUserObject = (userObject: UserEntity): GetUserDto => {
       email: userObject.email,
       languageDefault: userObject.languageDefault,
     },
-    partner:
-      userObject.partnerAccess && userObject.partnerAccess.partner
-        ? {
-            id: userObject.partnerAccess.partner.id,
-            createdAt: userObject.partnerAccess.partner.createdAt,
-            updatedAt: userObject.partnerAccess.partner.updatedAt,
-            name: userObject.partnerAccess.partner.name,
-            logo: userObject.partnerAccess.partner.logo,
-            primaryColour: userObject.partnerAccess.partner.primaryColour,
-          }
-        : {},
+    partner: getPartnerDetails(userObject),
     partnerAccess: userObject.partnerAccess
       ? {
           id: userObject.partnerAccess.id,
@@ -53,6 +56,15 @@ export const formatUserObject = (userObject: UserEntity): GetUserDto => {
           therapySessionsRemaining: Number(userObject.partnerAccess.therapySessionsRemaining),
           therapySessionsRedeemed: Number(userObject.partnerAccess.therapySessionsRedeemed),
         }
-      : {},
+      : null,
+    partnerAdmin: userObject.partnerAdmin
+      ? {
+          id: userObject.partnerAdmin.id,
+          userId: userObject.partnerAdmin.userId,
+          partnerId: userObject.partnerAdmin.partnerId,
+          createdAt: userObject.partnerAdmin.createdAt,
+          updatedAt: userObject.partnerAdmin.updatedAt,
+        }
+      : null,
   };
 };
