@@ -3,6 +3,7 @@ import { AppModule } from './app.module';
 import { Logger } from './logger/logger';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
+import { ExceptionsFilter } from './utils/exceptions.filter';
 
 async function bootstrap() {
   const PORT = process.env.PORT || 35001;
@@ -22,6 +23,7 @@ async function bootstrap() {
   const logger = app.get(Logger);
   app.useLogger(logger);
   app.useGlobalPipes(new ValidationPipe());
+  app.useGlobalFilters(new ExceptionsFilter());
   await app.listen(PORT);
   console.log(`Listening on localhost:${PORT}, CTRL+C to stop`);
 }
