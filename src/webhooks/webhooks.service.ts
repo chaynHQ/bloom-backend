@@ -4,6 +4,7 @@ import { SimplybookBodyDto } from 'src/partner-access/dtos/zapier-body.dto';
 import { PartnerAccessRepository } from 'src/partner-access/partner-access.repository';
 import { UserRepository } from 'src/user/user.repository';
 import { SIMPLYBOOK_ACTION_ENUM } from 'src/utils/constants';
+import axios from 'axios';
 
 @Injectable()
 export class WebhooksService {
@@ -17,6 +18,9 @@ export class WebhooksService {
     const userDetails = await this.userRepository.findOne({ email: client_email });
 
     if (!userDetails) {
+      await axios.post(`${process.env.SLACK_WEBHOOK_URL}`, {
+        text: `${client_email} doest not exist in the bloom backend`,
+      });
       throw new HttpException('Unable to find user', HttpStatus.BAD_REQUEST);
     }
 
