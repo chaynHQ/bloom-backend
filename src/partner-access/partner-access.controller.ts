@@ -47,11 +47,4 @@ export class PartnerAccessController {
   ): Promise<{ status: PartnerAccessCodeStatusEnum }> {
     return this.partnerAccessService.validatePartnerAccessCode(partnerAccessCode.toUpperCase());
   }
-
-  @UseGuards(ZapierAuthGuard)
-  @Post('webhooks/simplybook')
-  @ApiBody({ type: SimplybookBodyDto })
-  async updatePartnerAccessBooking(@Body() simplybookBodyDto: SimplybookBodyDto): Promise<string> {
-    return this.partnerAccessService.updatePartnerAccessBooking(simplybookBodyDto);
-  }
 }
