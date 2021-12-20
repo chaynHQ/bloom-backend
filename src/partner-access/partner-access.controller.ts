@@ -7,8 +7,6 @@ import { PartnerAdminAuthGuard } from '../partner-admin/partner-admin-auth.guard
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
 import { ValidatePartnerAccessCodeDto } from './dtos/validate-partner-access.dto';
 import { PartnerAccessCodeStatusEnum } from '../utils/constants';
-import { SimplybookBodyDto } from './dtos/zapier-body.dto';
-import { ZapierAuthGuard } from './zapier-auth.guard';
 import { SuperAdminAuthGuard } from '../partner-admin/super-admin-auth.guard';
 import { ControllerDecorator } from '../utils/controller.decorator';
 
