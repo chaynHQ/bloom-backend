@@ -68,3 +68,17 @@ export const formatUserObject = (userObject: UserEntity): GetUserDto => {
       : null,
   };
 };
+
+export const getUserData = (createUserResponse, partnerDetails, updatePartnerAccessResponse) => {
+  return {
+    createdAt: createUserResponse.createdAt,
+    updatedAt: createUserResponse.updatedAt,
+    languageDefault: createUserResponse.languageDefault,
+    partner: partnerDetails.name,
+    partner_activated_at: partnerDetails.createdAt,
+    feature_live_chat: updatePartnerAccessResponse.featureLiveChat,
+    feature_therapy: updatePartnerAccessResponse.featureTherapy,
+    therapy_sessions_remaining: updatePartnerAccessResponse.therapySessionsRemaining,
+    therapy_sessions_redeemed: updatePartnerAccessResponse.therapySessionsRedeemed,
+  };
+};
