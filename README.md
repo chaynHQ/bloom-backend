@@ -94,6 +94,10 @@ There is no need to run the build command when pushing changes to GitHub. Simply
 
 Slack is a workplace communication tool. Slack is being used to notify the team when an unknown email is used to try and register an account on the bloom platform
 
+## Crisp
+
+Crisp is used for users to message the Chayn team in relation to bloom course content or other queries and support. Some of our users\* are allowed access to the crisp chat functionality. For those users only, we want their crisp user profile to reflect key data from our database, so the chayn member can see details about their bloom usage for more context.
+
 ## Stay in touch
 
 - Website - [Chayn](https://www.chayn.co/)
