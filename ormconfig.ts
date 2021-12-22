@@ -1,10 +1,7 @@
-import { isProduction } from './src/utils/constants';
+import { databaseUrl, isProduction } from './src/utils/constants';
 import { PostgresConnectionOptions } from 'typeorm/driver/postgres/PostgresConnectionOptions';
 import * as PostgressConnectionStringParser from 'pg-connection-string';
-import dotenv from 'dotenv';
-dotenv.config();
 
-const databaseUrl: string = process.env.DATABASE_URL;
 const { host, port, user, password, database } = PostgressConnectionStringParser.parse(databaseUrl);
 
 const config: PostgresConnectionOptions = {

@@ -1,9 +1,9 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { SimplybookBodyDto } from 'src/partner-access/dtos/zapier-body.dto';
-import { PartnerAccessRepository } from 'src/partner-access/partner-access.repository';
-import { UserRepository } from 'src/user/user.repository';
-import { SIMPLYBOOK_ACTION_ENUM } from 'src/utils/constants';
+import { SimplybookBodyDto } from '../partner-access/dtos/zapier-body.dto';
+import { PartnerAccessRepository } from '../partner-access/partner-access.repository';
+import { UserRepository } from '../user/user.repository';
+import { SIMPLYBOOK_ACTION_ENUM } from '../utils/constants';
 
 @Injectable()
 export class WebhooksService {
