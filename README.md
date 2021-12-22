@@ -49,6 +49,8 @@ The project is containerized and can be run solely in docker - both the PostgreS
 - Run `docker-compose up`
 - You should see this in the shell output in docker:
   `shell Listening on localhost:35001, CTRL+C to stop `
+  _To populate the database run the command below in a new terminal_
+- Run `cat ./bloom_db_local.sql | docker exec -i bloom-local-db pg_restore --verbose --clean --no-acl --no-owner -U postgres -d bloom`
 
 _Note: you can use an application like Postman to test the apis locally_
 
@@ -87,6 +89,10 @@ A migration in TypeORM is a single file with SQL queries to update a database sc
 There is no need to run the build command when pushing changes to GitHub. Simply create a pull request (PR) for the feature/bug fix you're working on and the GitHub Actions implemented will handle building the application and Heroku will handle to deployment of the changes automatically. The automatic deployment is set to work with the Staging and Production environment respectively. _Note: There are rules set for each branch. You wont be able to merge your changes without your PR being reveiwed_
 
 `If for any reason a new environment variable is created please reach out to Anna Hughes to add the variable to the staging and production environment as needed.`
+
+## Slack
+
+Slack is a workplace communication tool. Slack is being used to notify the team when an unknown email is used to try and register an account on the bloom platform
 
 ## Crisp
 
