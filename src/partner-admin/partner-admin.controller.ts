@@ -1,7 +1,7 @@
 import { Body, Controller, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiBody, ApiTags } from '@nestjs/swagger';
 import { PartnerAdminEntity } from '../entities/partner-admin.entity';
-import { ControllerDecorator } from 'src/utils/controller.decorator';
+import { ControllerDecorator } from '../utils/controller.decorator';
 import { CreatePartnerAdminDto } from './dtos/create-partner-admin.dto';
 import { PartnerAdminService } from './partner-admin.service';
 import { SuperAdminAuthGuard } from './super-admin-auth.guard';

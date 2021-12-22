@@ -13,7 +13,7 @@ export class ZapierAuthGuard implements CanActivate {
 
     const zapierToken = authorization.split('Basic ')[1];
 
-    if (zapierToken !== process.env.ZAPIER_TOKEN) {
+    if (zapierToken !== zapierToken) {
       throw new UnauthorizedException('Unauthorized: invalid auth token');
     }
 
