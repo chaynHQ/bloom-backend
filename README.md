@@ -49,8 +49,6 @@ The project is containerized and can be run solely in docker - both the PostgreS
 - Run `docker-compose up`
 - You should see this in the shell output in docker:
   `shell Listening on localhost:35001, CTRL+C to stop `
-  _To populate the database run the command below in a new terminal_
-- Run `cat ./bloom_db_local.sql | docker exec -i bloom-local-db pg_restore --verbose --clean --no-acl --no-owner -U postgres -d bloom`
 
 _Note: you can use an application like Postman to test the apis locally_
 

@@ -18,7 +18,7 @@ const headers = {
   'Content-Type': 'application/json',
 };
 
-export const addNewPeopleProfile = async (
+export const addCrispProfile = async (
   newPeopleProfile: NewPeopleProfile,
 ): Promise<AxiosResponse<NewPeopleProfileResponse>> => {
   try {
@@ -33,7 +33,7 @@ export const addNewPeopleProfile = async (
   }
 };
 
-export const savePeopleData = async (
+export const updateCrispProfile = async (
   savePeopleData: SavePeopleData,
   peopleId: string,
 ): Promise<AxiosResponse<CrispResponse>> => {
