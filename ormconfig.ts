@@ -1,15 +1,16 @@
-import { isProduction } from './src/utils/constants';
+import { databaseUrl, isProduction } from './src/utils/constants';
 import { PostgresConnectionOptions } from 'typeorm/driver/postgres/PostgresConnectionOptions';
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-require('dotenv').config();
+import * as PostgressConnectionStringParser from 'pg-connection-string';
+
+const { host, port, user, password, database } = PostgressConnectionStringParser.parse(databaseUrl);
 
 const config: PostgresConnectionOptions = {
   type: 'postgres',
-  host: process.env.POSTGRES_HOST,
-  port: Number(process.env.POSTGRES_PORT),
-  username: process.env.POSTGRES_USER,
-  password: process.env.POSTGRES_PASSWORD,
-  database: process.env.POSTGRES_DATABASE,
+  host,
+  port: Number(port),
+  username: user,
+  password,
+  database,
   entities: ['dist/src/**/*.entity.js'],
   synchronize: !isProduction,
   migrationsRun: isProduction,

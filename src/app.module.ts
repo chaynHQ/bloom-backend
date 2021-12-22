@@ -8,6 +8,7 @@ import config from '../ormconfig';
 import { UserModule } from './user/user.module';
 import { PartnerAdminModule } from './partner-admin/partner-admin.module';
 import { PartnerModule } from './partner/partner.module';
+import { WebhooksModule } from './webhooks/webhooks.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { PartnerModule } from './partner/partner.module';
     UserModule,
     PartnerAdminModule,
     PartnerModule,
+    WebhooksModule,
   ],
 })
 export class AppModule {}

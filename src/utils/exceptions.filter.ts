@@ -1,6 +1,7 @@
 import { ExceptionFilter, Catch, ArgumentsHost, HttpException, HttpStatus } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { Logger } from '../logger/logger';
+import { isProduction } from './constants';
 
 @Catch()
 export class ExceptionsFilter implements ExceptionFilter {
@@ -21,7 +22,7 @@ export class ExceptionsFilter implements ExceptionFilter {
         ? exception['response'].message || exception.message
         : 'Internal server error';
 
-    if (process.env.NODE_ENV === 'production') {
+    if (isProduction) {
       this.logger.error(
         `Failed ${request.url} - status: ${httpStatus}, message: ${message} - in ${
           Date.now() - now
