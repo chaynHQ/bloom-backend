@@ -36,6 +36,7 @@
     "@nestjs/swagger": "^5.1.4",
     "@nestjs/typeorm": "^8.0.2",
     "@types/lodash": "^4.14.176",
+    "axios": "^0.24.0",
     "class-transformer": "^0.4.0",
     "class-validator": "^0.13.1",
     "dotenv": "^10.0.0",
