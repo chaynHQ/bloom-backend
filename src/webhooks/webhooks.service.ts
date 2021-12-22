@@ -1,10 +1,10 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { SimplybookBodyDto } from 'src/partner-access/dtos/zapier-body.dto';
-import { PartnerAccessRepository } from 'src/partner-access/partner-access.repository';
-import { UserRepository } from 'src/user/user.repository';
-import { SIMPLYBOOK_ACTION_ENUM } from 'src/utils/constants';
-import axios from 'axios';
+import { SimplybookBodyDto } from '../partner-access/dtos/zapier-body.dto';
+import { PartnerAccessRepository } from '../partner-access/partner-access.repository';
+import { UserRepository } from '../user/user.repository';
+import { SIMPLYBOOK_ACTION_ENUM } from '../utils/constants';
+import apiCall from '../api/apiCalls';
 
 @Injectable()
 export class WebhooksService {
@@ -18,8 +18,12 @@ export class WebhooksService {
     const userDetails = await this.userRepository.findOne({ email: client_email });
 
     if (!userDetails) {
-      await axios.post(`${process.env.SLACK_WEBHOOK_URL}`, {
-        text: `${client_email} doest not exist in the bloom backend`,
+      await apiCall({
+        url: process.env.SLACK_WEBHOOK_URL,
+        type: 'post',
+        data: {
+          text: `Unknown email address made a therapy booking - ${client_email} 🚨`,
+        },
       });
       throw new HttpException('Unable to find user', HttpStatus.BAD_REQUEST);
     }

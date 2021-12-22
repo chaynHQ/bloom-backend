@@ -9,7 +9,7 @@ import { CreateUserDto } from './dtos/create-user.dto';
 import { UserEntity } from '../entities/user.entity';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
 import { PartnerEntity } from '../entities/partner.entity';
-import { ControllerDecorator } from 'src/utils/controller.decorator';
+import { ControllerDecorator } from '../utils/controller.decorator';
 
 @ApiTags('Users')
 @ControllerDecorator()
