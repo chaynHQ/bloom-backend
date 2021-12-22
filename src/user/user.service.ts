@@ -10,7 +10,7 @@ import { PartnerAccessService } from '../partner-access/partner-access.service';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
 import { PartnerEntity } from '../entities/partner.entity';
 import { PartnerRepository } from '../partner/partner.repository';
-import { addCrispProfile, updateCrispProfile } from 'src/api/crisp/api-crisp';
+import { addCrispProfile, updateCrispProfile } from '../api/crisp/api-crisp';
 
 @Injectable()
 export class UserService {
