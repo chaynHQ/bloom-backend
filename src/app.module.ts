@@ -10,6 +10,7 @@ import { PartnerAdminModule } from './partner-admin/partner-admin.module';
 import { PartnerModule } from './partner/partner.module';
 import { WebhooksModule } from './webhooks/webhooks.module';
 import { SessionModule } from './session/session.module';
+import { CourseModule } from './course/course.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { SessionModule } from './session/session.module';
     PartnerModule,
     WebhooksModule,
     SessionModule,
+    CourseModule,
   ],
 })
 export class AppModule {}
