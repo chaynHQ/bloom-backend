@@ -1,6 +1,7 @@
-import { Column, Entity, JoinTable, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, JoinTable, ManyToMany, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 import { BaseEntity } from './base.entity';
 import { CourseEntity } from './course.entity';
+import { SessionUserEntity } from './session-user.entity';
 
 @Entity({ name: 'session' })
 export class SessionEntity extends BaseEntity {
@@ -24,4 +25,7 @@ export class SessionEntity extends BaseEntity {
   @ManyToOne(() => CourseEntity, (courseEntity) => courseEntity.session)
   @JoinTable({ name: 'course', joinColumn: { name: 'courseId' } })
   course: CourseEntity;
+
+  @ManyToMany(() => SessionUserEntity, (sessionUserEntity) => sessionUserEntity.session)
+  sessionUser: SessionUserEntity[];
 }
