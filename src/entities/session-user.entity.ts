@@ -1,10 +1,11 @@
 import { Column, Entity, JoinTable, ManyToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { BaseEntity } from './base.entity';
+import { CourseUserEntity } from './course-user.entity';
 import { SessionEntity } from './session.entity';
 
-@Entity({ name: 'course_user' })
+@Entity({ name: 'session_user' })
 export class SessionUserEntity extends BaseEntity {
-  @PrimaryGeneratedColumn('uuid', { name: 'courseUserId' })
+  @PrimaryGeneratedColumn('uuid', { name: 'sessionUserId' })
   id: string;
 
   @Column()
@@ -15,4 +16,10 @@ export class SessionUserEntity extends BaseEntity {
   @ManyToMany(() => SessionEntity, (sessionEntity) => sessionEntity.sessionUser)
   @JoinTable({ name: 'session', joinColumn: { name: 'sessionId' } })
   session: SessionEntity[];
+
+  @Column()
+  courseUserId: string;
+  @ManyToMany(() => CourseUserEntity, (courseUser) => courseUser.sessionUser)
+  @JoinTable({ name: 'course_user', joinColumn: { name: 'courseUserId' } })
+  courseUser: CourseUserEntity[];
 }
