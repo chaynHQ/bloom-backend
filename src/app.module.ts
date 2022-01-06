@@ -9,6 +9,8 @@ import { UserModule } from './user/user.module';
 import { PartnerAdminModule } from './partner-admin/partner-admin.module';
 import { PartnerModule } from './partner/partner.module';
 import { WebhooksModule } from './webhooks/webhooks.module';
+import { SessionModule } from './session/session.module';
+import { CourseModule } from './course/course.module';
 
 @Module({
   imports: [
@@ -21,6 +23,8 @@ import { WebhooksModule } from './webhooks/webhooks.module';
     PartnerAdminModule,
     PartnerModule,
     WebhooksModule,
+    SessionModule,
+    CourseModule,
   ],
 })
 export class AppModule {}
