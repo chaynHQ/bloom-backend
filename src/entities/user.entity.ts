@@ -1,6 +1,6 @@
 import { PartnerAdminEntity } from '../entities/partner-admin.entity';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
-import { Column, Entity, ManyToMany, OneToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, OneToMany, OneToOne, PrimaryGeneratedColumn } from 'typeorm';
 import { BaseEntity } from './base.entity';
 import { LANGUAGE_DEFAULT } from '../utils/constants';
 import { CourseUserEntity } from './course-user.entity';
@@ -34,6 +34,6 @@ export class UserEntity extends BaseEntity {
   @OneToOne(() => PartnerAdminEntity, (partnerAdmin) => partnerAdmin.user)
   partnerAdmin: PartnerAdminEntity;
 
-  @ManyToMany(() => CourseUserEntity, (courseUser) => courseUser.user)
+  @OneToMany(() => CourseUserEntity, (courseUser) => courseUser.user)
   courseUser: CourseUserEntity[];
 }

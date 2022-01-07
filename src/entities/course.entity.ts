@@ -1,4 +1,4 @@
-import { Column, Entity, ManyToMany, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { BaseEntity } from './base.entity';
 import { CourseUserEntity } from './course-user.entity';
 import { SessionEntity } from './session.entity';
@@ -23,6 +23,6 @@ export class CourseEntity extends BaseEntity {
   @OneToMany(() => SessionEntity, (sessionEntity) => sessionEntity.course)
   session: SessionEntity[];
 
-  @ManyToMany(() => CourseUserEntity, (courseUser) => courseUser.course)
+  @OneToMany(() => CourseUserEntity, (courseUser) => courseUser.course)
   courseUser: CourseUserEntity[];
 }
