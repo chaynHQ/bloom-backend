@@ -1,4 +1,4 @@
-import { SessionUserEntity } from '../entities/Session-user.entity';
+import { SessionUserEntity } from 'src/entities/session-user.entity';
 import { EntityRepository, Repository } from 'typeorm';
 
 @EntityRepository(SessionUserEntity)
