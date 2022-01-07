@@ -11,6 +11,7 @@ import { PartnerModule } from './partner/partner.module';
 import { WebhooksModule } from './webhooks/webhooks.module';
 import { SessionModule } from './session/session.module';
 import { CourseModule } from './course/course.module';
+import { CourseUserModule } from './course-user/course-user.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { CourseModule } from './course/course.module';
     WebhooksModule,
     SessionModule,
     CourseModule,
+    CourseUserModule,
   ],
 })
 export class AppModule {}
