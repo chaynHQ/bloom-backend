@@ -17,7 +17,7 @@ export class CourseEntity extends BaseEntity {
     unique: true,
     nullable: true,
   })
-  active: SIMPLYBOOK_STORY_STATUS_ENUM;
+  status: SIMPLYBOOK_STORY_STATUS_ENUM;
 
   @Column({
     unique: true,
