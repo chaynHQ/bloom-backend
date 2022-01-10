@@ -1,4 +1,5 @@
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import { SIMPLYBOOK_STORY_STATUS_ENUM } from '../utils/constants';
 import { BaseEntity } from './base.entity';
 import { SessionEntity } from './session.entity';
 
@@ -13,10 +14,16 @@ export class CourseEntity extends BaseEntity {
   @Column()
   slug: string;
 
-  @Column()
-  active: boolean;
+  @Column({
+    unique: true,
+    nullable: true,
+  })
+  status: SIMPLYBOOK_STORY_STATUS_ENUM;
 
-  @Column()
+  @Column({
+    unique: true,
+    nullable: true,
+  })
   storyblokid: string;
 
   @OneToMany(() => SessionEntity, (sessionEntity) => sessionEntity.course)
