@@ -1,4 +1,4 @@
-import { SIMPLYBOOK_STORY_STATUS_ENUM } from 'src/utils/constants';
+import { SIMPLYBOOK_STORY_STATUS_ENUM } from '../utils/constants';
 import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 import { BaseEntity } from './base.entity';
 
@@ -13,9 +13,15 @@ export class CourseEntity extends BaseEntity {
   @Column()
   slug: string;
 
-  @Column()
+  @Column({
+    unique: true,
+    nullable: true,
+  })
   active: SIMPLYBOOK_STORY_STATUS_ENUM;
 
-  @Column()
+  @Column({
+    unique: true,
+    nullable: true,
+  })
   storyblokid: string;
 }
