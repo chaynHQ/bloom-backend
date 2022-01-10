@@ -93,6 +93,10 @@ export class UserService {
       .leftJoinAndSelect('user.partnerAccess', 'partnerAccess')
       .leftJoinAndSelect('user.partnerAdmin', 'partnerAdmin')
       .leftJoinAndSelect('partnerAccess.partner', 'partner')
+      .leftJoinAndSelect('user.courseUser', 'courseUser')
+      .leftJoinAndSelect('courseUser.course', 'course')
+      .leftJoinAndSelect('course.session', 'session')
+      .leftJoinAndSelect('session.sessionUser', 'sessionUser')
       .where('user.firebaseUid = :uid', { uid })
       .getOne();
 

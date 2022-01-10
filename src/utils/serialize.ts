@@ -45,6 +45,8 @@ export const formatUserObject = (userObject: UserEntity): GetUserDto => {
           updatedAt: userObject.partnerAdmin.updatedAt,
         }
       : null,
+    courseUser: '',
+    sessionUser: '',
   };
 };
 

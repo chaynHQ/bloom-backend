@@ -8,4 +8,6 @@ export class GetUserDto {
   partner?: IPartner;
   partnerAccess?: IPartnerAccess;
   partnerAdmin?: IPartnerAdmin;
+  courseUser?: any;
+  sessionUser?: any;
 }
