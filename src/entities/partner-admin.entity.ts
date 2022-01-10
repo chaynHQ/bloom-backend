@@ -20,7 +20,7 @@ export class PartnerAdminEntity extends BaseEntity {
 
   @Column({ nullable: true })
   userId: string;
-  @OneToOne(() => UserEntity, (userEntity) => userEntity.partnerAdmin, {
+  @ManyToOne(() => UserEntity, (userEntity) => userEntity.partnerAdmin, {
     primary: true,
     eager: true,
   })

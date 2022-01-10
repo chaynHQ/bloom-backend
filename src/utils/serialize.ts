@@ -14,6 +14,30 @@ const getPartnerDetails = (userObject: UserEntity) => {
   };
 };
 
+const getUserCourseSessionDetails = (userObject: UserEntity) => {
+  const courseObj = userObject.courseUser;
+  return courseObj.map((course) => {
+    return {
+      id: course.course.id,
+      name: course.course.name,
+      slug: course.course.slug,
+      status: course.course.status,
+      storyblokid: course.course.storyblokid,
+      completed: course.completed,
+      session: course.course.session.map((session) => {
+        return {
+          id: session.id,
+          name: session.name,
+          slug: session.slug,
+          storyblokid: session.storyblokid,
+          status: session.status,
+          completed: session.sessionUser[0].completed,
+        };
+      }),
+    };
+  });
+};
+
 export const formatUserObject = (userObject: UserEntity): GetUserDto => {
   return {
     user: {
@@ -45,8 +69,7 @@ export const formatUserObject = (userObject: UserEntity): GetUserDto => {
           updatedAt: userObject.partnerAdmin.updatedAt,
         }
       : null,
-    courseUser: '',
-    sessionUser: '',
+    course: userObject.courseUser ? getUserCourseSessionDetails(userObject) : [],
   };
 };
 

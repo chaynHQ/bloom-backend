@@ -28,11 +28,11 @@ export class UserEntity extends BaseEntity {
   @Column({ type: Boolean, default: false })
   isSuperAdmin: boolean;
 
-  @OneToOne(() => PartnerAccessEntity, (partnerAccess) => partnerAccess.user)
-  partnerAccess: PartnerAccessEntity;
+  @OneToMany(() => PartnerAccessEntity, (partnerAccess) => partnerAccess.user)
+  partnerAccess: PartnerAccessEntity[];
 
-  @OneToOne(() => PartnerAdminEntity, (partnerAdmin) => partnerAdmin.user)
-  partnerAdmin: PartnerAdminEntity;
+  @OneToMany(() => PartnerAdminEntity, (partnerAdmin) => partnerAdmin.user)
+  partnerAdmin: PartnerAdminEntity[];
 
   @OneToMany(() => CourseUserEntity, (courseUser) => courseUser.user)
   courseUser: CourseUserEntity[];
