@@ -1,4 +1,4 @@
-import { SIMPLYBOOK_STORY_STATUS_ENUM } from '../utils/constants';
+import { STORYBLOK_STORY_STATUS_ENUM } from '../utils/constants';
 
 export interface ICourse {
   id?: string;
@@ -6,6 +6,6 @@ export interface ICourse {
   updatedAt?: Date | string;
   name?: string;
   slug?: string;
-  status?: SIMPLYBOOK_STORY_STATUS_ENUM;
+  status?: STORYBLOK_STORY_STATUS_ENUM;
   storyblokid?: string;
 }

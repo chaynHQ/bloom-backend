@@ -2,16 +2,24 @@ import { UserEntity } from '../entities/user.entity';
 import { GetUserDto } from '../user/dtos/get-user.dto';
 
 const getPartnerDetails = (userObject: UserEntity) => {
-  const object = userObject.partnerAccess
-    ? userObject.partnerAccess.partner
-    : userObject.partnerAdmin.partner;
-
-  return {
-    id: object.id,
-    name: object.name,
-    logo: object.logo,
-    primaryColour: object.primaryColour,
-  };
+  if (!userObject.partnerAccess.length) {
+    return [
+      {
+        id: userObject.partnerAdmin.partner.id,
+        name: userObject.partnerAdmin.partner.name,
+        logo: userObject.partnerAdmin.partner.logo,
+        primaryColour: userObject.partnerAdmin.partner.primaryColour,
+      },
+    ];
+  }
+  return userObject.partnerAccess.map(({ partner }) => {
+    return {
+      id: partner.id,
+      name: partner.name,
+      logo: partner.logo,
+      primaryColour: partner.primaryColour,
+    };
+  });
 };
 
 const getUserCourseSessionDetails = (userObject: UserEntity) => {
@@ -49,17 +57,17 @@ export const formatUserObject = (userObject: UserEntity): GetUserDto => {
       languageDefault: userObject.languageDefault,
     },
     partner: getPartnerDetails(userObject),
-    partnerAccess: userObject.partnerAccess
-      ? {
-          id: userObject.partnerAccess.id,
-          activatedAt: userObject.partnerAccess.activatedAt,
-          featureLiveChat: Boolean(userObject.partnerAccess.featureLiveChat),
-          featureTherapy: Boolean(userObject.partnerAccess.featureTherapy),
-          accessCode: userObject.partnerAccess.accessCode,
-          therapySessionsRemaining: Number(userObject.partnerAccess.therapySessionsRemaining),
-          therapySessionsRedeemed: Number(userObject.partnerAccess.therapySessionsRedeemed),
-        }
-      : null,
+    partnerAccess: userObject.partnerAccess.map((partnerAccess) => {
+      return {
+        id: partnerAccess.id,
+        activatedAt: partnerAccess.activatedAt,
+        featureLiveChat: Boolean(partnerAccess.featureLiveChat),
+        featureTherapy: Boolean(partnerAccess.featureTherapy),
+        accessCode: partnerAccess.accessCode,
+        therapySessionsRemaining: Number(partnerAccess.therapySessionsRemaining),
+        therapySessionsRedeemed: Number(partnerAccess.therapySessionsRedeemed),
+      };
+    }),
     partnerAdmin: userObject.partnerAdmin
       ? {
           id: userObject.partnerAdmin.id,

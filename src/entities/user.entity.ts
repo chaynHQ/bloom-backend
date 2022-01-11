@@ -31,8 +31,8 @@ export class UserEntity extends BaseEntity {
   @OneToMany(() => PartnerAccessEntity, (partnerAccess) => partnerAccess.user)
   partnerAccess: PartnerAccessEntity[];
 
-  @OneToMany(() => PartnerAdminEntity, (partnerAdmin) => partnerAdmin.user)
-  partnerAdmin: PartnerAdminEntity[];
+  @OneToOne(() => PartnerAdminEntity, (partnerAdmin) => partnerAdmin.user)
+  partnerAdmin: PartnerAdminEntity;
 
   @OneToMany(() => CourseUserEntity, (courseUser) => courseUser.user)
   courseUser: CourseUserEntity[];
