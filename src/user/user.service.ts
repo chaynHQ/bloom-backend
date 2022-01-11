@@ -2,7 +2,7 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { IFirebaseUser } from '../firebase/firebase-user.interface';
 import { UserRepository } from './user.repository';
 import { InjectRepository } from '@nestjs/typeorm';
-import { formatUserObject } from '../utils/constants';
+import { formatUserObject, getCrispUserData } from '../utils/serialize';
 import { GetUserDto } from './dtos/get-user.dto';
 import { CreateUserDto } from './dtos/create-user.dto';
 import { UserEntity } from '../entities/user.entity';
@@ -10,6 +10,7 @@ import { PartnerAccessService } from '../partner-access/partner-access.service';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
 import { PartnerEntity } from '../entities/partner.entity';
 import { PartnerRepository } from '../partner/partner.repository';
+import { addCrispProfile, updateCrispProfile } from '../api/crisp/api-crisp';
 
 @Injectable()
 export class UserService {
@@ -46,16 +47,32 @@ export class UserService {
             createUserResponse.id,
           );
 
-        const partnerDetails = await this.partnerRepository.findOne({
+        const getPartnerResponse = await this.partnerRepository.findOne({
           id: updatePartnerAccessResponse.partnerId,
         });
+
+        if (!!updatePartnerAccessResponse.featureLiveChat) {
+          const {
+            data: { data },
+          } = await addCrispProfile({
+            email: createUserResponse.email,
+            person: { nickname: createUserResponse.name },
+          });
+
+          const userData = getCrispUserData(
+            createUserResponse,
+            getPartnerResponse,
+            updatePartnerAccessResponse,
+          );
+          await updateCrispProfile({ ...userData }, data?.people_id);
+        }
 
         delete updatePartnerAccessResponse.partnerAdmin;
 
         return {
           user: createUserResponse,
           partnerAccess: updatePartnerAccessResponse,
-          partner: partnerDetails,
+          partner: getPartnerResponse,
         };
       }
 
@@ -66,7 +83,7 @@ export class UserService {
       if (error.code === '23505') {
         throw new HttpException(error.detail, HttpStatus.CONFLICT);
       }
-      return error;
+      throw error;
     }
   }
 
@@ -74,6 +91,7 @@ export class UserService {
     const queryResult = await this.userRepository
       .createQueryBuilder('user')
       .leftJoinAndSelect('user.partnerAccess', 'partnerAccess')
+      .leftJoinAndSelect('user.partnerAdmin', 'partnerAdmin')
       .leftJoinAndSelect('partnerAccess.partner', 'partner')
       .where('user.firebaseUid = :uid', { uid })
       .getOne();

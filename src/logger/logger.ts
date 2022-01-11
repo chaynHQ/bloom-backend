@@ -1,5 +1,6 @@
 import { ConsoleLogger } from '@nestjs/common';
 import Rollbar from 'rollbar';
+import { isProduction, rollbarEnv, rollbarToken } from '../utils/constants';
 
 export class Logger extends ConsoleLogger {
   private rollbar?: Rollbar;
@@ -20,12 +21,9 @@ export class Logger extends ConsoleLogger {
   }
 
   private initialiseRollbar() {
-    const rollbarEnv = process.env.ROLLBAR_ENV;
-    const rollbarToken = process.env.ROLLBAR_TOKEN;
-
     // Values MUST be set in production mode.
     // But, can set ROLLBAR_TOKEN to 'false' if you want to disable rollbar logging.
-    if (process.env.NODE_ENV === 'production' && (!rollbarEnv || !rollbarToken)) {
+    if (isProduction && (!rollbarEnv || !rollbarToken)) {
       throw new Error(
         'Both ROLLBAR_ENV and ROLLBAR_TOKEN must be provided in the environment config.',
       );

@@ -4,18 +4,14 @@ import { CreatePartnerAccessDto } from './dtos/create-partner-access.dto';
 import { PartnerAccessRepository } from './partner-access.repository';
 import _ from 'lodash';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
-import { PartnerAccessCodeStatusEnum, SIMPLYBOOK_ACTION_ENUM } from '../utils/constants';
+import { PartnerAccessCodeStatusEnum } from '../utils/constants';
 import moment from 'moment';
-import { SimplybookBodyDto } from './dtos/zapier-body.dto';
-import { UserRepository } from '../user/user.repository';
 
 @Injectable()
 export class PartnerAccessService {
   constructor(
     @InjectRepository(PartnerAccessRepository)
     private partnerAccessRepository: PartnerAccessRepository,
-    @InjectRepository(UserRepository)
-    private userRepository: UserRepository,
   ) {}
 
   private async findPartnerAccessCode(accessCode: string): Promise<PartnerAccessEntity> {
@@ -100,50 +96,10 @@ export class PartnerAccessService {
     }
   }
 
-  async updatePartnerAccessBooking({ action, client_email }: SimplybookBodyDto): Promise<string> {
-    const userDetails = await this.userRepository.findOne({ email: client_email });
-
-    if (!userDetails) {
-      throw new HttpException('Unable to find user', HttpStatus.BAD_REQUEST);
-    }
-
-    const partnerAccessDetails = await this.partnerAccessRepository.findOne({
-      userId: userDetails.id,
-    });
-
-    if (!partnerAccessDetails) {
-      throw new HttpException('Unable to find partner access code', HttpStatus.BAD_REQUEST);
-    }
-
-    let partnerAccessUpdateDetails = {};
-
-    if (action === SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING) {
-      if (Number(partnerAccessDetails.therapySessionsRemaining) === 0) {
-        throw new HttpException('No therapy sessions remaining', HttpStatus.FORBIDDEN);
-      }
-
-      partnerAccessUpdateDetails = {
-        therapySessionsRemaining: Number(partnerAccessDetails.therapySessionsRemaining) - 1,
-        therapySessionsRedeemed: Number(partnerAccessDetails.therapySessionsRedeemed) + 1,
-      };
-    }
-
-    if (action === SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING) {
-      partnerAccessUpdateDetails = {
-        therapySessionsRemaining: Number(partnerAccessDetails.therapySessionsRemaining) + 1,
-        therapySessionsRedeemed: Number(partnerAccessDetails.therapySessionsRedeemed) - 1,
-      };
-    }
-
-    try {
-      await this.partnerAccessRepository.save({
-        ...partnerAccessDetails,
-        ...partnerAccessUpdateDetails,
-      });
-
-      return 'Successful';
-    } catch (error) {
-      return error;
-    }
+  async getPartnerAccessCodes(): Promise<PartnerAccessEntity[]> {
+    return await this.partnerAccessRepository
+      .createQueryBuilder('partnerAccess')
+      .leftJoinAndSelect('partnerAccess.partner', 'partner')
+      .getMany();
   }
 }

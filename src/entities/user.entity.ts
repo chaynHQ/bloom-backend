@@ -24,6 +24,9 @@ export class UserEntity extends BaseEntity {
   @Column()
   contactPermission!: boolean;
 
+  @Column({ type: Boolean, default: false })
+  isSuperAdmin: boolean;
+
   @OneToOne(() => PartnerAccessEntity, (partnerAccess) => partnerAccess.user)
   partnerAccess: PartnerAccessEntity;
 

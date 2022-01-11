@@ -8,10 +8,7 @@ services:
       context: .
       dockerfile: Dockerfile
     environment:
-      POSTGRES_HOST: host.docker.internal
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DATABASE: bloom
+      DATABASE_URL: postgres://postgres:postgres@host.docker.internal:35000/bloom
     ports:
       - 35001:35001
     depends_on:

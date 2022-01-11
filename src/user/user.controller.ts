@@ -3,28 +3,16 @@ import { FirebaseAuthGuard } from '../firebase/firebase-auth.guard';
 import { IFirebaseUser } from '../firebase/firebase-user.interface';
 import { UserService } from './user.service';
 import { Request } from 'express';
-import {
-  ApiTags,
-  ApiConsumes,
-  ApiProduces,
-  ApiResponse,
-  ApiBearerAuth,
-  ApiBody,
-} from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
 import { GetUserDto } from './dtos/get-user.dto';
 import { CreateUserDto } from './dtos/create-user.dto';
-import { UserEntity } from 'src/entities/user.entity';
+import { UserEntity } from '../entities/user.entity';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
 import { PartnerEntity } from '../entities/partner.entity';
+import { ControllerDecorator } from '../utils/controller.decorator';
 
 @ApiTags('Users')
-@ApiConsumes('application/json')
-@ApiProduces('application/json')
-@ApiResponse({ status: 201, description: 'The record has been successfully created.' })
-@ApiResponse({ status: 400, description: 'Incorrect payload sent.' })
-@ApiResponse({ status: 401, description: 'Unauthorized.' })
-@ApiResponse({ status: 403, description: 'Forbidden.' })
-@ApiResponse({ status: 500, description: 'Internal Server Error.' })
+@ControllerDecorator()
 @Controller('/v1/user')
 export class UserController {
   constructor(private readonly userService: UserService) {}
