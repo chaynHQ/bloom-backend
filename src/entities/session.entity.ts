@@ -1,5 +1,5 @@
 import { Column, Entity, JoinTable, ManyToOne, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
-import { SIMPLYBOOK_STORY_STATUS_ENUM } from '../utils/constants';
+import { STORYBLOK_STORY_STATUS_ENUM } from '../utils/constants';
 import { BaseEntity } from './base.entity';
 import { CourseEntity } from './course.entity';
 import { SessionUserEntity } from './session-user.entity';
@@ -19,7 +19,7 @@ export class SessionEntity extends BaseEntity {
     unique: true,
     nullable: true,
   })
-  status: SIMPLYBOOK_STORY_STATUS_ENUM;
+  status: STORYBLOK_STORY_STATUS_ENUM;
 
   @Column({
     unique: true,
