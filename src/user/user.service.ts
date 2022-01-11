@@ -93,11 +93,22 @@ export class UserService {
       .leftJoinAndSelect('user.partnerAccess', 'partnerAccess')
       .leftJoinAndSelect('user.partnerAdmin', 'partnerAdmin')
       .leftJoinAndSelect('partnerAccess.partner', 'partner')
-      .where('user.firebaseUid = :uid', { uid })
+      .where('user.firebaseUid = :u_id', { uid })
       .getOne();
 
     if (!queryResult) {
       throw new HttpException('NOT FOUND', HttpStatus.NOT_FOUND);
+    }
+
+    if (!!queryResult.partnerAdmin) {
+      const partnerQueryResult = await this.userRepository
+        .createQueryBuilder('user')
+        .leftJoinAndSelect('user.partnerAdmin', 'partnerAdmin')
+        .leftJoinAndSelect('partnerAdmin.partner', 'partner')
+        .where('user.firebaseUid = :u_id', { uid })
+        .getOne();
+
+      Object.assign(queryResult.partnerAdmin, { partner: partnerQueryResult.partnerAdmin.partner });
     }
 
     return formatUserObject(queryResult);
