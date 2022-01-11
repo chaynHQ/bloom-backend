@@ -6,7 +6,7 @@ export enum SIMPLYBOOK_ACTION_ENUM {
   CANCELLED_BOOKING = 'CANCELLED_BOOKING',
 }
 
-export enum SIMPLYBOOK_STORY_STATUS_ENUM {
+export enum STORYBLOK_STORY_STATUS_ENUM {
   PUBLISHED = 'published',
   UNPUBLISHED = 'unpublished',
   DELETED = 'deleted',
