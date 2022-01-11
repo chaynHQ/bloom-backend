@@ -92,7 +92,8 @@ export class UserService {
       .createQueryBuilder('user')
       .leftJoinAndSelect('user.partnerAccess', 'partnerAccess')
       .leftJoinAndSelect('user.partnerAdmin', 'partnerAdmin')
-      .leftJoinAndSelect('partnerAccess.partner', 'partner')
+      .leftJoinAndSelect('partnerAccess.partner', 'partnerAccessPartner')
+      .leftJoinAndSelect('partnerAdmin.partner', 'partnerAdminPartner')
       .where('user.firebaseUid = :uid', { uid })
       .getOne();
 
