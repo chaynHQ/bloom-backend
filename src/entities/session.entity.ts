@@ -1,4 +1,4 @@
-import { SIMPLYBOOK_STORY_STATUS_ENUM } from '../utils/constants';
+import { STORYBLOK_STORY_STATUS_ENUM } from '../utils/constants';
 import { Column, Entity, JoinTable, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 import { BaseEntity } from './base.entity';
 import { CourseEntity } from './course.entity';
@@ -18,7 +18,7 @@ export class SessionEntity extends BaseEntity {
     unique: true,
     nullable: true,
   })
-  status: SIMPLYBOOK_STORY_STATUS_ENUM;
+  status: STORYBLOK_STORY_STATUS_ENUM;
 
   @Column({
     unique: true,
