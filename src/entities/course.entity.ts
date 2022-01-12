@@ -1,6 +1,7 @@
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { STORYBLOK_STORY_STATUS_ENUM } from '../utils/constants';
 import { BaseEntity } from './base.entity';
+import { CourseUserEntity } from './course-user.entity';
 import { SessionEntity } from './session.entity';
 
 @Entity({ name: 'course' })
@@ -28,4 +29,7 @@ export class CourseEntity extends BaseEntity {
 
   @OneToMany(() => SessionEntity, (sessionEntity) => sessionEntity.course)
   session: SessionEntity[];
+
+  @OneToMany(() => CourseUserEntity, (courseUser) => courseUser.course)
+  courseUser: CourseUserEntity[];
 }
