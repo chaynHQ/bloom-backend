@@ -23,5 +23,5 @@ export class CourseEntity extends BaseEntity {
     unique: true,
     nullable: true,
   })
-  storyblokid: string;
+  storyblokId: string;
 }
