@@ -1,7 +1,8 @@
+import { Column, Entity, JoinTable, ManyToOne, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { STORYBLOK_STORY_STATUS_ENUM } from '../utils/constants';
-import { Column, Entity, JoinTable, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 import { BaseEntity } from './base.entity';
 import { CourseEntity } from './course.entity';
+import { SessionUserEntity } from './session-user.entity';
 
 @Entity({ name: 'session' })
 export class SessionEntity extends BaseEntity {
@@ -31,4 +32,7 @@ export class SessionEntity extends BaseEntity {
   @ManyToOne(() => CourseEntity, (courseEntity) => courseEntity.session)
   @JoinTable({ name: 'course', joinColumn: { name: 'courseId' } })
   course: CourseEntity;
+
+  @OneToMany(() => SessionUserEntity, (sessionUserEntity) => sessionUserEntity.session)
+  sessionUser: SessionUserEntity[];
 }

@@ -12,6 +12,7 @@ import { WebhooksModule } from './webhooks/webhooks.module';
 import { SessionModule } from './session/session.module';
 import { CourseModule } from './course/course.module';
 import { CourseUserModule } from './course-user/course-user.module';
+import { SessionUserModule } from './session-user/session-user.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { CourseUserModule } from './course-user/course-user.module';
     SessionModule,
     CourseModule,
     CourseUserModule,
+    SessionUserModule,
   ],
 })
 export class AppModule {}
