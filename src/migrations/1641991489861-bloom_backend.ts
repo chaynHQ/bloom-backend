@@ -1,7 +1,7 @@
 import {MigrationInterface, QueryRunner} from "typeorm";
 
-export class bloomBackend1641937153381 implements MigrationInterface {
-    name = 'bloomBackend1641937153381'
+export class bloomBackend1641991489861 implements MigrationInterface {
+    name = 'bloomBackend1641991489861'
 
     public async up(queryRunner: QueryRunner): Promise<void> {
         await queryRunner.query(`CREATE TABLE "session_user" ("createdAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "sessionUserId" uuid NOT NULL DEFAULT uuid_generate_v4(), "completed" boolean NOT NULL, "sessionId" uuid NOT NULL, "courseUserId" uuid NOT NULL, CONSTRAINT "PK_79d7649f75158323813916f4540" PRIMARY KEY ("sessionUserId"))`);
