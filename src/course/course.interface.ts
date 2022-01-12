@@ -5,5 +5,5 @@ export interface ICourse {
   name?: string;
   slug?: string;
   active?: boolean;
-  storyblokid?: string;
+  storyblokId?: string;
 }
