@@ -7,5 +7,6 @@ export interface ICourse {
   name?: string;
   slug?: string;
   status?: STORYBLOK_STORY_STATUS_ENUM;
-  storyblokid?: string;
+  active?: boolean;
+  storyblokId?: string;
 }
