@@ -16,7 +16,6 @@ export class SessionEntity extends BaseEntity {
   slug: string;
 
   @Column({
-    unique: true,
     nullable: true,
   })
   status: STORYBLOK_STORY_STATUS_ENUM;

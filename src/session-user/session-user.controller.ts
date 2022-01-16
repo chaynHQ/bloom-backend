@@ -8,17 +8,17 @@ import { Request } from 'express';
 
 @ApiTags('Session User')
 @ControllerDecorator()
-@Controller('session-user')
+@Controller('/v1/session-user')
 export class SessionUserController {
   constructor(private readonly sessionUserService: SessionUserService) {}
 
   @Post()
   @ApiBearerAuth()
-  @UseGuards(FirebaseAuthGuard)
-  async createSessionUserRecord(
-    @Body() createSessionUserDto: CreateSessionUserDto,
-    @Req() res: Request,
-  ) {
-    return '';
+  // @UseGuards(FirebaseAuthGuard)
+  async createSessionUserRecord() {
+    return await this.sessionUserService.createSessionUser();
   }
 }
+
+// @Body() createSessionUserDto: CreateSessionUserDto,
+// @Req() res: Request,
