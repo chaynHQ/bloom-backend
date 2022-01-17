@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CourseUserRepository } from './course-user.repository';
+import { CourseUserDto } from './dto/course-user.dto';
 
 @Injectable()
 export class CourseUserService {
@@ -8,7 +9,7 @@ export class CourseUserService {
     @InjectRepository(CourseUserRepository) private courseUserRepository: CourseUserRepository,
   ) {}
 
-  async courseUserExists(userId: string, courseId: string) {
+  async courseUserExists({ userId, courseId }: CourseUserDto) {
     return await this.courseUserRepository.findOne({ userId, courseId });
   }
 

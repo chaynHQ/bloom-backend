@@ -5,6 +5,7 @@ import { ControllerDecorator } from '../utils/controller.decorator';
 import { CreateSessionUserDto } from './dtos/create-session-user.dto';
 import { SessionUserService } from './session-user.service';
 import { Request } from 'express';
+import { IFirebaseUser } from '../firebase/firebase-user.interface';
 
 @ApiTags('Session User')
 @ControllerDecorator()
@@ -14,9 +15,15 @@ export class SessionUserController {
 
   @Post()
   @ApiBearerAuth()
-  // @UseGuards(FirebaseAuthGuard)
-  async createSessionUserRecord() {
-    return await this.sessionUserService.createSessionUser();
+  @UseGuards(FirebaseAuthGuard)
+  async createSessionUserRecord(
+    @Req() req: Request,
+    @Body() createSessionUserDto: CreateSessionUserDto,
+  ) {
+    return await this.sessionUserService.createSessionUser(
+      req['user'] as IFirebaseUser,
+      createSessionUserDto,
+    );
   }
 }
 
