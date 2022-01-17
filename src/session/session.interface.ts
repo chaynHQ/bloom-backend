@@ -1,3 +1,4 @@
+import { STORYBLOK_STORY_STATUS_ENUM } from 'src/utils/constants';
 import { ICourse } from '../course/course.interface';
 
 export interface ISession {
@@ -6,7 +7,7 @@ export interface ISession {
   updatedAt?: Date | string;
   name?: string;
   slug?: string;
-  active?: boolean;
+  status?: STORYBLOK_STORY_STATUS_ENUM;
   storyBlokId?: string;
   course?: ICourse;
 }
