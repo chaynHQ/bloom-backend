@@ -1,27 +1,6 @@
 import { UserEntity } from '../entities/user.entity';
 import { GetUserDto } from '../user/dtos/get-user.dto';
 
-const getPartnerDetails = (userObject: UserEntity) => {
-  if (!userObject.partnerAccess.length) {
-    return [
-      {
-        id: userObject.partnerAdmin.partner.id,
-        name: userObject.partnerAdmin.partner.name,
-        logo: userObject.partnerAdmin.partner.logo,
-        primaryColour: userObject.partnerAdmin.partner.primaryColour,
-      },
-    ];
-  }
-  return userObject.partnerAccess.map(({ partner }) => {
-    return {
-      id: partner.id,
-      name: partner.name,
-      logo: partner.logo,
-      primaryColour: partner.primaryColour,
-    };
-  });
-};
-
 const getUserCourseSessionDetails = (userObject: UserEntity) => {
   const courseObj = userObject.courseUser;
   return courseObj.map((course) => {
@@ -30,14 +9,14 @@ const getUserCourseSessionDetails = (userObject: UserEntity) => {
       name: course.course.name,
       slug: course.course.slug,
       status: course.course.status,
-      storyblokid: course.course.storyblokId,
+      storyblokId: course.course.storyblokId,
       completed: course.completed,
       session: course.course.session.map((session) => {
         return {
           id: session.id,
           name: session.name,
           slug: session.slug,
-          storyblokid: session.storyblokId,
+          storyblokId: session.storyblokId,
           status: session.status,
           completed: session.sessionUser[0].completed,
         };
@@ -56,8 +35,7 @@ export const formatUserObject = (userObject: UserEntity): GetUserDto => {
       email: userObject.email,
       languageDefault: userObject.languageDefault,
     },
-    partner: getPartnerDetails(userObject),
-    partnerAccess: userObject.partnerAccess.map((partnerAccess) => {
+    partnerAccesses: userObject.partnerAccess.map((partnerAccess) => {
       return {
         id: partnerAccess.id,
         activatedAt: partnerAccess.activatedAt,
@@ -66,6 +44,7 @@ export const formatUserObject = (userObject: UserEntity): GetUserDto => {
         accessCode: partnerAccess.accessCode,
         therapySessionsRemaining: Number(partnerAccess.therapySessionsRemaining),
         therapySessionsRedeemed: Number(partnerAccess.therapySessionsRedeemed),
+        partner: partnerAccess.partner,
       };
     }),
     partnerAdmin: userObject.partnerAdmin
@@ -75,6 +54,7 @@ export const formatUserObject = (userObject: UserEntity): GetUserDto => {
           partnerId: userObject.partnerAdmin.partnerId,
           createdAt: userObject.partnerAdmin.createdAt,
           updatedAt: userObject.partnerAdmin.updatedAt,
+          partner: userObject.partnerAdmin.partner,
         }
       : null,
     course: userObject.courseUser ? getUserCourseSessionDetails(userObject) : [],
