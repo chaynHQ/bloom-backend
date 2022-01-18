@@ -88,9 +88,18 @@ export class SessionUserService {
 
     const courseUser = await this.courseUserService.courseUserExists({ userId: id, courseId });
 
+    if (!courseUser) {
+      throw new HttpException('COURSE USER NOT FOUND', HttpStatus.NOT_FOUND);
+    }
+
     const sessionUser = await this.sessionUserRepository.findOne({
       where: { courseUserId: courseUser.id, sessionId },
     });
+
+    if (!courseUser) {
+      throw new HttpException('SESSION USER NOT FOUND', HttpStatus.NOT_FOUND);
+    }
+
     sessionUser.completed = true;
 
     await this.sessionUserRepository.save(sessionUser);
