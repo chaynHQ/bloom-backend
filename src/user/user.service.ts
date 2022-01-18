@@ -91,7 +91,7 @@ export class UserService {
     return await this.userRepository.findOne({ firebaseUid: uid });
   }
 
-  public async getUser({ uid }: IFirebaseUser): Promise<GetUserDto | undefined> {
+  public async getUser({ id }: UserEntity): Promise<GetUserDto | undefined> {
     const queryResult = await this.userRepository
       .createQueryBuilder('user')
       .leftJoinAndSelect('user.partnerAccess', 'partnerAccess')
@@ -103,7 +103,7 @@ export class UserService {
       .leftJoinAndSelect('courseUser.course', 'course')
       .leftJoinAndSelect('courseUser.sessionUser', 'sessionUser')
       .leftJoinAndSelect('sessionUser.session', 'session')
-      .where('user.firebaseUid = :uid', { uid })
+      .where('user.userId = :id', { id })
       .getOne();
 
     if (!queryResult) {

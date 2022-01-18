@@ -3,13 +3,13 @@ import { InjectRepository } from '@nestjs/typeorm';
 import * as _ from 'lodash';
 import { SessionUserEntity } from 'src/entities/session-user.entity';
 import { SessionEntity } from 'src/entities/session.entity';
+import { UserEntity } from 'src/entities/user.entity';
 import { SessionService } from 'src/session/session.service';
 import { GetUserDto } from 'src/user/dtos/get-user.dto';
 import { UserService } from 'src/user/user.service';
 import { STORYBLOK_STORY_STATUS_ENUM } from 'src/utils/constants';
 import { CourseUserService } from '../course-user/course-user.service';
 import { CourseService } from '../course/course.service';
-import { IFirebaseUser } from '../firebase/firebase-user.interface';
 import { CreateSessionUserDto } from './dtos/create-session-user.dto';
 import { SessionUserRepository } from './session-user.repository';
 
@@ -38,7 +38,7 @@ export class SessionUserService {
   }
 
   public async createSessionUser(
-    firebaseUser: IFirebaseUser,
+    user: UserEntity,
     { sessionId }: CreateSessionUserDto,
   ): Promise<SessionUserEntity> {
     const { courseId } = await this.sessionService.getCourseFromSessionId(sessionId);
@@ -49,12 +49,10 @@ export class SessionUserService {
       throw new HttpException('COURSE SESSIONS NOT FOUND', HttpStatus.NOT_FOUND);
     }
 
-    const { id } = await this.userService.getUserFromFirebaseUid(firebaseUser);
-
-    let courseUser = await this.courseUserService.courseUserExists({ userId: id, courseId });
+    let courseUser = await this.courseUserService.courseUserExists({ userId: user.id, courseId });
 
     if (!courseUser) {
-      courseUser = await this.courseUserService.createCourseUser({ userId: id, courseId });
+      courseUser = await this.courseUserService.createCourseUser({ userId: user.id, courseId });
     }
 
     const createSessionUserObject = this.sessionUserRepository.create({
@@ -75,7 +73,7 @@ export class SessionUserService {
     return sessionUser;
   }
 
-  public async updateSessionUser(firebaseUser: IFirebaseUser, sessionId: string) {
+  public async updateSessionUser(user: UserEntity, sessionId: string) {
     const { courseId } = await this.sessionService.getCourseFromSessionId(sessionId);
 
     const courseSessions = await this.courseService.getCourseSessions(courseId);
@@ -84,9 +82,7 @@ export class SessionUserService {
       throw new HttpException('COURSE SESSIONS NOT FOUND', HttpStatus.NOT_FOUND);
     }
 
-    const { id } = await this.userService.getUserFromFirebaseUid(firebaseUser);
-
-    const courseUser = await this.courseUserService.courseUserExists({ userId: id, courseId });
+    const courseUser = await this.courseUserService.courseUserExists({ userId: user.id, courseId });
 
     if (!courseUser) {
       throw new HttpException('COURSE USER NOT FOUND', HttpStatus.NOT_FOUND);
@@ -104,11 +100,11 @@ export class SessionUserService {
 
     await this.sessionUserRepository.save(sessionUser);
 
-    const userObject = await this.userService.getUser(firebaseUser);
+    const userObject = await this.userService.getUser(user);
 
     const markCourseComplete = this.markCourseComplete(userObject, courseSessions.session);
     if (markCourseComplete) {
-      await this.courseUserService.updateCourseUser({ userId: id, courseId });
+      await this.courseUserService.updateCourseUser({ userId: user.id, courseId });
       userObject.course[0].completed = true;
     }
 
