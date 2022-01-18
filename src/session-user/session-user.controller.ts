@@ -1,4 +1,4 @@
-import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Param, Post, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Request } from 'express';
 import { FirebaseAuthGuard } from '../firebase/firebase-auth.guard';
@@ -23,6 +23,16 @@ export class SessionUserController {
     return await this.sessionUserService.createSessionUser(
       req['user'] as IFirebaseUser,
       createSessionUserDto,
+    );
+  }
+
+  @Post(':sessionId')
+  @ApiBearerAuth()
+  @UseGuards(FirebaseAuthGuard)
+  async updateSessionUserRecord(@Req() req: Request, @Param() params) {
+    return await this.sessionUserService.updateSessionUser(
+      req['user'] as IFirebaseUser,
+      params.sessionId,
     );
   }
 }

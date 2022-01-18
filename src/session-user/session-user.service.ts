@@ -1,12 +1,14 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as _ from 'lodash';
-import { CourseService } from 'src/course/course.service';
+import { SessionUserEntity } from 'src/entities/session-user.entity';
 import { SessionEntity } from 'src/entities/session.entity';
 import { SessionService } from 'src/session/session.service';
 import { GetUserDto } from 'src/user/dtos/get-user.dto';
 import { UserService } from 'src/user/user.service';
+import { STORYBLOK_STORY_STATUS_ENUM } from 'src/utils/constants';
 import { CourseUserService } from '../course-user/course-user.service';
+import { CourseService } from '../course/course.service';
 import { IFirebaseUser } from '../firebase/firebase-user.interface';
 import { CreateSessionUserDto } from './dtos/create-session-user.dto';
 import { SessionUserRepository } from './session-user.repository';
@@ -25,11 +27,11 @@ export class SessionUserService {
     const userCompletedSession = userCourse.course[0].session;
 
     const userSessionIds = userCompletedSession.map((session) => {
-      return session.id;
+      if (session.completed) return session.id;
     });
 
     const courseSessionIds = courseSession.map((session) => {
-      return session.id;
+      if (session.status === STORYBLOK_STORY_STATUS_ENUM.PUBLISHED) return session.id;
     });
 
     return _.xor(courseSessionIds, userSessionIds).length == 0;
@@ -38,7 +40,7 @@ export class SessionUserService {
   public async createSessionUser(
     firebaseUser: IFirebaseUser,
     { sessionId }: CreateSessionUserDto,
-  ): Promise<GetUserDto> {
+  ): Promise<SessionUserEntity> {
     const { courseId } = await this.sessionService.getCourseFromSessionId(sessionId);
 
     const courseSessions = await this.courseService.getCourseSessions(courseId);
@@ -58,17 +60,40 @@ export class SessionUserService {
     const createSessionUserObject = this.sessionUserRepository.create({
       sessionId,
       courseUserId: courseUser.id,
-      completed: true,
+      completed: false,
     });
 
-    const exists = await this.sessionUserRepository.findOne({
+    let sessionUser = await this.sessionUserRepository.findOne({
       courseUserId: courseUser.id,
       sessionId,
     });
 
-    if (!exists) {
-      await this.sessionUserRepository.save(createSessionUserObject);
+    if (!sessionUser) {
+      sessionUser = await this.sessionUserRepository.save(createSessionUserObject);
     }
+
+    return sessionUser;
+  }
+
+  public async updateSessionUser(firebaseUser: IFirebaseUser, sessionId: string) {
+    const { courseId } = await this.sessionService.getCourseFromSessionId(sessionId);
+
+    const courseSessions = await this.courseService.getCourseSessions(courseId);
+
+    if (!courseSessions) {
+      throw new HttpException('COURSE SESSIONS NOT FOUND', HttpStatus.NOT_FOUND);
+    }
+
+    const { id } = await this.userService.getUserFromFirebaseUid(firebaseUser);
+
+    const courseUser = await this.courseUserService.courseUserExists({ userId: id, courseId });
+
+    const sessionUser = await this.sessionUserRepository.findOne({
+      where: { courseUserId: courseUser.id, sessionId },
+    });
+    sessionUser.completed = true;
+
+    await this.sessionUserRepository.save(sessionUser);
 
     const userObject = await this.userService.getUser(firebaseUser);
 
