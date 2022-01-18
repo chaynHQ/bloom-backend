@@ -11,14 +11,14 @@ const getUserCourseSessionDetails = (userObject: UserEntity) => {
       status: course.course.status,
       storyblokId: course.course.storyblokId,
       completed: course.completed,
-      session: course.course.session.map((session) => {
+      session: course.sessionUser.map((sessionUser) => {
         return {
-          id: session.id,
-          name: session.name,
-          slug: session.slug,
-          storyblokId: session.storyblokId,
-          status: session.status,
-          completed: session.sessionUser[0].completed,
+          id: sessionUser.session['id'],
+          name: sessionUser.session['name'],
+          slug: sessionUser.session['slug'],
+          storyblokId: sessionUser.session['storyblokId'],
+          status: sessionUser.session['status'],
+          completed: sessionUser.completed,
         };
       }),
     };

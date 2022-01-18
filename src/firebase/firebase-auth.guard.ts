@@ -17,8 +17,6 @@ export class FirebaseAuthGuard implements CanActivate {
 
     const user = await this.authService.parseAuth(authorization);
 
-    console.log('USER', user);
-
     request['user'] = user;
 
     return true;

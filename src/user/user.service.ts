@@ -1,16 +1,16 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
-import { IFirebaseUser } from '../firebase/firebase-user.interface';
-import { UserRepository } from './user.repository';
 import { InjectRepository } from '@nestjs/typeorm';
-import { formatUserObject, getCrispUserData } from '../utils/serialize';
-import { GetUserDto } from './dtos/get-user.dto';
-import { CreateUserDto } from './dtos/create-user.dto';
-import { UserEntity } from '../entities/user.entity';
-import { PartnerAccessService } from '../partner-access/partner-access.service';
+import { addCrispProfile, updateCrispProfile } from '../api/crisp/api-crisp';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
 import { PartnerEntity } from '../entities/partner.entity';
+import { UserEntity } from '../entities/user.entity';
+import { IFirebaseUser } from '../firebase/firebase-user.interface';
+import { PartnerAccessService } from '../partner-access/partner-access.service';
 import { PartnerRepository } from '../partner/partner.repository';
-import { addCrispProfile, updateCrispProfile } from '../api/crisp/api-crisp';
+import { formatUserObject, getCrispUserData } from '../utils/serialize';
+import { CreateUserDto } from './dtos/create-user.dto';
+import { GetUserDto } from './dtos/get-user.dto';
+import { UserRepository } from './user.repository';
 
 @Injectable()
 export class UserService {
@@ -87,6 +87,10 @@ export class UserService {
     }
   }
 
+  async getUserFromFirebaseUid({ uid }: IFirebaseUser): Promise<UserEntity> {
+    return await this.userRepository.findOne({ firebaseUid: uid });
+  }
+
   public async getUser({ uid }: IFirebaseUser): Promise<GetUserDto | undefined> {
     const queryResult = await this.userRepository
       .createQueryBuilder('user')
@@ -97,13 +101,13 @@ export class UserService {
       .leftJoinAndSelect('partnerAdmin.partner', 'partnerAdminPartner')
       .leftJoinAndSelect('user.courseUser', 'courseUser')
       .leftJoinAndSelect('courseUser.course', 'course')
-      .leftJoinAndSelect('course.session', 'session')
-      .leftJoinAndSelect('session.sessionUser', 'sessionUser')
+      .leftJoinAndSelect('courseUser.sessionUser', 'sessionUser')
+      .leftJoinAndSelect('sessionUser.session', 'session')
       .where('user.firebaseUid = :uid', { uid })
       .getOne();
 
     if (!queryResult) {
-      throw new HttpException('NOT FOUND', HttpStatus.NOT_FOUND);
+      throw new HttpException('USER NOT FOUND', HttpStatus.NOT_FOUND);
     }
 
     return formatUserObject(queryResult);

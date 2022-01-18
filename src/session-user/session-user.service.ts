@@ -1,11 +1,15 @@
-import { Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { IFirebaseUser } from '../firebase/firebase-user.interface';
+import * as _ from 'lodash';
+import { CourseService } from 'src/course/course.service';
+import { SessionEntity } from 'src/entities/session.entity';
+import { SessionService } from 'src/session/session.service';
+import { GetUserDto } from 'src/user/dtos/get-user.dto';
+import { UserService } from 'src/user/user.service';
 import { CourseUserService } from '../course-user/course-user.service';
+import { IFirebaseUser } from '../firebase/firebase-user.interface';
 import { CreateSessionUserDto } from './dtos/create-session-user.dto';
 import { SessionUserRepository } from './session-user.repository';
-import { UserService } from 'src/user/user.service';
-import { SessionService } from 'src/session/session.service';
 
 @Injectable()
 export class SessionUserService {
@@ -14,33 +18,66 @@ export class SessionUserService {
     private readonly courseUserService: CourseUserService,
     private readonly userService: UserService,
     private readonly sessionService: SessionService,
+    private readonly courseService: CourseService,
   ) {}
 
-  public async createSessionUser(firebaseUser: IFirebaseUser, { sessionId }: CreateSessionUserDto) {
-    const { user } = await this.userService.getUser(firebaseUser);
-    //get Course from session
-    // let courseUser = await this.courseUserService.courseUserExists(
-    //   user.id,
-    //   'b50da468-dca9-4264-9a72-562419a10860',
-    // );
+  private markCourseComplete(userCourse: GetUserDto, courseSession: SessionEntity[]): boolean {
+    const userCompletedSession = userCourse.course[0].session;
 
-    // if (!courseUser) {
-    //   courseUser = await this.courseUserService.createCourseUser(
-    //     'b50da468-dca9-4264-9a72-562419a10860',
-    //     'b316f2d1-f728-4752-8a18-f14624da8a36',
-    //   );
-    // }
+    const userSessionIds = userCompletedSession.map((session) => {
+      return session.id;
+    });
 
-    // const createSessionUserObject = this.sessionUserRepository.create({
-    //   sessionId: '30e89ff8-d1cd-4d3c-8ff2-494bc0aebe82',
-    //   courseUserId: courseUser.id,
-    //   completed: true,
-    // });
+    const courseSessionIds = courseSession.map((session) => {
+      return session.id;
+    });
 
-    // const exists = await this.sessionUserRepository.findOne({
-    //   courseUserId: courseUser.id,
-    //   sessionId: '30e89ff8-d1cd-4d3c-8ff2-494bc0aebe82',
-    // });
-    // return !!exists ? exists : await this.sessionUserRepository.save(createSessionUserObject);
+    return _.xor(courseSessionIds, userSessionIds).length == 0;
+  }
+
+  public async createSessionUser(
+    firebaseUser: IFirebaseUser,
+    { sessionId }: CreateSessionUserDto,
+  ): Promise<GetUserDto> {
+    const { courseId } = await this.sessionService.getCourseFromSessionId(sessionId);
+
+    const courseSessions = await this.courseService.getCourseSessions(courseId);
+
+    if (!courseSessions) {
+      throw new HttpException('COURSE SESSIONS NOT FOUND', HttpStatus.NOT_FOUND);
+    }
+
+    const { id } = await this.userService.getUserFromFirebaseUid(firebaseUser);
+
+    let courseUser = await this.courseUserService.courseUserExists({ userId: id, courseId });
+
+    if (!courseUser) {
+      courseUser = await this.courseUserService.createCourseUser({ userId: id, courseId });
+    }
+
+    const createSessionUserObject = this.sessionUserRepository.create({
+      sessionId,
+      courseUserId: courseUser.id,
+      completed: true,
+    });
+
+    const exists = await this.sessionUserRepository.findOne({
+      courseUserId: courseUser.id,
+      sessionId,
+    });
+
+    if (!exists) {
+      await this.sessionUserRepository.save(createSessionUserObject);
+    }
+
+    const userObject = await this.userService.getUser(firebaseUser);
+
+    const markCourseComplete = this.markCourseComplete(userObject, courseSessions.session);
+    if (markCourseComplete) {
+      await this.courseUserService.updateCourseUser({ userId: id, courseId });
+      userObject.course[0].completed = true;
+    }
+
+    return userObject;
   }
 }

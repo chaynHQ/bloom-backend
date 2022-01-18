@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CourseUserRepository } from 'src/course-user/course-user.repository';
 import { CourseUserService } from 'src/course-user/course-user.service';
+import { CourseRepository } from 'src/course/course.repository';
+import { CourseService } from 'src/course/course.service';
 import { PartnerAccessRepository } from 'src/partner-access/partner-access.repository';
 import { PartnerAccessService } from 'src/partner-access/partner-access.service';
 import { PartnerRepository } from 'src/partner/partner.repository';
@@ -22,6 +24,7 @@ import { SessionUserService } from './session-user.service';
       PartnerRepository,
       SessionRepository,
       PartnerAccessRepository,
+      CourseRepository,
     ]),
   ],
   controllers: [SessionUserController],
@@ -31,6 +34,7 @@ import { SessionUserService } from './session-user.service';
     UserService,
     SessionService,
     PartnerAccessService,
+    CourseService,
   ],
 })
 export class SessionUserModule {}
