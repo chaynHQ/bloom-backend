@@ -96,7 +96,7 @@ export class SessionUserService {
       where: { courseUserId: courseUser.id, sessionId },
     });
 
-    if (!courseUser) {
+    if (!sessionUser) {
       throw new HttpException('SESSION USER NOT FOUND', HttpStatus.NOT_FOUND);
     }
 
