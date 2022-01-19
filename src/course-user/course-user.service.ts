@@ -10,7 +10,7 @@ export class CourseUserService {
     @InjectRepository(CourseUserRepository) private courseUserRepository: CourseUserRepository,
   ) {}
 
-  async courseUserExists({ userId, courseId }: CourseUserDto): Promise<CourseUserEntity> {
+  async completeCourse({ userId, courseId }: CourseUserDto): Promise<CourseUserEntity> {
     return await this.courseUserRepository.findOne({ userId, courseId });
   }
 

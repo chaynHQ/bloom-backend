@@ -16,10 +16,7 @@ export class SessionUserController {
   @Post()
   @ApiBearerAuth()
   @UseGuards(FirebaseAuthGuard)
-  async createSessionUserRecord(
-    @Req() req: Request,
-    @Body() createSessionUserDto: CreateSessionUserDto,
-  ) {
+  async createSessionUser(@Req() req: Request, @Body() createSessionUserDto: CreateSessionUserDto) {
     return await this.sessionUserService.createSessionUser(
       req['user'] as UserEntity,
       createSessionUserDto,
@@ -29,7 +26,7 @@ export class SessionUserController {
   @Post(':sessionId')
   @ApiBearerAuth()
   @UseGuards(FirebaseAuthGuard)
-  async updateSessionUserRecord(@Req() req: Request, @Param() params) {
+  async updateSessionUser(@Req() req: Request, @Param() params) {
     return await this.sessionUserService.updateSessionUser(
       req['user'] as UserEntity,
       params.sessionId,

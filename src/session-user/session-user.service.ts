@@ -41,7 +41,7 @@ export class SessionUserService {
     user: UserEntity,
     { sessionId }: CreateSessionUserDto,
   ): Promise<SessionUserEntity> {
-    const { courseId } = await this.sessionService.getCourseFromSessionId(sessionId);
+    const { courseId } = await this.sessionService.getSession(sessionId);
 
     const courseSessions = await this.courseService.getCourseSessions(courseId);
 
@@ -49,7 +49,7 @@ export class SessionUserService {
       throw new HttpException('COURSE SESSIONS NOT FOUND', HttpStatus.NOT_FOUND);
     }
 
-    let courseUser = await this.courseUserService.courseUserExists({ userId: user.id, courseId });
+    let courseUser = await this.courseUserService.completeCourse({ userId: user.id, courseId });
 
     if (!courseUser) {
       courseUser = await this.courseUserService.createCourseUser({ userId: user.id, courseId });
@@ -74,15 +74,15 @@ export class SessionUserService {
   }
 
   public async updateSessionUser(user: UserEntity, sessionId: string) {
-    const { courseId } = await this.sessionService.getCourseFromSessionId(sessionId);
+    const { courseId } = await this.sessionService.getSession(sessionId);
+
+    if (!courseId) {
+      throw new HttpException('COURSE NOT FOUND', HttpStatus.NOT_FOUND);
+    }
 
     const courseSessions = await this.courseService.getCourseSessions(courseId);
 
-    if (!courseSessions) {
-      throw new HttpException('COURSE SESSIONS NOT FOUND', HttpStatus.NOT_FOUND);
-    }
-
-    const courseUser = await this.courseUserService.courseUserExists({ userId: user.id, courseId });
+    const courseUser = await this.courseUserService.completeCourse({ userId: user.id, courseId });
 
     if (!courseUser) {
       throw new HttpException('COURSE USER NOT FOUND', HttpStatus.NOT_FOUND);
