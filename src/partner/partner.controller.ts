@@ -1,5 +1,5 @@
-import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
+import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiBody, ApiTags } from '@nestjs/swagger';
 import { PartnerEntity } from '../entities/partner.entity';
 import { SuperAdminAuthGuard } from '../partner-admin/super-admin-auth.guard';
 import { ControllerDecorator } from '../utils/controller.decorator';
@@ -27,5 +27,10 @@ export class PartnerController {
   @Get()
   async fetchPartners(): Promise<PartnerEntity[]> {
     return this.partnerService.fetchPartners();
+  }
+
+  @Get(':partner')
+  async fetchPartner(@Param() { partner }): Promise<PartnerEntity> {
+    return this.partnerService.fetchPartner(partner);
   }
 }
