@@ -1,10 +1,14 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import apiCall from '../api/apiCalls';
+import { CourseRepository } from '../course/course.repository';
+import { CourseDto } from '../course/dtos/course.dto';
 import { SimplybookBodyDto } from '../partner-access/dtos/zapier-body.dto';
 import { PartnerAccessRepository } from '../partner-access/partner-access.repository';
+import { SessionDto } from '../session/dto/session.dto';
+import { SessionRepository } from '../session/session.repository';
 import { UserRepository } from '../user/user.repository';
 import { SIMPLYBOOK_ACTION_ENUM } from '../utils/constants';
-import apiCall from '../api/apiCalls';
 
 @Injectable()
 export class WebhooksService {
@@ -13,6 +17,8 @@ export class WebhooksService {
     private partnerAccessRepository: PartnerAccessRepository,
     @InjectRepository(UserRepository)
     private userRepository: UserRepository,
+    @InjectRepository(CourseRepository) private courseRepository: CourseRepository,
+    @InjectRepository(SessionRepository) private sessionRepository: SessionRepository,
   ) {}
   async updatePartnerAccessBooking({ action, client_email }: SimplybookBodyDto): Promise<string> {
     const userDetails = await this.userRepository.findOne({ email: client_email });
@@ -66,5 +72,25 @@ export class WebhooksService {
     } catch (error) {
       return error;
     }
+  }
+
+  async createCourse(courseDto: CourseDto) {
+    const createCourseObject = this.courseRepository.create(courseDto);
+    return await this.courseRepository.save(createCourseObject);
+  }
+
+  async updateCourse(storyblokId: string, body: Partial<CourseDto>) {
+    await this.courseRepository.update({ storyblokId }, body);
+    return await this.courseRepository.findOne({ storyblokId });
+  }
+
+  async createSession(sessionDto: SessionDto) {
+    const createSessionObject = this.sessionRepository.create(sessionDto);
+    return await this.sessionRepository.save(createSessionObject);
+  }
+
+  async updateSession(storyblokId: string, body: Partial<SessionDto>) {
+    await this.sessionRepository.update({ storyblokId }, body);
+    return await this.sessionRepository.findOne({ storyblokId });
   }
 }
