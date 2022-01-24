@@ -19,7 +19,7 @@ export class WebhooksController {
     return this.webhooksService.updatePartnerAccessBooking(simplybookBodyDto);
   }
 
-  @Post('story')
+  @Post('storyblok')
   @ApiBody({ type: StoryDto })
   async updateStory(@Body() storyDto: StoryDto) {
     return this.webhooksService.upsertStory(storyDto);
