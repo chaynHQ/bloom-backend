@@ -29,8 +29,8 @@ export class PartnerController {
     return this.partnerService.fetchPartners();
   }
 
-  @Get(':partner')
-  async fetchPartner(@Param() { partner }): Promise<PartnerEntity> {
-    return this.partnerService.fetchPartner(partner);
+  @Get(':name')
+  async fetchPartner(@Param() { name }): Promise<PartnerEntity> {
+    return this.partnerService.fetchPartner(name);
   }
 }
