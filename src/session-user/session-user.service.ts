@@ -3,9 +3,10 @@ import { InjectRepository } from '@nestjs/typeorm';
 import * as _ from 'lodash';
 import { SessionUserEntity } from 'src/entities/session-user.entity';
 import { SessionEntity } from 'src/entities/session.entity';
-import { UserEntity } from 'src/entities/user.entity';
+import { IFirebaseUser } from 'src/firebase/firebase-user.interface';
 import { SessionService } from 'src/session/session.service';
 import { GetUserDto } from 'src/user/dtos/get-user.dto';
+import { UserRepository } from 'src/user/user.repository';
 import { UserService } from 'src/user/user.service';
 import { STORYBLOK_STORY_STATUS_ENUM } from 'src/utils/constants';
 import { CourseUserService } from '../course-user/course-user.service';
@@ -17,6 +18,7 @@ import { SessionUserRepository } from './session-user.repository';
 export class SessionUserService {
   constructor(
     @InjectRepository(SessionUserRepository) private sessionUserRepository: SessionUserRepository,
+    @InjectRepository(UserRepository) private userRepository: UserRepository,
     private readonly courseUserService: CourseUserService,
     private readonly userService: UserService,
     private readonly sessionService: SessionService,
@@ -38,9 +40,11 @@ export class SessionUserService {
   }
 
   public async createSessionUser(
-    user: UserEntity,
+    { uid }: IFirebaseUser,
     { sessionId }: CreateSessionUserDto,
   ): Promise<SessionUserEntity> {
+    const user = await this.userRepository.findOne({ firebaseUid: uid });
+
     const { courseId } = await this.sessionService.getSession(sessionId);
 
     const courseSessions = await this.courseService.getCourseSessions(courseId);
@@ -73,7 +77,9 @@ export class SessionUserService {
     return sessionUser;
   }
 
-  public async updateSessionUser(user: UserEntity, sessionId: string) {
+  public async updateSessionUser({ uid }: IFirebaseUser, sessionId: string) {
+    const user = await this.userRepository.findOne({ firebaseUid: uid });
+
     const { courseId } = await this.sessionService.getSession(sessionId);
 
     if (!courseId) {

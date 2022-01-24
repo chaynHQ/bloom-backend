@@ -4,7 +4,6 @@ import { addCrispProfile, updateCrispProfile } from '../api/crisp/api-crisp';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
 import { PartnerEntity } from '../entities/partner.entity';
 import { UserEntity } from '../entities/user.entity';
-import { IFirebaseUser } from '../firebase/firebase-user.interface';
 import { PartnerAccessService } from '../partner-access/partner-access.service';
 import { PartnerRepository } from '../partner/partner.repository';
 import { formatUserObject, getCrispUserData } from '../utils/serialize';
@@ -85,10 +84,6 @@ export class UserService {
       }
       throw error;
     }
-  }
-
-  async getUserFromFirebaseUid({ uid }: IFirebaseUser): Promise<UserEntity> {
-    return await this.userRepository.findOne({ firebaseUid: uid });
   }
 
   public async getUser({ id }: UserEntity): Promise<GetUserDto | undefined> {

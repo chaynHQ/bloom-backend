@@ -1,7 +1,7 @@
 import { Body, Controller, Param, Post, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Request } from 'express';
-import { UserEntity } from 'src/entities/user.entity';
+import { IFirebaseUser } from 'src/firebase/firebase-user.interface';
 import { FirebaseAuthGuard } from '../firebase/firebase-auth.guard';
 import { ControllerDecorator } from '../utils/controller.decorator';
 import { CreateSessionUserDto } from './dtos/create-session-user.dto';
@@ -18,7 +18,7 @@ export class SessionUserController {
   @UseGuards(FirebaseAuthGuard)
   async createSessionUser(@Req() req: Request, @Body() createSessionUserDto: CreateSessionUserDto) {
     return await this.sessionUserService.createSessionUser(
-      req['user'] as UserEntity,
+      req['user'] as IFirebaseUser,
       createSessionUserDto,
     );
   }
@@ -28,7 +28,7 @@ export class SessionUserController {
   @UseGuards(FirebaseAuthGuard)
   async updateSessionUser(@Req() req: Request, @Param() params) {
     return await this.sessionUserService.updateSessionUser(
-      req['user'] as UserEntity,
+      req['user'] as IFirebaseUser,
       params.sessionId,
     );
   }
