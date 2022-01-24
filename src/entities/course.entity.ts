@@ -16,7 +16,6 @@ export class CourseEntity extends BaseEntity {
   slug: string;
 
   @Column({
-    unique: true,
     nullable: true,
   })
   status: STORYBLOK_STORY_STATUS_ENUM;
@@ -25,7 +24,12 @@ export class CourseEntity extends BaseEntity {
     unique: true,
     nullable: true,
   })
-  storyblokId: string;
+  storyblokId: number;
+
+  @Column({
+    nullable: true,
+  })
+  parent_id: number;
 
   @OneToMany(() => SessionEntity, (sessionEntity) => sessionEntity.course)
   session: SessionEntity[];

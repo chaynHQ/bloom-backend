@@ -1,14 +1,24 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { CourseEntity } from 'src/entities/course.entity';
+import { SessionEntity } from 'src/entities/session.entity';
+import StoryblokClient from 'storyblok-js-client';
 import apiCall from '../api/apiCalls';
 import { CourseRepository } from '../course/course.repository';
-import { CourseDto } from '../course/dtos/course.dto';
 import { SimplybookBodyDto } from '../partner-access/dtos/zapier-body.dto';
 import { PartnerAccessRepository } from '../partner-access/partner-access.repository';
-import { SessionDto } from '../session/dto/session.dto';
 import { SessionRepository } from '../session/session.repository';
 import { UserRepository } from '../user/user.repository';
-import { SIMPLYBOOK_ACTION_ENUM } from '../utils/constants';
+import { SIMPLYBOOK_ACTION_ENUM, storyblokToken } from '../utils/constants';
+import { StoryDto } from './dto/story.dto';
+
+const Storyblok = new StoryblokClient({
+  accessToken: storyblokToken,
+  cache: {
+    clear: 'auto',
+    type: 'memory',
+  },
+});
 
 @Injectable()
 export class WebhooksService {
@@ -74,23 +84,55 @@ export class WebhooksService {
     }
   }
 
-  async createCourse(courseDto: CourseDto) {
-    const createCourseObject = this.courseRepository.create(courseDto);
-    return await this.courseRepository.save(createCourseObject);
-  }
+  async upsertStory({ action, story_id }: StoryDto) {
+    const {
+      data: { story },
+    } = await Storyblok.get(`cdn/stories/${story_id}`);
 
-  async updateCourse(storyblokId: string, body: Partial<CourseDto>) {
-    await this.courseRepository.update({ storyblokId }, body);
-    return await this.courseRepository.findOne({ storyblokId });
-  }
+    if (!story) {
+      throw new HttpException('STORY NOT FOUND', HttpStatus.NOT_FOUND);
+    }
 
-  async createSession(sessionDto: SessionDto) {
-    const createSessionObject = this.sessionRepository.create(sessionDto);
-    return await this.sessionRepository.save(createSessionObject);
-  }
+    const createCourseObject = this.courseRepository.create({
+      name: story.name,
+      slug: story.full_slug,
+      status: action,
+      parent_id: story.parent_id,
+      storyblokId: story_id,
+    });
 
-  async updateSession(storyblokId: string, body: Partial<SessionDto>) {
-    await this.sessionRepository.update({ storyblokId }, body);
-    return await this.sessionRepository.findOne({ storyblokId });
+    try {
+      if (story.content?.component === 'Course') {
+        await this.courseRepository
+          .createQueryBuilder('course')
+          .insert()
+          .into(CourseEntity)
+          .values(createCourseObject)
+          .onConflict(`("storyblokId") DO UPDATE SET "status" = '${action}'`)
+          .execute();
+
+        return createCourseObject;
+      } else if (story.content?.component === 'Session') {
+        const { id } = await this.courseRepository.findOne({ parent_id: story.parent_id });
+
+        if (!id) {
+          throw new HttpException('COURSE NOT FOUND', HttpStatus.NOT_FOUND);
+        }
+
+        const sessionObject = this.sessionRepository.create({ courseId: id });
+
+        await this.sessionRepository
+          .createQueryBuilder('session')
+          .insert()
+          .into(SessionEntity)
+          .values({ ...createCourseObject, ...sessionObject })
+          .onConflict(`("storyblokId") DO UPDATE SET "status" = '${action}'`)
+          .execute();
+
+        return { ...createCourseObject, ...sessionObject };
+      }
+    } catch (error) {
+      throw error;
+    }
   }
 }

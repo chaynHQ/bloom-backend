@@ -1,11 +1,13 @@
-import { Body, Controller, Param, Patch, Post, UseGuards } from '@nestjs/common';
-import { ApiBody } from '@nestjs/swagger';
-import { CourseDto } from 'src/course/dtos/course.dto';
-import { SessionDto } from 'src/session/dto/session.dto';
+import { Body, Controller, Post, UseGuards } from '@nestjs/common';
+import { ApiBody, ApiTags } from '@nestjs/swagger';
+import { ControllerDecorator } from 'src/utils/controller.decorator';
 import { SimplybookBodyDto } from '../partner-access/dtos/zapier-body.dto';
 import { ZapierAuthGuard } from '../partner-access/zapier-auth.guard';
+import { StoryDto } from './dto/story.dto';
 import { WebhooksService } from './webhooks.service';
 
+@ApiTags('Webhooks')
+@ControllerDecorator()
 @Controller('webhooks')
 export class WebhooksController {
   constructor(private readonly webhooksService: WebhooksService) {}
@@ -17,28 +19,9 @@ export class WebhooksController {
     return this.webhooksService.updatePartnerAccessBooking(simplybookBodyDto);
   }
 
-  @Post('course')
-  @ApiBody({ type: CourseDto })
-  async createCourse(@Body() courseDto: CourseDto) {
-    return this.webhooksService.createCourse(courseDto);
-  }
-
-  @Patch('course/:storyblokId')
-  @ApiBody({ type: CourseDto })
-  async updateCourse(@Param('storyblokId') storyblokId: string, @Body() body: Partial<CourseDto>) {
-    return this.webhooksService.updateCourse(storyblokId, body);
-  }
-
-  @Post('session')
-  async createSession(@Body() sessionDto: SessionDto) {
-    return this.webhooksService.createSession(sessionDto);
-  }
-
-  @Patch('session/:storyblokId')
-  async updateSession(
-    @Param('storyblokId') storyblokId: string,
-    @Body() body: Partial<SessionDto>,
-  ) {
-    return this.webhooksService.updateSession(storyblokId, body);
+  @Post('story')
+  @ApiBody({ type: StoryDto })
+  async updateStory(@Body() storyDto: StoryDto) {
+    return this.webhooksService.upsertStory(storyDto);
   }
 }

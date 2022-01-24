@@ -82,3 +82,5 @@ export const crispToken = getEnv(process.env.CRISP_TOKEN, 'CRISP_TOKEN');
 export const websiteToken = getEnv(process.env.WEBSITE_TOKEN, 'WEBSITE_TOKEN');
 
 export const slackWebhookUrl = getEnv(process.env.SLACK_WEBHOOK_URL, 'SLACK_WEBHOOK_URL');
+
+export const storyblokToken = getEnv(process.env.STORYBLOK_PUBLIC_TOKEN, 'STORYBLOK_PUBLIC_TOKEN');
