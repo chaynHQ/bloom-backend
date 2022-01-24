@@ -7,7 +7,7 @@ import { SessionRepository } from './session.repository';
 export class SessionService {
   constructor(@InjectRepository(SessionRepository) private sessionRepository: SessionRepository) {}
 
-  async getCourseFromSessionId(id: string): Promise<SessionEntity> {
+  async getSession(id: string): Promise<SessionEntity> {
     return await this.sessionRepository.findOne({ id });
   }
 }
