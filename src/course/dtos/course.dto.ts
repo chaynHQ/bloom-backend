@@ -2,7 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { IsDefined, IsEnum, IsNotEmpty, IsString } from 'class-validator';
 import { STORYBLOK_STORY_STATUS_ENUM } from 'src/utils/constants';
 
-export class CreateCourseDto {
+export class CourseDto {
   @IsNotEmpty()
   @IsString()
   @IsDefined()

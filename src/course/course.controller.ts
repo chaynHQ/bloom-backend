@@ -1,8 +1,8 @@
-import { Body, Controller, Post, Put } from '@nestjs/common';
+import { Body, Controller, Param, Patch, Post } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { ControllerDecorator } from 'src/utils/controller.decorator';
 import { CourseService } from './course.service';
-import { CreateCourseDto } from './dtos/create-course.dto';
+import { CourseDto } from './dtos/course.dto';
 
 @ApiTags('Course')
 @ControllerDecorator()
@@ -11,8 +11,12 @@ export class CourseController {
   constructor(private readonly courseService: CourseService) {}
 
   @Post()
-  async createCourse(@Body() createCourseDto: CreateCourseDto) {}
+  async createCourse(@Body() courseDto: CourseDto) {
+    return this.courseService.createCourse(courseDto);
+  }
 
-  @Put()
-  async updateCourse() {}
+  @Patch(':storyblokId')
+  async updateCourse(@Param('storyblokId') storyblokId: string, @Body() body: Partial<CourseDto>) {
+    return this.courseService.updateCourse(storyblokId, body);
+  }
 }
