@@ -24,12 +24,7 @@ export class SessionEntity extends BaseEntity {
     unique: true,
     nullable: true,
   })
-  storyblokId: number;
-
-  @Column({
-    nullable: true,
-  })
-  parent_id: number;
+  storyblokId: string;
 
   @Column()
   courseId: string;

@@ -97,8 +97,7 @@ export class WebhooksService {
       name: story.name,
       slug: story.full_slug,
       status: action,
-      parent_id: story.parent_id,
-      storyblokId: story_id,
+      storyblokId: story.uuid,
     });
 
     try {
@@ -113,23 +112,21 @@ export class WebhooksService {
 
         return createCourseObject;
       } else if (story.content?.component === 'Session') {
-        const { id } = await this.courseRepository.findOne({ parent_id: story.parent_id });
+        const { id } = await this.courseRepository.findOne({ storyblokId: story.content.course });
 
         if (!id) {
           throw new HttpException('COURSE NOT FOUND', HttpStatus.NOT_FOUND);
         }
 
-        const sessionObject = this.sessionRepository.create({ courseId: id });
-
         await this.sessionRepository
           .createQueryBuilder('session')
           .insert()
           .into(SessionEntity)
-          .values({ ...createCourseObject, ...sessionObject })
+          .values({ ...createCourseObject, ...{ courseId: id } })
           .onConflict(`("storyblokId") DO UPDATE SET "status" = '${action}'`)
           .execute();
 
-        return { ...createCourseObject, ...sessionObject };
+        return { ...createCourseObject, ...{ courseId: id } };
       }
     } catch (error) {
       throw error;
