@@ -59,32 +59,28 @@ export class SessionUserService {
       courseUser = await this.courseUserService.createCourseUser({ userId: user.id, courseId });
     }
 
-    const createSessionUserObject = this.sessionUserRepository.create({
-      sessionId,
-      courseUserId: courseUser.id,
-      completed: false,
-    });
-
     let sessionUser = await this.sessionUserRepository.findOne({
       courseUserId: courseUser.id,
       sessionId,
     });
 
     if (!sessionUser) {
-      sessionUser = await this.sessionUserRepository.save(createSessionUserObject);
+      sessionUser = await this.sessionUserRepository.save({
+        sessionId,
+        courseUserId: courseUser.id,
+        completed: false,
+      });
     }
 
     return sessionUser;
   }
 
-  public async updateSessionUser({ uid }: IFirebaseUser, sessionId: string) {
+  public async completeSessionUser({ uid }: IFirebaseUser, sessionId: string) {
     const user = await this.userRepository.findOne({ firebaseUid: uid });
 
-    const { courseId } = await this.sessionService.getSession(sessionId);
+    const session = await this.sessionService.getSession(sessionId);
 
-    if (!courseId) {
-      throw new HttpException('COURSE NOT FOUND', HttpStatus.NOT_FOUND);
-    }
+    const { courseId } = session;
 
     const courseSessions = await this.courseService.getCourseSessions(courseId);
 
@@ -107,13 +103,17 @@ export class SessionUserService {
     await this.sessionUserRepository.save(sessionUser);
 
     const userObject = await this.userService.getUser(user);
-
+    let courseComplete = false;
     const markCourseComplete = this.markCourseComplete(userObject, courseSessions.session);
+
     if (markCourseComplete) {
       await this.courseUserService.completeCourse({ userId: user.id, courseId });
-      userObject.course[0].completed = true;
+      courseComplete = true;
     }
 
-    return userObject;
+    return {
+      courseComplete,
+      session,
+    };
   }
 }
