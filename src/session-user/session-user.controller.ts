@@ -16,7 +16,7 @@ export class SessionUserController {
   @ApiBearerAuth()
   @UseGuards(FirebaseAuthGuard)
   async update(@Req() req: Request, @Param() params) {
-    return await this.sessionUserService.updateSessionUser(
+    return await this.sessionUserService.completeSessionUser(
       req['user'] as IFirebaseUser,
       params.sessionId,
     );

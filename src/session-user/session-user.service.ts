@@ -53,7 +53,7 @@ export class SessionUserService {
     return markCourseComplete;
   }
 
-  public async updateSessionUser({ uid }: IFirebaseUser, sessionId: string) {
+  public async completeSessionUser({ uid }: IFirebaseUser, sessionId: string) {
     const user = await this.userRepository.findOne({ firebaseUid: uid });
 
     const session = await this.sessionService.getSession(sessionId);
