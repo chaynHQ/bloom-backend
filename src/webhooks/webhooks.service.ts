@@ -84,7 +84,7 @@ export class WebhooksService {
     }
   }
 
-  async upsertStory({ action, story_id }: StoryDto) {
+  async updateStory({ action, story_id }: StoryDto) {
     const {
       data: { story },
     } = await Storyblok.get(`cdn/stories/${story_id}`);

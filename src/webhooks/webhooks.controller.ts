@@ -22,6 +22,6 @@ export class WebhooksController {
   @Post('storyblok')
   @ApiBody({ type: StoryDto })
   async updateStory(@Body() storyDto: StoryDto) {
-    return this.webhooksService.upsertStory(storyDto);
+    return this.webhooksService.updateStory(storyDto);
   }
 }
