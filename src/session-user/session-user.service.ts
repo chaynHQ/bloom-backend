@@ -99,23 +99,16 @@ export class SessionUserService {
 
     const courseSessions = await this.courseService.getCourseSessions(courseId);
 
-    const courseUser = await this.courseUserService.getCourseUser({ userId: user.id, courseId });
-
-    if (!courseUser) {
-      throw new HttpException('COURSE USER NOT FOUND', HttpStatus.NOT_FOUND);
-    }
-
-    const sessionUser = await this.sessionUserRepository.findOne({
-      where: { courseUserId: courseUser.id, sessionId },
+    const courseUser = await this.courseUserService.createCourseUser({
+      userId: user.id,
+      courseId,
     });
 
-    if (!sessionUser) {
-      throw new HttpException('SESSION USER NOT FOUND', HttpStatus.NOT_FOUND);
-    }
-
-    sessionUser.completed = true;
-
-    await this.sessionUserRepository.save(sessionUser);
+    await this.sessionUserRepository.save({
+      sessionId,
+      courseUserId: courseUser.id,
+      completed: true,
+    });
 
     const userObject = await this.userService.getUser(user);
     const courseComplete = await this.markCourseComplete(
