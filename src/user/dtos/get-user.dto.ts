@@ -12,13 +12,13 @@ export class GetUserDto {
     name: string;
     slug: string;
     status: STORYBLOK_STORY_STATUS_ENUM;
-    storyblokId: number;
+    storyblokId: string;
     completed: boolean;
     session?: {
       id: string;
       name: string;
       slug: string;
-      storyblokId: number;
+      storyblokId: string;
       status: STORYBLOK_STORY_STATUS_ENUM;
       completed: boolean;
     }[];
