@@ -25,12 +25,12 @@ export class PartnerController {
   @ApiBearerAuth()
   @UseGuards(SuperAdminAuthGuard)
   @Get()
-  async fetchPartners(): Promise<PartnerEntity[]> {
-    return this.partnerService.fetchPartners();
+  async getPartners(): Promise<PartnerEntity[]> {
+    return this.partnerService.getPartners();
   }
 
   @Get(':name')
-  async fetchPartner(@Param() { name }): Promise<PartnerEntity> {
-    return this.partnerService.fetchPartner(name);
+  async getPartner(@Param() { name }): Promise<PartnerEntity> {
+    return this.partnerService.getPartner(name);
   }
 }
