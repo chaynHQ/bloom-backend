@@ -25,8 +25,14 @@ export class SessionUserService {
     private readonly courseService: CourseService,
   ) {}
 
-  private markCourseComplete(userCourse: GetUserDto, courseSession: SessionEntity[]): boolean {
-    const userCompletedSession = userCourse.course[0].session;
+  private async markCourseComplete(
+    userCourse: GetUserDto,
+    courseId: string,
+    courseSession: SessionEntity[],
+  ): Promise<boolean> {
+    const userCompletedSession = userCourse.courses.find((course) => {
+      return course.id === courseId;
+    }).sessions;
 
     const userSessionIds = userCompletedSession.map((session) => {
       if (session.completed) return session.id;
@@ -36,7 +42,16 @@ export class SessionUserService {
       if (session.status === STORYBLOK_STORY_STATUS_ENUM.PUBLISHED) return session.id;
     });
 
-    return _.xor(courseSessionIds, userSessionIds).length == 0;
+    const markCourseComplete = _.xor(courseSessionIds, userSessionIds).length == 0;
+
+    if (markCourseComplete) {
+      await this.courseUserService.completeCourse({
+        userId: userCourse.user.id,
+        courseId,
+      });
+    }
+
+    return markCourseComplete;
   }
 
   public async createSessionUser(
@@ -103,13 +118,11 @@ export class SessionUserService {
     await this.sessionUserRepository.save(sessionUser);
 
     const userObject = await this.userService.getUser(user);
-    let courseComplete = false;
-    const markCourseComplete = this.markCourseComplete(userObject, courseSessions.session);
-
-    if (markCourseComplete) {
-      await this.courseUserService.completeCourse({ userId: user.id, courseId });
-      courseComplete = true;
-    }
+    const courseComplete = await this.markCourseComplete(
+      userObject,
+      courseId,
+      courseSessions.session,
+    );
 
     return {
       courseComplete,

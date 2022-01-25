@@ -11,7 +11,7 @@ const getUserCourseSessionDetails = (userObject: UserEntity) => {
       status: course.course.status,
       storyblokId: course.course.storyblokId,
       completed: course.completed,
-      session: course.sessionUser.map((sessionUser) => {
+      sessions: course.sessionUser.map((sessionUser) => {
         return {
           id: sessionUser.session['id'],
           name: sessionUser.session['name'],
@@ -57,7 +57,7 @@ export const formatUserObject = (userObject: UserEntity): GetUserDto => {
           partner: userObject.partnerAdmin.partner,
         }
       : null,
-    course: userObject.courseUser ? getUserCourseSessionDetails(userObject) : [],
+    courses: userObject.courseUser ? getUserCourseSessionDetails(userObject) : [],
   };
 };
 

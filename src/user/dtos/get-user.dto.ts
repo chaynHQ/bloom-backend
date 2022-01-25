@@ -7,14 +7,14 @@ export class GetUserDto {
   user: IUser;
   partnerAccesses?: IPartnerAccessWithPartner[];
   partnerAdmin?: IPartnerAdminWithPartner;
-  course?: {
+  courses?: {
     id: string;
     name: string;
     slug: string;
     status: STORYBLOK_STORY_STATUS_ENUM;
     storyblokId: string;
     completed: boolean;
-    session?: {
+    sessions?: {
       id: string;
       name: string;
       slug: string;
