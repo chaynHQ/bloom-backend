@@ -1,4 +1,4 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as _ from 'lodash';
 import { SessionUserEntity } from 'src/entities/session-user.entity';
@@ -11,7 +11,6 @@ import { UserService } from 'src/user/user.service';
 import { STORYBLOK_STORY_STATUS_ENUM } from 'src/utils/constants';
 import { CourseUserService } from '../course-user/course-user.service';
 import { CourseService } from '../course/course.service';
-import { CreateSessionUserDto } from './dtos/create-session-user.dto';
 import { SessionUserRepository } from './session-user.repository';
 
 @Injectable()
@@ -54,61 +53,38 @@ export class SessionUserService {
     return markCourseComplete;
   }
 
-  public async createSessionUser(
-    { uid }: IFirebaseUser,
-    { sessionId }: CreateSessionUserDto,
-  ): Promise<SessionUserEntity> {
-    const user = await this.userRepository.findOne({ firebaseUid: uid });
-
-    const { courseId } = await this.sessionService.getSession(sessionId);
-
-    const courseSessions = await this.courseService.getCourseSessions(courseId);
-
-    if (!courseSessions) {
-      throw new HttpException('COURSE SESSIONS NOT FOUND', HttpStatus.NOT_FOUND);
-    }
-
-    let courseUser = await this.courseUserService.getCourseUser({ userId: user.id, courseId });
-
-    if (!courseUser) {
-      courseUser = await this.courseUserService.createCourseUser({ userId: user.id, courseId });
-    }
-
-    let sessionUser = await this.sessionUserRepository.findOne({
-      courseUserId: courseUser.id,
-      sessionId,
-    });
-
-    if (!sessionUser) {
-      sessionUser = await this.sessionUserRepository.save({
-        sessionId,
-        courseUserId: courseUser.id,
-        completed: false,
-      });
-    }
-
-    return sessionUser;
-  }
-
-  public async completeSessionUser({ uid }: IFirebaseUser, sessionId: string) {
+  public async updateSessionUser({ uid }: IFirebaseUser, sessionId: string) {
     const user = await this.userRepository.findOne({ firebaseUid: uid });
 
     const session = await this.sessionService.getSession(sessionId);
 
     const { courseId } = session;
 
-    const courseSessions = await this.courseService.getCourseSessions(courseId);
-
-    const courseUser = await this.courseUserService.createCourseUser({
+    let courseUser = await this.courseUserService.getCourseUser({
       userId: user.id,
       courseId,
     });
 
-    await this.sessionUserRepository.save({
-      sessionId,
-      courseUserId: courseUser.id,
-      completed: true,
-    });
+    if (!courseUser) {
+      courseUser = await this.courseUserService.createCourseUser({
+        userId: user.id,
+        courseId,
+      });
+    }
+
+    await this.sessionUserRepository
+      .createQueryBuilder('session_user')
+      .insert()
+      .into(SessionUserEntity)
+      .values({
+        sessionId,
+        courseUserId: courseUser.id,
+        completed: true,
+      })
+      .orIgnore()
+      .execute();
+
+    const courseSessions = await this.courseService.getCourseSessions(courseId);
 
     const userObject = await this.userService.getUser(user);
     const courseComplete = await this.markCourseComplete(
