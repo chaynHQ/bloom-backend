@@ -10,7 +10,7 @@ export class CourseUserService {
     @InjectRepository(CourseUserRepository) private courseUserRepository: CourseUserRepository,
   ) {}
 
-  async completeCourse({ userId, courseId }: CourseUserDto): Promise<CourseUserEntity> {
+  async getCourseUser({ userId, courseId }: CourseUserDto): Promise<CourseUserEntity> {
     return await this.courseUserRepository.findOne({ userId, courseId });
   }
 
@@ -24,7 +24,7 @@ export class CourseUserService {
     return await this.courseUserRepository.save(createCourseUserObject);
   }
 
-  async updateCourseUser({ userId, courseId }: CourseUserDto): Promise<CourseUserEntity> {
+  async completeCourse({ userId, courseId }: CourseUserDto): Promise<CourseUserEntity> {
     const courseUser = await this.courseUserRepository.findOne({ where: { userId, courseId } });
     courseUser.completed = true;
 

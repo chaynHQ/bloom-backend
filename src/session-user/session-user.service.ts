@@ -53,7 +53,7 @@ export class SessionUserService {
       throw new HttpException('COURSE SESSIONS NOT FOUND', HttpStatus.NOT_FOUND);
     }
 
-    let courseUser = await this.courseUserService.completeCourse({ userId: user.id, courseId });
+    let courseUser = await this.courseUserService.getCourseUser({ userId: user.id, courseId });
 
     if (!courseUser) {
       courseUser = await this.courseUserService.createCourseUser({ userId: user.id, courseId });
@@ -88,7 +88,7 @@ export class SessionUserService {
 
     const courseSessions = await this.courseService.getCourseSessions(courseId);
 
-    const courseUser = await this.courseUserService.completeCourse({ userId: user.id, courseId });
+    const courseUser = await this.courseUserService.getCourseUser({ userId: user.id, courseId });
 
     if (!courseUser) {
       throw new HttpException('COURSE USER NOT FOUND', HttpStatus.NOT_FOUND);
@@ -110,7 +110,7 @@ export class SessionUserService {
 
     const markCourseComplete = this.markCourseComplete(userObject, courseSessions.session);
     if (markCourseComplete) {
-      await this.courseUserService.updateCourseUser({ userId: user.id, courseId });
+      await this.courseUserService.completeCourse({ userId: user.id, courseId });
       userObject.course[0].completed = true;
     }
 
