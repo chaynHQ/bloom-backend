@@ -1,4 +1,4 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as _ from 'lodash';
 import { SessionUserEntity } from 'src/entities/session-user.entity';
@@ -11,7 +11,6 @@ import { UserService } from 'src/user/user.service';
 import { STORYBLOK_STORY_STATUS_ENUM } from 'src/utils/constants';
 import { CourseUserService } from '../course-user/course-user.service';
 import { CourseService } from '../course/course.service';
-import { CreateSessionUserDto } from './dtos/create-session-user.dto';
 import { SessionUserRepository } from './session-user.repository';
 
 @Injectable()
@@ -52,43 +51,6 @@ export class SessionUserService {
     }
 
     return courseIsComplete;
-  }
-
-  public async createSessionUser(
-    { uid }: IFirebaseUser,
-    { sessionId }: CreateSessionUserDto,
-  ): Promise<SessionUserEntity> {
-    const user = await this.userRepository.findOne({ firebaseUid: uid });
-
-    const { courseId } = await this.sessionService.getSession(sessionId);
-
-    const courseSessions = await this.courseService.getCourseWithSessions(courseId);
-
-    if (!courseSessions) {
-      throw new HttpException('COURSE SESSIONS NOT FOUND', HttpStatus.NOT_FOUND);
-    }
-
-    let courseUser = await this.courseUserService.getCourseUser({ userId: user.id, courseId });
-
-    if (!courseUser) {
-      courseUser = await this.courseUserService.createCourseUser({ userId: user.id, courseId });
-    }
-
-    const sessionUserCreateObject = this.sessionUserRepository.create({
-      sessionId,
-      courseUserId: courseUser.id,
-      completed: false,
-    });
-
-    await this.sessionUserRepository
-      .createQueryBuilder('session_user')
-      .insert()
-      .into(SessionUserEntity)
-      .values(sessionUserCreateObject)
-      .orIgnore()
-      .execute();
-
-    return sessionUserCreateObject;
   }
 
   public async completeSessionUser({ uid }: IFirebaseUser, sessionId: string) {
