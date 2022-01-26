@@ -25,7 +25,7 @@ export class SessionUserService {
     private readonly courseService: CourseService,
   ) {}
 
-  private async markCourseComplete(
+  private async checkCourseComplete(
     userCourse: GetUserDto,
     courseId: string,
     courseSession: SessionEntity[],
@@ -42,16 +42,16 @@ export class SessionUserService {
       if (session.status === STORYBLOK_STORY_STATUS_ENUM.PUBLISHED) return session.id;
     });
 
-    const markCourseComplete = _.xor(courseSessionIds, userSessionIds).length == 0;
+    const courseIsComplete = _.xor(courseSessionIds, userSessionIds).length == 0;
 
-    if (markCourseComplete) {
+    if (courseIsComplete) {
       await this.courseUserService.completeCourse({
         userId: userCourse.user.id,
         courseId,
       });
     }
 
-    return markCourseComplete;
+    return courseIsComplete;
   }
 
   public async createSessionUser(
@@ -62,7 +62,7 @@ export class SessionUserService {
 
     const { courseId } = await this.sessionService.getSession(sessionId);
 
-    const courseSessions = await this.courseService.getCourseSessions(courseId);
+    const courseSessions = await this.courseService.getCourseWithSessions(courseId);
 
     if (!courseSessions) {
       throw new HttpException('COURSE SESSIONS NOT FOUND', HttpStatus.NOT_FOUND);
@@ -74,20 +74,21 @@ export class SessionUserService {
       courseUser = await this.courseUserService.createCourseUser({ userId: user.id, courseId });
     }
 
-    let sessionUser = await this.sessionUserRepository.findOne({
-      courseUserId: courseUser.id,
+    const sessionUserCreateObject = this.sessionUserRepository.create({
       sessionId,
+      courseUserId: courseUser.id,
+      completed: false,
     });
 
-    if (!sessionUser) {
-      sessionUser = await this.sessionUserRepository.save({
-        sessionId,
-        courseUserId: courseUser.id,
-        completed: false,
-      });
-    }
+    await this.sessionUserRepository
+      .createQueryBuilder('session_user')
+      .insert()
+      .into(SessionUserEntity)
+      .values(sessionUserCreateObject)
+      .orIgnore()
+      .execute();
 
-    return sessionUser;
+    return sessionUserCreateObject;
   }
 
   public async completeSessionUser({ uid }: IFirebaseUser, sessionId: string) {
@@ -97,24 +98,37 @@ export class SessionUserService {
 
     const { courseId } = session;
 
-    const courseSessions = await this.courseService.getCourseSessions(courseId);
-
-    const courseUser = await this.courseUserService.createCourseUser({
+    let courseUser = await this.courseUserService.getCourseUser({
       userId: user.id,
       courseId,
     });
 
-    await this.sessionUserRepository.save({
-      sessionId,
-      courseUserId: courseUser.id,
-      completed: true,
-    });
+    if (!courseUser) {
+      courseUser = await this.courseUserService.createCourseUser({
+        userId: user.id,
+        courseId,
+      });
+    }
+
+    await this.sessionUserRepository
+      .createQueryBuilder('session_user')
+      .insert()
+      .into(SessionUserEntity)
+      .values({
+        sessionId,
+        courseUserId: courseUser.id,
+        completed: true,
+      })
+      .orIgnore()
+      .execute();
+
+    const courseWithSessions = await this.courseService.getCourseWithSessions(courseId);
 
     const userObject = await this.userService.getUser(user);
-    const courseComplete = await this.markCourseComplete(
+    const courseComplete = await this.checkCourseComplete(
       userObject,
       courseId,
-      courseSessions.session,
+      courseWithSessions.session,
     );
 
     return {

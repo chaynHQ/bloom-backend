@@ -8,7 +8,7 @@ import { CourseRepository } from './course.repository';
 export class CourseService {
   constructor(@InjectRepository(CourseRepository) private courseRepository: CourseRepository) {}
 
-  async getCourseSessions(id: string): Promise<CourseEntity> {
+  async getCourseWithSessions(id: string): Promise<CourseEntity> {
     return await this.courseRepository
       .createQueryBuilder('course')
       .leftJoinAndSelect('course.session', 'session')
