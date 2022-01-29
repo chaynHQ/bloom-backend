@@ -1,6 +1,7 @@
 import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiBody, ApiTags } from '@nestjs/swagger';
 import { Request } from 'express';
+import { IFirebaseUser } from 'src/firebase/firebase-user.interface';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
 import { PartnerEntity } from '../entities/partner.entity';
 import { UserEntity } from '../entities/user.entity';
@@ -31,6 +32,6 @@ export class UserController {
   @Post('/me')
   @UseGuards(FirebaseAuthGuard)
   async getUser(@Req() req: Request): Promise<GetUserDto> {
-    return this.userService.getUser(req['user'] as UserEntity);
+    return this.userService.getUser(req['user'] as IFirebaseUser);
   }
 }

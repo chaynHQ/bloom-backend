@@ -1,5 +1,6 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { IFirebaseUser } from 'src/firebase/firebase-user.interface';
 import { addCrispProfile, updateCrispProfile } from '../api/crisp/api-crisp';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
 import { PartnerEntity } from '../entities/partner.entity';
@@ -86,7 +87,7 @@ export class UserService {
     }
   }
 
-  public async getUser({ id }: UserEntity): Promise<GetUserDto | undefined> {
+  public async getUser({ uid }: IFirebaseUser): Promise<GetUserDto | undefined> {
     const queryResult = await this.userRepository
       .createQueryBuilder('user')
       .leftJoinAndSelect('user.partnerAccess', 'partnerAccess')
@@ -98,7 +99,7 @@ export class UserService {
       .leftJoinAndSelect('courseUser.course', 'course')
       .leftJoinAndSelect('courseUser.sessionUser', 'sessionUser')
       .leftJoinAndSelect('sessionUser.session', 'session')
-      .where('user.userId = :id', { id })
+      .where('user.firebaseUid = :uid', { uid })
       .getOne();
 
     if (!queryResult) {

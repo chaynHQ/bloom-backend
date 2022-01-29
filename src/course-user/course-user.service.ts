@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { getManager } from 'typeorm';
 import { CourseUserEntity } from '../entities/course-user.entity';
 import { CourseUserRepository } from './course-user.repository';
 import { CourseUserDto } from './dto/course-user.dto';
@@ -10,18 +11,14 @@ export class CourseUserService {
     @InjectRepository(CourseUserRepository) private courseUserRepository: CourseUserRepository,
   ) {}
 
-  async getCourseUser({ userId, courseId }: CourseUserDto): Promise<CourseUserEntity> {
-    return await this.courseUserRepository.findOne({ userId, courseId });
-  }
-
-  async createCourseUser({ userId, courseId }: CourseUserDto): Promise<CourseUserEntity> {
-    const createCourseUserObject = this.courseUserRepository.create({
-      courseId,
-      userId,
-      completed: false,
-    });
-
-    return await this.courseUserRepository.save(createCourseUserObject);
+  async createCourseUser({ userId, courseId }: CourseUserDto): Promise<CourseUserEntity[]> {
+    return await getManager().query(`WITH "course_user_alias" AS (
+              INSERT INTO "course_user"("createdAt", "updatedAt", "courseUserId", "completed", "userId", "courseId") 
+              VALUES (DEFAULT, DEFAULT, DEFAULT, false, '${userId}', '${courseId}') 
+              ON CONFLICT DO NOTHING
+              RETURNING * )
+                SELECT * FROM "course_user_alias" UNION SELECT * FROM "course_user" 
+                WHERE "userId"='${userId}' AND "courseId"='${courseId}'`);
   }
 
   async completeCourse({ userId, courseId }: CourseUserDto): Promise<CourseUserEntity> {
