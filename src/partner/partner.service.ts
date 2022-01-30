@@ -20,7 +20,14 @@ export class PartnerService {
     }
   }
 
-  async fetchPartners(): Promise<PartnerEntity[]> {
+  async getPartners(): Promise<PartnerEntity[]> {
     return await this.partnerRepository.find();
+  }
+
+  async getPartner(name: string): Promise<PartnerEntity> {
+    return await this.partnerRepository
+      .createQueryBuilder('partner')
+      .where('LOWER(partner.name) LIKE LOWER(:name)', { name: `%${name.toLowerCase()}%` })
+      .getOne();
   }
 }
