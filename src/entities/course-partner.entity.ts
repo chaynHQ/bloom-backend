@@ -10,6 +10,9 @@ export class CoursePartnerEntity extends BaseEntity {
   id: string;
 
   @Column()
+  active: boolean;
+
+  @Column()
   partnerId: string;
   @ManyToOne(() => PartnerEntity, (partnerEntity) => partnerEntity.partner)
   @JoinTable({ name: 'partner', joinColumn: { name: 'partnerId' } })

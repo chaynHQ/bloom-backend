@@ -1,5 +1,6 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { CoursePartnerService } from 'src/course-partner/course-partner.service';
 import { CourseEntity } from 'src/entities/course.entity';
 import { SessionEntity } from 'src/entities/session.entity';
 import StoryblokClient from 'storyblok-js-client';
@@ -29,6 +30,7 @@ export class WebhooksService {
     private userRepository: UserRepository,
     @InjectRepository(CourseRepository) private courseRepository: CourseRepository,
     @InjectRepository(SessionRepository) private sessionRepository: SessionRepository,
+    private readonly coursePartnerService: CoursePartnerService,
   ) {}
   async updatePartnerAccessBooking({ action, client_email }: SimplybookBodyDto): Promise<string> {
     const userDetails = await this.userRepository.findOne({ email: client_email });
@@ -109,6 +111,8 @@ export class WebhooksService {
           .values(createCourseObject)
           .onConflict(`("storyblokId") DO UPDATE SET "status" = '${action}'`)
           .execute();
+
+        await this.coursePartnerService.createCoursePartner(story.content?.included_for_partners);
 
         return createCourseObject;
       } else if (story.content?.component === 'Session') {
