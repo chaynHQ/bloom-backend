@@ -1,4 +1,3 @@
-import { STORYBLOK_STORY_STATUS_ENUM } from 'src/utils/constants';
 import {
   Column,
   Entity,
@@ -8,6 +7,7 @@ import {
   PrimaryGeneratedColumn,
   Unique,
 } from 'typeorm';
+import { STORYBLOK_STORY_STATUS_ENUM } from '../utils/constants';
 import { BaseEntity } from './base.entity';
 import { CourseEntity } from './course.entity';
 import { PartnerEntity } from './partner.entity';
