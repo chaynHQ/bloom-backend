@@ -13,5 +13,8 @@
     "prettier": {
       "singleQuote": true
     }
+  },
+  "[jsonc]": {
+    "editor.defaultFormatter": "vscode.json-language-features"
   }
 }
