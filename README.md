@@ -13,11 +13,10 @@ The purpose of this app is to allow users register and use a free, web-based sup
 - Swagger - API documentation
 - Firebase - User Authentication
 
-## Setting up your local environment
+## Development Setup
 
-- Install `nvm` on your machine
-- Run `nvm install` followed by `nvm use` on the root of the workspace
-- Run `yarn`
+- Install npm modules `yarn install`. To install [yarn](https://classic.yarnpkg.com/lang/en/docs/install/#mac-stable)
+- Copy `.env.example` and rename as `.env`
 
 ## Adding environmental variables
 
