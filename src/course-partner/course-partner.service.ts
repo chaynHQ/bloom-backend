@@ -1,22 +1,35 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
+import { PartnerService } from 'src/partner/partner.service';
 import { getManager } from 'typeorm';
-import { CoursePartnerRepository } from './course-partner.repository';
 
 @Injectable()
 export class CoursePartnerService {
-  constructor(
-    @InjectRepository(CoursePartnerRepository)
-    private CoursePartnerRepository: CoursePartnerRepository,
-  ) {}
+  constructor(private readonly partnerService: PartnerService) {}
 
-  async createCoursePartner(partners: string[]) {
-    return await getManager().query(`WITH "course_user_alias" AS (
-              INSERT INTO "course_user"("createdAt", "updatedAt", "CoursePartnerId", "completed", "userId", "courseId") 
-              VALUES (DEFAULT, DEFAULT, DEFAULT, false, '${userId}', '${courseId}') 
-              ON CONFLICT DO NOTHING
+  async createCoursePartner(partners: string[], action, courseId: string) {
+    const partnerObjects = await Promise.all(
+      partners.map(async (partner) => {
+        if (partner === 'public' || partner === 'Public') return null;
+        return await (
+          await this.partnerService.getPartner(partner)
+        ).id;
+      }),
+    );
+
+    return await Promise.all(
+      partnerObjects.map(async (partnerObject) => {
+        return await getManager().query(`WITH "course_partner_alias" AS (
+              INSERT INTO "course_partner"("createdAt", "updatedAt", "coursePartnerId", "status", "partnerId", "courseId")
+              VALUES (DEFAULT, DEFAULT, DEFAULT, '${action}', ${
+          partnerObject === null ? null : `'${partnerObject}'`
+        }, '${courseId}')
+              ON CONFLICT ON CONSTRAINT course_partner_index_name DO UPDATE SET status = '${action}'
               RETURNING * )
-                SELECT * FROM "course_user_alias" UNION SELECT * FROM "course_user" 
-                WHERE "userId"='${userId}' AND "courseId"='${courseId}'`);
+                SELECT * FROM "course_partner_alias" UNION SELECT * FROM "course_partner"
+                WHERE "partnerId"=${
+                  partnerObject === null ? null : `'${partnerObject}'`
+                } AND "courseId"='${courseId}'`);
+      }),
+    );
   }
 }

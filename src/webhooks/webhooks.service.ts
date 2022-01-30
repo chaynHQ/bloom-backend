@@ -104,7 +104,7 @@ export class WebhooksService {
 
     try {
       if (story.content?.component === 'Course') {
-        await this.courseRepository
+        const { identifiers } = await this.courseRepository
           .createQueryBuilder('course')
           .insert()
           .into(CourseEntity)
@@ -112,7 +112,11 @@ export class WebhooksService {
           .onConflict(`("storyblokId") DO UPDATE SET "status" = '${action}'`)
           .execute();
 
-        await this.coursePartnerService.createCoursePartner(story.content?.included_for_partners);
+        await this.coursePartnerService.createCoursePartner(
+          story.content?.included_for_partners,
+          action,
+          identifiers[0]['id'],
+        );
 
         return createCourseObject;
       } else if (story.content?.component === 'Session') {
