@@ -1,8 +1,6 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CoursePartnerService } from 'src/course-partner/course-partner.service';
-import { CourseEntity } from 'src/entities/course.entity';
-import { SessionEntity } from 'src/entities/session.entity';
 import StoryblokClient from 'storyblok-js-client';
 import apiCall from '../api/apiCalls';
 import { CourseRepository } from '../course/course.repository';
@@ -104,21 +102,23 @@ export class WebhooksService {
 
     try {
       if (story.content?.component === 'Course') {
-        const { identifiers } = await this.courseRepository
-          .createQueryBuilder('course')
-          .insert()
-          .into(CourseEntity)
-          .values(createCourseObject)
-          .onConflict(`("storyblokId") DO UPDATE SET "status" = '${action}'`)
-          .execute();
+        let course = await this.courseRepository.findOne({
+          name: story.name,
+          storyblokId: story.uuid,
+        });
+        course.status = action;
+        course.slug = story.full_slug;
+        course.name = story.name;
+
+        course = await this.courseRepository.save(!!course ? course : createCourseObject);
 
         await this.coursePartnerService.createCoursePartner(
           story.content?.included_for_partners,
           action,
-          identifiers[0]['id'],
+          course.id,
         );
 
-        return createCourseObject;
+        return course;
       } else if (story.content?.component === 'Session') {
         const { id } = await this.courseRepository.findOne({ storyblokId: story.content.course });
 
@@ -126,13 +126,18 @@ export class WebhooksService {
           throw new HttpException('COURSE NOT FOUND', HttpStatus.NOT_FOUND);
         }
 
-        await this.sessionRepository
-          .createQueryBuilder('session')
-          .insert()
-          .into(SessionEntity)
-          .values({ ...createCourseObject, ...{ courseId: id } })
-          .onConflict(`("storyblokId") DO UPDATE SET "status" = '${action}'`)
-          .execute();
+        const session = await this.sessionRepository.findOne({
+          name: story.name,
+          storyblokId: story.uuid,
+        });
+
+        session.status = action;
+        session.slug = story.full_slug;
+        session.name = story.name;
+
+        await this.sessionRepository.save(
+          !!session ? session : { ...createCourseObject, ...{ courseId: id } },
+        );
 
         return { ...createCourseObject, ...{ courseId: id } };
       }

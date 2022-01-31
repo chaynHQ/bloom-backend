@@ -1,34 +1,41 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
 import { PartnerService } from 'src/partner/partner.service';
-import { getManager } from 'typeorm';
+import { CoursePartnerRepository } from './course-partner.repository';
 
 @Injectable()
 export class CoursePartnerService {
-  constructor(private readonly partnerService: PartnerService) {}
+  constructor(
+    @InjectRepository(CoursePartnerRepository)
+    private coursePartnerRepository: CoursePartnerRepository,
+    private readonly partnerService: PartnerService,
+  ) {}
 
   async createCoursePartner(partners: string[], action, courseId: string) {
-    const partnerObjects = await Promise.all(
+    const partnersObjects = await Promise.all(
       partners.map(async (partner) => {
         if (partner === 'public' || partner === 'Public') return null;
-        return await (
-          await this.partnerService.getPartner(partner)
-        ).id;
+        return await await this.partnerService.getPartner(partner);
       }),
     );
 
     return await Promise.all(
-      partnerObjects.map(async (partnerObject) => {
-        return await getManager().query(`WITH "course_partner_alias" AS (
-              INSERT INTO "course_partner"("createdAt", "updatedAt", "coursePartnerId", "status", "partnerId", "courseId")
-              VALUES (DEFAULT, DEFAULT, DEFAULT, '${action}', ${
-          partnerObject === null ? null : `'${partnerObject}'`
-        }, '${courseId}')
-              ON CONFLICT ON CONSTRAINT course_partner_index_name DO UPDATE SET status = '${action}'
-              RETURNING * )
-                SELECT * FROM "course_partner_alias" UNION SELECT * FROM "course_partner"
-                WHERE "partnerId"=${
-                  partnerObject === null ? null : `'${partnerObject}'`
-                } AND "courseId"='${courseId}'`);
+      partnersObjects.map(async (partnerObject) => {
+        const createCoursePartnerObject = this.coursePartnerRepository.create({
+          partnerId: partnerObject.id,
+          courseId,
+          status: action,
+        });
+
+        const coursePartner = await this.coursePartnerRepository.findOne({
+          partnerId: partnerObject.id,
+          courseId: courseId,
+        });
+        coursePartner.status = action;
+
+        await this.coursePartnerRepository.save(
+          !!coursePartner ? coursePartner : createCoursePartnerObject,
+        );
       }),
     );
   }
