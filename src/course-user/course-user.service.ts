@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { getManager } from 'typeorm';
 import { CourseUserEntity } from '../entities/course-user.entity';
 import { CourseUserRepository } from './course-user.repository';
 import { CourseUserDto } from './dto/course-user.dto';
@@ -11,14 +10,22 @@ export class CourseUserService {
     @InjectRepository(CourseUserRepository) private courseUserRepository: CourseUserRepository,
   ) {}
 
-  async createCourseUser({ userId, courseId }: CourseUserDto): Promise<CourseUserEntity[]> {
-    return await getManager().query(`WITH "course_user_alias" AS (
-              INSERT INTO "course_user"("createdAt", "updatedAt", "courseUserId", "completed", "userId", "courseId") 
-              VALUES (DEFAULT, DEFAULT, DEFAULT, false, '${userId}', '${courseId}') 
-              ON CONFLICT DO NOTHING
-              RETURNING * )
-                SELECT * FROM "course_user_alias" UNION SELECT * FROM "course_user" 
-                WHERE "userId"='${userId}' AND "courseId"='${courseId}'`);
+  async getCourseUser({ courseId, userId }: CourseUserDto): Promise<CourseUserEntity[]> {
+    return await this.courseUserRepository
+      .createQueryBuilder('course_user')
+      .leftJoinAndSelect('course_user.sessionUser', 'sessionUser')
+      .leftJoinAndSelect('sessionUser.session', 'session')
+      .where('course_user.userId = :userId', { userId })
+      .andWhere('course_user.courseId = :courseId', { courseId })
+      .getMany();
+  }
+
+  async createCourseUser({ userId, courseId }: CourseUserDto): Promise<CourseUserEntity> {
+    return await this.courseUserRepository.save({
+      courseId,
+      userId,
+      completed: false,
+    });
   }
 
   async completeCourse({ userId, courseId }: CourseUserDto): Promise<CourseUserEntity> {

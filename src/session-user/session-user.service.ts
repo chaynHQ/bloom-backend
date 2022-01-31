@@ -1,17 +1,18 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import _ from 'lodash';
+import { CourseUserEntity } from 'src/entities/course-user.entity';
+import { CourseEntity } from 'src/entities/course.entity';
 import { SessionUserEntity } from 'src/entities/session-user.entity';
-import { SessionEntity } from 'src/entities/session.entity';
 import { IFirebaseUser } from 'src/firebase/firebase-user.interface';
 import { SessionService } from 'src/session/session.service';
 import { UserRepository } from 'src/user/user.repository';
 import { UserService } from 'src/user/user.service';
 import { STORYBLOK_STORY_STATUS_ENUM } from 'src/utils/constants';
-import { getManager } from 'typeorm';
 import { CourseUserService } from '../course-user/course-user.service';
 import { CourseService } from '../course/course.service';
 import { CreateSessionUserDto } from './dtos/create-session-user.dto';
+import { SessionUserDto } from './dtos/session-user.dto';
 import { SessionUserRepository } from './session-user.repository';
 
 @Injectable()
@@ -25,49 +26,15 @@ export class SessionUserService {
     private readonly courseService: CourseService,
   ) {}
 
-  private async updateSessionUser(
-    sessionId: string,
-    courseUserId: string,
-    complete: boolean,
-  ): Promise<SessionUserEntity[]> {
-    const onConflict = complete
-      ? ` ON CONFLICT ON CONSTRAINT session_user_index_name DO UPDATE SET completed = ${Boolean(
-          complete,
-        )}`
-      : ` ON CONFLICT DO NOTHING`;
-
-    return await getManager().query(`WITH "session_user_alias" AS (
-              INSERT INTO "session_user"("createdAt", "updatedAt", "sessionUserId", completed, "sessionId", "courseUserId")
-              VALUES (DEFAULT, DEFAULT, DEFAULT, ${Boolean(
-                complete,
-              )}, '${sessionId}', '${courseUserId}')
-             ${onConflict}
-              RETURNING * )
-                SELECT * FROM "session_user_alias" UNION SELECT * FROM "session_user"
-                WHERE "sessionId"='${sessionId}' AND "courseUserId"='${courseUserId}'`);
-  }
-
   private async checkCourseComplete(
-    courseUserId: string,
-    userId: string,
-    courseId: string,
-    sessionId: string,
-  ) {
-    const courseSession = await this.courseService.getCourseWithSessions(courseId);
-
-    const userSessionIds = (
-      await this.sessionUserRepository
-        .createQueryBuilder('session_user')
-        .select(['session_user.sessionUserId'])
-        .where('session_user.courseUserId = :courseUserId', { courseUserId })
-        .andWhere('session_user.sessionId = :sessionId', { sessionId })
-        .andWhere('session_user.completed = true')
-        .getRawMany()
-    ).map((id) => {
-      return id['sessionUserId'];
+    courseUser: CourseUserEntity[],
+    course: CourseEntity,
+  ): Promise<boolean> {
+    const userSessionIds = courseUser[0].sessionUser.map((session) => {
+      if (session.completed) return session.id;
     });
 
-    const courseSessionIds = courseSession.session.map((session) => {
+    const courseSessionIds = course.session.map((session) => {
       if (session.status === STORYBLOK_STORY_STATUS_ENUM.PUBLISHED) return session.id;
     });
 
@@ -75,21 +42,43 @@ export class SessionUserService {
 
     if (courseIsComplete) {
       await this.courseUserService.completeCourse({
-        userId,
-        courseId,
+        userId: courseUser[0].userId,
+        courseId: courseUser[0].course.id,
       });
     }
 
     return courseIsComplete;
   }
 
+  private async getSessionUser({
+    courseUserId,
+    sessionId,
+  }: SessionUserDto): Promise<SessionUserEntity> {
+    return await this.sessionUserRepository
+      .createQueryBuilder('session_user')
+      .leftJoinAndSelect('session_user.session', 'session')
+      .where('session_user.courseUserId = :courseUserId', { courseUserId })
+      .andWhere('session_user.sessionId = :sessionId', { sessionId })
+      .getOne();
+  }
+
+  async createSessionUserRecord({
+    sessionId,
+    courseUserId,
+    completed,
+  }: SessionUserDto): Promise<SessionUserEntity> {
+    return await this.sessionUserRepository.save({
+      sessionId,
+      courseUserId,
+      completed,
+    });
+  }
+
   public async createSessionUser(
     firebaseUser: IFirebaseUser,
     { sessionId }: CreateSessionUserDto,
-  ): Promise<SessionUserEntity[]> {
-    const {
-      user: { id },
-    } = await this.userService.getUser(firebaseUser);
+  ): Promise<SessionUserEntity> {
+    const { user } = await this.userService.getUser(firebaseUser);
     const { courseId } = await this.sessionService.getSession(sessionId);
 
     const courseSessions = await this.courseService.getCourseWithSessions(courseId);
@@ -97,39 +86,89 @@ export class SessionUserService {
     if (!courseSessions) {
       throw new HttpException('COURSE SESSIONS NOT FOUND', HttpStatus.NOT_FOUND);
     }
-    const courseUser = await this.courseUserService.createCourseUser({ userId: id, courseId });
 
-    return await this.updateSessionUser(sessionId, courseUser[0]['courseUserId'], false);
+    let courseUser: CourseUserEntity | CourseUserEntity[] =
+      await this.courseUserService.getCourseUser({
+        userId: user.id,
+        courseId,
+      });
+
+    if (courseUser.length === 0) {
+      courseUser = await this.courseUserService.createCourseUser({
+        userId: user.id,
+        courseId,
+      });
+    }
+
+    let sessionUser = await this.getSessionUser({
+      sessionId,
+      courseUserId: courseUser[0].id,
+    });
+
+    if (!sessionUser) {
+      sessionUser = await this.createSessionUserRecord({
+        sessionId,
+        courseUserId: courseUser[0].id,
+        completed: false,
+      });
+    }
+
+    return sessionUser;
   }
 
-  public async completeSessionUser(
-    firebaseUser: IFirebaseUser,
-    sessionId: string,
-  ): Promise<{
-    courseComplete: boolean;
-    session: SessionEntity;
-  }> {
-    const {
-      user: { id },
-    } = await this.userService.getUser(firebaseUser);
+  public async completeSessionUser(firebaseUser: IFirebaseUser, sessionId: string) {
+    const { user } = await this.userService.getUser(firebaseUser);
 
     const session = await this.sessionService.getSession(sessionId);
 
     const { courseId } = session;
 
-    const courseUser = await this.courseUserService.createCourseUser({
-      userId: id,
+    let courseUser: CourseUserEntity[] = [];
+
+    courseUser = await this.courseUserService.getCourseUser({
+      userId: user.id,
       courseId,
     });
 
-    await this.updateSessionUser(sessionId, courseUser[0]['courseUserId'], true);
+    if (courseUser.length === 0) {
+      const courseUserRecord = await this.courseUserService.createCourseUser({
+        userId: user.id,
+        courseId,
+      });
 
-    const courseComplete = await this.checkCourseComplete(
-      courseUser[0]['courseUserId'],
-      id,
-      courseId,
-      session.id,
-    );
+      courseUserRecord.sessionUser = [];
+
+      courseUser.push(courseUserRecord);
+    }
+
+    let sessionUser = await this.getSessionUser({
+      sessionId,
+      courseUserId: courseUser[0].id,
+    });
+
+    const sessionUserExists = !!sessionUser;
+
+    if (sessionUserExists) {
+      courseUser[0].sessionUser.map((su) => {
+        if (su.sessionId === sessionId) {
+          su.completed = true;
+        }
+      });
+    } else {
+      sessionUser = await this.createSessionUserRecord({
+        sessionId,
+        courseUserId: courseUser[0].id,
+        completed: true,
+      });
+
+      sessionUser.session = [session];
+    }
+
+    const courseWithSessions = await this.courseService.getCourseWithSessions(courseId);
+
+    const courseComplete = sessionUserExists
+      ? await this.checkCourseComplete(courseUser, courseWithSessions)
+      : false;
 
     return {
       courseComplete,
