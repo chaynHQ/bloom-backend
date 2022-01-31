@@ -106,9 +106,12 @@ export class WebhooksService {
           name: story.name,
           storyblokId: story.uuid,
         });
-        course.status = action;
-        course.slug = story.full_slug;
-        course.name = story.name;
+
+        if (!!course) {
+          course.status = action;
+          course.slug = story.full_slug;
+          course.name = story.name;
+        }
 
         course = await this.courseRepository.save(!!course ? course : createCourseObject);
 
@@ -131,9 +134,11 @@ export class WebhooksService {
           storyblokId: story.uuid,
         });
 
-        session.status = action;
-        session.slug = story.full_slug;
-        session.name = story.name;
+        if (!!session) {
+          session.status = action;
+          session.slug = story.full_slug;
+          session.name = story.name;
+        }
 
         await this.sessionRepository.save(
           !!session ? session : { ...createCourseObject, ...{ courseId: id } },

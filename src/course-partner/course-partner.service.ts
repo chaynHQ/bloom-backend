@@ -31,7 +31,10 @@ export class CoursePartnerService {
           partnerId: partnerObject.id,
           courseId: courseId,
         });
-        coursePartner.status = action;
+
+        if (!!coursePartner) {
+          coursePartner.status = action;
+        }
 
         await this.coursePartnerRepository.save(
           !!coursePartner ? coursePartner : createCoursePartnerObject,
