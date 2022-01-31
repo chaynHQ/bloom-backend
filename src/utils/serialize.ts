@@ -57,7 +57,7 @@ export const formatUserObject = (userObject: UserEntity): GetUserDto => {
           partner: userObject.partnerAdmin.partner,
         }
       : null,
-    course: userObject.courseUser ? getUserCourseSessionDetails(userObject) : [],
+    courses: userObject.courseUser ? getUserCourseSessionDetails(userObject) : [],
   };
 };
 

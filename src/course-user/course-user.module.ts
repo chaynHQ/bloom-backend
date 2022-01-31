@@ -4,6 +4,6 @@ import { CourseUserService } from './course-user.service';
 
 @Module({
   controllers: [CourseUserController],
-  providers: [CourseUserService]
+  providers: [CourseUserService],
 })
 export class CourseUserModule {}
