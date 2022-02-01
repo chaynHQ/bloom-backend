@@ -11,7 +11,7 @@ const getUserCourseSessionDetails = (userObject: UserEntity) => {
       status: course.course.status,
       storyblokId: course.course.storyblokId,
       completed: course.completed,
-      session: course.course.session.map((session) => {
+      sessions: course.course.session.map((session) => {
         return {
           id: session.id,
           name: session.name,
