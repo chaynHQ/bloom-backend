@@ -52,6 +52,7 @@
     "rimraf": "^3.0.2",
     "rollbar": "^2.24.0",
     "rxjs": "^7.2.0",
+    "storyblok-js-client": "^4.2.0",
     "swagger-ui-express": "^4.1.6",
     "typeorm": "^0.2.38"
   },
