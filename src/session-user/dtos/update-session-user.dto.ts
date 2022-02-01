@@ -1,10 +1,10 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsDefined, IsNotEmpty, IsString } from 'class-validator';
 
-export class CreateSessionUserDto {
+export class UpdateSessionUserDto {
   @IsString()
   @IsNotEmpty()
   @IsDefined()
   @ApiProperty({ type: String })
-  sessionId: string;
+  storyblokId: string;
 }
