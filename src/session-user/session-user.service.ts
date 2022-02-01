@@ -121,14 +121,12 @@ export class SessionUserService {
   ) {
     const { user } = await this.userService.getUser(firebaseUser);
     const session = await this.sessionService.getSessionByStoryblokId(storyblokId);
-    console.log('test 1', storyblokId, session);
 
     if (!session) {
       throw new HttpException('SESSION NOT FOUND', HttpStatus.NOT_FOUND);
     }
 
-    const { id } = session;
-    const { courseId } = session;
+    const { id, courseId } = session;
 
     let courseUser = await this.courseUserService.getCourseUser({
       userId: user.id,
@@ -143,7 +141,6 @@ export class SessionUserService {
 
       courseUser.sessionUser = [];
     }
-    console.log('test 3');
 
     let sessionUser = await this.getSessionUser({
       sessionId: id,
