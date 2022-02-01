@@ -30,8 +30,8 @@ export class SessionUserService {
     courseUser: CourseUserEntity,
     course: CourseEntity,
   ): Promise<boolean> {
-    const userSessionIds = courseUser.sessionUser.map((session) => {
-      if (session.completed) return session.id;
+    const userSessionIds = courseUser.sessionUser.map((sessionUser) => {
+      if (sessionUser.completed) return sessionUser.sessionId;
     });
 
     const courseSessionIds = course.session.map((session) => {
@@ -128,14 +128,12 @@ export class SessionUserService {
     });
 
     if (!courseUser) {
-      const courseUserRecord = await this.courseUserService.createCourseUser({
+      courseUser = await this.courseUserService.createCourseUser({
         userId: user.id,
         courseId,
       });
 
-      courseUserRecord.sessionUser = [];
-
-      courseUser = courseUserRecord;
+      courseUser.sessionUser = [];
     }
 
     let sessionUser = await this.getSessionUser({
@@ -143,9 +141,7 @@ export class SessionUserService {
       courseUserId: courseUser.id,
     });
 
-    const sessionUserExists = !!sessionUser;
-
-    if (sessionUserExists) {
+    if (sessionUser) {
       courseUser.sessionUser.map((su) => {
         if (su.sessionId === sessionId) {
           su.completed = true;
@@ -157,15 +153,12 @@ export class SessionUserService {
         courseUserId: courseUser.id,
         completed: true,
       });
-
-      sessionUser.session = [session];
+      courseUser.sessionUser.push(sessionUser);
     }
 
-    const courseWithSessions = await this.courseService.getCourseWithSessions(courseId);
+    const course = await this.courseService.getCourseWithSessions(courseId);
 
-    const courseComplete = sessionUserExists
-      ? await this.checkCourseComplete(courseUser, courseWithSessions)
-      : false;
+    const courseComplete = await this.checkCourseComplete(courseUser, course);
 
     return {
       courseComplete,
