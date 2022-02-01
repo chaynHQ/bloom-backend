@@ -165,7 +165,7 @@ export class SessionUserService {
 
     return {
       courseComplete,
-      session,
+      sessionUser,
     };
   }
 }
