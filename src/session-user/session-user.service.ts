@@ -142,6 +142,9 @@ export class SessionUserService {
     });
 
     if (sessionUser) {
+      sessionUser.completed = true;
+      await this.sessionUserRepository.save(sessionUser);
+
       courseUser.sessionUser.map((su) => {
         if (su.sessionId === sessionId) {
           su.completed = true;
