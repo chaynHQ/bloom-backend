@@ -27,10 +27,10 @@ export class SessionUserService {
   ) {}
 
   private async checkCourseComplete(
-    courseUser: CourseUserEntity[],
+    courseUser: CourseUserEntity,
     course: CourseEntity,
   ): Promise<boolean> {
-    const userSessionIds = courseUser[0].sessionUser.map((session) => {
+    const userSessionIds = courseUser.sessionUser.map((session) => {
       if (session.completed) return session.id;
     });
 
@@ -42,8 +42,8 @@ export class SessionUserService {
 
     if (courseIsComplete) {
       await this.courseUserService.completeCourse({
-        userId: courseUser[0].userId,
-        courseId: courseUser[0].course.id,
+        userId: courseUser.userId,
+        courseId: courseUser.course.id,
       });
     }
 
@@ -87,13 +87,12 @@ export class SessionUserService {
       throw new HttpException('COURSE SESSIONS NOT FOUND', HttpStatus.NOT_FOUND);
     }
 
-    let courseUser: CourseUserEntity | CourseUserEntity[] =
-      await this.courseUserService.getCourseUser({
-        userId: user.id,
-        courseId,
-      });
+    let courseUser: CourseUserEntity = await this.courseUserService.getCourseUser({
+      userId: user.id,
+      courseId,
+    });
 
-    if (courseUser.length === 0) {
+    if (!courseUser) {
       courseUser = await this.courseUserService.createCourseUser({
         userId: user.id,
         courseId,
@@ -102,13 +101,13 @@ export class SessionUserService {
 
     let sessionUser = await this.getSessionUser({
       sessionId,
-      courseUserId: courseUser[0].id,
+      courseUserId: courseUser.id,
     });
 
     if (!sessionUser) {
       sessionUser = await this.createSessionUserRecord({
         sessionId,
-        courseUserId: courseUser[0].id,
+        courseUserId: courseUser.id,
         completed: false,
       });
     }
@@ -123,14 +122,12 @@ export class SessionUserService {
 
     const { courseId } = session;
 
-    let courseUser: CourseUserEntity[] = [];
-
-    courseUser = await this.courseUserService.getCourseUser({
+    let courseUser = await this.courseUserService.getCourseUser({
       userId: user.id,
       courseId,
     });
 
-    if (courseUser.length === 0) {
+    if (!courseUser) {
       const courseUserRecord = await this.courseUserService.createCourseUser({
         userId: user.id,
         courseId,
@@ -138,18 +135,18 @@ export class SessionUserService {
 
       courseUserRecord.sessionUser = [];
 
-      courseUser.push(courseUserRecord);
+      courseUser = courseUserRecord;
     }
 
     let sessionUser = await this.getSessionUser({
       sessionId,
-      courseUserId: courseUser[0].id,
+      courseUserId: courseUser.id,
     });
 
     const sessionUserExists = !!sessionUser;
 
     if (sessionUserExists) {
-      courseUser[0].sessionUser.map((su) => {
+      courseUser.sessionUser.map((su) => {
         if (su.sessionId === sessionId) {
           su.completed = true;
         }
@@ -157,7 +154,7 @@ export class SessionUserService {
     } else {
       sessionUser = await this.createSessionUserRecord({
         sessionId,
-        courseUserId: courseUser[0].id,
+        courseUserId: courseUser.id,
         completed: true,
       });
 
