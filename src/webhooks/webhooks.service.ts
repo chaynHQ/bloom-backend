@@ -93,17 +93,16 @@ export class WebhooksService {
       throw new HttpException('STORY NOT FOUND', HttpStatus.NOT_FOUND);
     }
 
-    const createCourseObject = this.courseRepository.create({
+    const storyData = {
       name: story.name,
       slug: story.full_slug,
       status: action,
       storyblokId: story.uuid,
-    });
+    };
 
     try {
       if (story.content?.component === 'Course') {
         let course = await this.courseRepository.findOne({
-          name: story.name,
           storyblokId: story.uuid,
         });
 
@@ -111,26 +110,25 @@ export class WebhooksService {
           course.status = action;
           course.slug = story.full_slug;
           course.name = story.name;
+        } else {
+          course = this.courseRepository.create(storyData);
         }
 
-        course = await this.courseRepository.save(!!course ? course : createCourseObject);
+        course = await this.courseRepository.save(course);
 
-        await this.coursePartnerService.createCoursePartner(
+        await this.coursePartnerService.updateCoursePartners(
           story.content?.included_for_partners,
-          action,
           course.id,
         );
-
-        return course;
       } else if (story.content?.component === 'Session') {
-        const { id } = await this.courseRepository.findOne({ storyblokId: story.content.course });
+        const { id } = await this.courseRepository.findOne({
+          storyblokId: story.content.course,
+        });
 
         if (!id) {
           throw new HttpException('COURSE NOT FOUND', HttpStatus.NOT_FOUND);
         }
-
-        const session = await this.sessionRepository.findOne({
-          name: story.name,
+        let session = await this.sessionRepository.findOne({
           storyblokId: story.uuid,
         });
 
@@ -138,14 +136,13 @@ export class WebhooksService {
           session.status = action;
           session.slug = story.full_slug;
           session.name = story.name;
+        } else {
+          session = this.sessionRepository.create({ ...storyData, ...{ courseId: id } });
         }
 
-        await this.sessionRepository.save(
-          !!session ? session : { ...createCourseObject, ...{ courseId: id } },
-        );
-
-        return { ...createCourseObject, ...{ courseId: id } };
+        await this.sessionRepository.save(session);
       }
+      return 'ok';
     } catch (error) {
       throw error;
     }

@@ -11,7 +11,7 @@ export class CoursePartnerService {
     private readonly partnerService: PartnerService,
   ) {}
 
-  async createCoursePartner(partners: string[], action, courseId: string) {
+  async updateCoursePartners(partners: string[], courseId: string) {
     const partnersObjects = await Promise.all(
       partners.map(async (partner) => {
         if (partner === 'public' || partner === 'Public') return null;
@@ -21,24 +21,18 @@ export class CoursePartnerService {
 
     return await Promise.all(
       partnersObjects.map(async (partnerObject) => {
-        const createCoursePartnerObject = this.coursePartnerRepository.create({
-          partnerId: partnerObject.id,
-          courseId,
-          status: action,
-        });
-
         const coursePartner = await this.coursePartnerRepository.findOne({
           partnerId: partnerObject.id,
           courseId: courseId,
         });
 
-        if (!!coursePartner) {
-          coursePartner.status = action;
+        if (!coursePartner) {
+          const coursePartnerObject = this.coursePartnerRepository.create({
+            partnerId: partnerObject.id,
+            courseId,
+          });
+          await this.coursePartnerRepository.save(coursePartnerObject);
         }
-
-        await this.coursePartnerRepository.save(
-          !!coursePartner ? coursePartner : createCoursePartnerObject,
-        );
       }),
     );
   }
