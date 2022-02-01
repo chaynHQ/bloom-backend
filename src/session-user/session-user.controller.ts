@@ -1,10 +1,9 @@
-import { Body, Controller, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { Request } from 'express';
+import { FirebaseAuthGuard } from 'src/firebase/firebase-auth.guard';
 import { IFirebaseUser } from 'src/firebase/firebase-user.interface';
-import { FirebaseAuthGuard } from '../firebase/firebase-auth.guard';
-import { ControllerDecorator } from '../utils/controller.decorator';
-import { CreateSessionUserDto } from './dtos/create-session-user.dto';
+import { ControllerDecorator } from 'src/utils/controller.decorator';
+import { UpdateSessionUserDto } from './dtos/update-session-user.dto';
 import { SessionUserService } from './session-user.service';
 
 @ApiTags('Session User')
@@ -16,20 +15,20 @@ export class SessionUserController {
   @Post()
   @ApiBearerAuth()
   @UseGuards(FirebaseAuthGuard)
-  async createSessionUser(@Req() req: Request, @Body() createSessionUserDto: CreateSessionUserDto) {
+  async createSessionUser(@Req() req: Request, @Body() createSessionUserDto: UpdateSessionUserDto) {
     return await this.sessionUserService.createSessionUser(
       req['user'] as IFirebaseUser,
       createSessionUserDto,
     );
   }
 
-  @Patch(':sessionId')
+  @Post('/complete')
   @ApiBearerAuth()
   @UseGuards(FirebaseAuthGuard)
-  async update(@Req() req: Request, @Param() params) {
+  async update(@Req() req: Request, @Body() completeSessionUserDto: UpdateSessionUserDto) {
     return await this.sessionUserService.completeSessionUser(
       req['user'] as IFirebaseUser,
-      params.sessionId,
+      completeSessionUserDto,
     );
   }
 }

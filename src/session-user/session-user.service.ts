@@ -1,17 +1,18 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import _ from 'lodash';
+import { CourseUserEntity } from 'src/entities/course-user.entity';
+import { CourseEntity } from 'src/entities/course.entity';
 import { SessionUserEntity } from 'src/entities/session-user.entity';
-import { SessionEntity } from 'src/entities/session.entity';
 import { IFirebaseUser } from 'src/firebase/firebase-user.interface';
 import { SessionService } from 'src/session/session.service';
 import { UserRepository } from 'src/user/user.repository';
 import { UserService } from 'src/user/user.service';
 import { STORYBLOK_STORY_STATUS_ENUM } from 'src/utils/constants';
-import { getManager } from 'typeorm';
 import { CourseUserService } from '../course-user/course-user.service';
 import { CourseService } from '../course/course.service';
-import { CreateSessionUserDto } from './dtos/create-session-user.dto';
+import { SessionUserDto } from './dtos/session-user.dto';
+import { UpdateSessionUserDto } from './dtos/update-session-user.dto';
 import { SessionUserRepository } from './session-user.repository';
 
 @Injectable()
@@ -25,49 +26,15 @@ export class SessionUserService {
     private readonly courseService: CourseService,
   ) {}
 
-  private async updateSessionUser(
-    sessionId: string,
-    courseUserId: string,
-    complete: boolean,
-  ): Promise<SessionUserEntity[]> {
-    const onConflict = complete
-      ? ` ON CONFLICT ON CONSTRAINT session_user_index_name DO UPDATE SET completed = ${Boolean(
-          complete,
-        )}`
-      : ` ON CONFLICT DO NOTHING`;
-
-    return await getManager().query(`WITH "session_user_alias" AS (
-              INSERT INTO "session_user"("createdAt", "updatedAt", "sessionUserId", completed, "sessionId", "courseUserId")
-              VALUES (DEFAULT, DEFAULT, DEFAULT, ${Boolean(
-                complete,
-              )}, '${sessionId}', '${courseUserId}')
-             ${onConflict}
-              RETURNING * )
-                SELECT * FROM "session_user_alias" UNION SELECT * FROM "session_user"
-                WHERE "sessionId"='${sessionId}' AND "courseUserId"='${courseUserId}'`);
-  }
-
   private async checkCourseComplete(
-    courseUserId: string,
-    userId: string,
-    courseId: string,
-    sessionId: string,
-  ) {
-    const courseSession = await this.courseService.getCourseWithSessions(courseId);
-
-    const userSessionIds = (
-      await this.sessionUserRepository
-        .createQueryBuilder('session_user')
-        .select(['session_user.sessionUserId'])
-        .where('session_user.courseUserId = :courseUserId', { courseUserId })
-        .andWhere('session_user.sessionId = :sessionId', { sessionId })
-        .andWhere('session_user.completed = true')
-        .getRawMany()
-    ).map((id) => {
-      return id['sessionUserId'];
+    courseUser: CourseUserEntity,
+    course: CourseEntity,
+  ): Promise<boolean> {
+    const userSessionIds = courseUser.sessionUser.map((sessionUser) => {
+      if (sessionUser.completed) return sessionUser.sessionId;
     });
 
-    const courseSessionIds = courseSession.session.map((session) => {
+    const courseSessionIds = course.session.map((session) => {
       if (session.status === STORYBLOK_STORY_STATUS_ENUM.PUBLISHED) return session.id;
     });
 
@@ -75,65 +42,136 @@ export class SessionUserService {
 
     if (courseIsComplete) {
       await this.courseUserService.completeCourse({
-        userId,
-        courseId,
+        userId: courseUser.userId,
+        courseId: courseUser.courseId,
       });
     }
 
     return courseIsComplete;
   }
 
+  private async getSessionUser({
+    courseUserId,
+    sessionId,
+  }: SessionUserDto): Promise<SessionUserEntity> {
+    return await this.sessionUserRepository
+      .createQueryBuilder('session_user')
+      .leftJoinAndSelect('session_user.session', 'session')
+      .where('session_user.courseUserId = :courseUserId', { courseUserId })
+      .andWhere('session_user.sessionId = :sessionId', { sessionId })
+      .getOne();
+  }
+
+  async createSessionUserRecord({
+    sessionId,
+    courseUserId,
+    completed,
+  }: SessionUserDto): Promise<SessionUserEntity> {
+    return await this.sessionUserRepository.save({
+      sessionId,
+      courseUserId,
+      completed,
+    });
+  }
+
   public async createSessionUser(
     firebaseUser: IFirebaseUser,
-    { sessionId }: CreateSessionUserDto,
-  ): Promise<SessionUserEntity[]> {
-    const {
-      user: { id },
-    } = await this.userService.getUser(firebaseUser);
-    const { courseId } = await this.sessionService.getSession(sessionId);
+    { storyblokId }: UpdateSessionUserDto,
+  ): Promise<SessionUserEntity> {
+    const { user } = await this.userService.getUser(firebaseUser);
+    const session = await this.sessionService.getSessionByStoryblokId(storyblokId);
 
-    const courseSessions = await this.courseService.getCourseWithSessions(courseId);
-
-    if (!courseSessions) {
-      throw new HttpException('COURSE SESSIONS NOT FOUND', HttpStatus.NOT_FOUND);
+    if (!session) {
+      throw new HttpException('SESSION NOT FOUND', HttpStatus.NOT_FOUND);
     }
-    const courseUser = await this.courseUserService.createCourseUser({ userId: id, courseId });
 
-    return await this.updateSessionUser(sessionId, courseUser[0]['courseUserId'], false);
+    const { id, courseId } = session;
+
+    let courseUser: CourseUserEntity = await this.courseUserService.getCourseUser({
+      userId: user.id,
+      courseId,
+    });
+
+    if (!courseUser) {
+      courseUser = await this.courseUserService.createCourseUser({
+        userId: user.id,
+        courseId,
+      });
+    }
+
+    let sessionUser = await this.getSessionUser({
+      sessionId: id,
+      courseUserId: courseUser.id,
+    });
+
+    if (!sessionUser) {
+      sessionUser = await this.createSessionUserRecord({
+        sessionId: id,
+        courseUserId: courseUser.id,
+        completed: false,
+      });
+    }
+
+    return sessionUser;
   }
 
   public async completeSessionUser(
     firebaseUser: IFirebaseUser,
-    sessionId: string,
-  ): Promise<{
-    courseComplete: boolean;
-    session: SessionEntity;
-  }> {
-    const {
-      user: { id },
-    } = await this.userService.getUser(firebaseUser);
+    { storyblokId }: UpdateSessionUserDto,
+  ) {
+    const { user } = await this.userService.getUser(firebaseUser);
+    const session = await this.sessionService.getSessionByStoryblokId(storyblokId);
 
-    const session = await this.sessionService.getSession(sessionId);
+    if (!session) {
+      throw new HttpException('SESSION NOT FOUND', HttpStatus.NOT_FOUND);
+    }
 
-    const { courseId } = session;
+    const { id, courseId } = session;
 
-    const courseUser = await this.courseUserService.createCourseUser({
-      userId: id,
+    let courseUser = await this.courseUserService.getCourseUser({
+      userId: user.id,
       courseId,
     });
 
-    await this.updateSessionUser(sessionId, courseUser[0]['courseUserId'], true);
+    if (!courseUser) {
+      courseUser = await this.courseUserService.createCourseUser({
+        userId: user.id,
+        courseId,
+      });
 
-    const courseComplete = await this.checkCourseComplete(
-      courseUser[0]['courseUserId'],
-      id,
-      courseId,
-      session.id,
-    );
+      courseUser.sessionUser = [];
+    }
+
+    let sessionUser = await this.getSessionUser({
+      sessionId: id,
+      courseUserId: courseUser.id,
+    });
+
+    if (sessionUser) {
+      sessionUser.completed = true;
+      await this.sessionUserRepository.save(sessionUser);
+
+      courseUser.sessionUser.map((su) => {
+        if (su.sessionId === id) {
+          su.completed = true;
+        }
+      });
+    } else {
+      sessionUser = await this.createSessionUserRecord({
+        sessionId: id,
+        courseUserId: courseUser.id,
+        completed: true,
+      });
+      sessionUser.session = session;
+      courseUser.sessionUser.push(sessionUser);
+    }
+
+    const course = await this.courseService.getCourseWithSessions(courseId);
+    const courseComplete = await this.checkCourseComplete(courseUser, course);
 
     return {
       courseComplete,
-      session,
+      sessionUser,
     };
   }
 }
