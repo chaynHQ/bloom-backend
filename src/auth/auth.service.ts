@@ -9,7 +9,11 @@ export class AuthService {
   constructor(@Inject(FIREBASE) private firebase: FirebaseServices) {}
 
   public async loginFirebaseUser({ email, password }: UserAuthDto) {
-    return await this.firebase.auth.signInWithEmailAndPassword(email, password);
+    try {
+      return await this.firebase.auth.signInWithEmailAndPassword(email, password);
+    } catch (error) {
+      throw new UnauthorizedException('Unauthorized: Invalid login credentials');
+    }
   }
 
   async parseAuth(header: string): Promise<DecodedIdToken> {

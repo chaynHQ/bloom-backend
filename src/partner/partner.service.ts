@@ -16,7 +16,7 @@ export class PartnerService {
       if (error.code === '23505') {
         throw new HttpException(error.detail, HttpStatus.BAD_REQUEST);
       }
-      return error;
+      throw error;
     }
   }
 
@@ -25,9 +25,13 @@ export class PartnerService {
   }
 
   async getPartner(name: string): Promise<PartnerEntity> {
-    return await this.partnerRepository
-      .createQueryBuilder('partner')
-      .where('LOWER(partner.name) LIKE LOWER(:name)', { name: `%${name.toLowerCase()}%` })
-      .getOne();
+    try {
+      return await this.partnerRepository
+        .createQueryBuilder('partner')
+        .where('LOWER(partner.name) LIKE LOWER(:name)', { name: `%${name.toLowerCase()}%` })
+        .getOne();
+    } catch (error) {
+      throw error;
+    }
   }
 }

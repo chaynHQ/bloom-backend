@@ -1,11 +1,11 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm/dist/common';
-import { CreatePartnerAccessDto } from './dtos/create-partner-access.dto';
-import { PartnerAccessRepository } from './partner-access.repository';
 import _ from 'lodash';
+import moment from 'moment';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
 import { PartnerAccessCodeStatusEnum } from '../utils/constants';
-import moment from 'moment';
+import { CreatePartnerAccessDto } from './dtos/create-partner-access.dto';
+import { PartnerAccessRepository } from './partner-access.repository';
 
 @Injectable()
 export class PartnerAccessService {
@@ -15,7 +15,11 @@ export class PartnerAccessService {
   ) {}
 
   private async findPartnerAccessCode(accessCode: string): Promise<PartnerAccessEntity> {
-    return await this.partnerAccessRepository.findOne({ accessCode });
+    try {
+      return await this.partnerAccessRepository.findOne({ accessCode });
+    } catch (error) {
+      throw error;
+    }
   }
 
   private async generateAccessCode(length: number): Promise<string> {
@@ -92,14 +96,18 @@ export class PartnerAccessService {
         ...partnerAccessCodeUpdateDetails,
       });
     } catch (error) {
-      return error;
+      throw error;
     }
   }
 
   async getPartnerAccessCodes(): Promise<PartnerAccessEntity[]> {
-    return await this.partnerAccessRepository
-      .createQueryBuilder('partnerAccess')
-      .leftJoinAndSelect('partnerAccess.partner', 'partner')
-      .getMany();
+    try {
+      return await this.partnerAccessRepository
+        .createQueryBuilder('partnerAccess')
+        .leftJoinAndSelect('partnerAccess.partner', 'partner')
+        .getMany();
+    } catch (error) {
+      throw error;
+    }
   }
 }

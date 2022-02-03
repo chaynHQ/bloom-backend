@@ -9,11 +9,15 @@ export class CourseService {
   constructor(@InjectRepository(CourseRepository) private courseRepository: CourseRepository) {}
 
   async getCourseWithSessions(id: string): Promise<CourseEntity> {
-    return await this.courseRepository
-      .createQueryBuilder('course')
-      .leftJoinAndSelect('course.session', 'session')
-      .where('course.courseId = :id', { id })
-      .andWhere(`session.status = :status`, { status: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED })
-      .getOne();
+    try {
+      return await this.courseRepository
+        .createQueryBuilder('course')
+        .leftJoinAndSelect('course.session', 'session')
+        .where('course.courseId = :id', { id })
+        .andWhere(`session.status = :status`, { status: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED })
+        .getOne();
+    } catch (error) {
+      throw error;
+    }
   }
 }

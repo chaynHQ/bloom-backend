@@ -8,10 +8,18 @@ export class SessionService {
   constructor(@InjectRepository(SessionRepository) private sessionRepository: SessionRepository) {}
 
   async getSession(id: string): Promise<SessionEntity> {
-    return await this.sessionRepository.findOne({ id });
+    try {
+      return await this.sessionRepository.findOne({ id });
+    } catch (error) {
+      throw error;
+    }
   }
 
   async getSessionByStoryblokId(storyblokId: string): Promise<SessionEntity> {
-    return await this.sessionRepository.findOne({ storyblokId });
+    try {
+      return await this.sessionRepository.findOne({ storyblokId });
+    } catch (error) {
+      throw error;
+    }
   }
 }

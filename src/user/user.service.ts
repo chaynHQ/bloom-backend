@@ -88,24 +88,28 @@ export class UserService {
   }
 
   public async getUser({ uid }: IFirebaseUser): Promise<GetUserDto | undefined> {
-    const queryResult = await this.userRepository
-      .createQueryBuilder('user')
-      .leftJoinAndSelect('user.partnerAccess', 'partnerAccess')
-      .leftJoinAndSelect('user.partnerAdmin', 'partnerAdmin')
-      .leftJoinAndSelect('partnerAccess.partner', 'partner')
-      .leftJoinAndSelect('partnerAccess.partner', 'partnerAccessPartner')
-      .leftJoinAndSelect('partnerAdmin.partner', 'partnerAdminPartner')
-      .leftJoinAndSelect('user.courseUser', 'courseUser')
-      .leftJoinAndSelect('courseUser.course', 'course')
-      .leftJoinAndSelect('courseUser.sessionUser', 'sessionUser')
-      .leftJoinAndSelect('sessionUser.session', 'session')
-      .where('user.firebaseUid = :uid', { uid })
-      .getOne();
+    try {
+      const queryResult = await this.userRepository
+        .createQueryBuilder('user')
+        .leftJoinAndSelect('user.partnerAccess', 'partnerAccess')
+        .leftJoinAndSelect('user.partnerAdmin', 'partnerAdmin')
+        .leftJoinAndSelect('partnerAccess.partner', 'partner')
+        .leftJoinAndSelect('partnerAccess.partner', 'partnerAccessPartner')
+        .leftJoinAndSelect('partnerAdmin.partner', 'partnerAdminPartner')
+        .leftJoinAndSelect('user.courseUser', 'courseUser')
+        .leftJoinAndSelect('courseUser.course', 'course')
+        .leftJoinAndSelect('courseUser.sessionUser', 'sessionUser')
+        .leftJoinAndSelect('sessionUser.session', 'session')
+        .where('user.firebaseUid = :uid', { uid })
+        .getOne();
 
-    if (!queryResult) {
-      throw new HttpException('USER NOT FOUND', HttpStatus.NOT_FOUND);
+      if (!queryResult) {
+        throw new HttpException('USER NOT FOUND', HttpStatus.NOT_FOUND);
+      }
+
+      return formatUserObject(queryResult);
+    } catch (error) {
+      throw error;
     }
-
-    return formatUserObject(queryResult);
   }
 }

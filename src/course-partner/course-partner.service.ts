@@ -13,53 +13,61 @@ export class CoursePartnerService {
   ) {}
 
   async getCoursePartnersByCourseId(courseId: string) {
-    return await this.coursePartnerRepository
-      .createQueryBuilder('course_partner')
-      .leftJoinAndSelect('course_partner.partner', 'partner')
-      .where('course_partner.courseId = :courseId', { courseId })
-      .getMany();
+    try {
+      return await this.coursePartnerRepository
+        .createQueryBuilder('course_partner')
+        .leftJoinAndSelect('course_partner.partner', 'partner')
+        .where('course_partner.courseId = :courseId', { courseId })
+        .getMany();
+    } catch (error) {
+      throw error;
+    }
   }
 
   async updateCoursePartners(partners: string[], courseId: string) {
-    const coursePartners = await this.getCoursePartnersByCourseId(courseId);
+    try {
+      const coursePartners = await this.getCoursePartnersByCourseId(courseId);
 
-    const partnersObjects = await Promise.all(
-      partners.map(async (partner) => {
-        if (partner === 'public' || partner === 'Public')
-          return await this.partnerService.getPartner('Chayn');
-        return await this.partnerService.getPartner(partner);
-      }),
-    );
+      const partnersObjects = await Promise.all(
+        partners.map(async (partner) => {
+          if (partner === 'public' || partner === 'Public')
+            return await this.partnerService.getPartner('Chayn');
+          return await this.partnerService.getPartner(partner);
+        }),
+      );
 
-    //If course existed in included_for_partners but now doesnt
-    Promise.all(
-      coursePartners.map(async (cp) => {
-        if (!_.find(partnersObjects, { id: cp.partner.id })) {
-          cp.active = false;
-          await this.coursePartnerRepository.save(cp);
-        }
-      }),
-    );
+      //If course existed in included_for_partners but now doesnt
+      Promise.all(
+        coursePartners.map(async (cp) => {
+          if (!_.find(partnersObjects, { id: cp.partner.id })) {
+            cp.active = false;
+            await this.coursePartnerRepository.save(cp);
+          }
+        }),
+      );
 
-    return Promise.all(
-      partnersObjects.map(async (partner) => {
-        const coursePartner = await this.coursePartnerRepository.findOne({
-          partnerId: partner.id,
-          courseId: courseId,
-        });
-
-        if (!coursePartner) {
-          await this.coursePartnerRepository.save({
+      return Promise.all(
+        partnersObjects.map(async (partner) => {
+          const coursePartner = await this.coursePartnerRepository.findOne({
             partnerId: partner.id,
-            courseId,
-            active: true,
+            courseId: courseId,
           });
-        } else if (coursePartner.active === false) {
-          //If course was removed from included_for_partners but was added back at a later date
-          coursePartner.active = true;
-          await this.coursePartnerRepository.save(coursePartner);
-        }
-      }),
-    );
+
+          if (!coursePartner) {
+            await this.coursePartnerRepository.save({
+              partnerId: partner.id,
+              courseId,
+              active: true,
+            });
+          } else if (coursePartner.active === false) {
+            //If course was removed from included_for_partners but was added back at a later date
+            coursePartner.active = true;
+            await this.coursePartnerRepository.save(coursePartner);
+          }
+        }),
+      );
+    } catch (error) {
+      throw error;
+    }
   }
 }
