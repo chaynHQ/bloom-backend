@@ -1,5 +1,6 @@
 import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { Request } from 'express';
 import { FirebaseAuthGuard } from 'src/firebase/firebase-auth.guard';
 import { IFirebaseUser } from 'src/firebase/firebase-user.interface';
 import { ControllerDecorator } from 'src/utils/controller.decorator';
