@@ -1,8 +1,9 @@
 import { PartnerAdminEntity } from '../entities/partner-admin.entity';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
-import { Column, Entity, OneToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, OneToMany, OneToOne, PrimaryGeneratedColumn } from 'typeorm';
 import { BaseEntity } from './base.entity';
 import { LANGUAGE_DEFAULT } from '../utils/constants';
+import { CourseUserEntity } from './course-user.entity';
 
 @Entity({ name: 'user' })
 export class UserEntity extends BaseEntity {
@@ -27,9 +28,12 @@ export class UserEntity extends BaseEntity {
   @Column({ type: Boolean, default: false })
   isSuperAdmin: boolean;
 
-  @OneToOne(() => PartnerAccessEntity, (partnerAccess) => partnerAccess.user)
-  partnerAccess: PartnerAccessEntity;
+  @OneToMany(() => PartnerAccessEntity, (partnerAccess) => partnerAccess.user)
+  partnerAccess: PartnerAccessEntity[];
 
   @OneToOne(() => PartnerAdminEntity, (partnerAdmin) => partnerAdmin.user)
   partnerAdmin: PartnerAdminEntity;
+
+  @OneToMany(() => CourseUserEntity, (courseUser) => courseUser.user)
+  courseUser: CourseUserEntity[];
 }

@@ -13,11 +13,10 @@ The purpose of this app is to allow users register and use a free, web-based sup
 - Swagger - API documentation
 - Firebase - User Authentication
 
-## Setting up your local environment
+## Development Setup
 
-- Install `nvm` on your machine
-- Run `nvm install` followed by `nvm use` on the root of the workspace
-- Run `yarn`
+- Install npm modules `yarn install`. To install [yarn](https://classic.yarnpkg.com/lang/en/docs/install/#mac-stable)
+- Copy `.env.example` and rename as `.env`
 
 ## Adding environmental variables
 
@@ -49,8 +48,6 @@ The project is containerized and can be run solely in docker - both the PostgreS
 - Run `docker-compose up`
 - You should see this in the shell output in docker:
   `shell Listening on localhost:35001, CTRL+C to stop `
-  _To populate the database run the command below in a new terminal_
-- Run `cat ./bloom_db_local.sql | docker exec -i bloom-local-db pg_restore --verbose --clean --no-acl --no-owner -U postgres -d bloom`
 
 _Note: you can use an application like Postman to test the apis locally_
 

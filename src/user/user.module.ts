@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { SessionUserModule } from 'src/session-user/session-user.module';
 import { AuthService } from '../auth/auth.service';
 import { FirebaseModule } from '../firebase/firebase.module';
 import { PartnerAccessRepository } from '../partner-access/partner-access.repository';
@@ -15,6 +16,6 @@ import { UserService } from './user.service';
     FirebaseModule,
   ],
   controllers: [UserController],
-  providers: [UserService, AuthService, PartnerAccessService],
+  providers: [UserService, AuthService, PartnerAccessService, SessionUserModule],
 })
 export class UserModule {}

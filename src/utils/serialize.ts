@@ -1,17 +1,28 @@
 import { UserEntity } from '../entities/user.entity';
 import { GetUserDto } from '../user/dtos/get-user.dto';
 
-const getPartnerDetails = (userObject: UserEntity) => {
-  const object = userObject.partnerAccess
-    ? userObject.partnerAccess.partner
-    : userObject.partnerAdmin.partner;
-
-  return {
-    id: object.id,
-    name: object.name,
-    logo: object.logo,
-    primaryColour: object.primaryColour,
-  };
+const getUserCourseSessionDetails = (userObject: UserEntity) => {
+  const courseObj = userObject.courseUser;
+  return courseObj.map((course) => {
+    return {
+      id: course.course.id,
+      name: course.course.name,
+      slug: course.course.slug,
+      status: course.course.status,
+      storyblokId: course.course.storyblokId,
+      completed: course.completed,
+      sessions: course.course.session.map((session) => {
+        return {
+          id: session.id,
+          name: session.name,
+          slug: session.slug,
+          storyblokId: session.storyblokId,
+          status: session.status,
+          completed: session.sessionUser[0].completed,
+        };
+      }),
+    };
+  });
 };
 
 export const formatUserObject = (userObject: UserEntity): GetUserDto => {
@@ -24,18 +35,18 @@ export const formatUserObject = (userObject: UserEntity): GetUserDto => {
       email: userObject.email,
       languageDefault: userObject.languageDefault,
     },
-    partner: getPartnerDetails(userObject),
-    partnerAccess: userObject.partnerAccess
-      ? {
-          id: userObject.partnerAccess.id,
-          activatedAt: userObject.partnerAccess.activatedAt,
-          featureLiveChat: Boolean(userObject.partnerAccess.featureLiveChat),
-          featureTherapy: Boolean(userObject.partnerAccess.featureTherapy),
-          accessCode: userObject.partnerAccess.accessCode,
-          therapySessionsRemaining: Number(userObject.partnerAccess.therapySessionsRemaining),
-          therapySessionsRedeemed: Number(userObject.partnerAccess.therapySessionsRedeemed),
-        }
-      : null,
+    partnerAccesses: userObject.partnerAccess.map((partnerAccess) => {
+      return {
+        id: partnerAccess.id,
+        activatedAt: partnerAccess.activatedAt,
+        featureLiveChat: Boolean(partnerAccess.featureLiveChat),
+        featureTherapy: Boolean(partnerAccess.featureTherapy),
+        accessCode: partnerAccess.accessCode,
+        therapySessionsRemaining: Number(partnerAccess.therapySessionsRemaining),
+        therapySessionsRedeemed: Number(partnerAccess.therapySessionsRedeemed),
+        partner: partnerAccess.partner,
+      };
+    }),
     partnerAdmin: userObject.partnerAdmin
       ? {
           id: userObject.partnerAdmin.id,
@@ -43,8 +54,10 @@ export const formatUserObject = (userObject: UserEntity): GetUserDto => {
           partnerId: userObject.partnerAdmin.partnerId,
           createdAt: userObject.partnerAdmin.createdAt,
           updatedAt: userObject.partnerAdmin.updatedAt,
+          partner: userObject.partnerAdmin.partner,
         }
       : null,
+    courses: userObject.courseUser ? getUserCourseSessionDetails(userObject) : [],
   };
 };
 
