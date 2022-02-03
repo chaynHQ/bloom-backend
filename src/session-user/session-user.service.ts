@@ -11,8 +11,8 @@ import { UserService } from 'src/user/user.service';
 import { STORYBLOK_STORY_STATUS_ENUM } from 'src/utils/constants';
 import { CourseUserService } from '../course-user/course-user.service';
 import { CourseService } from '../course/course.service';
-import { CreateSessionUserDto } from './dtos/create-session-user.dto';
 import { SessionUserDto } from './dtos/session-user.dto';
+import { UpdateSessionUserDto } from './dtos/update-session-user.dto';
 import { SessionUserRepository } from './session-user.repository';
 
 @Injectable()
@@ -27,11 +27,11 @@ export class SessionUserService {
   ) {}
 
   private async checkCourseComplete(
-    courseUser: CourseUserEntity[],
+    courseUser: CourseUserEntity,
     course: CourseEntity,
   ): Promise<boolean> {
-    const userSessionIds = courseUser[0].sessionUser.map((session) => {
-      if (session.completed) return session.id;
+    const userSessionIds = courseUser.sessionUser.map((sessionUser) => {
+      if (sessionUser.completed) return sessionUser.sessionId;
     });
 
     const courseSessionIds = course.session.map((session) => {
@@ -42,8 +42,8 @@ export class SessionUserService {
 
     if (courseIsComplete) {
       await this.courseUserService.completeCourse({
-        userId: courseUser[0].userId,
-        courseId: courseUser[0].course.id,
+        userId: courseUser.userId,
+        courseId: courseUser.courseId,
       });
     }
 
@@ -76,24 +76,23 @@ export class SessionUserService {
 
   public async createSessionUser(
     firebaseUser: IFirebaseUser,
-    { sessionId }: CreateSessionUserDto,
+    { storyblokId }: UpdateSessionUserDto,
   ): Promise<SessionUserEntity> {
     const { user } = await this.userService.getUser(firebaseUser);
-    const { courseId } = await this.sessionService.getSession(sessionId);
+    const session = await this.sessionService.getSessionByStoryblokId(storyblokId);
 
-    const courseSessions = await this.courseService.getCourseWithSessions(courseId);
-
-    if (!courseSessions) {
-      throw new HttpException('COURSE SESSIONS NOT FOUND', HttpStatus.NOT_FOUND);
+    if (!session) {
+      throw new HttpException('SESSION NOT FOUND', HttpStatus.NOT_FOUND);
     }
 
-    let courseUser: CourseUserEntity | CourseUserEntity[] =
-      await this.courseUserService.getCourseUser({
-        userId: user.id,
-        courseId,
-      });
+    const { id, courseId } = session;
 
-    if (courseUser.length === 0) {
+    let courseUser: CourseUserEntity = await this.courseUserService.getCourseUser({
+      userId: user.id,
+      courseId,
+    });
+
+    if (!courseUser) {
       courseUser = await this.courseUserService.createCourseUser({
         userId: user.id,
         courseId,
@@ -101,14 +100,14 @@ export class SessionUserService {
     }
 
     let sessionUser = await this.getSessionUser({
-      sessionId,
-      courseUserId: courseUser[0].id,
+      sessionId: id,
+      courseUserId: courseUser.id,
     });
 
     if (!sessionUser) {
       sessionUser = await this.createSessionUserRecord({
-        sessionId,
-        courseUserId: courseUser[0].id,
+        sessionId: id,
+        courseUserId: courseUser.id,
         completed: false,
       });
     }
@@ -116,63 +115,63 @@ export class SessionUserService {
     return sessionUser;
   }
 
-  public async completeSessionUser(firebaseUser: IFirebaseUser, sessionId: string) {
+  public async completeSessionUser(
+    firebaseUser: IFirebaseUser,
+    { storyblokId }: UpdateSessionUserDto,
+  ) {
     const { user } = await this.userService.getUser(firebaseUser);
+    const session = await this.sessionService.getSessionByStoryblokId(storyblokId);
 
-    const session = await this.sessionService.getSession(sessionId);
+    if (!session) {
+      throw new HttpException('SESSION NOT FOUND', HttpStatus.NOT_FOUND);
+    }
 
-    const { courseId } = session;
+    const { id, courseId } = session;
 
-    let courseUser: CourseUserEntity[] = [];
-
-    courseUser = await this.courseUserService.getCourseUser({
+    let courseUser = await this.courseUserService.getCourseUser({
       userId: user.id,
       courseId,
     });
 
-    if (courseUser.length === 0) {
-      const courseUserRecord = await this.courseUserService.createCourseUser({
+    if (!courseUser) {
+      courseUser = await this.courseUserService.createCourseUser({
         userId: user.id,
         courseId,
       });
 
-      courseUserRecord.sessionUser = [];
-
-      courseUser.push(courseUserRecord);
+      courseUser.sessionUser = [];
     }
 
     let sessionUser = await this.getSessionUser({
-      sessionId,
-      courseUserId: courseUser[0].id,
+      sessionId: id,
+      courseUserId: courseUser.id,
     });
 
-    const sessionUserExists = !!sessionUser;
+    if (sessionUser) {
+      sessionUser.completed = true;
+      await this.sessionUserRepository.save(sessionUser);
 
-    if (sessionUserExists) {
-      courseUser[0].sessionUser.map((su) => {
-        if (su.sessionId === sessionId) {
+      courseUser.sessionUser.map((su) => {
+        if (su.sessionId === id) {
           su.completed = true;
         }
       });
     } else {
       sessionUser = await this.createSessionUserRecord({
-        sessionId,
-        courseUserId: courseUser[0].id,
+        sessionId: id,
+        courseUserId: courseUser.id,
         completed: true,
       });
-
-      sessionUser.session = [session];
+      sessionUser.session = session;
+      courseUser.sessionUser.push(sessionUser);
     }
 
-    const courseWithSessions = await this.courseService.getCourseWithSessions(courseId);
-
-    const courseComplete = sessionUserExists
-      ? await this.checkCourseComplete(courseUser, courseWithSessions)
-      : false;
+    const course = await this.courseService.getCourseWithSessions(courseId);
+    const courseComplete = await this.checkCourseComplete(courseUser, course);
 
     return {
       courseComplete,
-      session,
+      sessionUser,
     };
   }
 }

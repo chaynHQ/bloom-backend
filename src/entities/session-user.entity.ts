@@ -16,11 +16,11 @@ export class SessionUserEntity extends BaseEntity {
   sessionId: string;
   @ManyToOne(() => SessionEntity, (sessionEntity) => sessionEntity.sessionUser)
   @JoinTable({ name: 'session', joinColumn: { name: 'sessionId' } })
-  session: SessionEntity[];
+  session: SessionEntity;
 
   @Column()
   courseUserId: string;
   @ManyToOne(() => CourseUserEntity, (courseUser) => courseUser.sessionUser)
   @JoinTable({ name: 'course_user', joinColumn: { name: 'courseUserId' } })
-  courseUser: CourseUserEntity[];
+  courseUser: CourseUserEntity;
 }

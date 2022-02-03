@@ -10,4 +10,8 @@ export class SessionService {
   async getSession(id: string): Promise<SessionEntity> {
     return await this.sessionRepository.findOne({ id });
   }
+
+  async getSessionByStoryblokId(storyblokId: string): Promise<SessionEntity> {
+    return await this.sessionRepository.findOne({ storyblokId });
+  }
 }
