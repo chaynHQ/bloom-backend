@@ -1,4 +1,4 @@
-import {MigrationInterface, QueryRunner} from "typeorm";
+import { MigrationInterface, QueryRunner } from "typeorm";
 
 export class bloomBackend1643934015734 implements MigrationInterface {
     name = 'bloomBackend1643934015734'
