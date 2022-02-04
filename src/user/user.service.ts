@@ -52,9 +52,7 @@ export class UserService {
         });
 
         if (!!updatePartnerAccessResponse.featureLiveChat) {
-          const {
-            data: { data },
-          } = await addCrispProfile({
+          await addCrispProfile({
             email: createUserResponse.email,
             person: { nickname: createUserResponse.name },
           });
@@ -64,7 +62,7 @@ export class UserService {
             getPartnerResponse,
             updatePartnerAccessResponse,
           );
-          await updateCrispProfile({ ...userData }, data?.people_id);
+          await updateCrispProfile({ ...userData }, createUserResponse.email);
         }
 
         delete updatePartnerAccessResponse.partnerAdmin;

@@ -1,6 +1,7 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import _ from 'lodash';
+import { updateCrispProfile } from 'src/api/crisp/api-crisp';
 import { CourseUserEntity } from 'src/entities/course-user.entity';
 import { CourseEntity } from 'src/entities/course.entity';
 import { SessionUserEntity } from 'src/entities/session-user.entity';
@@ -25,6 +26,10 @@ export class SessionUserService {
     private readonly sessionService: SessionService,
     private readonly courseService: CourseService,
   ) {}
+
+  formatText = (text: string) => {
+    return `course-${text.replace(/,?\s+/g, '-').toLowerCase()}`;
+  };
 
   private async checkCourseComplete(
     courseUser: CourseUserEntity,
@@ -78,41 +83,63 @@ export class SessionUserService {
     firebaseUser: IFirebaseUser,
     { storyblokId }: UpdateSessionUserDto,
   ): Promise<SessionUserEntity> {
-    const { user } = await this.userService.getUser(firebaseUser);
-    const session = await this.sessionService.getSessionByStoryblokId(storyblokId);
+    try {
+      const { user } = await this.userService.getUser(firebaseUser);
+      const session = await this.sessionService.getSessionByStoryblokId(storyblokId);
 
-    if (!session) {
-      throw new HttpException('SESSION NOT FOUND', HttpStatus.NOT_FOUND);
-    }
+      if (!session) {
+        throw new HttpException('SESSION NOT FOUND', HttpStatus.NOT_FOUND);
+      }
 
-    const { id, courseId } = session;
+      const { id, courseId } = session;
 
-    let courseUser: CourseUserEntity = await this.courseUserService.getCourseUser({
-      userId: user.id,
-      courseId,
-    });
-
-    if (!courseUser) {
-      courseUser = await this.courseUserService.createCourseUser({
+      let courseUser: CourseUserEntity = await this.courseUserService.getCourseUser({
         userId: user.id,
         courseId,
       });
-    }
 
-    let sessionUser = await this.getSessionUser({
-      sessionId: id,
-      courseUserId: courseUser.id,
-    });
+      if (!courseUser) {
+        courseUser = await this.courseUserService.createCourseUser({
+          userId: user.id,
+          courseId,
+        });
 
-    if (!sessionUser) {
-      sessionUser = await this.createSessionUserRecord({
+        const courseFormattedName = this.formatText(session.course.name);
+        await updateCrispProfile({ [`${courseFormattedName}`]: 'Not Completed' }, user.email);
+      }
+
+      let sessionUser = await this.getSessionUser({
         sessionId: id,
         courseUserId: courseUser.id,
-        completed: false,
       });
-    }
 
-    return sessionUser;
+      if (!sessionUser) {
+        sessionUser = await this.createSessionUserRecord({
+          sessionId: id,
+          courseUserId: courseUser.id,
+          completed: false,
+        });
+      }
+
+      //We need to check what course the user has already if they do have?
+
+      // const personData = await getCrispPeopleData(user.email);
+      // const personCourse = personData.data.data.data;
+      // const personCourse_ = [];
+      // for (const [key, value] of Object.entries(personCourse)) {
+      //   if (key.includes('course-')) {
+      //     personCourse_.push({ key, value });
+      //   }
+      // }
+
+      // console.log(personCourse_);
+      //If they do have a The course already append the session to the course
+      //If they dont have the course already create a course and session object
+
+      return sessionUser;
+    } catch (error) {
+      console.log(error);
+    }
   }
 
   public async completeSessionUser(
