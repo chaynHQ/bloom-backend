@@ -32,7 +32,7 @@ export const logCourseEvent = (
 ) => {
   let featureSeen = false;
 
-  partnerAccesses.map(async (pa) => {
+  return partnerAccesses.map(async (pa) => {
     if (!!pa.featureLiveChat && featureSeen === false) {
       const courseFormattedName = formatText(courseName);
       await updateCrispProfile({ [`${courseFormattedName}`]: status }, userEmail);
