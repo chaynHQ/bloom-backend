@@ -1,5 +1,6 @@
 import { AxiosResponse } from 'axios';
-import { crispToken, website_id } from '../../utils/constants';
+import { IPartnerAccessWithPartner } from 'src/partner-access/partner-access.interface';
+import { COURSE_STATUS, crispToken, website_id } from '../../utils/constants';
 import apiCall from '../apiCalls';
 import {
   CrispResponse,
@@ -17,6 +18,27 @@ const headers = {
   Authorization: `Basic ${crispToken}`,
   'X-Crisp-Tier': 'plugin',
   '-ContentType': 'application/json',
+};
+
+const formatText = (text: string) => {
+  return `course_${text.replace(/,?\s+/g, '_').toLowerCase()}`;
+};
+
+export const logCourseEvent = (
+  partnerAccesses: IPartnerAccessWithPartner[],
+  courseName: string,
+  userEmail: string,
+  status: COURSE_STATUS,
+) => {
+  let featureSeen = false;
+
+  partnerAccesses.map(async (pa) => {
+    if (!!pa.featureLiveChat && featureSeen === false) {
+      const courseFormattedName = formatText(courseName);
+      await updateCrispProfile({ [`${courseFormattedName}`]: status }, userEmail);
+      featureSeen = true;
+    }
+  });
 };
 
 export const getCrispProfile = async (email: string): Promise<AxiosResponse<CrispResponse>> => {

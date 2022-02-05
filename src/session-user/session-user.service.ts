@@ -1,7 +1,7 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import _ from 'lodash';
-import { updateCrispProfile } from 'src/api/crisp/api-crisp';
+import { logCourseEvent } from 'src/api/crisp/api-crisp';
 import { CourseUserEntity } from 'src/entities/course-user.entity';
 import { CourseEntity } from 'src/entities/course.entity';
 import { SessionUserEntity } from 'src/entities/session-user.entity';
@@ -9,7 +9,7 @@ import { IFirebaseUser } from 'src/firebase/firebase-user.interface';
 import { SessionService } from 'src/session/session.service';
 import { UserRepository } from 'src/user/user.repository';
 import { UserService } from 'src/user/user.service';
-import { STORYBLOK_STORY_STATUS_ENUM } from 'src/utils/constants';
+import { COURSE_STATUS, STORYBLOK_STORY_STATUS_ENUM } from 'src/utils/constants';
 import { CourseUserService } from '../course-user/course-user.service';
 import { CourseService } from '../course/course.service';
 import { SessionUserDto } from './dtos/session-user.dto';
@@ -26,10 +26,6 @@ export class SessionUserService {
     private readonly sessionService: SessionService,
     private readonly courseService: CourseService,
   ) {}
-
-  formatText = (text: string) => {
-    return `course-${text.replace(/,?\s+/g, '-').toLowerCase()}`;
-  };
 
   private async checkCourseComplete(
     courseUser: CourseUserEntity,
@@ -84,7 +80,7 @@ export class SessionUserService {
     { storyblokId }: UpdateSessionUserDto,
   ): Promise<SessionUserEntity> {
     try {
-      const { user } = await this.userService.getUser(firebaseUser);
+      const { user, partnerAccesses } = await this.userService.getUser(firebaseUser);
       const session = await this.sessionService.getSessionByStoryblokId(storyblokId);
 
       if (!session) {
@@ -104,8 +100,7 @@ export class SessionUserService {
           courseId,
         });
 
-        const courseFormattedName = this.formatText(session.course.name);
-        await updateCrispProfile({ [`${courseFormattedName}`]: 'Not Completed' }, user.email);
+        logCourseEvent(partnerAccesses, session.course.name, user.email, COURSE_STATUS.IN_PROGRESS);
       }
 
       let sessionUser = await this.getSessionUser({
@@ -121,21 +116,6 @@ export class SessionUserService {
         });
       }
 
-      //We need to check what course the user has already if they do have?
-
-      // const personData = await getCrispPeopleData(user.email);
-      // const personCourse = personData.data.data.data;
-      // const personCourse_ = [];
-      // for (const [key, value] of Object.entries(personCourse)) {
-      //   if (key.includes('course-')) {
-      //     personCourse_.push({ key, value });
-      //   }
-      // }
-
-      // console.log(personCourse_);
-      //If they do have a The course already append the session to the course
-      //If they dont have the course already create a course and session object
-
       return sessionUser;
     } catch (error) {
       console.log(error);
@@ -146,7 +126,7 @@ export class SessionUserService {
     firebaseUser: IFirebaseUser,
     { storyblokId }: UpdateSessionUserDto,
   ) {
-    const { user } = await this.userService.getUser(firebaseUser);
+    const { user, partnerAccesses } = await this.userService.getUser(firebaseUser);
     const session = await this.sessionService.getSessionByStoryblokId(storyblokId);
 
     if (!session) {
@@ -165,6 +145,8 @@ export class SessionUserService {
         userId: user.id,
         courseId,
       });
+
+      logCourseEvent(partnerAccesses, session.course.name, user.email, COURSE_STATUS.IN_PROGRESS);
 
       courseUser.sessionUser = [];
     }
@@ -195,6 +177,10 @@ export class SessionUserService {
 
     const course = await this.courseService.getCourseWithSessions(courseId);
     const courseComplete = await this.checkCourseComplete(courseUser, course);
+
+    if (courseComplete) {
+      logCourseEvent(partnerAccesses, session.course.name, user.email, COURSE_STATUS.COMPLETED);
+    }
 
     return {
       courseComplete,

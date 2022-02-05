@@ -1,6 +1,11 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
+export enum COURSE_STATUS {
+  IN_PROGRESS = 'In Progress',
+  COMPLETED = 'Completed',
+}
+
 export enum SIMPLYBOOK_ACTION_ENUM {
   NEW_BOOKING = 'NEW_BOOKING',
   CANCELLED_BOOKING = 'CANCELLED_BOOKING',
