@@ -24,21 +24,20 @@ const formatText = (text: string) => {
   return `course_${text.replace(/,?\s+/g, '_').toLowerCase()}`;
 };
 
-export const logCourseEvent = (
+export const updateCrispProfileCourse = async (
   partnerAccesses: IPartnerAccessWithPartner[],
   courseName: string,
   userEmail: string,
   status: COURSE_STATUS,
 ) => {
-  let featureSeen = false;
-
-  return partnerAccesses.map(async (pa) => {
-    if (!!pa.featureLiveChat && featureSeen === false) {
-      const courseFormattedName = formatText(courseName);
-      await updateCrispProfile({ [`${courseFormattedName}`]: status }, userEmail);
-      featureSeen = true;
-    }
+  const featureLiveChat = !!partnerAccesses.find(function (partnerAccess) {
+    return partnerAccess.featureLiveChat === true;
   });
+
+  if (featureLiveChat) {
+    const courseFormattedName = formatText(courseName);
+    await updateCrispProfile({ [`${courseFormattedName}`]: status }, userEmail);
+  }
 };
 
 export const getCrispProfile = async (email: string): Promise<AxiosResponse<CrispResponse>> => {
