@@ -2,7 +2,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 export enum PROGRESS_STATUS {
-  IN_PROGRESS = 'In Progress',
+  STARTED = 'Started',
   COMPLETED = 'Completed',
   NOT_STARTED = 'Not Started',
 }

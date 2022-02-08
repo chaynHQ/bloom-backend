@@ -1,7 +1,7 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import _ from 'lodash';
-import { updateCrispProfileCourse } from 'src/api/crisp/crisp-api';
+import { updateCrispProfileCourse, updateCrispProfileSession } from 'src/api/crisp/crisp-api';
 import { CourseUserEntity } from 'src/entities/course-user.entity';
 import { CourseEntity } from 'src/entities/course.entity';
 import { SessionUserEntity } from 'src/entities/session-user.entity';
@@ -100,11 +100,11 @@ export class SessionUserService {
           courseId,
         });
 
-        updateCrispProfileCourse(
+        await updateCrispProfileCourse(
           partnerAccesses,
           session.course.name,
           user.email,
-          PROGRESS_STATUS.IN_PROGRESS,
+          PROGRESS_STATUS.STARTED,
         );
       }
 
@@ -119,6 +119,13 @@ export class SessionUserService {
           courseUserId: courseUser.id,
           completed: false,
         });
+
+        await updateCrispProfileSession(
+          session.course.name,
+          session.name,
+          PROGRESS_STATUS.STARTED,
+          user.email,
+        );
       }
 
       return sessionUser;
@@ -155,7 +162,7 @@ export class SessionUserService {
         partnerAccesses,
         session.course.name,
         user.email,
-        PROGRESS_STATUS.IN_PROGRESS,
+        PROGRESS_STATUS.STARTED,
       );
 
       courseUser.sessionUser = [];
@@ -196,6 +203,13 @@ export class SessionUserService {
         PROGRESS_STATUS.COMPLETED,
       );
     }
+
+    await updateCrispProfileSession(
+      session.course.name,
+      session.name,
+      PROGRESS_STATUS.COMPLETED,
+      user.email,
+    );
 
     return {
       courseComplete,

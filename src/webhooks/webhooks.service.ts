@@ -1,5 +1,6 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { updateCrispProfile } from 'src/api/crisp/crisp-api';
 import { CoursePartnerService } from 'src/course-partner/course-partner.service';
 import StoryblokClient from 'storyblok-js-client';
 import apiCall from '../api/apiCalls';
@@ -63,6 +64,14 @@ export class WebhooksService {
         therapySessionsRemaining: Number(partnerAccessDetails.therapySessionsRemaining) - 1,
         therapySessionsRedeemed: Number(partnerAccessDetails.therapySessionsRedeemed) + 1,
       };
+
+      await updateCrispProfile(
+        {
+          therapy_sessions_remaining: Number(partnerAccessDetails.therapySessionsRemaining) - 1,
+          therapy_sessions_redeemed: Number(partnerAccessDetails.therapySessionsRedeemed) + 1,
+        },
+        client_email,
+      );
     }
 
     if (action === SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING) {
@@ -70,6 +79,14 @@ export class WebhooksService {
         therapySessionsRemaining: Number(partnerAccessDetails.therapySessionsRemaining) + 1,
         therapySessionsRedeemed: Number(partnerAccessDetails.therapySessionsRedeemed) - 1,
       };
+
+      await updateCrispProfile(
+        {
+          therapy_sessions_remaining: Number(partnerAccessDetails.therapySessionsRemaining) + 1,
+          therapy_sessions_redeemed: Number(partnerAccessDetails.therapySessionsRedeemed) - 1,
+        },
+        client_email,
+      );
     }
 
     try {
