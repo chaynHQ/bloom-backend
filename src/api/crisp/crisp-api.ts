@@ -1,6 +1,6 @@
 import { AxiosResponse } from 'axios';
 import { IPartnerAccessWithPartner } from 'src/partner-access/partner-access.interface';
-import { COURSE_STATUS, crispToken, website_id } from '../../utils/constants';
+import { crispToken, PROGRESS_STATUS, website_id } from '../../utils/constants';
 import apiCall from '../apiCalls';
 import {
   CrispResponse,
@@ -28,7 +28,7 @@ export const updateCrispProfileCourse = async (
   partnerAccesses: IPartnerAccessWithPartner[],
   courseName: string,
   userEmail: string,
-  status: COURSE_STATUS,
+  status: PROGRESS_STATUS,
 ) => {
   const featureLiveChat = !!partnerAccesses.find(function (partnerAccess) {
     return partnerAccess.featureLiveChat === true;

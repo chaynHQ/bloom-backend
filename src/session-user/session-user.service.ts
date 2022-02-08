@@ -9,7 +9,7 @@ import { IFirebaseUser } from 'src/firebase/firebase-user.interface';
 import { SessionService } from 'src/session/session.service';
 import { UserRepository } from 'src/user/user.repository';
 import { UserService } from 'src/user/user.service';
-import { COURSE_STATUS, STORYBLOK_STORY_STATUS_ENUM } from 'src/utils/constants';
+import { PROGRESS_STATUS, STORYBLOK_STORY_STATUS_ENUM } from 'src/utils/constants';
 import { CourseUserService } from '../course-user/course-user.service';
 import { CourseService } from '../course/course.service';
 import { SessionUserDto } from './dtos/session-user.dto';
@@ -104,7 +104,7 @@ export class SessionUserService {
           partnerAccesses,
           session.course.name,
           user.email,
-          COURSE_STATUS.IN_PROGRESS,
+          PROGRESS_STATUS.IN_PROGRESS,
         );
       }
 
@@ -155,7 +155,7 @@ export class SessionUserService {
         partnerAccesses,
         session.course.name,
         user.email,
-        COURSE_STATUS.IN_PROGRESS,
+        PROGRESS_STATUS.IN_PROGRESS,
       );
 
       courseUser.sessionUser = [];
@@ -193,7 +193,7 @@ export class SessionUserService {
         partnerAccesses,
         session.course.name,
         user.email,
-        COURSE_STATUS.COMPLETED,
+        PROGRESS_STATUS.COMPLETED,
       );
     }
 
