@@ -25,8 +25,7 @@ export class CoursePartnerService {
 
     const partnersObjects = await Promise.all(
       partners.map(async (partner) => {
-        if (partner === 'public' || partner === 'Public')
-          return await this.partnerService.getPartner('Chayn');
+        if (partner === 'public' || partner === 'Public') return;
         return await this.partnerService.getPartner(partner);
       }),
     );
