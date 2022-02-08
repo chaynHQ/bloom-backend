@@ -31,7 +31,7 @@ const formatCourseText = (courseName: string) => {
   return `course_${getAcronym(courseName)}_status`;
 };
 
-const fomrmatSessionText = (courseName: string, status: PROGRESS_STATUS) => {
+const formatSessionText = (courseName: string, status: PROGRESS_STATUS) => {
   return `course_${getAcronym(courseName)}_sessions_${status.toLowerCase()}`;
 };
 
@@ -59,19 +59,18 @@ export const updateCrispProfileSession = async (
   status: PROGRESS_STATUS,
   email: string,
 ) => {
-  const crispData = await getCrispPeopleData(email);
+  const crispResponse = await getCrispPeopleData(email);
+  const crispData = crispResponse.data.data.data;
 
-  const sessionStartedFormattedName = fomrmatSessionText(courseName, PROGRESS_STATUS.STARTED);
-  const sessionCompletedFormattedName = fomrmatSessionText(courseName, PROGRESS_STATUS.COMPLETED);
+  const sessionStartedFormattedName = formatSessionText(courseName, PROGRESS_STATUS.STARTED);
+  const sessionCompletedFormattedName = formatSessionText(courseName, PROGRESS_STATUS.COMPLETED);
 
-  const startedSessions: string[] = !!crispData.data.data?.data[`${sessionStartedFormattedName}`]
-    ? crispData.data.data?.data[`${sessionStartedFormattedName}`].split('; ')
+  const startedSessions: string[] = !!crispData[sessionStartedFormattedName]
+    ? crispData[sessionStartedFormattedName].split('; ')
     : [];
 
-  const completedSessions: string[] = !!crispData.data.data?.data[
-    `${sessionCompletedFormattedName}`
-  ]
-    ? crispData.data.data.data[`${sessionCompletedFormattedName}`].split('; ')
+  const completedSessions: string[] = !!crispData[sessionCompletedFormattedName]
+    ? crispData[sessionCompletedFormattedName].split('; ')
     : [];
 
   const index = startedSessions.indexOf(sessionName);
@@ -79,20 +78,17 @@ export const updateCrispProfileSession = async (
     if (index === -1) {
       startedSessions.push(sessionName);
       await updateCrispProfile(
-        { [`${sessionStartedFormattedName}`]: startedSessions.join('; ') },
+        { [sessionStartedFormattedName]: startedSessions.join('; ') },
         email,
       );
     }
   } else if (status === PROGRESS_STATUS.COMPLETED) {
-    startedSessions.splice(index, 1);
+    index !== -1 && startedSessions.splice(index, 1);
     completedSessions.push(sessionName);
     await updateCrispProfile(
-      { [`${sessionStartedFormattedName}`]: startedSessions.join('; ') },
-      email,
-    );
-    await updateCrispProfile(
       {
-        [`${sessionCompletedFormattedName}`]: completedSessions.join('; '),
+        [sessionStartedFormattedName]: startedSessions.join('; '),
+        [sessionCompletedFormattedName]: completedSessions.join('; '),
       },
       email,
     );
