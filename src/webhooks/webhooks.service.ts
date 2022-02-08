@@ -56,38 +56,24 @@ export class WebhooksService {
     let partnerAccessUpdateDetails = {};
 
     if (action === SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING) {
-      if (Number(partnerAccessDetails.therapySessionsRemaining) === 0) {
+      if (partnerAccessDetails.therapySessionsRemaining === 0) {
         throw new HttpException('No therapy sessions remaining', HttpStatus.FORBIDDEN);
       }
 
       partnerAccessUpdateDetails = {
-        therapySessionsRemaining: Number(partnerAccessDetails.therapySessionsRemaining) - 1,
-        therapySessionsRedeemed: Number(partnerAccessDetails.therapySessionsRedeemed) + 1,
+        therapySessionsRemaining: partnerAccessDetails.therapySessionsRemaining - 1,
+        therapySessionsRedeemed: partnerAccessDetails.therapySessionsRedeemed + 1,
       };
-
-      await updateCrispProfile(
-        {
-          therapy_sessions_remaining: Number(partnerAccessDetails.therapySessionsRemaining) - 1,
-          therapy_sessions_redeemed: Number(partnerAccessDetails.therapySessionsRedeemed) + 1,
-        },
-        client_email,
-      );
     }
 
     if (action === SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING) {
       partnerAccessUpdateDetails = {
-        therapySessionsRemaining: Number(partnerAccessDetails.therapySessionsRemaining) + 1,
-        therapySessionsRedeemed: Number(partnerAccessDetails.therapySessionsRedeemed) - 1,
+        therapySessionsRemaining: partnerAccessDetails.therapySessionsRemaining + 1,
+        therapySessionsRedeemed: partnerAccessDetails.therapySessionsRedeemed - 1,
       };
-
-      await updateCrispProfile(
-        {
-          therapy_sessions_remaining: Number(partnerAccessDetails.therapySessionsRemaining) + 1,
-          therapy_sessions_redeemed: Number(partnerAccessDetails.therapySessionsRedeemed) - 1,
-        },
-        client_email,
-      );
     }
+
+    await updateCrispProfile(partnerAccessUpdateDetails, client_email);
 
     try {
       await this.partnerAccessRepository.save({
