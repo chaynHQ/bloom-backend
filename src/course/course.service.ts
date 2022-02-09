@@ -16,4 +16,8 @@ export class CourseService {
       .andWhere(`session.status = :status`, { status: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED })
       .getOne();
   }
+
+  async getCourse(id: string): Promise<CourseEntity> {
+    return await this.courseRepository.findOne({ id });
+  }
 }
