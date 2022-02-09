@@ -1,7 +1,6 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { CourseEntity } from 'src/entities/course.entity';
-import { SessionEntity } from 'src/entities/session.entity';
+import { CoursePartnerService } from 'src/course-partner/course-partner.service';
 import StoryblokClient from 'storyblok-js-client';
 import apiCall from '../api/apiCalls';
 import { CourseRepository } from '../course/course.repository';
@@ -29,6 +28,7 @@ export class WebhooksService {
     private userRepository: UserRepository,
     @InjectRepository(CourseRepository) private courseRepository: CourseRepository,
     @InjectRepository(SessionRepository) private sessionRepository: SessionRepository,
+    private readonly coursePartnerService: CoursePartnerService,
   ) {}
   async updatePartnerAccessBooking({ action, client_email }: SimplybookBodyDto): Promise<string> {
     const userDetails = await this.userRepository.findOne({ email: client_email });
@@ -93,41 +93,55 @@ export class WebhooksService {
       throw new HttpException('STORY NOT FOUND', HttpStatus.NOT_FOUND);
     }
 
-    const createCourseObject = this.courseRepository.create({
+    const storyData = {
       name: story.name,
       slug: story.full_slug,
       status: action,
       storyblokId: story.uuid,
-    });
+    };
 
     try {
       if (story.content?.component === 'Course') {
-        await this.courseRepository
-          .createQueryBuilder('course')
-          .insert()
-          .into(CourseEntity)
-          .values(createCourseObject)
-          .onConflict(`("storyblokId") DO UPDATE SET "status" = '${action}'`)
-          .execute();
+        let course = await this.courseRepository.findOne({
+          storyblokId: story.uuid,
+        });
 
-        return createCourseObject;
+        if (!!course) {
+          course.status = action;
+          course.slug = story.full_slug;
+        } else {
+          course = this.courseRepository.create(storyData);
+        }
+        course.name = story.content?.name;
+        course = await this.courseRepository.save(course);
+
+        await this.coursePartnerService.updateCoursePartners(
+          story.content?.included_for_partners,
+          course.id,
+        );
       } else if (story.content?.component === 'Session') {
-        const { id } = await this.courseRepository.findOne({ storyblokId: story.content.course });
+        const { id } = await this.courseRepository.findOne({
+          storyblokId: story.content.course,
+        });
 
         if (!id) {
           throw new HttpException('COURSE NOT FOUND', HttpStatus.NOT_FOUND);
         }
+        let session = await this.sessionRepository.findOne({
+          storyblokId: story.uuid,
+        });
 
-        await this.sessionRepository
-          .createQueryBuilder('session')
-          .insert()
-          .into(SessionEntity)
-          .values({ ...createCourseObject, ...{ courseId: id } })
-          .onConflict(`("storyblokId") DO UPDATE SET "status" = '${action}'`)
-          .execute();
+        if (!!session) {
+          session.status = action;
+          session.slug = story.full_slug;
+          session.name = story.name;
+        } else {
+          session = this.sessionRepository.create({ ...storyData, ...{ courseId: id } });
+        }
 
-        return { ...createCourseObject, ...{ courseId: id } };
+        await this.sessionRepository.save(session);
       }
+      return 'ok';
     } catch (error) {
       throw error;
     }
