@@ -47,7 +47,7 @@ export const updateCrispProfileCourse = async (
 
   if (featureLiveChat) {
     const courseFormattedName = formatCourseText(courseName);
-    return await updateCrispProfile({ [`${courseFormattedName}`]: status }, userEmail);
+    updateCrispProfile({ [`${courseFormattedName}`]: status }, userEmail);
   }
 
   return;
@@ -77,15 +77,12 @@ export const updateCrispProfileSession = async (
   if (status === PROGRESS_STATUS.STARTED) {
     if (index === -1) {
       startedSessions.push(sessionName);
-      await updateCrispProfile(
-        { [sessionStartedFormattedName]: startedSessions.join('; ') },
-        email,
-      );
+      updateCrispProfile({ [sessionStartedFormattedName]: startedSessions.join('; ') }, email);
     }
   } else if (status === PROGRESS_STATUS.COMPLETED) {
     index !== -1 && startedSessions.splice(index, 1);
     completedSessions.push(sessionName);
-    await updateCrispProfile(
+    updateCrispProfile(
       {
         [sessionStartedFormattedName]: startedSessions.join('; '),
         [sessionCompletedFormattedName]: completedSessions.join('; '),

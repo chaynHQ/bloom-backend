@@ -99,7 +99,7 @@ export class SessionUserService {
         courseId,
       });
 
-      await updateCrispProfileCourse(
+      updateCrispProfileCourse(
         partnerAccesses,
         session.course.name,
         user.email,
@@ -119,7 +119,7 @@ export class SessionUserService {
         completed: false,
       });
 
-      await updateCrispProfileSession(
+      updateCrispProfileSession(
         session.course.name,
         session.name,
         PROGRESS_STATUS.STARTED,
@@ -200,7 +200,7 @@ export class SessionUserService {
       );
     }
 
-    await updateCrispProfileSession(
+    updateCrispProfileSession(
       session.course.name,
       session.name,
       PROGRESS_STATUS.COMPLETED,
