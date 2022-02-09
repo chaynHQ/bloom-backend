@@ -79,59 +79,55 @@ export class SessionUserService {
     firebaseUser: IFirebaseUser,
     { storyblokId }: UpdateSessionUserDto,
   ): Promise<SessionUserEntity> {
-    try {
-      const { user, partnerAccesses } = await this.userService.getUser(firebaseUser);
-      const session = await this.sessionService.getSessionByStoryblokId(storyblokId);
+    const { user, partnerAccesses } = await this.userService.getUser(firebaseUser);
+    const session = await this.sessionService.getSessionByStoryblokId(storyblokId);
 
-      if (!session) {
-        throw new HttpException('SESSION NOT FOUND', HttpStatus.NOT_FOUND);
-      }
+    if (!session) {
+      throw new HttpException('SESSION NOT FOUND', HttpStatus.NOT_FOUND);
+    }
 
-      const { id, courseId } = session;
+    const { id, courseId } = session;
 
-      let courseUser: CourseUserEntity = await this.courseUserService.getCourseUser({
+    let courseUser: CourseUserEntity = await this.courseUserService.getCourseUser({
+      userId: user.id,
+      courseId,
+    });
+
+    if (!courseUser) {
+      courseUser = await this.courseUserService.createCourseUser({
         userId: user.id,
         courseId,
       });
 
-      if (!courseUser) {
-        courseUser = await this.courseUserService.createCourseUser({
-          userId: user.id,
-          courseId,
-        });
+      await updateCrispProfileCourse(
+        partnerAccesses,
+        session.course.name,
+        user.email,
+        PROGRESS_STATUS.STARTED,
+      );
+    }
 
-        await updateCrispProfileCourse(
-          partnerAccesses,
-          session.course.name,
-          user.email,
-          PROGRESS_STATUS.STARTED,
-        );
-      }
+    let sessionUser = await this.getSessionUser({
+      sessionId: id,
+      courseUserId: courseUser.id,
+    });
 
-      let sessionUser = await this.getSessionUser({
+    if (!sessionUser) {
+      sessionUser = await this.createSessionUserRecord({
         sessionId: id,
         courseUserId: courseUser.id,
+        completed: false,
       });
 
-      if (!sessionUser) {
-        sessionUser = await this.createSessionUserRecord({
-          sessionId: id,
-          courseUserId: courseUser.id,
-          completed: false,
-        });
-
-        await updateCrispProfileSession(
-          session.course.name,
-          session.name,
-          PROGRESS_STATUS.STARTED,
-          user.email,
-        );
-      }
-
-      return sessionUser;
-    } catch (error) {
-      console.log(error);
+      await updateCrispProfileSession(
+        session.course.name,
+        session.name,
+        PROGRESS_STATUS.STARTED,
+        user.email,
+      );
     }
+
+    return sessionUser;
   }
 
   public async completeSessionUser(
