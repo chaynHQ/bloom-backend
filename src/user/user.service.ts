@@ -1,7 +1,7 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { IFirebaseUser } from 'src/firebase/firebase-user.interface';
-import { addCrispProfile, updateCrispProfile } from '../api/crisp/api-crisp';
+import { addCrispProfile } from '../api/crisp/api-crisp';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
 import { PartnerEntity } from '../entities/partner.entity';
 import { UserEntity } from '../entities/user.entity';
@@ -52,19 +52,15 @@ export class UserService {
         });
 
         if (!!updatePartnerAccessResponse.featureLiveChat) {
-          const {
-            data: { data },
-          } = await addCrispProfile({
+          addCrispProfile({
             email: createUserResponse.email,
             person: { nickname: createUserResponse.name },
+            data: getCrispUserData(
+              createUserResponse,
+              getPartnerResponse,
+              updatePartnerAccessResponse,
+            ),
           });
-
-          const userData = getCrispUserData(
-            createUserResponse,
-            getPartnerResponse,
-            updatePartnerAccessResponse,
-          );
-          await updateCrispProfile({ ...userData }, data?.people_id);
         }
 
         delete updatePartnerAccessResponse.partnerAdmin;
@@ -75,10 +71,6 @@ export class UserService {
           partner: getPartnerResponse,
         };
       }
-
-      return {
-        user: createUserResponse,
-      };
     } catch (error) {
       if (error.code === '23505') {
         throw new HttpException(error.detail, HttpStatus.CONFLICT);

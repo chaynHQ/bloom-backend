@@ -5,7 +5,7 @@ import {
   CrispResponse,
   NewPeopleProfile,
   NewPeopleProfileResponse,
-  SavePeopleData,
+  SavePeopleData
 } from './crisp-api.interfaces';
 
 // https://docs.crisp.chat/references/rest-api/v1/#add-new-people-profile
