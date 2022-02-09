@@ -2,16 +2,16 @@ import { UserEntity } from '../entities/user.entity';
 import { GetUserDto } from '../user/dtos/get-user.dto';
 
 const getUserCourseSessionDetails = (userObject: UserEntity) => {
-  const courseObj = userObject.courseUser;
-  return courseObj.map((course) => {
+  const courseUserObjects = userObject.courseUser;
+  return courseUserObjects.map((courseUser) => {
     return {
-      id: course.course.id,
-      name: course.course.name,
-      slug: course.course.slug,
-      status: course.course.status,
-      storyblokId: course.course.storyblokId,
-      completed: course.completed,
-      sessions: course.course.session.map((session) => {
+      id: courseUser.course.id,
+      name: courseUser.course.name,
+      slug: courseUser.course.slug,
+      status: courseUser.course.status,
+      storyblokId: courseUser.course.storyblokId,
+      completed: courseUser.completed,
+      sessions: courseUser.course.session?.map((session) => {
         return {
           id: session.id,
           name: session.name,
