@@ -1,6 +1,10 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { CoursePartnerRepository } from 'src/course-partner/course-partner.repository';
+import { CoursePartnerService } from 'src/course-partner/course-partner.service';
 import { CourseRepository } from 'src/course/course.repository';
+import { PartnerRepository } from 'src/partner/partner.repository';
+import { PartnerService } from 'src/partner/partner.service';
 import { SessionRepository } from 'src/session/session.repository';
 import { PartnerAccessRepository } from '../partner-access/partner-access.repository';
 import { UserRepository } from '../user/user.repository';
@@ -14,9 +18,11 @@ import { WebhooksService } from './webhooks.service';
       UserRepository,
       CourseRepository,
       SessionRepository,
+      CoursePartnerRepository,
+      PartnerRepository,
     ]),
   ],
-  providers: [WebhooksService],
+  providers: [WebhooksService, CoursePartnerService, PartnerService],
   controllers: [WebhooksController],
 })
 export class WebhooksModule {}
