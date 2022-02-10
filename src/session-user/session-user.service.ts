@@ -45,7 +45,7 @@ export class SessionUserService {
         userId: courseUser.userId,
         courseId: courseUser.courseId,
       });
-      return updatedCourseUser;
+      return Object.assign({}, courseUser, updatedCourseUser);
     }
 
     return courseUser;
