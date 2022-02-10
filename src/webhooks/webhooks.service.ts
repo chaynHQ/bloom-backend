@@ -73,7 +73,7 @@ export class WebhooksService {
       };
     }
 
-    await updateCrispProfile(partnerAccessUpdateDetails, client_email);
+    updateCrispProfile(partnerAccessUpdateDetails, client_email);
 
     try {
       await this.partnerAccessRepository.save({
