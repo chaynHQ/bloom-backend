@@ -9,12 +9,12 @@ import { SessionService } from 'src/session/session.service';
 import { UserRepository } from 'src/user/user.repository';
 import { UserService } from 'src/user/user.service';
 import { STORYBLOK_STORY_STATUS_ENUM } from 'src/utils/constants';
+import { formatCourseUserObjects } from 'src/utils/serialize';
 import { CourseUserService } from '../course-user/course-user.service';
 import { CourseService } from '../course/course.service';
 import { SessionUserDto } from './dtos/session-user.dto';
 import { UpdateSessionUserDto } from './dtos/update-session-user.dto';
 import { SessionUserRepository } from './session-user.repository';
-
 @Injectable()
 export class SessionUserService {
   constructor(
@@ -29,7 +29,7 @@ export class SessionUserService {
   private async checkCourseComplete(
     courseUser: CourseUserEntity,
     course: CourseEntity,
-  ): Promise<boolean> {
+  ): Promise<CourseUserEntity> {
     const userSessionIds = courseUser.sessionUser.map((sessionUser) => {
       if (sessionUser.completed) return sessionUser.sessionId;
     });
@@ -41,13 +41,14 @@ export class SessionUserService {
     const courseIsComplete = _.xor(courseSessionIds, userSessionIds).length == 0;
 
     if (courseIsComplete) {
-      await this.courseUserService.completeCourse({
+      const updatedCourseUser = await this.courseUserService.completeCourse({
         userId: courseUser.userId,
         courseId: courseUser.courseId,
       });
+      return updatedCourseUser;
     }
 
-    return courseIsComplete;
+    return courseUser;
   }
 
   private async getSessionUser({
@@ -77,7 +78,7 @@ export class SessionUserService {
   public async createSessionUser(
     firebaseUser: IFirebaseUser,
     { storyblokId }: UpdateSessionUserDto,
-  ): Promise<SessionUserEntity> {
+  ) {
     const { user } = await this.userService.getUser(firebaseUser);
     const session = await this.sessionService.getSessionByStoryblokId(storyblokId);
 
@@ -112,7 +113,13 @@ export class SessionUserService {
       });
     }
 
-    return sessionUser;
+    // Attach data to object to be serialized for response
+    const course = await this.courseService.getCourse(courseId);
+    sessionUser.session = session;
+    courseUser.sessionUser.push(sessionUser);
+    courseUser.course = course;
+    const formattedResponse = formatCourseUserObjects([courseUser])[0];
+    return formattedResponse;
   }
 
   public async completeSessionUser(
@@ -166,12 +173,12 @@ export class SessionUserService {
       courseUser.sessionUser.push(sessionUser);
     }
 
+    // Attach data to object to be serialized for response
     const course = await this.courseService.getCourseWithSessions(courseId);
-    const courseComplete = await this.checkCourseComplete(courseUser, course);
+    courseUser = await this.checkCourseComplete(courseUser, course);
+    courseUser.course = course;
+    const formattedResponse = formatCourseUserObjects([courseUser])[0];
 
-    return {
-      courseComplete,
-      sessionUser,
-    };
+    return formattedResponse;
   }
 }
