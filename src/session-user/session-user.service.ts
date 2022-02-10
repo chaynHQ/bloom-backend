@@ -6,16 +6,17 @@ import { CourseUserEntity } from 'src/entities/course-user.entity';
 import { CourseEntity } from 'src/entities/course.entity';
 import { SessionUserEntity } from 'src/entities/session-user.entity';
 import { IFirebaseUser } from 'src/firebase/firebase-user.interface';
+import { IPartnerAccessWithPartner } from 'src/partner-access/partner-access.interface';
 import { SessionService } from 'src/session/session.service';
 import { UserRepository } from 'src/user/user.repository';
 import { UserService } from 'src/user/user.service';
 import { PROGRESS_STATUS, STORYBLOK_STORY_STATUS_ENUM } from 'src/utils/constants';
+import { formatCourseUserObjects } from 'src/utils/serialize';
 import { CourseUserService } from '../course-user/course-user.service';
 import { CourseService } from '../course/course.service';
 import { SessionUserDto } from './dtos/session-user.dto';
 import { UpdateSessionUserDto } from './dtos/update-session-user.dto';
 import { SessionUserRepository } from './session-user.repository';
-
 @Injectable()
 export class SessionUserService {
   constructor(
@@ -30,7 +31,9 @@ export class SessionUserService {
   private async checkCourseComplete(
     courseUser: CourseUserEntity,
     course: CourseEntity,
-  ): Promise<boolean> {
+    partnerAccesses: IPartnerAccessWithPartner[],
+    userEmail: string,
+  ): Promise<CourseUserEntity> {
     const userSessionIds = courseUser.sessionUser.map((sessionUser) => {
       if (sessionUser.completed) return sessionUser.sessionId;
     });
@@ -42,13 +45,16 @@ export class SessionUserService {
     const courseIsComplete = _.xor(courseSessionIds, userSessionIds).length == 0;
 
     if (courseIsComplete) {
-      await this.courseUserService.completeCourse({
+      const updatedCourseUser = await this.courseUserService.completeCourse({
         userId: courseUser.userId,
         courseId: courseUser.courseId,
       });
+
+      updateCrispProfileCourse(partnerAccesses, course.name, userEmail, PROGRESS_STATUS.COMPLETED);
+      return updatedCourseUser;
     }
 
-    return courseIsComplete;
+    return courseUser;
   }
 
   private async getSessionUser({
@@ -78,7 +84,7 @@ export class SessionUserService {
   public async createSessionUser(
     firebaseUser: IFirebaseUser,
     { storyblokId }: UpdateSessionUserDto,
-  ): Promise<SessionUserEntity> {
+  ) {
     const { user, partnerAccesses } = await this.userService.getUser(firebaseUser);
     const session = await this.sessionService.getSessionByStoryblokId(storyblokId);
 
@@ -127,7 +133,13 @@ export class SessionUserService {
       );
     }
 
-    return sessionUser;
+    // Attach data to object to be serialized for response
+    const course = await this.courseService.getCourse(courseId);
+    sessionUser.session = session;
+    courseUser.sessionUser.push(sessionUser);
+    courseUser.course = course;
+    const formattedResponse = formatCourseUserObjects([courseUser])[0];
+    return formattedResponse;
   }
 
   public async completeSessionUser(
@@ -188,17 +200,11 @@ export class SessionUserService {
       courseUser.sessionUser.push(sessionUser);
     }
 
+    // Attach data to object to be serialized for response
     const course = await this.courseService.getCourseWithSessions(courseId);
-    const courseComplete = await this.checkCourseComplete(courseUser, course);
-
-    if (courseComplete) {
-      updateCrispProfileCourse(
-        partnerAccesses,
-        session.course.name,
-        user.email,
-        PROGRESS_STATUS.COMPLETED,
-      );
-    }
+    courseUser = await this.checkCourseComplete(courseUser, course, partnerAccesses, user.email);
+    courseUser.course = course;
+    const formattedResponse = formatCourseUserObjects([courseUser])[0];
 
     updateCrispProfileSession(
       session.course.name,
@@ -207,9 +213,6 @@ export class SessionUserService {
       user.email,
     );
 
-    return {
-      courseComplete,
-      sessionUser,
-    };
+    return formattedResponse;
   }
 }

@@ -1,6 +1,18 @@
-# Bloom Backend
+# Bloom
 
-The purpose of this app is to allow users register and use a free, web-based support service run by Chayn. The app is Designed for anyone who has experienced or is currently experiencing domestic or sexual abuse, all courses are packed with tailored information, guidance, everyday tools, and comforting words to cope with traumatic events.
+Bloom is a remote trauma support service from Chayn, a global charity supporting survivors of abuse across borders. Bloom is our flagship product; a free, web-based support service designed for anyone who has experienced or is currently experiencing domestic or sexual abuse. Through a combination of online video-based courses, anonymous interaction and 1:1 chat, Bloom aims to provide tailored information, guidance, everyday tools, and comforting words to cope with traumatic events.
+
+## Get involved
+
+Bloom is created by Chayn, global nonprofit, run by survivors and allies from around the world, creating resources to support the healing of survivors of gender-based violence. There are lots of ways to get involved, from joining our volunteer team to [donating](https://www.paypal.me/chaynhq) or supporting us on social media.
+
+Website - [Chayn](https://www.chayn.co/)
+
+Twitter - [@ChaynHQ](https://twitter.com/ChaynHQ)
+
+Instagram - [@chaynhq](https://www.instagram.com/chaynhq/)
+
+Youtube - [Chayn Team](https://www.youtube.com/channel/UC5_1Ci2SWVjmbeH8_USm-Bg)
 
 ## Technologies Used:
 
@@ -95,13 +107,7 @@ Slack is a workplace communication tool. Slack is being used to notify the team 
 
 Crisp is used for users to message the Chayn team in relation to bloom course content or other queries and support. Some of our users\* are allowed access to the crisp chat functionality. For those users only, we want their crisp user profile to reflect key data from our database, so the chayn member can see details about their bloom usage for more context.
 
-## Stay in touch
-
-- Website - [Chayn](https://www.chayn.co/)
-- Twitter - [@ChaynHQ](https://twitter.com/ChaynHQ)
-- Instagram - [@chaynhq](https://www.instagram.com/chaynhq/)
-- Youtube - [Chayn Team](https://www.youtube.com/channel/UC5_1Ci2SWVjmbeH8_USm-Bg)
-
 ## License
 
-Nest is [MIT licensed](LICENSE).
+Bloom and all of Chayn's projects are open source.
+The core tech stack included here is open source however some external integrations used in the project require subscriptions.
