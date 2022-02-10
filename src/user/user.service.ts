@@ -1,7 +1,7 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { IFirebaseUser } from 'src/firebase/firebase-user.interface';
-import { addCrispProfile, updateCrispProfile } from '../api/crisp/crisp-api';
+import { addCrispProfile } from '../api/crisp/crisp-api';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
 import { PartnerEntity } from '../entities/partner.entity';
 import { UserEntity } from '../entities/user.entity';
@@ -52,17 +52,17 @@ export class UserService {
         });
 
         if (!!updatePartnerAccessResponse.featureLiveChat) {
-          await addCrispProfile({
-            email: createUserResponse.email,
-            person: { nickname: createUserResponse.name },
-          });
-
           const userData = getCrispUserData(
             createUserResponse,
             getPartnerResponse,
             updatePartnerAccessResponse,
           );
-          await updateCrispProfile({ ...userData }, createUserResponse.email);
+
+          addCrispProfile({
+            email: createUserResponse.email,
+            person: { nickname: createUserResponse.name },
+            data: userData,
+          });
         }
 
         delete updatePartnerAccessResponse.partnerAdmin;
