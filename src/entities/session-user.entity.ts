@@ -12,8 +12,8 @@ export class SessionUserEntity extends BaseEntity {
   @Column()
   completed: boolean;
 
-  @Column({ type: 'varchar', nullable: true })
-  completedAt: Date | string | null;
+  @Column({ type: 'date', nullable: true })
+  completedAt: Date;
 
   @Column()
   sessionId: string;
