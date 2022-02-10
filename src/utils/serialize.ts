@@ -1,24 +1,24 @@
+import { CourseUserEntity } from 'src/entities/course-user.entity';
 import { UserEntity } from '../entities/user.entity';
 import { GetUserDto } from '../user/dtos/get-user.dto';
 
-const getUserCourseSessionDetails = (userObject: UserEntity) => {
-  const courseObj = userObject.courseUser;
-  return courseObj.map((course) => {
+export const formatCourseUserObjects = (courseUserObjects: CourseUserEntity[]) => {
+  return courseUserObjects.map((courseUser) => {
     return {
-      id: course.course.id,
-      name: course.course.name,
-      slug: course.course.slug,
-      status: course.course.status,
-      storyblokId: course.course.storyblokId,
-      completed: course.completed,
-      sessions: course.course.session.map((session) => {
+      id: courseUser.course.id,
+      name: courseUser.course.name,
+      slug: courseUser.course.slug,
+      status: courseUser.course.status,
+      storyblokId: courseUser.course.storyblokId,
+      completed: courseUser.completed,
+      sessions: courseUser.sessionUser?.map((sessionUser) => {
         return {
-          id: session.id,
-          name: session.name,
-          slug: session.slug,
-          storyblokId: session.storyblokId,
-          status: session.status,
-          completed: session.sessionUser[0].completed,
+          id: sessionUser.session.id,
+          name: sessionUser.session.name,
+          slug: sessionUser.session.slug,
+          storyblokId: sessionUser.session.storyblokId,
+          status: sessionUser.session.status,
+          completed: sessionUser.completed,
         };
       }),
     };
@@ -57,7 +57,7 @@ export const formatUserObject = (userObject: UserEntity): GetUserDto => {
           partner: userObject.partnerAdmin.partner,
         }
       : null,
-    courses: userObject.courseUser ? getUserCourseSessionDetails(userObject) : [],
+    courses: userObject.courseUser ? formatCourseUserObjects(userObject.courseUser) : [],
   };
 };
 
