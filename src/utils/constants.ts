@@ -77,7 +77,7 @@ export const firebaseMeasurementId = getEnv(
 export const zapierToken = getEnv(process.env.ZAPIER_TOKEN, 'ZAPIER_TOKEN');
 
 export const crispToken = getEnv(process.env.CRISP_TOKEN, 'CRISP_TOKEN');
-export const websiteToken = getEnv(process.env.CRISP_WEBSITE_ID, 'CRISP_WEBSITE_ID');
+export const crispWebsiteToken = getEnv(process.env.CRISP_WEBSITE_ID, 'CRISP_WEBSITE_ID');
 
 export const slackWebhookUrl = getEnv(process.env.SLACK_WEBHOOK_URL, 'SLACK_WEBHOOK_URL');
 
