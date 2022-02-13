@@ -52,16 +52,14 @@ export class UserService {
         });
 
         if (!!updatePartnerAccessResponse.featureLiveChat) {
-          const userData = getCrispUserData(
-            createUserResponse,
-            getPartnerResponse,
-            updatePartnerAccessResponse,
-          );
-
           addCrispProfile({
             email: createUserResponse.email,
             person: { nickname: createUserResponse.name },
-            data: userData,
+            data: getCrispUserData(
+              createUserResponse,
+              getPartnerResponse,
+              updatePartnerAccessResponse,
+            ),
           });
         }
 
@@ -73,10 +71,6 @@ export class UserService {
           partner: getPartnerResponse,
         };
       }
-
-      return {
-        user: createUserResponse,
-      };
     } catch (error) {
       if (error.code === '23505') {
         throw new HttpException(error.detail, HttpStatus.CONFLICT);

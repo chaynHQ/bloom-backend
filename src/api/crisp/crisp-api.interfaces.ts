@@ -11,7 +11,9 @@ export interface NewPeopleProfile {
   person: {
     nickname: string;
   };
-  [key: string]: string | any;
+  data: {
+    [key: string]: string | number | boolean;
+  };
 }
 
 export interface NewPeopleProfileResponse extends CrispResponse {

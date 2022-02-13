@@ -51,7 +51,7 @@ export class SessionUserService {
       });
 
       updateCrispProfileCourse(partnerAccesses, course.name, userEmail, PROGRESS_STATUS.COMPLETED);
-      return updatedCourseUser;
+      return Object.assign({}, courseUser, updatedCourseUser);
     }
 
     return courseUser;
