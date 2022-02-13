@@ -42,8 +42,8 @@ export const formatUserObject = (userObject: UserEntity): GetUserDto => {
         featureLiveChat: Boolean(partnerAccess.featureLiveChat),
         featureTherapy: Boolean(partnerAccess.featureTherapy),
         accessCode: partnerAccess.accessCode,
-        therapySessionsRemaining: Number(partnerAccess.therapySessionsRemaining),
-        therapySessionsRedeemed: Number(partnerAccess.therapySessionsRedeemed),
+        therapy_sessions_remaining: Number(partnerAccess.therapySessionsRemaining),
+        therapy_sessions_redeemed: Number(partnerAccess.therapySessionsRedeemed),
         partner: partnerAccess.partner,
       };
     }),
@@ -74,7 +74,7 @@ export const getCrispUserData = (
     partner_activated_at: partnerDetails.createdAt,
     feature_live_chat: updatePartnerAccessResponse.featureLiveChat,
     feature_therapy: updatePartnerAccessResponse.featureTherapy,
-    therapySessionsRemaining: updatePartnerAccessResponse.therapySessionsRemaining,
-    therapySessionsRedeemed: updatePartnerAccessResponse.therapySessionsRedeemed,
+    therapy_sessions_remaining: updatePartnerAccessResponse.therapySessionsRemaining,
+    therapy_sessions_redeemed: updatePartnerAccessResponse.therapySessionsRedeemed,
   };
 };

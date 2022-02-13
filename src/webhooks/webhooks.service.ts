@@ -31,6 +31,22 @@ export class WebhooksService {
     @InjectRepository(SessionRepository) private sessionRepository: SessionRepository,
     private readonly coursePartnerService: CoursePartnerService,
   ) {}
+
+  renameKeys = (obj: { [x: string]: any }) => {
+    const keyValues = Object.keys(obj).map((key) => {
+      const newKey = this.addUnderscore(key);
+      return { [newKey]: obj[key] };
+    });
+    return Object.assign({}, ...keyValues);
+  };
+
+  addUnderscore = (title: string) => {
+    return title
+      .split(/(?=[A-Z])/)
+      .join('_')
+      .toLowerCase();
+  };
+
   async updatePartnerAccessBooking({ action, client_email }: SimplybookBodyDto): Promise<string> {
     const userDetails = await this.userRepository.findOne({ email: client_email });
 
@@ -73,7 +89,7 @@ export class WebhooksService {
       };
     }
 
-    updateCrispProfile(partnerAccessUpdateDetails, client_email);
+    updateCrispProfile(this.renameKeys(partnerAccessUpdateDetails), client_email);
 
     try {
       await this.partnerAccessRepository.save({
