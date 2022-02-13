@@ -12,6 +12,9 @@ export class SessionUserEntity extends BaseEntity {
   @Column()
   completed: boolean;
 
+  @Column({ type: 'date', nullable: true })
+  completedAt: Date;
+
   @Column()
   sessionId: string;
   @ManyToOne(() => SessionEntity, (sessionEntity) => sessionEntity.sessionUser)
