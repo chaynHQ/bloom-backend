@@ -10,13 +10,15 @@ export const formatCourseUserObjects = (courseUserObjects: CourseUserEntity[]) =
       slug: courseUser.course.slug,
       status: courseUser.course.status,
       storyblokId: courseUser.course.storyblokId,
+      storyblokUuid: courseUser.course.storyblokUuid,
       completed: courseUser.completed,
       sessions: courseUser.sessionUser?.map((sessionUser) => {
         return {
           id: sessionUser.session.id,
           name: sessionUser.session.name,
           slug: sessionUser.session.slug,
-          storyblokId: sessionUser.session.storyblokId,
+          storyblokId: Number(sessionUser.session.storyblokId),
+          storyblokUuid: sessionUser.session.storyblokUuid,
           status: sessionUser.session.status,
           completed: sessionUser.completed,
         };
