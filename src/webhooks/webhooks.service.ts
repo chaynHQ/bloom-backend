@@ -103,10 +103,10 @@ export class WebhooksService {
     }
   }
 
-  async updateStory({ action, storyblokId }: StoryDto) {
+  async updateStory({ action, story_id }: StoryDto) {
     const {
       data: { story },
-    } = await Storyblok.get(`cdn/stories/${storyblokId}`);
+    } = await Storyblok.get(`cdn/stories/${story_id}`);
 
     if (!story) {
       throw new HttpException('STORY NOT FOUND', HttpStatus.NOT_FOUND);
