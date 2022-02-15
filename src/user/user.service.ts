@@ -1,7 +1,7 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { IFirebaseUser } from 'src/firebase/firebase-user.interface';
-import { addCrispProfile } from '../api/crisp/api-crisp';
+import { addCrispProfile } from '../api/crisp/crisp-api';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
 import { PartnerEntity } from '../entities/partner.entity';
 import { UserEntity } from '../entities/user.entity';

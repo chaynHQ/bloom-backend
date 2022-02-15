@@ -1,8 +1,8 @@
 {
   "eslint.packageManager": "yarn",
   "eslint.alwaysShowStatus": true,
-  "editor.formatOnPaste": false,
-  "editor.formatOnSave": false,
+  "editor.formatOnPaste": true,
+  "editor.formatOnSave": true,
   "editor.codeActionsOnSave": {
     "source.organizeImports": true,
     "source.fixAll": true,

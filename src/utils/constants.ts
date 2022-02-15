@@ -1,6 +1,12 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
+export enum PROGRESS_STATUS {
+  STARTED = 'Started',
+  COMPLETED = 'Completed',
+  NOT_STARTED = 'Not Started',
+}
+
 export enum SIMPLYBOOK_ACTION_ENUM {
   NEW_BOOKING = 'NEW_BOOKING',
   CANCELLED_BOOKING = 'CANCELLED_BOOKING',
@@ -77,7 +83,7 @@ export const firebaseMeasurementId = getEnv(
 export const zapierToken = getEnv(process.env.ZAPIER_TOKEN, 'ZAPIER_TOKEN');
 
 export const crispToken = getEnv(process.env.CRISP_TOKEN, 'CRISP_TOKEN');
-export const crispWebsiteToken = getEnv(process.env.CRISP_WEBSITE_ID, 'CRISP_WEBSITE_ID');
+export const crispWebsiteId = getEnv(process.env.CRISP_WEBSITE_ID, 'CRISP_WEBSITE_ID');
 
 export const slackWebhookUrl = getEnv(process.env.SLACK_WEBHOOK_URL, 'SLACK_WEBHOOK_URL');
 

@@ -69,9 +69,9 @@ export const getCrispUserData = (
   updatePartnerAccessResponse,
 ) => {
   return {
-    createdAt: createUserResponse.createdAt,
-    updatedAt: createUserResponse.updatedAt,
-    languageDefault: createUserResponse.languageDefault,
+    created_at: createUserResponse.createdAt,
+    updated_at: createUserResponse.updatedAt,
+    language_default: createUserResponse.languageDefault,
     partner: partnerDetails.name,
     partner_activated_at: partnerDetails.createdAt,
     feature_live_chat: updatePartnerAccessResponse.featureLiveChat,
