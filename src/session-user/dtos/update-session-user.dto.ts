@@ -5,6 +5,6 @@ export class UpdateSessionUserDto {
   @IsString()
   @IsNotEmpty()
   @IsDefined()
-  @ApiProperty({ type: String })
-  storyblokId: string;
+  @ApiProperty({ type: Number })
+  storyblokId: number;
 }

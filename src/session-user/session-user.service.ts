@@ -183,6 +183,7 @@ export class SessionUserService {
 
     if (sessionUser) {
       sessionUser.completed = true;
+      sessionUser.completedAt = new Date();
       await this.sessionUserRepository.save(sessionUser);
 
       courseUser.sessionUser.map((su) => {

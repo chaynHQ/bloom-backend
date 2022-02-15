@@ -17,7 +17,7 @@ export class StoryDto {
   @IsNotEmpty()
   @IsDefined()
   @ApiProperty({ type: Number })
-  story_id: number;
+  storyblokId: number;
 
   @IsOptional()
   @IsNumber()

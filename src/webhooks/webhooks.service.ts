@@ -103,10 +103,10 @@ export class WebhooksService {
     }
   }
 
-  async updateStory({ action, story_id }: StoryDto) {
+  async updateStory({ action, storyblokId }: StoryDto) {
     const {
       data: { story },
-    } = await Storyblok.get(`cdn/stories/${story_id}`);
+    } = await Storyblok.get(`cdn/stories/${storyblokId}`);
 
     if (!story) {
       throw new HttpException('STORY NOT FOUND', HttpStatus.NOT_FOUND);
@@ -116,13 +116,14 @@ export class WebhooksService {
       name: story.name,
       slug: story.full_slug,
       status: action,
-      storyblokId: story.uuid,
+      storyblokId: Number(story.id),
+      storyblokUuid: story.uuid,
     };
 
     try {
       if (story.content?.component === 'Course') {
         let course = await this.courseRepository.findOne({
-          storyblokId: story.uuid,
+          storyblokId: story.id,
         });
 
         if (!!course) {
@@ -140,14 +141,15 @@ export class WebhooksService {
         );
       } else if (story.content?.component === 'Session') {
         const { id } = await this.courseRepository.findOne({
-          storyblokId: story.content.course,
+          storyblokUuid: story.content.course,
         });
 
         if (!id) {
           throw new HttpException('COURSE NOT FOUND', HttpStatus.NOT_FOUND);
         }
+
         let session = await this.sessionRepository.findOne({
-          storyblokId: story.uuid,
+          storyblokId: story.id,
         });
 
         if (!!session) {
