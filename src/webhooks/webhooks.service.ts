@@ -1,5 +1,6 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { updateCrispProfile } from 'src/api/crisp/crisp-api';
 import { CoursePartnerService } from 'src/course-partner/course-partner.service';
 import StoryblokClient from 'storyblok-js-client';
 import apiCall from '../api/apiCalls';
@@ -30,6 +31,22 @@ export class WebhooksService {
     @InjectRepository(SessionRepository) private sessionRepository: SessionRepository,
     private readonly coursePartnerService: CoursePartnerService,
   ) {}
+
+  renameKeys = (obj: { [x: string]: any }) => {
+    const keyValues = Object.keys(obj).map((key) => {
+      const newKey = this.addUnderscore(key);
+      return { [newKey]: obj[key] };
+    });
+    return Object.assign({}, ...keyValues);
+  };
+
+  addUnderscore = (title: string) => {
+    return title
+      .split(/(?=[A-Z])/)
+      .join('_')
+      .toLowerCase();
+  };
+
   async updatePartnerAccessBooking({ action, client_email }: SimplybookBodyDto): Promise<string> {
     const userDetails = await this.userRepository.findOne({ email: client_email });
 
@@ -55,22 +72,24 @@ export class WebhooksService {
     let partnerAccessUpdateDetails = {};
 
     if (action === SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING) {
-      if (Number(partnerAccessDetails.therapySessionsRemaining) === 0) {
+      if (partnerAccessDetails.therapySessionsRemaining === 0) {
         throw new HttpException('No therapy sessions remaining', HttpStatus.FORBIDDEN);
       }
 
       partnerAccessUpdateDetails = {
-        therapySessionsRemaining: Number(partnerAccessDetails.therapySessionsRemaining) - 1,
-        therapySessionsRedeemed: Number(partnerAccessDetails.therapySessionsRedeemed) + 1,
+        therapySessionsRemaining: partnerAccessDetails.therapySessionsRemaining - 1,
+        therapySessionsRedeemed: partnerAccessDetails.therapySessionsRedeemed + 1,
       };
     }
 
     if (action === SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING) {
       partnerAccessUpdateDetails = {
-        therapySessionsRemaining: Number(partnerAccessDetails.therapySessionsRemaining) + 1,
-        therapySessionsRedeemed: Number(partnerAccessDetails.therapySessionsRedeemed) - 1,
+        therapySessionsRemaining: partnerAccessDetails.therapySessionsRemaining + 1,
+        therapySessionsRedeemed: partnerAccessDetails.therapySessionsRedeemed - 1,
       };
     }
+
+    updateCrispProfile(this.renameKeys(partnerAccessUpdateDetails), client_email);
 
     try {
       await this.partnerAccessRepository.save({
@@ -84,10 +103,10 @@ export class WebhooksService {
     }
   }
 
-  async updateStory({ action, story_id }: StoryDto) {
+  async updateStory({ action, storyblokId }: StoryDto) {
     const {
       data: { story },
-    } = await Storyblok.get(`cdn/stories/${story_id}`);
+    } = await Storyblok.get(`cdn/stories/${storyblokId}`);
 
     if (!story) {
       throw new HttpException('STORY NOT FOUND', HttpStatus.NOT_FOUND);
@@ -97,13 +116,14 @@ export class WebhooksService {
       name: story.name,
       slug: story.full_slug,
       status: action,
-      storyblokId: story.uuid,
+      storyblokId: Number(story.id),
+      storyblokUuid: story.uuid,
     };
 
     try {
       if (story.content?.component === 'Course') {
         let course = await this.courseRepository.findOne({
-          storyblokId: story.uuid,
+          storyblokId: story.id,
         });
 
         if (!!course) {
@@ -121,14 +141,15 @@ export class WebhooksService {
         );
       } else if (story.content?.component === 'Session') {
         const { id } = await this.courseRepository.findOne({
-          storyblokId: story.content.course,
+          storyblokUuid: story.content.course,
         });
 
         if (!id) {
           throw new HttpException('COURSE NOT FOUND', HttpStatus.NOT_FOUND);
         }
+
         let session = await this.sessionRepository.findOne({
-          storyblokId: story.uuid,
+          storyblokId: story.id,
         });
 
         if (!!session) {

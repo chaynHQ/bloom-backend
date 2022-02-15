@@ -25,7 +25,13 @@ export class CourseEntity extends BaseEntity {
     unique: true,
     nullable: true,
   })
-  storyblokId: string;
+  storyblokId: number;
+
+  @Column({
+    unique: true,
+    nullable: true,
+  })
+  storyblokUuid: string;
 
   @OneToMany(() => SessionEntity, (sessionEntity) => sessionEntity.course)
   session: SessionEntity[];

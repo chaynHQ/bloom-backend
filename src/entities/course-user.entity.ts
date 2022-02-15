@@ -5,7 +5,7 @@ import {
   ManyToOne,
   OneToMany,
   PrimaryGeneratedColumn,
-  Unique,
+  Unique
 } from 'typeorm';
 import { BaseEntity } from './base.entity';
 import { CourseEntity } from './course.entity';
@@ -20,6 +20,9 @@ export class CourseUserEntity extends BaseEntity {
 
   @Column()
   completed: boolean;
+
+  @Column({ type: 'date', nullable: true })
+  completedAt: Date;
 
   @Column()
   userId: string;

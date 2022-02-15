@@ -11,7 +11,11 @@ export class SessionService {
     return await this.sessionRepository.findOne({ id });
   }
 
-  async getSessionByStoryblokId(storyblokId: string): Promise<SessionEntity> {
-    return await this.sessionRepository.findOne({ storyblokId });
+  async getSessionByStoryblokId(storyblokId: number): Promise<SessionEntity> {
+    return await this.sessionRepository
+      .createQueryBuilder('session')
+      .leftJoinAndSelect('session.course', 'course')
+      .where('session.storyblokId = :storyblokId', { storyblokId })
+      .getOne();
   }
 }
