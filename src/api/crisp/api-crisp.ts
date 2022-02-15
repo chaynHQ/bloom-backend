@@ -1,17 +1,17 @@
 import { AxiosResponse } from 'axios';
-import { crispToken, websiteToken } from '../../utils/constants';
+import { crispToken, crispWebsiteToken } from '../../utils/constants';
 import apiCall from '../apiCalls';
 import {
   CrispResponse,
   NewPeopleProfile,
   NewPeopleProfileResponse,
-  SavePeopleData,
+  SavePeopleData
 } from './crisp-api.interfaces';
 
 // https://docs.crisp.chat/references/rest-api/v1/#add-new-people-profile
 // Full details needed to add a new person
 
-const baseUrl = `https://api.crisp.chat/v1/website/${websiteToken}`;
+const baseUrl = `https://api.crisp.chat/v1/website/${crispWebsiteToken}`;
 
 const headers = {
   Authorization: `Basic ${crispToken}`,
