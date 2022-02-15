@@ -25,8 +25,7 @@ export class CoursePartnerService {
 
     const partnersObjects = await Promise.all(
       partners.map(async (partner) => {
-        if (partner === 'public' || partner === 'Public') return;
-        return await this.partnerService.getPartner(partner);
+        if (partner !== 'Public') return await this.partnerService.getPartner(partner);
       }),
     );
 
@@ -44,18 +43,20 @@ export class CoursePartnerService {
 
     return Promise.all(
       partnersObjects.map(async (partner) => {
-        if (coursePartnersIds.indexOf(partner.id) === -1) {
-          await this.coursePartnerRepository.save({
-            partnerId: partner.id,
-            courseId,
-            active: true,
-          });
-        } else {
-          const coursePartner = coursePartners.find((cp) => cp.partner.id === partner.id);
-          if (!!coursePartner && coursePartner.active === false) {
-            //If course was removed from included_for_partners but was added back at a later date
-            coursePartner.active = true;
-            await this.coursePartnerRepository.save(coursePartner);
+        if (!!partner) {
+          if (coursePartnersIds.indexOf(partner.id) === -1) {
+            await this.coursePartnerRepository.save({
+              partnerId: partner.id,
+              courseId,
+              active: true,
+            });
+          } else {
+            const coursePartner = coursePartners.find((cp) => cp.partner.id === partner.id);
+            if (!!coursePartner && coursePartner.active === false) {
+              //If course was removed from included_for_partners but was added back at a later date
+              coursePartner.active = true;
+              await this.coursePartnerRepository.save(coursePartner);
+            }
           }
         }
       }),
