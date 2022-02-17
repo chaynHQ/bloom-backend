@@ -1,9 +1,9 @@
 import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Request } from 'express';
-import { FirebaseAuthGuard } from 'src/firebase/firebase-auth.guard';
 import { GetUserDto } from 'src/user/dtos/get-user.dto';
 import { ControllerDecorator } from 'src/utils/controller.decorator';
+import { FirebaseAuthGuard } from '../firebase/firebase-auth.guard';
 import { UpdateSessionUserDto } from './dtos/update-session-user.dto';
 import { SessionUserService } from './session-user.service';
 

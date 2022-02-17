@@ -1,11 +1,11 @@
 import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiBody, ApiTags } from '@nestjs/swagger';
 import { Request } from 'express';
-import { FirebaseAuthGuard } from 'src/firebase/firebase-auth.guard';
-import { GetUserDto } from 'src/user/dtos/get-user.dto';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
+import { FirebaseAuthGuard } from '../firebase/firebase-auth.guard';
 import { PartnerAdminAuthGuard } from '../partner-admin/partner-admin-auth.guard';
 import { SuperAdminAuthGuard } from '../partner-admin/super-admin-auth.guard';
+import { GetUserDto } from '../user/dtos/get-user.dto';
 import { PartnerAccessCodeStatusEnum } from '../utils/constants';
 import { ControllerDecorator } from '../utils/controller.decorator';
 import { CreatePartnerAccessDto } from './dtos/create-partner-access.dto';

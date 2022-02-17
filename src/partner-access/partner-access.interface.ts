@@ -1,4 +1,4 @@
-import { IPartner } from 'src/partner/partner.interface';
+import { IPartner } from '../partner/partner.interface';
 
 export interface IPartnerAccess {
   id?: string;

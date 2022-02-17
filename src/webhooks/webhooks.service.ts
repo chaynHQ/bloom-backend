@@ -1,9 +1,9 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { updateCrispProfile } from 'src/api/crisp/crisp-api';
-import { CoursePartnerService } from 'src/course-partner/course-partner.service';
 import StoryblokClient from 'storyblok-js-client';
 import apiCall from '../api/apiCalls';
+import { updateCrispProfile } from '../api/crisp/crisp-api';
+import { CoursePartnerService } from '../course-partner/course-partner.service';
 import { CourseRepository } from '../course/course.repository';
 import { SimplybookBodyDto } from '../partner-access/dtos/zapier-body.dto';
 import { PartnerAccessRepository } from '../partner-access/partner-access.repository';

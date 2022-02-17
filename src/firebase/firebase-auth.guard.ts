@@ -1,7 +1,7 @@
 import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
 import { Request } from 'express';
-import { UserService } from 'src/user/user.service';
 import { AuthService } from '../auth/auth.service';
+import { UserService } from '../user/user.service';
 import { IFirebaseUser } from './firebase-user.interface';
 
 @Injectable()
