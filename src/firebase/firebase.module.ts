@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { PartnerAccessRepository } from 'src/partner-access/partner-access.repository';
-import { PartnerAccessService } from 'src/partner-access/partner-access.service';
-import { PartnerRepository } from 'src/partner/partner.repository';
-import { UserRepository } from 'src/user/user.repository';
-import { UserService } from 'src/user/user.service';
+import { PartnerAccessRepository } from '../partner-access/partner-access.repository';
+import { PartnerAccessService } from '../partner-access/partner-access.service';
+import { PartnerRepository } from '../partner/partner.repository';
+import { UserRepository } from '../user/user.repository';
+import { UserService } from '../user/user.service';
 import { FIREBASE, firebaseFactory } from './firebase-factory';
 
 @Module({
