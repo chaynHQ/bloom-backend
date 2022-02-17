@@ -2,6 +2,7 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm/dist/common';
 import _ from 'lodash';
 import moment from 'moment';
+import { getCrispPeopleData, updateCrispProfile } from '../api/crisp/crisp-api';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
 import { GetUserDto } from '../user/dtos/get-user.dto';
 import { PartnerAccessCodeStatusEnum } from '../utils/constants';
@@ -100,12 +101,18 @@ export class PartnerAccessService {
     { user, partnerAccesses }: GetUserDto,
     partnerAccessCode: string,
   ): Promise<PartnerAccessEntity> {
+    let totalSessionRemainingCount = 0;
+    let totalSessionRedemmedCount = 0;
+
     const partnerAccessCodeDetails = await this.getValidPartnerAccessCode(partnerAccessCode);
 
     partnerAccesses.map(async (pa) => {
       if (partnerAccessCodeDetails.partner.id === pa.partner.id && pa.active === true) {
         pa.active = false;
         await this.partnerAccessRepository.save(pa);
+      } else {
+        totalSessionRemainingCount = totalSessionRemainingCount + pa.therapySessionsRemaining;
+        totalSessionRedemmedCount = totalSessionRedemmedCount + pa.therapySessionsRedeemed;
       }
     });
 
@@ -113,6 +120,26 @@ export class PartnerAccessService {
     partnerAccessCodeDetails.activatedAt = new Date();
 
     await this.partnerAccessRepository.save(partnerAccessCodeDetails);
+
+    if (!!partnerAccessCodeDetails.featureLiveChat) {
+      const crispResponse = await getCrispPeopleData(user.email);
+      const crispData = crispResponse.data.data.data;
+      const partners = crispData['partners'].split('; ');
+
+      if (partners.indexOf(partnerAccessCodeDetails.partner.name) === -1) {
+        partners.push(partnerAccessCodeDetails.partner.name);
+      }
+
+      const updateDetails = {
+        partners: partners.join('; '),
+        therapy_sessions_remaining:
+          partnerAccessCodeDetails.therapySessionsRemaining + totalSessionRemainingCount,
+        therapy_sessions_redeemed:
+          partnerAccessCodeDetails.therapySessionsRedeemed + totalSessionRedemmedCount,
+      };
+
+      updateCrispProfile(updateDetails, user.email);
+    }
 
     return partnerAccessCodeDetails;
   }

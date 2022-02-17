@@ -7,7 +7,7 @@ import { PartnerEntity } from '../entities/partner.entity';
 import { UserEntity } from '../entities/user.entity';
 import { PartnerAccessService } from '../partner-access/partner-access.service';
 import { PartnerRepository } from '../partner/partner.repository';
-import { formatUserObject, getCrispUserData } from '../utils/serialize';
+import { crispProfileDataObject, formatUserObject } from '../utils/serialize';
 import { CreateUserDto } from './dtos/create-user.dto';
 import { GetUserDto } from './dtos/get-user.dto';
 import { UserRepository } from './user.repository';
@@ -55,7 +55,7 @@ export class UserService {
           addCrispProfile({
             email: createUserResponse.email,
             person: { nickname: createUserResponse.name },
-            data: getCrispUserData(
+            data: crispProfileDataObject(
               createUserResponse,
               getPartnerResponse,
               updatePartnerAccessResponse,

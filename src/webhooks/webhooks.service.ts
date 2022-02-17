@@ -1,9 +1,10 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import _ from 'lodash';
+import { getCrispPeopleData, updateCrispProfile } from 'src/api/crisp/crisp-api';
+import { CoursePartnerService } from 'src/course-partner/course-partner.service';
 import StoryblokClient from 'storyblok-js-client';
 import apiCall from '../api/apiCalls';
-import { updateCrispProfile } from '../api/crisp/crisp-api';
-import { CoursePartnerService } from '../course-partner/course-partner.service';
 import { CourseRepository } from '../course/course.repository';
 import { SimplybookBodyDto } from '../partner-access/dtos/zapier-body.dto';
 import { PartnerAccessRepository } from '../partner-access/partner-access.repository';
@@ -47,6 +48,30 @@ export class WebhooksService {
       .toLowerCase();
   };
 
+  async updateCrispProfileSessionsData(action, email) {
+    let partnerAccessUpdateCrisp = {};
+    const crispResponse = await getCrispPeopleData(email);
+    const crispData = crispResponse.data.data.data;
+
+    if (action === SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING) {
+      partnerAccessUpdateCrisp = {
+        therapy_sessions_remaining: crispData['therapy_sessions_remaining'] - 1,
+        therapy_sessions_redeemed: crispData['therapy_sessions_redeemed'] + 1,
+      };
+    }
+
+    if (action === SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING) {
+      partnerAccessUpdateCrisp = {
+        therapy_sessions_remaining: crispData['therapy_sessions_remaining'] + 1,
+        therapy_sessions_redeemed: crispData['therapy_sessions_redeemed'] - 1,
+      };
+    }
+
+    updateCrispProfile(partnerAccessUpdateCrisp, email);
+
+    return 'ok';
+  }
+
   async updatePartnerAccessBooking({ action, client_email }: SimplybookBodyDto): Promise<string> {
     const userDetails = await this.userRepository.findOne({ email: client_email });
 
@@ -61,35 +86,42 @@ export class WebhooksService {
       throw new HttpException('Unable to find user', HttpStatus.BAD_REQUEST);
     }
 
-    const partnerAccessDetails = await this.partnerAccessRepository.findOne({
+    const partnerAccessDetails = await this.partnerAccessRepository.find({
       userId: userDetails.id,
+      active: true,
     });
 
-    if (!partnerAccessDetails) {
+    if (!partnerAccessDetails.length) {
       throw new HttpException('Unable to find partner access code', HttpStatus.BAD_REQUEST);
+    }
+
+    //_.maxBy returns the partner access that has the highest number of therapy session remaining
+    const partnerAccess = _.maxBy(partnerAccessDetails, async (paDetails) => {
+      if (paDetails.featureLiveChat === true) {
+        await this.updateCrispProfileSessionsData(action, client_email);
+      }
+      return paDetails.therapySessionsRemaining;
+    });
+
+    if (partnerAccess.therapySessionsRemaining === 0) {
+      throw new HttpException('No therapy sessions remaining', HttpStatus.FORBIDDEN);
     }
 
     let partnerAccessUpdateDetails = {};
 
     if (action === SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING) {
-      if (partnerAccessDetails.therapySessionsRemaining === 0) {
-        throw new HttpException('No therapy sessions remaining', HttpStatus.FORBIDDEN);
-      }
-
       partnerAccessUpdateDetails = {
-        therapySessionsRemaining: partnerAccessDetails.therapySessionsRemaining - 1,
-        therapySessionsRedeemed: partnerAccessDetails.therapySessionsRedeemed + 1,
+        therapySessionsRemaining: partnerAccess.therapySessionsRemaining - 1,
+        therapySessionsRedeemed: partnerAccess.therapySessionsRedeemed + 1,
       };
     }
 
     if (action === SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING) {
       partnerAccessUpdateDetails = {
-        therapySessionsRemaining: partnerAccessDetails.therapySessionsRemaining + 1,
-        therapySessionsRedeemed: partnerAccessDetails.therapySessionsRedeemed - 1,
+        therapySessionsRemaining: partnerAccess.therapySessionsRemaining + 1,
+        therapySessionsRedeemed: partnerAccess.therapySessionsRedeemed - 1,
       };
     }
-
-    updateCrispProfile(this.renameKeys(partnerAccessUpdateDetails), client_email);
 
     try {
       await this.partnerAccessRepository.save({

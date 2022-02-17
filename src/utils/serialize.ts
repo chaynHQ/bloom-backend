@@ -64,7 +64,7 @@ export const formatUserObject = (userObject: UserEntity): GetUserDto => {
   };
 };
 
-export const getCrispUserData = (
+export const crispProfileDataObject = (
   createUserResponse,
   partnerDetails,
   updatePartnerAccessResponse,
@@ -73,7 +73,7 @@ export const getCrispUserData = (
     created_at: createUserResponse.createdAt,
     updated_at: createUserResponse.updatedAt,
     language_default: createUserResponse.languageDefault,
-    partner: partnerDetails.name,
+    partners: `${partnerDetails.name}; `,
     partner_activated_at: partnerDetails.createdAt,
     feature_live_chat: updatePartnerAccessResponse.featureLiveChat,
     feature_therapy: updatePartnerAccessResponse.featureTherapy,
