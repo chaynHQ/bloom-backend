@@ -1,14 +1,15 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
+import { createMock, DeepMocked } from '@golevelup/ts-jest';
 import { Test, TestingModule } from '@nestjs/testing';
+import { Request } from 'express';
+import { UserService } from 'src/user/user.service';
+import { AuthService } from '../auth/auth.service';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
+import { PartnerAdminAuthGuard } from '../partner-admin/partner-admin-auth.guard';
+import { UserRepository } from '../user/user.repository';
 import { CreatePartnerAccessDto } from './dtos/create-partner-access.dto';
 import { PartnerAccessController } from './partner-access.controller';
 import { PartnerAccessService } from './partner-access.service';
-import { createMock, DeepMocked } from '@golevelup/ts-jest';
-import { Request } from 'express';
-import { PartnerAdminAuthGuard } from '../partner-admin/partner-admin-auth.guard';
-import { AuthService } from '../auth/auth.service';
-import { UserRepository } from '../user/user.repository';
 
 const mockUserRepository = () => ({});
 
@@ -20,6 +21,7 @@ describe('PartnerAccessController', () => {
   let controller: PartnerAccessController;
   let mockPartnerAccessService: Partial<PartnerAccessService>;
   let mockAuthService: DeepMocked<AuthService>;
+  let mockUserService: DeepMocked<UserService>;
   const date = Date.now();
   let authGuard: DeepMocked<PartnerAdminAuthGuard>;
 
@@ -33,6 +35,7 @@ describe('PartnerAccessController', () => {
   beforeEach(async () => {
     authGuard = createMock<PartnerAdminAuthGuard>();
     mockAuthService = createMock<AuthService>();
+    mockUserService = createMock<UserService>();
     mockPartnerAccessService = {
       createPartnerAccess: (
         createPartnerAccessDto: CreatePartnerAccessDto,
@@ -58,6 +61,7 @@ describe('PartnerAccessController', () => {
       providers: [
         { provide: PartnerAccessService, useValue: mockPartnerAccessService },
         { provide: AuthService, useValue: mockAuthService },
+        { provide: UserService, useValue: mockUserService },
         {
           provide: UserRepository,
           useFactory: mockUserRepository,
