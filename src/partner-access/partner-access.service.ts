@@ -1,11 +1,12 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm/dist/common';
-import { CreatePartnerAccessDto } from './dtos/create-partner-access.dto';
-import { PartnerAccessRepository } from './partner-access.repository';
 import _ from 'lodash';
+import moment from 'moment';
+import { GetUserDto } from 'src/user/dtos/get-user.dto';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
 import { PartnerAccessCodeStatusEnum } from '../utils/constants';
-import moment from 'moment';
+import { CreatePartnerAccessDto } from './dtos/create-partner-access.dto';
+import { PartnerAccessRepository } from './partner-access.repository';
 
 @Injectable()
 export class PartnerAccessService {
@@ -15,7 +16,11 @@ export class PartnerAccessService {
   ) {}
 
   private async findPartnerAccessCode(accessCode: string): Promise<PartnerAccessEntity> {
-    return await this.partnerAccessRepository.findOne({ accessCode });
+    return await this.partnerAccessRepository
+      .createQueryBuilder('partnerAccess')
+      .leftJoinAndSelect('partnerAccess.partner', 'partner')
+      .where('partnerAccess.accessCode = :accessCode', { accessCode })
+      .getOne();
   }
 
   private async generateAccessCode(length: number): Promise<string> {
@@ -27,7 +32,7 @@ export class PartnerAccessService {
     return accessCode;
   }
 
-  private async checkCodeStatus(partnerAccessCode: string): Promise<PartnerAccessCodeStatusEnum> {
+  private async getValidPartnerAccessCode(partnerAccessCode: string): Promise<PartnerAccessEntity> {
     const format = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/;
 
     if (format.test(partnerAccessCode) || partnerAccessCode.length !== 6) {
@@ -48,7 +53,7 @@ export class PartnerAccessService {
       throw new HttpException(PartnerAccessCodeStatusEnum.CODE_EXPIRED, HttpStatus.BAD_REQUEST);
     }
 
-    return PartnerAccessCodeStatusEnum.VALID;
+    return codeDetails;
   }
 
   async createPartnerAccess(
@@ -67,9 +72,9 @@ export class PartnerAccessService {
   async validatePartnerAccessCode(
     partnerAccessCode: string,
   ): Promise<{ status: PartnerAccessCodeStatusEnum }> {
-    const PartnerAccessCodeStatusEnum = await this.checkCodeStatus(partnerAccessCode);
+    await this.getValidPartnerAccessCode(partnerAccessCode);
     return {
-      status: PartnerAccessCodeStatusEnum,
+      status: PartnerAccessCodeStatusEnum.VALID,
     };
   }
 
@@ -77,23 +82,11 @@ export class PartnerAccessService {
     partnerAccessCode: string,
     userId: string,
   ): Promise<PartnerAccessEntity> {
-    await this.checkCodeStatus(partnerAccessCode);
+    const partnerAccessCodeDetails = await this.getValidPartnerAccessCode(partnerAccessCode);
 
-    const partnerAccessCodeDetails = await this.findPartnerAccessCode(partnerAccessCode);
-
-    const partnerAccessCodeUpdateDetails = {
-      userId,
-      activatedAt: moment(Date.now()).format('YYYY-MM-DD hh:mm:ss'),
-    };
-
-    try {
-      return await this.partnerAccessRepository.save({
-        ...partnerAccessCodeDetails,
-        ...partnerAccessCodeUpdateDetails,
-      });
-    } catch (error) {
-      return error;
-    }
+    partnerAccessCodeDetails.userId = userId;
+    partnerAccessCodeDetails.activatedAt = new Date();
+    return await this.partnerAccessRepository.save(partnerAccessCodeDetails);
   }
 
   async getPartnerAccessCodes(): Promise<PartnerAccessEntity[]> {
@@ -101,5 +94,26 @@ export class PartnerAccessService {
       .createQueryBuilder('partnerAccess')
       .leftJoinAndSelect('partnerAccess.partner', 'partner')
       .getMany();
+  }
+
+  async assignPartnerAccess(
+    { user, partnerAccesses }: GetUserDto,
+    partnerAccessCode: string,
+  ): Promise<PartnerAccessEntity> {
+    const partnerAccessCodeDetails = await this.getValidPartnerAccessCode(partnerAccessCode);
+
+    partnerAccesses.map(async (pa) => {
+      if (partnerAccessCodeDetails.partner.id === pa.partner.id && pa.active === true) {
+        pa.active = false;
+        await this.partnerAccessRepository.save(pa);
+      }
+    });
+
+    partnerAccessCodeDetails.userId = user.id;
+    partnerAccessCodeDetails.activatedAt = new Date();
+
+    await this.partnerAccessRepository.save(partnerAccessCodeDetails);
+
+    return partnerAccessCodeDetails;
   }
 }

@@ -44,6 +44,7 @@ export const formatUserObject = (userObject: UserEntity): GetUserDto => {
         featureLiveChat: Boolean(partnerAccess.featureLiveChat),
         featureTherapy: Boolean(partnerAccess.featureTherapy),
         accessCode: partnerAccess.accessCode,
+        active: Boolean(partnerAccess.active),
         therapySessionsRemaining: Number(partnerAccess.therapySessionsRemaining),
         therapySessionsRedeemed: Number(partnerAccess.therapySessionsRedeemed),
         partner: partnerAccess.partner,

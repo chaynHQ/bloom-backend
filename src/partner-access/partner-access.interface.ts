@@ -6,6 +6,7 @@ export interface IPartnerAccess {
   featureLiveChat?: boolean;
   featureTherapy?: boolean;
   accessCode?: string;
+  active?: boolean;
   therapySessionsRemaining?: number;
   therapySessionsRedeemed?: number;
 }

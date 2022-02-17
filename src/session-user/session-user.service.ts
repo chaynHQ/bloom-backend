@@ -5,9 +5,9 @@ import { updateCrispProfileCourse, updateCrispProfileSession } from 'src/api/cri
 import { CourseUserEntity } from 'src/entities/course-user.entity';
 import { CourseEntity } from 'src/entities/course.entity';
 import { SessionUserEntity } from 'src/entities/session-user.entity';
-import { IFirebaseUser } from 'src/firebase/firebase-user.interface';
 import { IPartnerAccessWithPartner } from 'src/partner-access/partner-access.interface';
 import { SessionService } from 'src/session/session.service';
+import { GetUserDto } from 'src/user/dtos/get-user.dto';
 import { UserRepository } from 'src/user/user.repository';
 import { UserService } from 'src/user/user.service';
 import { PROGRESS_STATUS, STORYBLOK_STORY_STATUS_ENUM } from 'src/utils/constants';
@@ -82,10 +82,9 @@ export class SessionUserService {
   }
 
   public async createSessionUser(
-    firebaseUser: IFirebaseUser,
+    { user, partnerAccesses }: GetUserDto,
     { storyblokId }: UpdateSessionUserDto,
   ) {
-    const { user, partnerAccesses } = await this.userService.getUser(firebaseUser);
     const session = await this.sessionService.getSessionByStoryblokId(storyblokId);
 
     if (!session) {
@@ -143,10 +142,9 @@ export class SessionUserService {
   }
 
   public async completeSessionUser(
-    firebaseUser: IFirebaseUser,
+    { user, partnerAccesses }: GetUserDto,
     { storyblokId }: UpdateSessionUserDto,
   ) {
-    const { user, partnerAccesses } = await this.userService.getUser(firebaseUser);
     const session = await this.sessionService.getSessionByStoryblokId(storyblokId);
 
     if (!session) {
