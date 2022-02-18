@@ -71,6 +71,7 @@ export class UserService {
           partner: getPartnerResponse,
         };
       }
+      return { user: createUserResponse };
     } catch (error) {
       if (error.code === '23505') {
         throw new HttpException(error.detail, HttpStatus.CONFLICT);
