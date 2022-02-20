@@ -96,12 +96,15 @@ export class WebhooksService {
     }
 
     //_.maxBy returns the partner access that has the highest number of therapy session remaining
+    let hasFeatureLiveChat = false;
     const partnerAccess = _.maxBy(partnerAccessDetails, async (paDetails) => {
       if (paDetails.featureLiveChat === true) {
-        await this.updateCrispProfileSessionsData(action, client_email);
+        hasFeatureLiveChat = true;
       }
       return paDetails.therapySessionsRemaining;
     });
+
+    hasFeatureLiveChat && (await this.updateCrispProfileSessionsData(action, client_email));
 
     if (partnerAccess.therapySessionsRemaining === 0) {
       throw new HttpException('No therapy sessions remaining', HttpStatus.FORBIDDEN);
