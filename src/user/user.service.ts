@@ -34,7 +34,7 @@ export class UserService {
       const createUserResponse = await this.userRepository.save(createUserObject);
       if (partnerAccessCode) {
         const updatePartnerAccessResponse =
-          await this.partnerAccessService.updatePartnerAccessCodeUser(
+          await this.partnerAccessService.assignPartnerAccessOnSignup(
             partnerAccessCode,
             createUserResponse.id,
           );

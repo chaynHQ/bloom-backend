@@ -16,21 +16,34 @@ export class PartnerAccessService {
     private partnerAccessRepository: PartnerAccessRepository,
   ) {}
 
-  private async findPartnerAccessCode(accessCode: string): Promise<PartnerAccessEntity> {
-    return await this.partnerAccessRepository
-      .createQueryBuilder('partnerAccess')
-      .leftJoinAndSelect('partnerAccess.partner', 'partner')
-      .where('partnerAccess.accessCode = :accessCode', { accessCode })
-      .getOne();
+  async createPartnerAccess(
+    createPartnerAccessDto: CreatePartnerAccessDto,
+    partnerId: string,
+    partnerAdminId: string,
+  ): Promise<PartnerAccessEntity> {
+    const partnerAccess = this.partnerAccessRepository.create(createPartnerAccessDto);
+    partnerAccess.partnerAdminId = partnerAdminId;
+    partnerAccess.partnerId = partnerId;
+    partnerAccess.accessCode = await this.generateAccessCode(6);
+
+    return await this.partnerAccessRepository.save(partnerAccess);
   }
 
   private async generateAccessCode(length: number): Promise<string> {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUFWXYZ1234567890';
     const accessCode = _.sampleSize(chars, length || 6).join('');
-    if (!!(await this.findPartnerAccessCode(accessCode))) {
+    if (!!(await this.findPartnerAccessByCode(accessCode))) {
       this.generateAccessCode(6);
     }
     return accessCode;
+  }
+
+  private async findPartnerAccessByCode(accessCode: string): Promise<PartnerAccessEntity> {
+    return await this.partnerAccessRepository
+      .createQueryBuilder('partnerAccess')
+      .leftJoinAndSelect('partnerAccess.partner', 'partner')
+      .where('partnerAccess.accessCode = :accessCode', { accessCode })
+      .getOne();
   }
 
   private async getValidPartnerAccessCode(partnerAccessCode: string): Promise<PartnerAccessEntity> {
@@ -40,34 +53,21 @@ export class PartnerAccessService {
       throw new HttpException(PartnerAccessCodeStatusEnum.INVALID_CODE, HttpStatus.BAD_REQUEST);
     }
 
-    const codeDetails = await this.findPartnerAccessCode(partnerAccessCode);
+    const partnerAccess = await this.findPartnerAccessByCode(partnerAccessCode);
 
-    if (codeDetails === undefined) {
+    if (partnerAccess === undefined) {
       throw new HttpException(PartnerAccessCodeStatusEnum.DOES_NOT_EXIST, HttpStatus.BAD_REQUEST);
     }
 
-    if (!!codeDetails.userId) {
+    if (!!partnerAccess.userId) {
       throw new HttpException(PartnerAccessCodeStatusEnum.ALREADY_IN_USE, HttpStatus.CONFLICT);
     }
 
-    if (moment(codeDetails.createdAt).add(1, 'year').isSameOrBefore(Date.now())) {
+    if (moment(partnerAccess.createdAt).add(1, 'year').isSameOrBefore(Date.now())) {
       throw new HttpException(PartnerAccessCodeStatusEnum.CODE_EXPIRED, HttpStatus.BAD_REQUEST);
     }
 
-    return codeDetails;
-  }
-
-  async createPartnerAccess(
-    createPartnerAccessDto: CreatePartnerAccessDto,
-    partnerId: string,
-    partnerAdminId: string,
-  ): Promise<PartnerAccessEntity> {
-    const partnerAccessDetails = this.partnerAccessRepository.create(createPartnerAccessDto);
-    partnerAccessDetails.partnerAdminId = partnerAdminId;
-    partnerAccessDetails.partnerId = partnerId;
-    partnerAccessDetails.accessCode = await this.generateAccessCode(6);
-
-    return await this.partnerAccessRepository.save(partnerAccessDetails);
+    return partnerAccess;
   }
 
   async validatePartnerAccessCode(
@@ -79,17 +79,6 @@ export class PartnerAccessService {
     };
   }
 
-  async updatePartnerAccessCodeUser(
-    partnerAccessCode: string,
-    userId: string,
-  ): Promise<PartnerAccessEntity> {
-    const partnerAccessCodeDetails = await this.getValidPartnerAccessCode(partnerAccessCode);
-
-    partnerAccessCodeDetails.userId = userId;
-    partnerAccessCodeDetails.activatedAt = new Date();
-    return await this.partnerAccessRepository.save(partnerAccessCodeDetails);
-  }
-
   async getPartnerAccessCodes(): Promise<PartnerAccessEntity[]> {
     return await this.partnerAccessRepository
       .createQueryBuilder('partnerAccess')
@@ -97,50 +86,61 @@ export class PartnerAccessService {
       .getMany();
   }
 
+  async assignPartnerAccessOnSignup(
+    partnerAccessCode: string,
+    userId: string,
+  ): Promise<PartnerAccessEntity> {
+    const partnerAccess = await this.getValidPartnerAccessCode(partnerAccessCode);
+
+    partnerAccess.userId = userId;
+    partnerAccess.activatedAt = new Date();
+    return await this.partnerAccessRepository.save(partnerAccess);
+  }
+
   async assignPartnerAccess(
     { user, partnerAccesses }: GetUserDto,
     partnerAccessCode: string,
   ): Promise<PartnerAccessEntity> {
-    let totalSessionRemainingCount = 0;
-    let totalSessionRedemmedCount = 0;
+    let totalTherapySessionsRemaining = 0;
+    let totalTherapySessionsRedeemed = 0;
 
-    const partnerAccessCodeDetails = await this.getValidPartnerAccessCode(partnerAccessCode);
+    const partnerAccess = await this.getValidPartnerAccessCode(partnerAccessCode);
 
     partnerAccesses.map(async (pa) => {
-      if (partnerAccessCodeDetails.partner.id === pa.partner.id && pa.active === true) {
+      if (partnerAccess.partner.id === pa.partner.id && pa.active === true) {
         pa.active = false;
         await this.partnerAccessRepository.save(pa);
       } else {
-        totalSessionRemainingCount = totalSessionRemainingCount + pa.therapySessionsRemaining;
-        totalSessionRedemmedCount = totalSessionRedemmedCount + pa.therapySessionsRedeemed;
+        totalTherapySessionsRemaining = totalTherapySessionsRemaining + pa.therapySessionsRemaining;
+        totalTherapySessionsRedeemed = totalTherapySessionsRedeemed + pa.therapySessionsRedeemed;
       }
     });
 
-    partnerAccessCodeDetails.userId = user.id;
-    partnerAccessCodeDetails.activatedAt = new Date();
+    partnerAccess.userId = user.id;
+    partnerAccess.activatedAt = new Date();
 
-    await this.partnerAccessRepository.save(partnerAccessCodeDetails);
+    await this.partnerAccessRepository.save(partnerAccess);
 
-    if (!!partnerAccessCodeDetails.featureLiveChat) {
+    if (!!partnerAccess.featureLiveChat) {
       const crispResponse = await getCrispPeopleData(user.email);
       const crispData = crispResponse.data.data.data;
       const partners = crispData['partners'].split('; ');
 
-      if (partners.indexOf(partnerAccessCodeDetails.partner.name) === -1) {
-        partners.push(partnerAccessCodeDetails.partner.name);
+      if (partners.indexOf(partnerAccess.partner.name) === -1) {
+        partners.push(partnerAccess.partner.name);
       }
 
-      const updateDetails = {
+      const updatedCrispData = {
         partners: partners.join('; '),
         therapy_sessions_remaining:
-          partnerAccessCodeDetails.therapySessionsRemaining + totalSessionRemainingCount,
+          partnerAccess.therapySessionsRemaining + totalTherapySessionsRemaining,
         therapy_sessions_redeemed:
-          partnerAccessCodeDetails.therapySessionsRedeemed + totalSessionRedemmedCount,
+          partnerAccess.therapySessionsRedeemed + totalTherapySessionsRedeemed,
       };
 
-      updateCrispProfile(updateDetails, user.email);
+      updateCrispProfile(updatedCrispData, user.email);
     }
 
-    return partnerAccessCodeDetails;
+    return partnerAccess;
   }
 }
