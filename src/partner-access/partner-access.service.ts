@@ -14,14 +14,14 @@ export class PartnerAccessService {
     private partnerAccessRepository: PartnerAccessRepository,
   ) {}
 
-  private async getPartnerAccessByCode(accessCode: string): Promise<PartnerAccessEntity> {
+  private async findPartnerAccessCode(accessCode: string): Promise<PartnerAccessEntity> {
     return await this.partnerAccessRepository.findOne({ accessCode });
   }
 
   private async generateAccessCode(length: number): Promise<string> {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUFWXYZ1234567890';
     const accessCode = _.sampleSize(chars, length || 6).join('');
-    if (!!(await this.getPartnerAccessByCode(accessCode))) {
+    if (!!(await this.findPartnerAccessCode(accessCode))) {
       this.generateAccessCode(6);
     }
     return accessCode;
@@ -34,17 +34,17 @@ export class PartnerAccessService {
       throw new HttpException(PartnerAccessCodeStatusEnum.INVALID_CODE, HttpStatus.BAD_REQUEST);
     }
 
-    const partnerAccess = await this.getPartnerAccessByCode(partnerAccessCode);
+    const codeDetails = await this.findPartnerAccessCode(partnerAccessCode);
 
-    if (partnerAccess === undefined) {
+    if (codeDetails === undefined) {
       throw new HttpException(PartnerAccessCodeStatusEnum.DOES_NOT_EXIST, HttpStatus.BAD_REQUEST);
     }
 
-    if (!!partnerAccess.userId) {
+    if (!!codeDetails.userId) {
       throw new HttpException(PartnerAccessCodeStatusEnum.ALREADY_IN_USE, HttpStatus.CONFLICT);
     }
 
-    if (moment(partnerAccess.createdAt).add(1, 'year').isSameOrBefore(Date.now())) {
+    if (moment(codeDetails.createdAt).add(1, 'year').isSameOrBefore(Date.now())) {
       throw new HttpException(PartnerAccessCodeStatusEnum.CODE_EXPIRED, HttpStatus.BAD_REQUEST);
     }
 
@@ -56,12 +56,12 @@ export class PartnerAccessService {
     partnerId: string,
     partnerAdminId: string,
   ): Promise<PartnerAccessEntity> {
-    const partnerAccess = this.partnerAccessRepository.create(createPartnerAccessDto);
-    partnerAccess.partnerAdminId = partnerAdminId;
-    partnerAccess.partnerId = partnerId;
-    partnerAccess.accessCode = await this.generateAccessCode(6);
+    const partnerAccessDetails = this.partnerAccessRepository.create(createPartnerAccessDto);
+    partnerAccessDetails.partnerAdminId = partnerAdminId;
+    partnerAccessDetails.partnerId = partnerId;
+    partnerAccessDetails.accessCode = await this.generateAccessCode(6);
 
-    return await this.partnerAccessRepository.save(partnerAccess);
+    return await this.partnerAccessRepository.save(partnerAccessDetails);
   }
 
   async validatePartnerAccessCode(
@@ -73,23 +73,23 @@ export class PartnerAccessService {
     };
   }
 
-  async updatePartnerAccessUser(
+  async updatePartnerAccessCodeUser(
     partnerAccessCode: string,
     userId: string,
   ): Promise<PartnerAccessEntity> {
     await this.checkCodeStatus(partnerAccessCode);
 
-    const partnerAccess = await this.getPartnerAccessByCode(partnerAccessCode);
+    const partnerAccessCodeDetails = await this.findPartnerAccessCode(partnerAccessCode);
 
-    const updatedPartnerAccess = {
+    const partnerAccessCodeUpdateDetails = {
       userId,
       activatedAt: moment(Date.now()).format('YYYY-MM-DD hh:mm:ss'),
     };
 
     try {
       return await this.partnerAccessRepository.save({
-        ...partnerAccess,
-        ...updatedPartnerAccess,
+        ...partnerAccessCodeDetails,
+        ...partnerAccessCodeUpdateDetails,
       });
     } catch (error) {
       return error;
