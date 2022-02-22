@@ -41,11 +41,10 @@ export class UserService {
     try {
       const createUserResponse = await this.userRepository.save(createUserObject);
       if (partnerAccessCode) {
-        const updatePartnerAccessResponse =
-          await this.partnerAccessService.updatePartnerAccessCodeUser(
-            partnerAccessCode,
-            createUserResponse.id,
-          );
+        const updatePartnerAccessResponse = await this.partnerAccessService.updatePartnerAccessUser(
+          partnerAccessCode,
+          createUserResponse.id,
+        );
 
         const getPartnerResponse = await this.partnerRepository.findOne({
           id: updatePartnerAccessResponse.partnerId,
