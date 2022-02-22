@@ -2,7 +2,7 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm/dist/common';
 import _ from 'lodash';
 import moment from 'moment';
-import { getCrispPeopleData, updateCrispProfile } from '../api/crisp/crisp-api';
+import { updateCrispProfileAccess } from '../api/crisp/crisp-api';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
 import { GetUserDto } from '../user/dtos/get-user.dto';
 import { PartnerAccessCodeStatusEnum } from '../utils/constants';
@@ -122,23 +122,12 @@ export class PartnerAccessService {
     await this.partnerAccessRepository.save(partnerAccess);
 
     if (!!partnerAccess.featureLiveChat) {
-      const crispResponse = await getCrispPeopleData(user.email);
-      const crispData = crispResponse.data.data.data;
-      const partners = crispData['partners'].split('; ');
-
-      if (partners.indexOf(partnerAccess.partner.name) === -1) {
-        partners.push(partnerAccess.partner.name);
-      }
-
-      const updatedCrispData = {
-        partners: partners.join('; '),
-        therapy_sessions_remaining:
-          partnerAccess.therapySessionsRemaining + totalTherapySessionsRemaining,
-        therapy_sessions_redeemed:
-          partnerAccess.therapySessionsRedeemed + totalTherapySessionsRedeemed,
-      };
-
-      updateCrispProfile(updatedCrispData, user.email);
+      await updateCrispProfileAccess(
+        user.email,
+        partnerAccess,
+        totalTherapySessionsRedeemed,
+        totalTherapySessionsRemaining,
+      );
     }
 
     return partnerAccess;

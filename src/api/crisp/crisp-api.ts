@@ -1,4 +1,5 @@
 import { AxiosResponse } from 'axios';
+import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { IPartnerAccessWithPartner } from 'src/partner-access/partner-access.interface';
 import { crispToken, crispWebsiteId, PROGRESS_STATUS } from '../../utils/constants';
 import apiCall from '../apiCalls';
@@ -33,6 +34,32 @@ const formatCourseText = (courseName: string) => {
 
 const formatSessionText = (courseName: string, status: PROGRESS_STATUS) => {
   return `course_${getAcronym(courseName)}_sessions_${status.toLowerCase()}`;
+};
+
+export const updateCrispProfileAccess = async (
+  email: string,
+  partnerAccess: PartnerAccessEntity,
+  totalTherapySessionsRedeemed: number,
+  totalTherapySessionsRemaining: number,
+) => {
+  const crispResponse = await getCrispPeopleData(email);
+  const crispData = crispResponse.data.data.data;
+  const partners = crispData['partners'].split('; ');
+
+  if (partners.indexOf(partnerAccess.partner.name) === -1) {
+    partners.push(partnerAccess.partner.name);
+  }
+
+  const updatedCrispData = {
+    partners: partners.join('; '),
+    therapy_sessions_remaining:
+      partnerAccess.therapySessionsRemaining + totalTherapySessionsRemaining,
+    therapy_sessions_redeemed: partnerAccess.therapySessionsRedeemed + totalTherapySessionsRedeemed,
+  };
+
+  updateCrispProfile(updatedCrispData, email);
+
+  return;
 };
 
 export const updateCrispProfileCourse = async (
