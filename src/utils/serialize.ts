@@ -21,7 +21,7 @@ export const formatCourseUserObjects = (courseUserObjects: CourseUserEntity[]) =
           updatedAt: sessionUser.updatedAt,
           name: sessionUser.session.name,
           slug: sessionUser.session.slug,
-          storyblokId: Number(sessionUser.session.storyblokId),
+          storyblokId: sessionUser.session.storyblokId,
           storyblokUuid: sessionUser.session.storyblokUuid,
           status: sessionUser.session.status,
           completed: sessionUser.completed,
