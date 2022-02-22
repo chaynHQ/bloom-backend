@@ -1,6 +1,5 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import _ from 'lodash';
 import { getCrispPeopleData, updateCrispProfile } from 'src/api/crisp/crisp-api';
 import { CoursePartnerService } from 'src/course-partner/course-partner.service';
 import StoryblokClient from 'storyblok-js-client';
@@ -95,13 +94,13 @@ export class WebhooksService {
       throw new HttpException('Unable to find partner access code', HttpStatus.BAD_REQUEST);
     }
 
-    //_.maxBy returns the partner access that has the highest number of therapy session remaining
     let hasFeatureLiveChat = false;
-    const partnerAccess = _.maxBy(partnerAccessDetails, async (paDetails) => {
-      if (paDetails.featureLiveChat === true) {
+
+    const partnerAccess = partnerAccessDetails.find((pa) => {
+      if (pa.featureLiveChat === true) {
         hasFeatureLiveChat = true;
       }
-      return paDetails.therapySessionsRemaining;
+      return partnerAccess.featureTherapy === true && partnerAccess.therapySessionsRemaining > 0;
     });
 
     hasFeatureLiveChat && (await this.updateCrispProfileSessionsData(action, client_email));
