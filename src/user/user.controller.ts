@@ -1,9 +1,6 @@
 import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiBody, ApiTags } from '@nestjs/swagger';
 import { Request } from 'express';
-import { PartnerAccessEntity } from '../entities/partner-access.entity';
-import { PartnerEntity } from '../entities/partner.entity';
-import { UserEntity } from '../entities/user.entity';
 import { FirebaseAuthGuard } from '../firebase/firebase-auth.guard';
 import { ControllerDecorator } from '../utils/controller.decorator';
 import { CreateUserDto } from './dtos/create-user.dto';
@@ -18,12 +15,7 @@ export class UserController {
 
   @Post()
   @ApiBody({ type: CreateUserDto })
-  async createUser(
-    @Body() createUserDto: CreateUserDto,
-  ): Promise<
-    | { user: UserEntity; partnerAccess: PartnerAccessEntity; partner: PartnerEntity }
-    | { user: UserEntity }
-  > {
+  async createUser(@Body() createUserDto: CreateUserDto): Promise<GetUserDto> {
     return await this.userService.createUser(createUserDto);
   }
 

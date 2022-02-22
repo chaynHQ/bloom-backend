@@ -41,21 +41,23 @@ export const formatUserObject = (userObject: UserEntity): GetUserDto => {
       email: userObject.email,
       languageDefault: userObject.languageDefault,
     },
-    partnerAccesses: userObject.partnerAccess.map((partnerAccess) => {
-      return {
-        id: partnerAccess.id,
-        createdAt: partnerAccess.createdAt,
-        updatedAt: partnerAccess.updatedAt,
-        activatedAt: partnerAccess.activatedAt,
-        featureLiveChat: partnerAccess.featureLiveChat,
-        featureTherapy: partnerAccess.featureTherapy,
-        accessCode: partnerAccess.accessCode,
-        active: partnerAccess.active,
-        therapySessionsRemaining: partnerAccess.therapySessionsRemaining,
-        therapySessionsRedeemed: partnerAccess.therapySessionsRedeemed,
-        partner: partnerAccess.partner,
-      };
-    }),
+    partnerAccesses: userObject.partnerAccess
+      ? userObject.partnerAccess.map((partnerAccess) => {
+          return {
+            id: partnerAccess.id,
+            createdAt: partnerAccess.createdAt,
+            updatedAt: partnerAccess.updatedAt,
+            activatedAt: partnerAccess.activatedAt,
+            featureLiveChat: partnerAccess.featureLiveChat,
+            featureTherapy: partnerAccess.featureTherapy,
+            accessCode: partnerAccess.accessCode,
+            active: partnerAccess.active,
+            therapySessionsRemaining: partnerAccess.therapySessionsRemaining,
+            therapySessionsRedeemed: partnerAccess.therapySessionsRedeemed,
+            partner: partnerAccess.partner,
+          };
+        })
+      : null,
     partnerAdmin: userObject.partnerAdmin
       ? {
           id: userObject.partnerAdmin.id,

@@ -2,9 +2,6 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { IFirebaseUser } from 'src/firebase/firebase-user.interface';
 import { addCrispProfile } from '../api/crisp/crisp-api';
-import { PartnerAccessEntity } from '../entities/partner-access.entity';
-import { PartnerEntity } from '../entities/partner.entity';
-import { UserEntity } from '../entities/user.entity';
 import { PartnerAccessService } from '../partner-access/partner-access.service';
 import { PartnerRepository } from '../partner/partner.repository';
 import { crispProfileDataObject, formatUserObject } from '../utils/serialize';
@@ -22,12 +19,7 @@ export class UserService {
     private readonly partnerAccessService: PartnerAccessService,
   ) {}
 
-  public async createUser(
-    createUserDto: CreateUserDto,
-  ): Promise<
-    | { user: UserEntity; partnerAccess: PartnerAccessEntity; partner: PartnerEntity }
-    | { user: UserEntity }
-  > {
+  public async createUser(createUserDto: CreateUserDto): Promise<GetUserDto> {
     const { name, email, firebaseUid, languageDefault, partnerAccessCode, contactPermission } =
       createUserDto;
     const createUserObject = this.userRepository.create({
@@ -41,11 +33,10 @@ export class UserService {
     try {
       const createUserResponse = await this.userRepository.save(createUserObject);
       if (partnerAccessCode) {
-        const updatePartnerAccessResponse =
-          await this.partnerAccessService.updatePartnerAccessCodeUser(
-            partnerAccessCode,
-            createUserResponse.id,
-          );
+        const updatePartnerAccessResponse = await this.partnerAccessService.updatePartnerAccessUser(
+          partnerAccessCode,
+          createUserResponse.id,
+        );
 
         const getPartnerResponse = await this.partnerRepository.findOne({
           id: updatePartnerAccessResponse.partnerId,
@@ -62,15 +53,11 @@ export class UserService {
             ),
           });
         }
-
-        delete updatePartnerAccessResponse.partnerAdmin;
-
-        return {
-          user: createUserResponse,
-          partnerAccess: updatePartnerAccessResponse,
-          partner: getPartnerResponse,
-        };
+        updatePartnerAccessResponse.partner = getPartnerResponse;
+        createUserResponse.partnerAccess = [updatePartnerAccessResponse];
+        return formatUserObject(createUserResponse);
       }
+      return formatUserObject(createUserResponse);
     } catch (error) {
       if (error.code === '23505') {
         throw new HttpException(error.detail, HttpStatus.CONFLICT);
