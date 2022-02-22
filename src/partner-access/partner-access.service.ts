@@ -2,7 +2,7 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm/dist/common';
 import _ from 'lodash';
 import moment from 'moment';
-import { updateCrispProfileAccess } from '../api/crisp/crisp-api';
+import { updateCrispProfile, updateCrispProfileAccess } from '../api/crisp/crisp-api';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
 import { GetUserDto } from '../user/dtos/get-user.dto';
 import { PartnerAccessCodeStatusEnum } from '../utils/constants';
@@ -103,10 +103,14 @@ export class PartnerAccessService {
   ): Promise<PartnerAccessEntity> {
     let totalTherapySessionsRemaining = 0;
     let totalTherapySessionsRedeemed = 0;
+    let hasFeatureLiveChat = false;
 
     const partnerAccess = await this.getValidPartnerAccessCode(partnerAccessCode);
 
     partnerAccesses.map(async (pa) => {
+      if (!!pa.featureLiveChat) {
+        hasFeatureLiveChat = true;
+      }
       if (partnerAccess.partner.id === pa.partner.id && pa.active === true) {
         pa.active = false;
         await this.partnerAccessRepository.save(pa);
@@ -128,6 +132,9 @@ export class PartnerAccessService {
         totalTherapySessionsRedeemed,
         totalTherapySessionsRemaining,
       );
+    }
+    if (!partnerAccess.featureLiveChat && hasFeatureLiveChat === false) {
+      updateCrispProfile({ feature_live_chat: false }, user.email);
     }
 
     return partnerAccess;

@@ -55,6 +55,7 @@ export const updateCrispProfileAccess = async (
     therapy_sessions_remaining:
       partnerAccess.therapySessionsRemaining + totalTherapySessionsRemaining,
     therapy_sessions_redeemed: partnerAccess.therapySessionsRedeemed + totalTherapySessionsRedeemed,
+    feature_live_chat: true,
   };
 
   updateCrispProfile(updatedCrispData, email);
