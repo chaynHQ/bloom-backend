@@ -2,10 +2,19 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm/dist/common';
 import _ from 'lodash';
 import moment from 'moment';
-import { updateCrispProfile, updateCrispProfileAccess } from '../api/crisp/crisp-api';
+import {
+  addCrispProfile,
+  getCrispPeopleData,
+  updateCrispProfile,
+  updateCrispProfileAccess,
+  updateCrispProfileCourse,
+  updateCrispProfileSession,
+} from 'src/api/crisp/crisp-api';
+import { CourseUserService } from 'src/course-user/course-user.service';
+import { crispProfileDataObject } from 'src/utils/serialize';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
 import { GetUserDto } from '../user/dtos/get-user.dto';
-import { PartnerAccessCodeStatusEnum } from '../utils/constants';
+import { PartnerAccessCodeStatusEnum, PROGRESS_STATUS } from '../utils/constants';
 import { CreatePartnerAccessDto } from './dtos/create-partner-access.dto';
 import { PartnerAccessRepository } from './partner-access.repository';
 
@@ -14,6 +23,7 @@ export class PartnerAccessService {
   constructor(
     @InjectRepository(PartnerAccessRepository)
     private partnerAccessRepository: PartnerAccessRepository,
+    private readonly courseUserService: CourseUserService,
   ) {}
 
   async createPartnerAccess(
@@ -98,7 +108,7 @@ export class PartnerAccessService {
   }
 
   async assignPartnerAccess(
-    { user, partnerAccesses }: GetUserDto,
+    { user, partnerAccesses, courses }: GetUserDto,
     partnerAccessCode: string,
   ): Promise<PartnerAccessEntity> {
     let totalTherapySessionsRemaining = 0;
@@ -108,9 +118,10 @@ export class PartnerAccessService {
     const partnerAccess = await this.getValidPartnerAccessCode(partnerAccessCode);
 
     partnerAccesses.map(async (pa) => {
-      if (!!pa.featureLiveChat) {
+      if (pa.featureLiveChat) {
         hasFeatureLiveChat = true;
       }
+
       if (partnerAccess.partner.id === pa.partner.id && pa.active === true) {
         pa.active = false;
         await this.partnerAccessRepository.save(pa);
@@ -122,19 +133,54 @@ export class PartnerAccessService {
 
     partnerAccess.userId = user.id;
     partnerAccess.activatedAt = new Date();
+    partnerAccesses.push(partnerAccess);
+
+    const crispData = await getCrispPeopleData(user.email);
+    const hasCrispProfile = crispData['reason'] === 'resolved';
 
     await this.partnerAccessRepository.save(partnerAccess);
 
-    if (!!partnerAccess.featureLiveChat) {
+    if (!!hasCrispProfile && !!partnerAccess.featureLiveChat) {
       await updateCrispProfileAccess(
         user.email,
         partnerAccess,
         totalTherapySessionsRedeemed,
         totalTherapySessionsRemaining,
       );
-    }
-    if (!partnerAccess.featureLiveChat && hasFeatureLiveChat === false) {
+    } else if (
+      !!hasCrispProfile &&
+      hasFeatureLiveChat === false &&
+      !partnerAccess.featureLiveChat
+    ) {
       updateCrispProfile({ feature_live_chat: false }, user.email);
+    } else if (!hasCrispProfile && !!partnerAccess.featureLiveChat) {
+      //Need to check if profile existed before
+      addCrispProfile({
+        email: user.email,
+        person: { nickname: user.name },
+        data: crispProfileDataObject(user, partnerAccess.partner, partnerAccess),
+      });
+
+      if (!!courses && courses.length > 0) {
+        const courseUser = await this.courseUserService.getCourseUserByUserId(user.id);
+        courseUser.map((cu) => {
+          updateCrispProfileCourse(
+            partnerAccesses,
+            cu.course.name,
+            user.email,
+            cu.completed ? PROGRESS_STATUS.COMPLETED : PROGRESS_STATUS.STARTED,
+          );
+
+          cu.sessionUser.map((su) => {
+            updateCrispProfileSession(
+              cu.course.name,
+              su.session.name,
+              su.completed ? PROGRESS_STATUS.COMPLETED : PROGRESS_STATUS.STARTED,
+              user.email,
+            );
+          });
+        });
+      }
     }
 
     return partnerAccess;

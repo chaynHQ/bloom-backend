@@ -41,7 +41,7 @@ const getEnv = (env: string, envName: string): string => {
   }
 };
 
-export const isProduction = getEnv(process.env.NODE_ENV, 'ROLLBAR_ENV') === 'production';
+export const isProduction = true;
 
 export const rollbarEnv = getEnv(process.env.ROLLBAR_ENV, 'ROLLBAR_ENV');
 export const rollbarToken = getEnv(process.env.ROLLBAR_TOKEN, 'ROLLBAR_TOKEN');

@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { CourseUserRepository } from 'src/course-user/course-user.repository';
+import { CourseUserService } from 'src/course-user/course-user.service';
 import { AuthService } from '../auth/auth.service';
 import { FirebaseModule } from '../firebase/firebase.module';
 import { PartnerRepository } from '../partner/partner.repository';
@@ -11,10 +13,15 @@ import { PartnerAccessService } from './partner-access.service';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([PartnerAccessRepository, UserRepository, PartnerRepository]),
+    TypeOrmModule.forFeature([
+      PartnerAccessRepository,
+      UserRepository,
+      PartnerRepository,
+      CourseUserRepository,
+    ]),
     FirebaseModule,
   ],
   controllers: [PartnerAccessController],
-  providers: [PartnerAccessService, AuthService, UserService],
+  providers: [PartnerAccessService, AuthService, UserService, CourseUserService],
 })
 export class PartnerAccessModule {}
