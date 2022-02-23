@@ -9,12 +9,12 @@ import {
   updateCrispProfileAccess,
   updateCrispProfileCourse,
   updateCrispProfileSession,
-} from 'src/api/crisp/crisp-api';
-import { CourseUserService } from 'src/course-user/course-user.service';
-import { crispProfileDataObject } from 'src/utils/serialize';
+} from '../api/crisp/crisp-api';
+import { CourseUserService } from '../course-user/course-user.service';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
 import { GetUserDto } from '../user/dtos/get-user.dto';
 import { PartnerAccessCodeStatusEnum, PROGRESS_STATUS } from '../utils/constants';
+import { crispProfileDataObject } from '../utils/serialize';
 import { CreatePartnerAccessDto } from './dtos/create-partner-access.dto';
 import { PartnerAccessRepository } from './partner-access.repository';
 
