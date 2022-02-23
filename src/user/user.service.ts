@@ -2,12 +2,9 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { IFirebaseUser } from 'src/firebase/firebase-user.interface';
 import { addCrispProfile } from '../api/crisp/crisp-api';
-import { PartnerAccessEntity } from '../entities/partner-access.entity';
-import { PartnerEntity } from '../entities/partner.entity';
-import { UserEntity } from '../entities/user.entity';
 import { PartnerAccessService } from '../partner-access/partner-access.service';
 import { PartnerRepository } from '../partner/partner.repository';
-import { formatUserObject, getCrispUserData } from '../utils/serialize';
+import { crispProfileDataObject, formatUserObject } from '../utils/serialize';
 import { CreateUserDto } from './dtos/create-user.dto';
 import { GetUserDto } from './dtos/get-user.dto';
 import { UserRepository } from './user.repository';
@@ -22,12 +19,7 @@ export class UserService {
     private readonly partnerAccessService: PartnerAccessService,
   ) {}
 
-  public async createUser(
-    createUserDto: CreateUserDto,
-  ): Promise<
-    | { user: UserEntity; partnerAccess: PartnerAccessEntity; partner: PartnerEntity }
-    | { user: UserEntity }
-  > {
+  public async createUser(createUserDto: CreateUserDto): Promise<GetUserDto> {
     const { name, email, firebaseUid, languageDefault, partnerAccessCode, contactPermission } =
       createUserDto;
     const createUserObject = this.userRepository.create({
@@ -42,7 +34,7 @@ export class UserService {
       const createUserResponse = await this.userRepository.save(createUserObject);
       if (partnerAccessCode) {
         const updatePartnerAccessResponse =
-          await this.partnerAccessService.updatePartnerAccessCodeUser(
+          await this.partnerAccessService.assignPartnerAccessOnSignup(
             partnerAccessCode,
             createUserResponse.id,
           );
@@ -55,22 +47,18 @@ export class UserService {
           addCrispProfile({
             email: createUserResponse.email,
             person: { nickname: createUserResponse.name },
-            data: getCrispUserData(
+            data: crispProfileDataObject(
               createUserResponse,
               getPartnerResponse,
               updatePartnerAccessResponse,
             ),
           });
         }
-
-        delete updatePartnerAccessResponse.partnerAdmin;
-
-        return {
-          user: createUserResponse,
-          partnerAccess: updatePartnerAccessResponse,
-          partner: getPartnerResponse,
-        };
+        updatePartnerAccessResponse.partner = getPartnerResponse;
+        createUserResponse.partnerAccess = [updatePartnerAccessResponse];
+        return formatUserObject(createUserResponse);
       }
+      return { user: createUserResponse };
     } catch (error) {
       if (error.code === '23505') {
         throw new HttpException(error.detail, HttpStatus.CONFLICT);

@@ -1,11 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { CourseUserRepository } from '../course-user/course-user.repository';
+import { CourseUserService } from '../course-user/course-user.service';
 import { UserRepository } from '../user/user.repository';
 import { PartnerAccessRepository } from './partner-access.repository';
 import { PartnerAccessService } from './partner-access.service';
 
-const mockTaskRepository = () => ({});
-
-const mockUserRepository = () => ({});
+const mockRepository = () => ({});
 
 describe('PartnerAccessService', () => {
   let service: Partial<PartnerAccessService>;
@@ -14,11 +14,16 @@ describe('PartnerAccessService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PartnerAccessService,
+        CourseUserService,
         {
           provide: PartnerAccessRepository,
-          useFactory: mockTaskRepository,
+          useFactory: mockRepository,
         },
-        { provide: UserRepository, useFactory: mockUserRepository },
+        {
+          provide: CourseUserRepository,
+          useFactory: mockRepository,
+        },
+        { provide: UserRepository, useFactory: mockRepository },
       ],
     }).compile();
 

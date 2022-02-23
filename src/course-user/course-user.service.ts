@@ -20,6 +20,16 @@ export class CourseUserService {
       .getOne();
   }
 
+  async getCourseUserByUserId(userId: string) {
+    return await this.courseUserRepository
+      .createQueryBuilder('course_user')
+      .leftJoinAndSelect('course_user.course', 'course')
+      .leftJoinAndSelect('course_user.sessionUser', 'sessionUser')
+      .leftJoinAndSelect('sessionUser.session', 'session')
+      .where('course_user.userId = :userId', { userId })
+      .getMany();
+  }
+
   async createCourseUser({ userId, courseId }: CourseUserDto): Promise<CourseUserEntity> {
     return await this.courseUserRepository.save({
       courseId,
