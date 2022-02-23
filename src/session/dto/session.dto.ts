@@ -21,11 +21,10 @@ export class SessionDto {
   @ApiProperty({ type: String })
   status: STORYBLOK_STORY_STATUS_ENUM;
 
-  @IsString()
   @IsNotEmpty()
   @IsDefined()
-  @ApiProperty({ type: String })
-  storyblokId: string;
+  @ApiProperty({ type: Number })
+  storyblokId: number;
 
   @IsString()
   @IsNotEmpty()

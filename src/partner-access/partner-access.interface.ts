@@ -1,4 +1,4 @@
-import { IPartner } from 'src/partner/partner.interface';
+import { IPartner } from '../partner/partner.interface';
 
 export interface IPartnerAccess {
   id?: string;
@@ -6,6 +6,7 @@ export interface IPartnerAccess {
   featureLiveChat?: boolean;
   featureTherapy?: boolean;
   accessCode?: string;
+  active?: boolean;
   therapySessionsRemaining?: number;
   therapySessionsRedeemed?: number;
 }

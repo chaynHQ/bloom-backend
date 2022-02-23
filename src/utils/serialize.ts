@@ -6,6 +6,8 @@ export const formatCourseUserObjects = (courseUserObjects: CourseUserEntity[]) =
   return courseUserObjects.map((courseUser) => {
     return {
       id: courseUser.course.id,
+      createdAt: courseUser.createdAt,
+      updatedAt: courseUser.updatedAt,
       name: courseUser.course.name,
       slug: courseUser.course.slug,
       status: courseUser.course.status,
@@ -15,9 +17,11 @@ export const formatCourseUserObjects = (courseUserObjects: CourseUserEntity[]) =
       sessions: courseUser.sessionUser?.map((sessionUser) => {
         return {
           id: sessionUser.session.id,
+          createdAt: sessionUser.createdAt,
+          updatedAt: sessionUser.updatedAt,
           name: sessionUser.session.name,
           slug: sessionUser.session.slug,
-          storyblokId: Number(sessionUser.session.storyblokId),
+          storyblokId: sessionUser.session.storyblokId,
           storyblokUuid: sessionUser.session.storyblokUuid,
           status: sessionUser.session.status,
           completed: sessionUser.completed,
@@ -37,23 +41,26 @@ export const formatUserObject = (userObject: UserEntity): GetUserDto => {
       email: userObject.email,
       languageDefault: userObject.languageDefault,
     },
-    partnerAccesses: userObject.partnerAccess.map((partnerAccess) => {
-      return {
-        id: partnerAccess.id,
-        activatedAt: partnerAccess.activatedAt,
-        featureLiveChat: Boolean(partnerAccess.featureLiveChat),
-        featureTherapy: Boolean(partnerAccess.featureTherapy),
-        accessCode: partnerAccess.accessCode,
-        therapySessionsRemaining: Number(partnerAccess.therapySessionsRemaining),
-        therapySessionsRedeemed: Number(partnerAccess.therapySessionsRedeemed),
-        partner: partnerAccess.partner,
-      };
-    }),
+    partnerAccesses: userObject.partnerAccess
+      ? userObject.partnerAccess.map((partnerAccess) => {
+          return {
+            id: partnerAccess.id,
+            createdAt: partnerAccess.createdAt,
+            updatedAt: partnerAccess.updatedAt,
+            activatedAt: partnerAccess.activatedAt,
+            featureLiveChat: partnerAccess.featureLiveChat,
+            featureTherapy: partnerAccess.featureTherapy,
+            accessCode: partnerAccess.accessCode,
+            active: partnerAccess.active,
+            therapySessionsRemaining: partnerAccess.therapySessionsRemaining,
+            therapySessionsRedeemed: partnerAccess.therapySessionsRedeemed,
+            partner: partnerAccess.partner,
+          };
+        })
+      : null,
     partnerAdmin: userObject.partnerAdmin
       ? {
           id: userObject.partnerAdmin.id,
-          userId: userObject.partnerAdmin.userId,
-          partnerId: userObject.partnerAdmin.partnerId,
           createdAt: userObject.partnerAdmin.createdAt,
           updatedAt: userObject.partnerAdmin.updatedAt,
           partner: userObject.partnerAdmin.partner,
@@ -63,7 +70,7 @@ export const formatUserObject = (userObject: UserEntity): GetUserDto => {
   };
 };
 
-export const getCrispUserData = (
+export const crispProfileDataObject = (
   createUserResponse,
   partnerDetails,
   updatePartnerAccessResponse,
@@ -72,7 +79,7 @@ export const getCrispUserData = (
     created_at: createUserResponse.createdAt,
     updated_at: createUserResponse.updatedAt,
     language_default: createUserResponse.languageDefault,
-    partner: partnerDetails.name,
+    partners: `${partnerDetails.name}; `,
     partner_activated_at: partnerDetails.createdAt,
     feature_live_chat: updatePartnerAccessResponse.featureLiveChat,
     feature_therapy: updatePartnerAccessResponse.featureTherapy,

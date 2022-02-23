@@ -1,6 +1,6 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { updateCrispProfile } from 'src/api/crisp/crisp-api';
+import { getCrispPeopleData, updateCrispProfile } from 'src/api/crisp/crisp-api';
 import { CoursePartnerService } from 'src/course-partner/course-partner.service';
 import StoryblokClient from 'storyblok-js-client';
 import apiCall from '../api/apiCalls';
@@ -47,6 +47,30 @@ export class WebhooksService {
       .toLowerCase();
   };
 
+  async updateCrispProfileSessionsData(action, email) {
+    let partnerAccessUpdateCrisp = {};
+    const crispResponse = await getCrispPeopleData(email);
+    const crispData = crispResponse.data.data.data;
+
+    if (action === SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING) {
+      partnerAccessUpdateCrisp = {
+        therapy_sessions_remaining: crispData['therapy_sessions_remaining'] - 1,
+        therapy_sessions_redeemed: crispData['therapy_sessions_redeemed'] + 1,
+      };
+    }
+
+    if (action === SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING) {
+      partnerAccessUpdateCrisp = {
+        therapy_sessions_remaining: crispData['therapy_sessions_remaining'] + 1,
+        therapy_sessions_redeemed: crispData['therapy_sessions_redeemed'] - 1,
+      };
+    }
+
+    updateCrispProfile(partnerAccessUpdateCrisp, email);
+
+    return 'ok';
+  }
+
   async updatePartnerAccessBooking({ action, client_email }: SimplybookBodyDto): Promise<string> {
     const userDetails = await this.userRepository.findOne({ email: client_email });
 
@@ -61,35 +85,45 @@ export class WebhooksService {
       throw new HttpException('Unable to find user', HttpStatus.BAD_REQUEST);
     }
 
-    const partnerAccessDetails = await this.partnerAccessRepository.findOne({
+    const partnerAccessDetails = await this.partnerAccessRepository.find({
       userId: userDetails.id,
+      active: true,
     });
 
-    if (!partnerAccessDetails) {
+    if (!partnerAccessDetails.length) {
       throw new HttpException('Unable to find partner access code', HttpStatus.BAD_REQUEST);
+    }
+
+    let hasFeatureLiveChat = false;
+
+    const partnerAccess = partnerAccessDetails.find((pa) => {
+      if (pa.featureLiveChat === true) {
+        hasFeatureLiveChat = true;
+      }
+      return partnerAccess.featureTherapy === true && partnerAccess.therapySessionsRemaining > 0;
+    });
+
+    hasFeatureLiveChat && (await this.updateCrispProfileSessionsData(action, client_email));
+
+    if (partnerAccess.therapySessionsRemaining === 0) {
+      throw new HttpException('No therapy sessions remaining', HttpStatus.FORBIDDEN);
     }
 
     let partnerAccessUpdateDetails = {};
 
     if (action === SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING) {
-      if (partnerAccessDetails.therapySessionsRemaining === 0) {
-        throw new HttpException('No therapy sessions remaining', HttpStatus.FORBIDDEN);
-      }
-
       partnerAccessUpdateDetails = {
-        therapySessionsRemaining: partnerAccessDetails.therapySessionsRemaining - 1,
-        therapySessionsRedeemed: partnerAccessDetails.therapySessionsRedeemed + 1,
+        therapySessionsRemaining: partnerAccess.therapySessionsRemaining - 1,
+        therapySessionsRedeemed: partnerAccess.therapySessionsRedeemed + 1,
       };
     }
 
     if (action === SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING) {
       partnerAccessUpdateDetails = {
-        therapySessionsRemaining: partnerAccessDetails.therapySessionsRemaining + 1,
-        therapySessionsRedeemed: partnerAccessDetails.therapySessionsRedeemed - 1,
+        therapySessionsRemaining: partnerAccess.therapySessionsRemaining + 1,
+        therapySessionsRedeemed: partnerAccess.therapySessionsRedeemed - 1,
       };
     }
-
-    updateCrispProfile(this.renameKeys(partnerAccessUpdateDetails), client_email);
 
     try {
       await this.partnerAccessRepository.save({

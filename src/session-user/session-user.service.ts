@@ -1,19 +1,19 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import _ from 'lodash';
-import { updateCrispProfileCourse, updateCrispProfileSession } from 'src/api/crisp/crisp-api';
-import { CourseUserEntity } from 'src/entities/course-user.entity';
-import { CourseEntity } from 'src/entities/course.entity';
-import { SessionUserEntity } from 'src/entities/session-user.entity';
-import { IFirebaseUser } from 'src/firebase/firebase-user.interface';
-import { IPartnerAccessWithPartner } from 'src/partner-access/partner-access.interface';
-import { SessionService } from 'src/session/session.service';
-import { UserRepository } from 'src/user/user.repository';
-import { UserService } from 'src/user/user.service';
-import { PROGRESS_STATUS, STORYBLOK_STORY_STATUS_ENUM } from 'src/utils/constants';
-import { formatCourseUserObjects } from 'src/utils/serialize';
+import { updateCrispProfileCourse, updateCrispProfileSession } from '../api/crisp/crisp-api';
 import { CourseUserService } from '../course-user/course-user.service';
 import { CourseService } from '../course/course.service';
+import { CourseUserEntity } from '../entities/course-user.entity';
+import { CourseEntity } from '../entities/course.entity';
+import { SessionUserEntity } from '../entities/session-user.entity';
+import { IPartnerAccessWithPartner } from '../partner-access/partner-access.interface';
+import { SessionService } from '../session/session.service';
+import { GetUserDto } from '../user/dtos/get-user.dto';
+import { UserRepository } from '../user/user.repository';
+import { UserService } from '../user/user.service';
+import { PROGRESS_STATUS, STORYBLOK_STORY_STATUS_ENUM } from '../utils/constants';
+import { formatCourseUserObjects } from '../utils/serialize';
 import { SessionUserDto } from './dtos/session-user.dto';
 import { UpdateSessionUserDto } from './dtos/update-session-user.dto';
 import { SessionUserRepository } from './session-user.repository';
@@ -82,10 +82,9 @@ export class SessionUserService {
   }
 
   public async createSessionUser(
-    firebaseUser: IFirebaseUser,
+    { user, partnerAccesses }: GetUserDto,
     { storyblokId }: UpdateSessionUserDto,
   ) {
-    const { user, partnerAccesses } = await this.userService.getUser(firebaseUser);
     const session = await this.sessionService.getSessionByStoryblokId(storyblokId);
 
     if (!session) {
@@ -143,10 +142,9 @@ export class SessionUserService {
   }
 
   public async completeSessionUser(
-    firebaseUser: IFirebaseUser,
+    { user, partnerAccesses }: GetUserDto,
     { storyblokId }: UpdateSessionUserDto,
   ) {
-    const { user, partnerAccesses } = await this.userService.getUser(firebaseUser);
     const session = await this.sessionService.getSessionByStoryblokId(storyblokId);
 
     if (!session) {

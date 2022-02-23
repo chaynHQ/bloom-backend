@@ -1,14 +1,16 @@
 import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
-import { Request } from 'express';
 import { ApiBearerAuth, ApiBody, ApiTags } from '@nestjs/swagger';
-import { CreatePartnerAccessDto } from './dtos/create-partner-access.dto';
-import { PartnerAccessService } from './partner-access.service';
-import { PartnerAdminAuthGuard } from '../partner-admin/partner-admin-auth.guard';
+import { Request } from 'express';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
-import { ValidatePartnerAccessCodeDto } from './dtos/validate-partner-access.dto';
-import { PartnerAccessCodeStatusEnum } from '../utils/constants';
+import { FirebaseAuthGuard } from '../firebase/firebase-auth.guard';
+import { PartnerAdminAuthGuard } from '../partner-admin/partner-admin-auth.guard';
 import { SuperAdminAuthGuard } from '../partner-admin/super-admin-auth.guard';
+import { GetUserDto } from '../user/dtos/get-user.dto';
+import { PartnerAccessCodeStatusEnum } from '../utils/constants';
 import { ControllerDecorator } from '../utils/controller.decorator';
+import { CreatePartnerAccessDto } from './dtos/create-partner-access.dto';
+import { ValidatePartnerAccessCodeDto } from './dtos/validate-partner-access.dto';
+import { PartnerAccessService } from './partner-access.service';
 
 @ApiTags('Partner Access')
 @ControllerDecorator()
@@ -44,5 +46,19 @@ export class PartnerAccessController {
     @Body() { partnerAccessCode }: ValidatePartnerAccessCodeDto,
   ): Promise<{ status: PartnerAccessCodeStatusEnum }> {
     return this.partnerAccessService.validatePartnerAccessCode(partnerAccessCode.toUpperCase());
+  }
+
+  @ApiBearerAuth()
+  @Post('assign')
+  @UseGuards(FirebaseAuthGuard)
+  @ApiBody({ type: ValidatePartnerAccessCodeDto })
+  assignPartnerAccess(
+    @Req() req: Request,
+    @Body() { partnerAccessCode }: ValidatePartnerAccessCodeDto,
+  ): Promise<PartnerAccessEntity> {
+    return this.partnerAccessService.assignPartnerAccess(
+      req['user'] as GetUserDto,
+      partnerAccessCode,
+    );
   }
 }
