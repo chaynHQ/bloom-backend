@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { CourseUserService } from 'src/course-user/course-user.service';
 import { UserRepository } from '../user/user.repository';
 import { PartnerAccessRepository } from './partner-access.repository';
 import { PartnerAccessService } from './partner-access.service';
@@ -14,6 +15,7 @@ describe('PartnerAccessService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PartnerAccessService,
+        CourseUserService,
         {
           provide: PartnerAccessRepository,
           useFactory: mockTaskRepository,
