@@ -6,7 +6,6 @@ import { FirebaseAuthGuard } from '../firebase/firebase-auth.guard';
 import { PartnerAdminAuthGuard } from '../partner-admin/partner-admin-auth.guard';
 import { SuperAdminAuthGuard } from '../partner-admin/super-admin-auth.guard';
 import { GetUserDto } from '../user/dtos/get-user.dto';
-import { PartnerAccessCodeStatusEnum } from '../utils/constants';
 import { ControllerDecorator } from '../utils/controller.decorator';
 import { CreatePartnerAccessDto } from './dtos/create-partner-access.dto';
 import { ValidatePartnerAccessCodeDto } from './dtos/validate-partner-access.dto';
@@ -44,8 +43,8 @@ export class PartnerAccessController {
   @ApiBody({ type: ValidatePartnerAccessCodeDto })
   async validatePartnerAccessCode(
     @Body() { partnerAccessCode }: ValidatePartnerAccessCodeDto,
-  ): Promise<{ status: PartnerAccessCodeStatusEnum }> {
-    return this.partnerAccessService.validatePartnerAccessCode(partnerAccessCode.toUpperCase());
+  ): Promise<PartnerAccessEntity> {
+    return this.partnerAccessService.getValidPartnerAccessCode(partnerAccessCode.toUpperCase());
   }
 
   @ApiBearerAuth()

@@ -56,7 +56,7 @@ export class PartnerAccessService {
       .getOne();
   }
 
-  private async getValidPartnerAccessCode(partnerAccessCode: string): Promise<PartnerAccessEntity> {
+  async getValidPartnerAccessCode(partnerAccessCode: string): Promise<PartnerAccessEntity> {
     const format = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/;
 
     if (format.test(partnerAccessCode) || partnerAccessCode.length !== 6) {
@@ -78,15 +78,6 @@ export class PartnerAccessService {
     }
 
     return partnerAccess;
-  }
-
-  async validatePartnerAccessCode(
-    partnerAccessCode: string,
-  ): Promise<{ status: PartnerAccessCodeStatusEnum }> {
-    await this.getValidPartnerAccessCode(partnerAccessCode);
-    return {
-      status: PartnerAccessCodeStatusEnum.VALID,
-    };
   }
 
   async getPartnerAccessCodes(): Promise<PartnerAccessEntity[]> {
