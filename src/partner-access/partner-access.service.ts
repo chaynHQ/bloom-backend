@@ -2,19 +2,11 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm/dist/common';
 import _ from 'lodash';
 import moment from 'moment';
-import {
-  addCrispProfile,
-  getCrispPeopleData,
-  updateCrispProfile,
-  updateCrispProfileAccess,
-  updateCrispProfileCourse,
-  updateCrispProfileSession,
-} from '../api/crisp/crisp-api';
+import { getCrispPeopleData, updateCrispProfileAccess } from '../api/crisp/crisp-api';
 import { CourseUserService } from '../course-user/course-user.service';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
 import { GetUserDto } from '../user/dtos/get-user.dto';
-import { PartnerAccessCodeStatusEnum, PROGRESS_STATUS } from '../utils/constants';
-import { crispProfileDataObject } from '../utils/serialize';
+import { PartnerAccessCodeStatusEnum } from '../utils/constants';
 import { CreatePartnerAccessDto } from './dtos/create-partner-access.dto';
 import { PartnerAccessRepository } from './partner-access.repository';
 
@@ -56,7 +48,7 @@ export class PartnerAccessService {
       .getOne();
   }
 
-  private async getValidPartnerAccessCode(partnerAccessCode: string): Promise<PartnerAccessEntity> {
+  async getValidPartnerAccessCode(partnerAccessCode: string): Promise<PartnerAccessEntity> {
     const format = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/;
 
     if (format.test(partnerAccessCode) || partnerAccessCode.length !== 6) {
@@ -80,6 +72,13 @@ export class PartnerAccessService {
     return partnerAccess;
   }
 
+  async getPartnerAccessCodes(): Promise<PartnerAccessEntity[]> {
+    return await this.partnerAccessRepository
+      .createQueryBuilder('partnerAccess')
+      .leftJoinAndSelect('partnerAccess.partner', 'partner')
+      .getMany();
+  }
+
   async validatePartnerAccessCode(
     partnerAccessCode: string,
   ): Promise<{ status: PartnerAccessCodeStatusEnum }> {
@@ -87,13 +86,6 @@ export class PartnerAccessService {
     return {
       status: PartnerAccessCodeStatusEnum.VALID,
     };
-  }
-
-  async getPartnerAccessCodes(): Promise<PartnerAccessEntity[]> {
-    return await this.partnerAccessRepository
-      .createQueryBuilder('partnerAccess')
-      .leftJoinAndSelect('partnerAccess.partner', 'partner')
-      .getMany();
   }
 
   async assignPartnerAccessOnSignup(
@@ -137,50 +129,20 @@ export class PartnerAccessService {
 
     const crispData = await getCrispPeopleData(user.email);
     const hasCrispProfile = crispData['reason'] === 'resolved';
+    const hasCourses = !!courses && courses.length > 0;
 
     await this.partnerAccessRepository.save(partnerAccess);
 
     if (!!hasCrispProfile && !!partnerAccess.featureLiveChat) {
       await updateCrispProfileAccess(
-        user.email,
+        user,
         partnerAccess,
         totalTherapySessionsRedeemed,
         totalTherapySessionsRemaining,
+        hasFeatureLiveChat,
+        hasCourses,
+        this.courseUserService,
       );
-    } else if (
-      !!hasCrispProfile &&
-      hasFeatureLiveChat === false &&
-      !partnerAccess.featureLiveChat
-    ) {
-      updateCrispProfile({ feature_live_chat: false }, user.email);
-    } else if (!hasCrispProfile && !!partnerAccess.featureLiveChat) {
-      //Need to check if profile existed before
-      addCrispProfile({
-        email: user.email,
-        person: { nickname: user.name },
-        data: crispProfileDataObject(user, partnerAccess.partner, partnerAccess),
-      });
-
-      if (!!courses && courses.length > 0) {
-        const courseUser = await this.courseUserService.getCourseUserByUserId(user.id);
-        courseUser.map((cu) => {
-          updateCrispProfileCourse(
-            partnerAccesses,
-            cu.course.name,
-            user.email,
-            cu.completed ? PROGRESS_STATUS.COMPLETED : PROGRESS_STATUS.STARTED,
-          );
-
-          cu.sessionUser.map((su) => {
-            updateCrispProfileSession(
-              cu.course.name,
-              su.session.name,
-              su.completed ? PROGRESS_STATUS.COMPLETED : PROGRESS_STATUS.STARTED,
-              user.email,
-            );
-          });
-        });
-      }
     }
 
     return partnerAccess;
