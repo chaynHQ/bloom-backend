@@ -12,7 +12,11 @@ import { SessionService } from '../session/session.service';
 import { GetUserDto } from '../user/dtos/get-user.dto';
 import { UserRepository } from '../user/user.repository';
 import { UserService } from '../user/user.service';
-import { PROGRESS_STATUS, STORYBLOK_STORY_STATUS_ENUM } from '../utils/constants';
+import {
+  hasFeatureLiveChat,
+  PROGRESS_STATUS,
+  STORYBLOK_STORY_STATUS_ENUM,
+} from '../utils/constants';
 import { formatCourseUserObjects } from '../utils/serialize';
 import { SessionUserDto } from './dtos/session-user.dto';
 import { UpdateSessionUserDto } from './dtos/update-session-user.dto';
@@ -50,7 +54,10 @@ export class SessionUserService {
         courseId: courseUser.courseId,
       });
 
-      updateCrispProfileCourse(partnerAccesses, course.name, userEmail, PROGRESS_STATUS.COMPLETED);
+      if (hasFeatureLiveChat(partnerAccesses)) {
+        updateCrispProfileCourse(course.name, userEmail, PROGRESS_STATUS.COMPLETED);
+      }
+
       return Object.assign({}, courseUser, updatedCourseUser);
     }
 
@@ -104,12 +111,9 @@ export class SessionUserService {
         courseId,
       });
 
-      updateCrispProfileCourse(
-        partnerAccesses,
-        session.course.name,
-        user.email,
-        PROGRESS_STATUS.STARTED,
-      );
+      if (hasFeatureLiveChat(partnerAccesses)) {
+        updateCrispProfileCourse(session.course.name, user.email, PROGRESS_STATUS.STARTED);
+      }
     }
 
     let sessionUser = await this.getSessionUser({
@@ -164,12 +168,9 @@ export class SessionUserService {
         courseId,
       });
 
-      updateCrispProfileCourse(
-        partnerAccesses,
-        session.course.name,
-        user.email,
-        PROGRESS_STATUS.STARTED,
-      );
+      if (hasFeatureLiveChat(partnerAccesses)) {
+        updateCrispProfileCourse(session.course.name, user.email, PROGRESS_STATUS.STARTED);
+      }
 
       courseUser.sessionUser = [];
     }

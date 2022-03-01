@@ -1,7 +1,9 @@
 import { AxiosResponse } from 'axios';
-import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
-import { IPartnerAccessWithPartner } from 'src/partner-access/partner-access.interface';
+import { CourseUserService } from '../../course-user/course-user.service';
+import { PartnerAccessEntity } from '../../entities/partner-access.entity';
+import { IUser } from '../../user/user.interface';
 import { crispToken, crispWebsiteId, PROGRESS_STATUS } from '../../utils/constants';
+import { crispProfileDataObject } from '../../utils/serialize';
 import apiCall from '../apiCalls';
 import {
   CrispResponse,
@@ -37,47 +39,77 @@ const formatSessionText = (courseName: string, status: PROGRESS_STATUS) => {
 };
 
 export const updateCrispProfileAccess = async (
-  email: string,
+  user: IUser,
   partnerAccess: PartnerAccessEntity,
   totalTherapySessionsRedeemed: number,
   totalTherapySessionsRemaining: number,
+  hasFeatureLiveChat: boolean,
+  hasCourses: boolean,
+  courseUserService: CourseUserService,
 ) => {
-  const crispResponse = await getCrispPeopleData(email);
-  const crispData = crispResponse.data.data.data;
-  const partners = crispData['partners'].split('; ');
+  const crispResponse = await getCrispPeopleData(user.email);
+  const hasCrispProfile = crispResponse['reason'] === 'resolved';
 
-  if (partners.indexOf(partnerAccess.partner.name) === -1) {
-    partners.push(partnerAccess.partner.name);
+  if (!!hasCrispProfile) {
+    const crispData = crispResponse.data.data.data;
+    const partners = crispData['partners'].split('; ');
+
+    if (partners.indexOf(partnerAccess.partner.name) === -1) {
+      partners.push(partnerAccess.partner.name);
+    }
+
+    const updatedCrispData = {
+      partners: partners.join('; '),
+      therapy_sessions_remaining:
+        partnerAccess.therapySessionsRemaining + totalTherapySessionsRemaining,
+      therapy_sessions_redeemed:
+        partnerAccess.therapySessionsRedeemed + totalTherapySessionsRedeemed,
+    };
+
+    updateCrispProfile(updatedCrispData, user.email);
+  } else if (!!hasCrispProfile && hasFeatureLiveChat === false && !partnerAccess.featureLiveChat) {
+    updateCrispProfile({ feature_live_chat: false }, user.email);
+  } else if (!hasCrispProfile && !!partnerAccess.featureLiveChat) {
+    //Need to check if profile existed before
+    addCrispProfile({
+      email: user.email,
+      person: { nickname: user.name },
+      data: crispProfileDataObject(user, partnerAccess.partner, partnerAccess),
+    });
+
+    if (hasCourses) {
+      const courseUser = await courseUserService.getCourseUserByUserId(user.id);
+      courseUser.map((cu) => {
+        updateCrispProfileCourse(
+          cu.course.name,
+          user.email,
+          cu.completed ? PROGRESS_STATUS.COMPLETED : PROGRESS_STATUS.STARTED,
+        );
+
+        cu.sessionUser.map((su) => {
+          updateCrispProfileSession(
+            cu.course.name,
+            su.session.name,
+            su.completed ? PROGRESS_STATUS.COMPLETED : PROGRESS_STATUS.STARTED,
+            user.email,
+          );
+        });
+      });
+    }
   }
 
-  const updatedCrispData = {
-    partners: partners.join('; '),
-    therapy_sessions_remaining:
-      partnerAccess.therapySessionsRemaining + totalTherapySessionsRemaining,
-    therapy_sessions_redeemed: partnerAccess.therapySessionsRedeemed + totalTherapySessionsRedeemed,
-  };
-
-  updateCrispProfile(updatedCrispData, email);
-
-  return;
+  return 'ok';
 };
 
 export const updateCrispProfileCourse = async (
-  partnerAccesses: IPartnerAccessWithPartner[],
   courseName: string,
   userEmail: string,
   status: PROGRESS_STATUS,
 ) => {
-  const featureLiveChat = !!partnerAccesses.find(function (partnerAccess) {
-    return partnerAccess.featureLiveChat === true;
-  });
+  const courseFormattedName = formatCourseText(courseName);
+  updateCrispProfile({ [`${courseFormattedName}`]: status }, userEmail);
 
-  if (featureLiveChat) {
-    const courseFormattedName = formatCourseText(courseName);
-    updateCrispProfile({ [`${courseFormattedName}`]: status }, userEmail);
-  }
-
-  return;
+  return 'ok';
 };
 
 export const updateCrispProfileSession = async (
