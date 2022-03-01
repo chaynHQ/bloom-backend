@@ -69,21 +69,3 @@ export const formatUserObject = (userObject: UserEntity): GetUserDto => {
     courses: userObject.courseUser ? formatCourseUserObjects(userObject.courseUser) : [],
   };
 };
-
-export const crispProfileDataObject = (
-  createUserResponse,
-  partnerDetails,
-  updatePartnerAccessResponse,
-) => {
-  return {
-    created_at: createUserResponse.createdAt,
-    updated_at: createUserResponse.updatedAt,
-    language_default: createUserResponse.languageDefault,
-    partners: `${partnerDetails.name}; `,
-    partner_activated_at: partnerDetails.createdAt,
-    feature_live_chat: updatePartnerAccessResponse.featureLiveChat,
-    feature_therapy: updatePartnerAccessResponse.featureTherapy,
-    therapy_sessions_remaining: updatePartnerAccessResponse.therapySessionsRemaining,
-    therapy_sessions_redeemed: updatePartnerAccessResponse.therapySessionsRedeemed,
-  };
-};
