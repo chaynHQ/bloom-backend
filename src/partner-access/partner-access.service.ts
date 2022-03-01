@@ -48,7 +48,7 @@ export class PartnerAccessService {
       .getOne();
   }
 
-  async getValidPartnerAccessCode(partnerAccessCode: string): Promise<PartnerAccessEntity> {
+  private async getValidPartnerAccessCode(partnerAccessCode: string): Promise<PartnerAccessEntity> {
     const format = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/;
 
     if (format.test(partnerAccessCode) || partnerAccessCode.length !== 6) {
