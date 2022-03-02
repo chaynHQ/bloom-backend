@@ -29,11 +29,11 @@ const getAcronym = (text: string) => {
     .toLowerCase()}`;
 };
 
-const formatCourseName = (courseName: string) => {
+const formatCourseKey = (courseName: string) => {
   return `course_${getAcronym(courseName)}_status`;
 };
 
-const formatSessionName = (courseName: string, status: PROGRESS_STATUS) => {
+const formatSessionKey = (courseName: string, status: PROGRESS_STATUS) => {
   return `course_${getAcronym(courseName)}_sessions_${status.toLowerCase()}`;
 };
 
@@ -57,15 +57,15 @@ export const createCrispProfileData = (
 
   if (!!courses && courses.length > 0) {
     const courseData = courses.forEach((course) => {
-      const courseFormattedName = formatCourseName(course.name);
-      courseData[`${courseFormattedName}`] = course.status;
+      const courseKey = formatCourseKey(course.name);
+      courseData[`${courseKey}`] = course.status;
 
-      const sessionsStartedName = formatSessionName(course.name, PROGRESS_STATUS.STARTED);
+      const sessionsStartedKey = formatSessionKey(course.name, PROGRESS_STATUS.STARTED);
       const sessionsStarted = course.sessions.filter((session) => !session.completed).join('; ');
-      courseData[`${sessionsStartedName}`] = sessionsStarted;
-      const sessionsCompletedName = formatSessionName(course.name, PROGRESS_STATUS.COMPLETED);
+      courseData[`${sessionsStartedKey}`] = sessionsStarted;
+      const sessionsCompletedKey = formatSessionKey(course.name, PROGRESS_STATUS.COMPLETED);
       const sessionsCompleted = course.sessions.filter((session) => !!session.completed).join('; ');
-      courseData[`${sessionsCompletedName}`] = sessionsCompleted;
+      courseData[`${sessionsCompletedKey}`] = sessionsCompleted;
     });
     profileData = Object.assign({}, profileData, courseData);
   }
@@ -103,8 +103,8 @@ export const updateCrispProfileCourse = async (
   userEmail: string,
   status: PROGRESS_STATUS,
 ) => {
-  const courseFormattedName = formatCourseName(courseName);
-  updateCrispProfile({ [`${courseFormattedName}`]: status }, userEmail);
+  const courseKey = formatCourseKey(courseName);
+  updateCrispProfile({ [`${courseKey}`]: status }, userEmail);
 
   return 'ok';
 };
@@ -118,30 +118,30 @@ export const updateCrispProfileSession = async (
   const crispResponse = await getCrispPeopleData(email);
   const crispData = crispResponse.data.data.data;
 
-  const sessionsStartedName = formatSessionName(courseName, PROGRESS_STATUS.STARTED);
-  const sessionsCompletedName = formatSessionName(courseName, PROGRESS_STATUS.COMPLETED);
+  const sessionsStartedKey = formatSessionKey(courseName, PROGRESS_STATUS.STARTED);
+  const sessionsCompletedKey = formatSessionKey(courseName, PROGRESS_STATUS.COMPLETED);
 
-  const startedSessions: string[] = !!crispData[sessionsStartedName]
-    ? crispData[sessionsStartedName].split('; ')
+  const startedSessions: string[] = !!crispData[sessionsStartedKey]
+    ? crispData[sessionsStartedKey].split('; ')
     : [];
 
-  const completedSessions: string[] = !!crispData[sessionsCompletedName]
-    ? crispData[sessionsCompletedName].split('; ')
+  const completedSessions: string[] = !!crispData[sessionsCompletedKey]
+    ? crispData[sessionsCompletedKey].split('; ')
     : [];
 
   const index = startedSessions.indexOf(sessionName);
   if (status === PROGRESS_STATUS.STARTED) {
     if (index === -1) {
       startedSessions.push(sessionName);
-      updateCrispProfile({ [sessionsStartedName]: startedSessions.join('; ') }, email);
+      updateCrispProfile({ [sessionsStartedKey]: startedSessions.join('; ') }, email);
     }
   } else if (status === PROGRESS_STATUS.COMPLETED) {
     index !== -1 && startedSessions.splice(index, 1);
     completedSessions.push(sessionName);
     updateCrispProfile(
       {
-        [sessionsStartedName]: startedSessions.join('; '),
-        [sessionsCompletedName]: completedSessions.join('; '),
+        [sessionsStartedKey]: startedSessions.join('; '),
+        [sessionsCompletedKey]: completedSessions.join('; '),
       },
       email,
     );
