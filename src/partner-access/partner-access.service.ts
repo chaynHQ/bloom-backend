@@ -2,7 +2,7 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm/dist/common';
 import _ from 'lodash';
 import moment from 'moment';
-import { getCrispPeopleData, updateCrispProfileAccess } from '../api/crisp/crisp-api';
+import { updateCrispProfileAccesses } from 'src/api/crisp/crisp-api';
 import { CourseUserService } from '../course-user/course-user.service';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
 import { GetUserDto } from '../user/dtos/get-user.dto';
@@ -103,23 +103,12 @@ export class PartnerAccessService {
     { user, partnerAccesses, courses }: GetUserDto,
     partnerAccessCode: string,
   ): Promise<PartnerAccessEntity> {
-    let totalTherapySessionsRemaining = 0;
-    let totalTherapySessionsRedeemed = 0;
-    let hasFeatureLiveChat = false;
-
     const partnerAccess = await this.getValidPartnerAccessCode(partnerAccessCode);
 
     partnerAccesses.map(async (pa) => {
-      if (pa.featureLiveChat) {
-        hasFeatureLiveChat = true;
-      }
-
       if (partnerAccess.partner.id === pa.partner.id && pa.active === true) {
         pa.active = false;
         await this.partnerAccessRepository.save(pa);
-      } else {
-        totalTherapySessionsRemaining = totalTherapySessionsRemaining + pa.therapySessionsRemaining;
-        totalTherapySessionsRedeemed = totalTherapySessionsRedeemed + pa.therapySessionsRedeemed;
       }
     });
 
@@ -127,22 +116,10 @@ export class PartnerAccessService {
     partnerAccess.activatedAt = new Date();
     partnerAccesses.push(partnerAccess);
 
-    const crispData = await getCrispPeopleData(user.email);
-    const hasCrispProfile = crispData['reason'] === 'resolved';
-    const hasCourses = !!courses && courses.length > 0;
-
     await this.partnerAccessRepository.save(partnerAccess);
 
-    if (!!hasCrispProfile && !!partnerAccess.featureLiveChat) {
-      await updateCrispProfileAccess(
-        user,
-        partnerAccess,
-        totalTherapySessionsRedeemed,
-        totalTherapySessionsRemaining,
-        hasFeatureLiveChat,
-        hasCourses,
-        this.courseUserService,
-      );
+    if (!!partnerAccess.featureLiveChat || partnerAccesses.find((pa) => pa.featureLiveChat)) {
+      await updateCrispProfileAccesses(user, partnerAccesses, courses);
     }
 
     return partnerAccess;

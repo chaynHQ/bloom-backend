@@ -1,10 +1,10 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { IFirebaseUser } from 'src/firebase/firebase-user.interface';
-import { addCrispProfile } from '../api/crisp/crisp-api';
+import { addCrispProfile, createCrispProfileData } from '../api/crisp/crisp-api';
 import { PartnerAccessService } from '../partner-access/partner-access.service';
 import { PartnerRepository } from '../partner/partner.repository';
-import { crispProfileDataObject, formatUserObject } from '../utils/serialize';
+import { formatUserObject } from '../utils/serialize';
 import { CreateUserDto } from './dtos/create-user.dto';
 import { GetUserDto } from './dtos/get-user.dto';
 import { UserRepository } from './user.repository';
@@ -33,29 +33,25 @@ export class UserService {
     try {
       const createUserResponse = await this.userRepository.save(createUserObject);
       if (partnerAccessCode) {
-        const updatePartnerAccessResponse =
-          await this.partnerAccessService.assignPartnerAccessOnSignup(
-            partnerAccessCode,
-            createUserResponse.id,
-          );
+        const partnerAccessResponse = await this.partnerAccessService.assignPartnerAccessOnSignup(
+          partnerAccessCode,
+          createUserResponse.id,
+        );
 
         const getPartnerResponse = await this.partnerRepository.findOne({
-          id: updatePartnerAccessResponse.partnerId,
+          id: partnerAccessResponse.partnerId,
         });
 
-        if (!!updatePartnerAccessResponse.featureLiveChat) {
+        partnerAccessResponse.partner = getPartnerResponse;
+
+        if (!!partnerAccessResponse.featureLiveChat) {
           addCrispProfile({
             email: createUserResponse.email,
             person: { nickname: createUserResponse.name },
-            data: crispProfileDataObject(
-              createUserResponse,
-              getPartnerResponse,
-              updatePartnerAccessResponse,
-            ),
+            data: createCrispProfileData(createUserResponse, [partnerAccessResponse]),
           });
         }
-        updatePartnerAccessResponse.partner = getPartnerResponse;
-        createUserResponse.partnerAccess = [updatePartnerAccessResponse];
+        createUserResponse.partnerAccess = [partnerAccessResponse];
         return formatUserObject(createUserResponse);
       }
       return { user: createUserResponse };
