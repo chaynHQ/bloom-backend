@@ -1,6 +1,7 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import _ from 'lodash';
+import { hasFeatureLiveChat } from 'src/utils/utils';
 import { updateCrispProfileCourse, updateCrispProfileSession } from '../api/crisp/crisp-api';
 import { CourseUserService } from '../course-user/course-user.service';
 import { CourseService } from '../course/course.service';
@@ -12,11 +13,7 @@ import { SessionService } from '../session/session.service';
 import { GetUserDto } from '../user/dtos/get-user.dto';
 import { UserRepository } from '../user/user.repository';
 import { UserService } from '../user/user.service';
-import {
-  hasFeatureLiveChat,
-  PROGRESS_STATUS,
-  STORYBLOK_STORY_STATUS_ENUM,
-} from '../utils/constants';
+import { PROGRESS_STATUS, STORYBLOK_STORY_STATUS_ENUM } from '../utils/constants';
 import { formatCourseUserObjects } from '../utils/serialize';
 import { SessionUserDto } from './dtos/session-user.dto';
 import { UpdateSessionUserDto } from './dtos/update-session-user.dto';

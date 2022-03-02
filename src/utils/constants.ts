@@ -31,12 +31,6 @@ export enum PartnerAccessCodeStatusEnum {
   CODE_EXPIRED = 'CODE_EXPIRED',
 }
 
-export const hasFeatureLiveChat = (partnerAccesses) => {
-  return !!partnerAccesses.map((pa) => {
-    return pa.featureLiveChat === true;
-  });
-};
-
 const getEnv = (env: string, envName: string): string => {
   try {
     if (!env) throw `Unable to get environemt variable ${envName}`;
