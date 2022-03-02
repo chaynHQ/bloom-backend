@@ -8,6 +8,7 @@ import { PartnerService } from 'src/partner/partner.service';
 import { SessionRepository } from 'src/session/session.repository';
 import { PartnerAccessRepository } from '../partner-access/partner-access.repository';
 import { UserRepository } from '../user/user.repository';
+import { SimplyBookRepository } from './simply-book.repository';
 import { WebhooksController } from './webhooks.controller';
 import { WebhooksService } from './webhooks.service';
 
@@ -20,6 +21,7 @@ import { WebhooksService } from './webhooks.service';
       SessionRepository,
       CoursePartnerRepository,
       PartnerRepository,
+      SimplyBookRepository,
     ]),
   ],
   providers: [WebhooksService, CoursePartnerService, PartnerService],

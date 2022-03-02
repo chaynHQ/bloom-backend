@@ -11,6 +11,7 @@ import { SessionRepository } from '../session/session.repository';
 import { UserRepository } from '../user/user.repository';
 import { SIMPLYBOOK_ACTION_ENUM, storyblokToken } from '../utils/constants';
 import { StoryDto } from './dto/story.dto';
+import { SimplyBookRepository } from './simply-book.repository';
 
 const Storyblok = new StoryblokClient({
   accessToken: storyblokToken,
@@ -30,6 +31,7 @@ export class WebhooksService {
     @InjectRepository(CourseRepository) private courseRepository: CourseRepository,
     @InjectRepository(SessionRepository) private sessionRepository: SessionRepository,
     private readonly coursePartnerService: CoursePartnerService,
+    @InjectRepository(SimplyBookRepository) private simplyBookRepository: SimplyBookRepository,
   ) {}
 
   renameKeys = (obj: { [x: string]: any }) => {
@@ -71,7 +73,8 @@ export class WebhooksService {
     return 'ok';
   }
 
-  async updatePartnerAccessBooking({ action, client_email }: SimplybookBodyDto): Promise<string> {
+  async updatePartnerAccessBooking(simplyBookDto: SimplybookBodyDto): Promise<string> {
+    const { action, client_email } = simplyBookDto;
     const userDetails = await this.userRepository.findOne({ email: client_email });
 
     if (!userDetails) {
@@ -123,6 +126,7 @@ export class WebhooksService {
         therapySessionsRemaining: partnerAccess.therapySessionsRemaining + 1,
         therapySessionsRedeemed: partnerAccess.therapySessionsRedeemed - 1,
       };
+      simplyBookDto.cancelledAt = new Date();
     }
 
     try {
@@ -130,6 +134,8 @@ export class WebhooksService {
         ...partnerAccessDetails,
         ...partnerAccessUpdateDetails,
       });
+
+      await this.simplyBookRepository.save({ ...simplyBookDto });
 
       return 'Successful';
     } catch (error) {
