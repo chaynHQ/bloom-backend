@@ -2,7 +2,7 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm/dist/common';
 import _ from 'lodash';
 import moment from 'moment';
-import { updateCrispProfileAccesses } from 'src/api/crisp/crisp-api';
+import { updateCrispProfileAccesses } from '../api/crisp/crisp-api';
 import { CourseUserService } from '../course-user/course-user.service';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
 import { GetUserDto } from '../user/dtos/get-user.dto';
