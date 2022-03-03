@@ -2,19 +2,11 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm/dist/common';
 import _ from 'lodash';
 import moment from 'moment';
-import {
-  addCrispProfile,
-  getCrispPeopleData,
-  updateCrispProfile,
-  updateCrispProfileAccess,
-  updateCrispProfileCourse,
-  updateCrispProfileSession,
-} from '../api/crisp/crisp-api';
+import { updateCrispProfileAccesses } from '../api/crisp/crisp-api';
 import { CourseUserService } from '../course-user/course-user.service';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
 import { GetUserDto } from '../user/dtos/get-user.dto';
-import { PartnerAccessCodeStatusEnum, PROGRESS_STATUS } from '../utils/constants';
-import { crispProfileDataObject } from '../utils/serialize';
+import { PartnerAccessCodeStatusEnum } from '../utils/constants';
 import { CreatePartnerAccessDto } from './dtos/create-partner-access.dto';
 import { PartnerAccessRepository } from './partner-access.repository';
 
@@ -56,7 +48,7 @@ export class PartnerAccessService {
       .getOne();
   }
 
-  private async getValidPartnerAccessCode(partnerAccessCode: string): Promise<PartnerAccessEntity> {
+  async getValidPartnerAccessCode(partnerAccessCode: string): Promise<PartnerAccessEntity> {
     const format = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/;
 
     if (format.test(partnerAccessCode) || partnerAccessCode.length !== 6) {
@@ -78,15 +70,6 @@ export class PartnerAccessService {
     }
 
     return partnerAccess;
-  }
-
-  async validatePartnerAccessCode(
-    partnerAccessCode: string,
-  ): Promise<{ status: PartnerAccessCodeStatusEnum }> {
-    await this.getValidPartnerAccessCode(partnerAccessCode);
-    return {
-      status: PartnerAccessCodeStatusEnum.VALID,
-    };
   }
 
   async getPartnerAccessCodes(): Promise<PartnerAccessEntity[]> {
@@ -111,23 +94,12 @@ export class PartnerAccessService {
     { user, partnerAccesses, courses }: GetUserDto,
     partnerAccessCode: string,
   ): Promise<PartnerAccessEntity> {
-    let totalTherapySessionsRemaining = 0;
-    let totalTherapySessionsRedeemed = 0;
-    let hasFeatureLiveChat = false;
-
     const partnerAccess = await this.getValidPartnerAccessCode(partnerAccessCode);
 
     partnerAccesses.map(async (pa) => {
-      if (pa.featureLiveChat) {
-        hasFeatureLiveChat = true;
-      }
-
       if (partnerAccess.partner.id === pa.partner.id && pa.active === true) {
         pa.active = false;
         await this.partnerAccessRepository.save(pa);
-      } else {
-        totalTherapySessionsRemaining = totalTherapySessionsRemaining + pa.therapySessionsRemaining;
-        totalTherapySessionsRedeemed = totalTherapySessionsRedeemed + pa.therapySessionsRedeemed;
       }
     });
 
@@ -135,52 +107,10 @@ export class PartnerAccessService {
     partnerAccess.activatedAt = new Date();
     partnerAccesses.push(partnerAccess);
 
-    const crispData = await getCrispPeopleData(user.email);
-    const hasCrispProfile = crispData['reason'] === 'resolved';
-
     await this.partnerAccessRepository.save(partnerAccess);
 
-    if (!!hasCrispProfile && !!partnerAccess.featureLiveChat) {
-      await updateCrispProfileAccess(
-        user.email,
-        partnerAccess,
-        totalTherapySessionsRedeemed,
-        totalTherapySessionsRemaining,
-      );
-    } else if (
-      !!hasCrispProfile &&
-      hasFeatureLiveChat === false &&
-      !partnerAccess.featureLiveChat
-    ) {
-      updateCrispProfile({ feature_live_chat: false }, user.email);
-    } else if (!hasCrispProfile && !!partnerAccess.featureLiveChat) {
-      //Need to check if profile existed before
-      addCrispProfile({
-        email: user.email,
-        person: { nickname: user.name },
-        data: crispProfileDataObject(user, partnerAccess.partner, partnerAccess),
-      });
-
-      if (!!courses && courses.length > 0) {
-        const courseUser = await this.courseUserService.getCourseUserByUserId(user.id);
-        courseUser.map((cu) => {
-          updateCrispProfileCourse(
-            partnerAccesses,
-            cu.course.name,
-            user.email,
-            cu.completed ? PROGRESS_STATUS.COMPLETED : PROGRESS_STATUS.STARTED,
-          );
-
-          cu.sessionUser.map((su) => {
-            updateCrispProfileSession(
-              cu.course.name,
-              su.session.name,
-              su.completed ? PROGRESS_STATUS.COMPLETED : PROGRESS_STATUS.STARTED,
-              user.email,
-            );
-          });
-        });
-      }
+    if (!!partnerAccess.featureLiveChat || partnerAccesses.find((pa) => pa.featureLiveChat)) {
+      await updateCrispProfileAccesses(user, partnerAccesses, courses);
     }
 
     return partnerAccess;
