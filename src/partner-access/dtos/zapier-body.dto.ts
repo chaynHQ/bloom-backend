@@ -28,7 +28,7 @@ export class SimplybookBodyDto {
   @IsString()
   @IsDefined()
   @ApiProperty({ type: String })
-  service_name: string;
+  client_timezone: string;
 
   @IsNotEmpty()
   @IsString()
@@ -36,16 +36,11 @@ export class SimplybookBodyDto {
   @ApiProperty({ type: String })
   booking_code: string;
 
-  @IsDate()
-  @IsDefined()
-  @ApiProperty({ type: Date })
-  start_date_time: Date;
-
   @IsNotEmpty()
-  @IsDate()
-  @IsOptional()
-  @ApiProperty({ type: Date })
-  cancelledAt: Date;
+  @IsString()
+  @IsDefined()
+  @ApiProperty({ type: String })
+  service_name: string;
 
   @IsNotEmpty()
   @IsString()
@@ -57,7 +52,12 @@ export class SimplybookBodyDto {
   @IsString()
   @IsDefined()
   @ApiProperty({ type: String })
-  client_timezone: string;
+  service_provider_email: string;
+
+  @IsDate()
+  @IsDefined()
+  @ApiProperty({ type: Date })
+  start_date_time: Date;
 
   @IsNotEmpty()
   @IsDate()
@@ -66,8 +66,8 @@ export class SimplybookBodyDto {
   end_date_time: Date;
 
   @IsNotEmpty()
-  @IsString()
-  @IsDefined()
-  @ApiProperty({ type: String })
-  service_provider_email: string;
+  @IsDate()
+  @IsOptional()
+  @ApiProperty({ type: Date })
+  cancelledAt: Date;
 }

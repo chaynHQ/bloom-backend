@@ -1,5 +1,5 @@
-import { SimplyBookEntity } from 'src/entities/simply-book.entity';
+import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
 import { EntityRepository, Repository } from 'typeorm';
 
-@EntityRepository(SimplyBookEntity)
-export class SimplyBookRepository extends Repository<SimplyBookEntity> {}
+@EntityRepository(TherapySessionEntity)
+export class TherapySessionRepository extends Repository<TherapySessionEntity> {}

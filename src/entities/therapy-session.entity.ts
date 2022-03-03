@@ -35,6 +35,9 @@ export class TherapySessionEntity extends BaseEntity {
   @Column({ type: 'date', nullable: true })
   cancelledAt: Date;
 
+  @Column({ type: 'date', nullable: true })
+  rescheduledFrom: Date;
+
   @Column()
   partnerAccessId: string;
   @ManyToOne(() => PartnerAccessEntity, (partnerAccess) => partnerAccess.therapySession)
