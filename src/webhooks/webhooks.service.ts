@@ -2,6 +2,7 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { getCrispPeopleData, updateCrispProfile } from 'src/api/crisp/crisp-api';
 import { CoursePartnerService } from 'src/course-partner/course-partner.service';
+import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import StoryblokClient from 'storyblok-js-client';
 import apiCall from '../api/apiCalls';
 import { CourseRepository } from '../course/course.repository';
@@ -11,7 +12,7 @@ import { SessionRepository } from '../session/session.repository';
 import { UserRepository } from '../user/user.repository';
 import { SIMPLYBOOK_ACTION_ENUM, storyblokToken } from '../utils/constants';
 import { StoryDto } from './dto/story.dto';
-import { TherapySessionRepository } from './simply-book.repository';
+import { TherapySessionRepository } from './therapy-session.repository';
 
 const Storyblok = new StoryblokClient({
   accessToken: storyblokToken,
@@ -74,6 +75,53 @@ export class WebhooksService {
     return 'ok';
   }
 
+  private async upadateTherapySession(
+    action,
+    simplyBookDto: SimplybookBodyDto,
+    usersPartnerAccess: PartnerAccessEntity[],
+  ): Promise<void> {
+    const partnerAccessRecord = usersPartnerAccess.find((pa) => {
+      return pa.accessCode === simplyBookDto.booking_code;
+    });
+
+    const therapySessions = await this.therapySessionRepository.find({
+      partnerAccessId: partnerAccessRecord.id,
+    });
+
+    const activeSessions = therapySessions
+      .filter((ts) => {
+        return ts.cancelledAt === null && ts.completedAt === null;
+      })
+      .sort((a: any, b: any) => {
+        return a.start_date_time - b.start_date_time;
+      });
+
+    if (!activeSessions) {
+      throw new HttpException('No active therapy sessions', HttpStatus.FORBIDDEN);
+    }
+
+    switch (action) {
+      case SIMPLYBOOK_ACTION_ENUM.UPDATED_BOOKING:
+        activeSessions[0].rescheduledFrom = activeSessions[0].start_date_time;
+        break;
+      case SIMPLYBOOK_ACTION_ENUM.COMPLETED_BOOKING:
+        activeSessions[0].completedAt = new Date();
+        break;
+      case SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING:
+        activeSessions[0].cancelledAt = new Date();
+        break;
+
+      default:
+        break;
+    }
+
+    const therapySessionObject =
+      action === SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING
+        ? { ...simplyBookDto, ...{ partnerAccessId: partnerAccessRecord.id } }
+        : activeSessions[0];
+    await this.therapySessionRepository.save(therapySessionObject);
+  }
+
   async updatePartnerAccessBooking(simplyBookDto: SimplybookBodyDto): Promise<string> {
     const { action, client_email } = simplyBookDto;
     const userDetails = await this.userRepository.findOne({ email: client_email });
@@ -89,58 +137,52 @@ export class WebhooksService {
       throw new HttpException('Unable to find user', HttpStatus.BAD_REQUEST);
     }
 
-    const partnerAccessDetails = await this.partnerAccessRepository.find({
+    const usersPartnerAccess = await this.partnerAccessRepository.find({
       userId: userDetails.id,
       active: true,
     });
 
-    if (!partnerAccessDetails.length) {
+    if (!usersPartnerAccess.length) {
       throw new HttpException('Unable to find partner access code', HttpStatus.BAD_REQUEST);
     }
 
     let hasFeatureLiveChat = false;
 
-    const partnerAccess = partnerAccessDetails.find((pa) => {
+    const partnerAccess: PartnerAccessEntity[] = usersPartnerAccess.filter((pa) => {
       if (pa.featureLiveChat === true) {
         hasFeatureLiveChat = true;
       }
-      return partnerAccess.featureTherapy === true && partnerAccess.therapySessionsRemaining > 0;
+      return pa.featureTherapy === true && pa.therapySessionsRemaining > 0;
     });
 
-    hasFeatureLiveChat && (await this.updateCrispProfileSessionsData(action, client_email));
-
-    if (partnerAccess.therapySessionsRemaining === 0) {
+    if (partnerAccess.length === 0) {
       throw new HttpException('No therapy sessions remaining', HttpStatus.FORBIDDEN);
     }
+
+    hasFeatureLiveChat && this.updateCrispProfileSessionsData(action, client_email);
 
     let partnerAccessUpdateDetails = {};
 
     if (action === SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING) {
       partnerAccessUpdateDetails = {
-        therapySessionsRemaining: partnerAccess.therapySessionsRemaining - 1,
-        therapySessionsRedeemed: partnerAccess.therapySessionsRedeemed + 1,
+        therapySessionsRemaining: partnerAccess[0].therapySessionsRemaining - 1,
+        therapySessionsRedeemed: partnerAccess[0].therapySessionsRedeemed + 1,
       };
     }
 
     if (action === SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING) {
       partnerAccessUpdateDetails = {
-        therapySessionsRemaining: partnerAccess.therapySessionsRemaining + 1,
-        therapySessionsRedeemed: partnerAccess.therapySessionsRedeemed - 1,
+        therapySessionsRemaining: partnerAccess[0].therapySessionsRemaining + 1,
+        therapySessionsRedeemed: partnerAccess[0].therapySessionsRedeemed - 1,
       };
-      simplyBookDto.cancelledAt = new Date();
-    }
-
-    if (action === SIMPLYBOOK_ACTION_ENUM.UPDATED_BOOKING) {
-      console.log(action);
     }
 
     try {
+      this.upadateTherapySession(action, simplyBookDto, usersPartnerAccess);
       await this.partnerAccessRepository.save({
-        ...partnerAccessDetails,
+        ...usersPartnerAccess,
         ...partnerAccessUpdateDetails,
       });
-
-      // await this.therapySessionRepository.save({ ...simplyBookDto });
 
       return 'Successful';
     } catch (error) {

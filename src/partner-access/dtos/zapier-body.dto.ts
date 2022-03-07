@@ -6,7 +6,7 @@ import {
   IsEnum,
   IsNotEmpty,
   IsOptional,
-  IsString,
+  IsString
 } from 'class-validator';
 import { SIMPLYBOOK_ACTION_ENUM } from '../../utils/constants';
 
