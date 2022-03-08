@@ -39,7 +39,7 @@ export class PartnerAccessEntity extends BaseEntity {
   partnerAdmin: PartnerAdminEntity;
 
   @OneToMany(() => TherapySessionEntity, (therapySession) => therapySession.partnerAccess)
-  therapySessionsss: TherapySessionEntity[];
+  therapySession: TherapySessionEntity[];
 
   @Column({ default: true })
   active: boolean;
