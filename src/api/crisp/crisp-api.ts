@@ -56,7 +56,9 @@ export const createCrispProfileData = (
   };
 
   if (!!courses && courses.length > 0) {
-    const courseData = courses.forEach((course) => {
+    const courseData = {};
+
+    courses.forEach((course) => {
       const courseKey = formatCourseKey(course.name);
       courseData[`${courseKey}`] = course.status;
 

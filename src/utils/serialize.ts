@@ -1,6 +1,9 @@
-import { CourseUserEntity } from 'src/entities/course-user.entity';
-import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
+import moment from 'moment';
+import { CourseUserEntity } from '../entities/course-user.entity';
+import { PartnerAccessEntity } from '../entities/partner-access.entity';
+import { TherapySessionEntity } from '../entities/therapy-session.entity';
 import { UserEntity } from '../entities/user.entity';
+import { SimplybookBodyDto } from '../partner-access/dtos/zapier-body.dto';
 import { GetUserDto } from '../user/dtos/get-user.dto';
 
 export const formatCourseUserObjects = (courseUserObjects: CourseUserEntity[]) => {
@@ -50,12 +53,12 @@ export const formatPartnerAccessObjects = (partnerAccessObjects: PartnerAccessEn
         return {
           id: ts.id,
           action: ts.action,
-          clientTimezone: ts.client_timezone,
-          serviceName: ts.service_name,
-          serviceProviderName: ts.service_provider_name,
-          serviceProviderEmail: ts.service_provider_email,
-          startDateTime: ts.start_date_time,
-          endDateTime: ts.end_date_time,
+          clientTimezone: ts.clientTimezone,
+          serviceName: ts.serviceName,
+          serviceProviderName: ts.serviceProviderName,
+          serviceProviderEmail: ts.serviceProviderEmail,
+          startDateTime: ts.startDateTime,
+          endDateTime: ts.endDateTime,
           cancelledAt: ts.cancelledAt,
           rescheduledFrom: ts.rescheduledFrom,
           completedAt: ts.completedAt,
@@ -87,5 +90,26 @@ export const formatUserObject = (userObject: UserEntity): GetUserDto => {
         }
       : null,
     courses: userObject.courseUser ? formatCourseUserObjects(userObject.courseUser) : [],
+  };
+};
+
+export const formatTherapySessionObject = (
+  therapySession: SimplybookBodyDto,
+  partnerAccessId: string,
+): Partial<TherapySessionEntity> => {
+  return {
+    action: therapySession.action,
+    bookingCode: therapySession.booking_code,
+    clientEmail: therapySession.client_email,
+    clientTimezone: therapySession.client_timezone,
+    serviceName: therapySession.service_name,
+    serviceProviderName: therapySession.service_provider_email,
+    serviceProviderEmail: therapySession.service_provider_email,
+    startDateTime: moment(therapySession.start_date_time).toDate(),
+    endDateTime: moment(therapySession.end_date_time).toDate(),
+    cancelledAt: null,
+    rescheduledFrom: null,
+    completedAt: null,
+    partnerAccessId,
   };
 };
