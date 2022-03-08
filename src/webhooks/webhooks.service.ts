@@ -1,17 +1,17 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import moment from 'moment';
-import { getCrispPeopleData, updateCrispProfile } from 'src/api/crisp/crisp-api';
-import { CoursePartnerService } from 'src/course-partner/course-partner.service';
-import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import StoryblokClient from 'storyblok-js-client';
 import apiCall from '../api/apiCalls';
+import { getCrispPeopleData, updateCrispProfile } from '../api/crisp/crisp-api';
+import { CoursePartnerService } from '../course-partner/course-partner.service';
 import { CourseRepository } from '../course/course.repository';
+import { PartnerAccessEntity } from '../entities/partner-access.entity';
 import { SimplybookBodyDto } from '../partner-access/dtos/zapier-body.dto';
 import { PartnerAccessRepository } from '../partner-access/partner-access.repository';
 import { SessionRepository } from '../session/session.repository';
 import { UserRepository } from '../user/user.repository';
 import { SIMPLYBOOK_ACTION_ENUM, storyblokToken } from '../utils/constants';
+import { formatTherapySessionObject } from '../utils/serialize';
 import { StoryDto } from './dto/story.dto';
 import { TherapySessionRepository } from './therapy-session.repository';
 
@@ -103,7 +103,7 @@ export class WebhooksService {
 
     switch (action) {
       case SIMPLYBOOK_ACTION_ENUM.UPDATED_BOOKING:
-        activeSessions[0].rescheduledFrom = activeSessions[0].start_date_time;
+        activeSessions[0].rescheduledFrom = activeSessions[0].startDateTime;
         break;
       case SIMPLYBOOK_ACTION_ENUM.COMPLETED_BOOKING:
         activeSessions[0].completedAt = new Date();
@@ -117,11 +117,8 @@ export class WebhooksService {
 
     const therapySessionObject =
       action === SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING
-        ? { ...simplyBookDto, ...{ partnerAccessId: partnerAccess.id } }
+        ? formatTherapySessionObject(simplyBookDto, partnerAccess.id)
         : activeSessions[0];
-
-    therapySessionObject.start_date_time = moment(simplyBookDto.start_date_time).toDate();
-    therapySessionObject.end_date_time = moment(simplyBookDto.end_date_time).toDate();
 
     await this.therapySessionRepository.save(therapySessionObject);
 

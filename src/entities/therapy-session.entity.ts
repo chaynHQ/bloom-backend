@@ -12,28 +12,28 @@ export class TherapySessionEntity extends BaseEntity {
   action: SIMPLYBOOK_ACTION_ENUM;
 
   @Column()
-  client_email: string;
+  clientEmail: string;
 
   @Column({ nullable: true })
-  booking_code: string;
+  bookingCode: string;
 
   @Column()
-  client_timezone: string;
+  clientTimezone: string;
 
   @Column()
-  service_name: string;
+  serviceName: string;
 
   @Column()
-  service_provider_name: string;
+  serviceProviderName: string;
 
   @Column()
-  service_provider_email: string;
+  serviceProviderEmail: string;
 
   @Column({ type: 'timestamptz' })
-  start_date_time: Date;
+  startDateTime: Date;
 
   @Column({ type: 'timestamptz' })
-  end_date_time: Date;
+  endDateTime: Date;
 
   @Column({ type: 'timestamptz', nullable: true })
   cancelledAt: Date;
