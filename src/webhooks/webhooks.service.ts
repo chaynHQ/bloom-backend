@@ -79,7 +79,7 @@ export class WebhooksService {
     action,
     simplyBookDto: SimplybookBodyDto,
     usersPartnerAccess: PartnerAccessEntity[],
-  ): Promise<void> {
+  ): Promise<string> {
     const partnerAccessRecord = usersPartnerAccess.find((pa) => {
       return pa.accessCode === simplyBookDto.booking_code;
     });
@@ -96,7 +96,7 @@ export class WebhooksService {
         return a.start_date_time - b.start_date_time;
       });
 
-    if (!activeSessions) {
+    if (activeSessions.length === 0) {
       throw new HttpException('No active therapy sessions', HttpStatus.FORBIDDEN);
     }
 
@@ -110,7 +110,6 @@ export class WebhooksService {
       case SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING:
         activeSessions[0].cancelledAt = new Date();
         break;
-
       default:
         break;
     }
@@ -120,6 +119,8 @@ export class WebhooksService {
         ? { ...simplyBookDto, ...{ partnerAccessId: partnerAccessRecord.id } }
         : activeSessions[0];
     await this.therapySessionRepository.save(therapySessionObject);
+
+    return 'Successful';
   }
 
   async updatePartnerAccessBooking(simplyBookDto: SimplybookBodyDto): Promise<string> {
@@ -178,7 +179,7 @@ export class WebhooksService {
     }
 
     try {
-      this.upadateTherapySession(action, simplyBookDto, usersPartnerAccess);
+      await this.upadateTherapySession(action, simplyBookDto, usersPartnerAccess);
       await this.partnerAccessRepository.save({
         ...usersPartnerAccess,
         ...partnerAccessUpdateDetails,
