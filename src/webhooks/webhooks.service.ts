@@ -1,5 +1,6 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import moment from 'moment';
 import { getCrispPeopleData, updateCrispProfile } from 'src/api/crisp/crisp-api';
 import { CoursePartnerService } from 'src/course-partner/course-partner.service';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
@@ -78,14 +79,10 @@ export class WebhooksService {
   private async upadateTherapySession(
     action,
     simplyBookDto: SimplybookBodyDto,
-    usersPartnerAccess: PartnerAccessEntity[],
+    partnerAccess: PartnerAccessEntity,
   ): Promise<string> {
-    const partnerAccessRecord = usersPartnerAccess.find((pa) => {
-      return pa.accessCode === simplyBookDto.booking_code;
-    });
-
     const therapySessions = await this.therapySessionRepository.find({
-      partnerAccessId: partnerAccessRecord.id,
+      partnerAccessId: partnerAccess.id,
     });
 
     const activeSessions = therapySessions
@@ -96,8 +93,12 @@ export class WebhooksService {
         return a.start_date_time - b.start_date_time;
       });
 
-    if (activeSessions.length === 0) {
+    if (action !== SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING && activeSessions.length === 0) {
       throw new HttpException('No active therapy sessions', HttpStatus.FORBIDDEN);
+    }
+
+    if (action !== SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING) {
+      activeSessions[0].action = action;
     }
 
     switch (action) {
@@ -116,8 +117,12 @@ export class WebhooksService {
 
     const therapySessionObject =
       action === SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING
-        ? { ...simplyBookDto, ...{ partnerAccessId: partnerAccessRecord.id } }
+        ? { ...simplyBookDto, ...{ partnerAccessId: partnerAccess.id } }
         : activeSessions[0];
+
+    therapySessionObject.start_date_time = moment(simplyBookDto.start_date_time).toDate();
+    therapySessionObject.end_date_time = moment(simplyBookDto.end_date_time).toDate();
+
     await this.therapySessionRepository.save(therapySessionObject);
 
     return 'Successful';
@@ -138,23 +143,26 @@ export class WebhooksService {
       throw new HttpException('Unable to find user', HttpStatus.BAD_REQUEST);
     }
 
-    const usersPartnerAccess = await this.partnerAccessRepository.find({
+    const usersPartnerAccesses = await this.partnerAccessRepository.find({
       userId: userDetails.id,
       active: true,
     });
 
-    if (!usersPartnerAccess.length) {
+    if (usersPartnerAccesses.length === 0) {
       throw new HttpException('Unable to find partner access code', HttpStatus.BAD_REQUEST);
     }
-
     let hasFeatureLiveChat = false;
 
-    const partnerAccess: PartnerAccessEntity[] = usersPartnerAccess.filter((pa) => {
-      if (pa.featureLiveChat === true) {
-        hasFeatureLiveChat = true;
-      }
-      return pa.featureTherapy === true && pa.therapySessionsRemaining > 0;
-    });
+    const partnerAccess: PartnerAccessEntity[] = usersPartnerAccesses
+      .filter((pa) => {
+        if (pa.featureLiveChat === true) {
+          hasFeatureLiveChat = true;
+        }
+        return pa.featureTherapy === true && pa.therapySessionsRemaining > 0;
+      })
+      .sort((a: any, b: any) => {
+        return a.createdAt - b.createdAt;
+      });
 
     if (partnerAccess.length === 0) {
       throw new HttpException('No therapy sessions remaining', HttpStatus.FORBIDDEN);
@@ -179,11 +187,10 @@ export class WebhooksService {
     }
 
     try {
-      await this.upadateTherapySession(action, simplyBookDto, usersPartnerAccess);
-      await this.partnerAccessRepository.save({
-        ...usersPartnerAccess,
-        ...partnerAccessUpdateDetails,
-      });
+      await this.upadateTherapySession(action, simplyBookDto, partnerAccess[0]);
+      await this.partnerAccessRepository.save(
+        Object.assign(partnerAccess[0], { ...partnerAccessUpdateDetails }),
+      );
 
       return 'Successful';
     } catch (error) {
