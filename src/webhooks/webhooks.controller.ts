@@ -15,8 +15,8 @@ export class WebhooksController {
   @UseGuards(ZapierAuthGuard)
   @Post('simplybook')
   @ApiBody({ type: SimplybookBodyDto })
-  async updatePartnerAccessBooking(@Body() simplybookBodyDto: SimplybookBodyDto): Promise<string> {
-    return this.webhooksService.updatePartnerAccessBooking(simplybookBodyDto);
+  async updatePartnerAccessTherapy(@Body() simplybookBodyDto: SimplybookBodyDto): Promise<string> {
+    return this.webhooksService.updatePartnerAccessTherapy(simplybookBodyDto);
   }
 
   @Post('storyblok')

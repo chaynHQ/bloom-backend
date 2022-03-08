@@ -81,51 +81,38 @@ export class WebhooksService {
     simplyBookDto: SimplybookBodyDto,
     partnerAccess: PartnerAccessEntity,
   ): Promise<string> {
-    const therapySessions = await this.therapySessionRepository.find({
-      partnerAccessId: partnerAccess.id,
-    });
-
-    const activeSessions = therapySessions
-      .filter((ts) => {
-        return ts.cancelledAt === null && ts.completedAt === null;
-      })
-      .sort((a: any, b: any) => {
-        return a.start_date_time - b.start_date_time;
+    if (action === SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING) {
+      const therapySession = formatTherapySessionObject(simplyBookDto, partnerAccess.id);
+      await this.therapySessionRepository.save(therapySession);
+    } else {
+      const therapySession = await this.therapySessionRepository.findOne({
+        partnerAccessId: partnerAccess.id,
+        bookingCode: simplyBookDto.booking_code,
       });
 
-    if (action !== SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING && activeSessions.length === 0) {
-      throw new HttpException('No active therapy sessions', HttpStatus.FORBIDDEN);
+      if (!therapySession) {
+        throw new HttpException('Therapy session not found', HttpStatus.FORBIDDEN);
+      }
+
+      therapySession.action = action;
+
+      if (action === SIMPLYBOOK_ACTION_ENUM.UPDATED_BOOKING) {
+        therapySession.rescheduledFrom = therapySession.startDateTime;
+      }
+      if (action === SIMPLYBOOK_ACTION_ENUM.COMPLETED_BOOKING) {
+        therapySession.completedAt = new Date();
+      }
+      if (action === SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING) {
+        therapySession.cancelledAt = new Date();
+      }
+
+      await this.therapySessionRepository.save(therapySession);
     }
-
-    if (action !== SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING) {
-      activeSessions[0].action = action;
-    }
-
-    switch (action) {
-      case SIMPLYBOOK_ACTION_ENUM.UPDATED_BOOKING:
-        activeSessions[0].rescheduledFrom = activeSessions[0].startDateTime;
-        break;
-      case SIMPLYBOOK_ACTION_ENUM.COMPLETED_BOOKING:
-        activeSessions[0].completedAt = new Date();
-        break;
-      case SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING:
-        activeSessions[0].cancelledAt = new Date();
-        break;
-      default:
-        break;
-    }
-
-    const therapySessionObject =
-      action === SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING
-        ? formatTherapySessionObject(simplyBookDto, partnerAccess.id)
-        : activeSessions[0];
-
-    await this.therapySessionRepository.save(therapySessionObject);
 
     return 'Successful';
   }
 
-  async updatePartnerAccessBooking(simplyBookDto: SimplybookBodyDto): Promise<string> {
+  async updatePartnerAccessTherapy(simplyBookDto: SimplybookBodyDto): Promise<string> {
     const { action, client_email } = simplyBookDto;
     const userDetails = await this.userRepository.findOne({ email: client_email });
 
@@ -188,7 +175,7 @@ export class WebhooksService {
     try {
       await this.updateTherapySession(action, simplyBookDto, therapyPartnerAccess[0]);
       await this.partnerAccessRepository.save(
-        Object.assign(therapyPartnerAccess[0], { ...partnerAccessUpdateDetails }),
+        Object.assign(therapyPartnerAccess, { ...partnerAccessUpdateDetails }),
       );
 
       return 'Successful';
