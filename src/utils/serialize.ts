@@ -1,4 +1,7 @@
+import moment from 'moment';
 import { CourseUserEntity } from 'src/entities/course-user.entity';
+import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
+import { SimplybookBodyDto } from 'src/partner-access/dtos/zapier-body.dto';
 import { UserEntity } from '../entities/user.entity';
 import { GetUserDto } from '../user/dtos/get-user.dto';
 
@@ -70,20 +73,23 @@ export const formatUserObject = (userObject: UserEntity): GetUserDto => {
   };
 };
 
-export const crispProfileDataObject = (
-  createUserResponse,
-  partnerDetails,
-  updatePartnerAccessResponse,
-) => {
+export const formatTherapySessionObject = (
+  therapySession: SimplybookBodyDto,
+  partnerAccessId: string,
+): Partial<TherapySessionEntity> => {
   return {
-    created_at: createUserResponse.createdAt,
-    updated_at: createUserResponse.updatedAt,
-    language_default: createUserResponse.languageDefault,
-    partners: `${partnerDetails.name}; `,
-    partner_activated_at: partnerDetails.createdAt,
-    feature_live_chat: updatePartnerAccessResponse.featureLiveChat,
-    feature_therapy: updatePartnerAccessResponse.featureTherapy,
-    therapy_sessions_remaining: updatePartnerAccessResponse.therapySessionsRemaining,
-    therapy_sessions_redeemed: updatePartnerAccessResponse.therapySessionsRedeemed,
+    action: therapySession.action,
+    bookingCode: therapySession.booking_code,
+    clientEmail: therapySession.client_email,
+    clientTimezone: therapySession.client_timezone,
+    serviceName: therapySession.service_name,
+    serviceProviderName: therapySession.service_provider_email,
+    serviceProviderEmail: therapySession.service_provider_email,
+    startDateTime: moment(therapySession.start_date_time).toDate(),
+    endDateTime: moment(therapySession.end_date_time).toDate(),
+    cancelledAt: null,
+    rescheduledFrom: null,
+    completedAt: null,
+    partnerAccessId,
   };
 };
