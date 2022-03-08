@@ -1,4 +1,7 @@
+import moment from 'moment';
 import { CourseUserEntity } from 'src/entities/course-user.entity';
+import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
+import { SimplybookBodyDto } from 'src/partner-access/dtos/zapier-body.dto';
 import { UserEntity } from '../entities/user.entity';
 import { GetUserDto } from '../user/dtos/get-user.dto';
 
@@ -67,5 +70,26 @@ export const formatUserObject = (userObject: UserEntity): GetUserDto => {
         }
       : null,
     courses: userObject.courseUser ? formatCourseUserObjects(userObject.courseUser) : [],
+  };
+};
+
+export const formatTherapySessionObject = (
+  therapySession: SimplybookBodyDto,
+  partnerAccessId: string,
+): Partial<TherapySessionEntity> => {
+  return {
+    action: therapySession.action,
+    bookingCode: therapySession.booking_code,
+    clientEmail: therapySession.client_email,
+    clientTimezone: therapySession.client_timezone,
+    serviceName: therapySession.service_name,
+    serviceProviderName: therapySession.service_provider_email,
+    serviceProviderEmail: therapySession.service_provider_email,
+    startDateTime: moment(therapySession.start_date_time).toDate(),
+    endDateTime: moment(therapySession.end_date_time).toDate(),
+    cancelledAt: null,
+    rescheduledFrom: null,
+    completedAt: null,
+    partnerAccessId,
   };
 };
