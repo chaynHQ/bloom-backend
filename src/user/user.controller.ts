@@ -19,7 +19,7 @@ export class UserController {
     return await this.userService.createUser(createUserDto);
   }
 
-  @ApiBearerAuth()
+  @ApiBearerAuth('access-token')
   @Post('/me')
   @UseGuards(FirebaseAuthGuard)
   async getUser(@Req() req: Request): Promise<GetUserDto> {

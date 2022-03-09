@@ -17,7 +17,7 @@ import { PartnerAccessService } from './partner-access.service';
 export class PartnerAccessController {
   constructor(private readonly partnerAccessService: PartnerAccessService) {}
 
-  @ApiBearerAuth()
+  @ApiBearerAuth('access-token')
   @UseGuards(PartnerAdminAuthGuard)
   @Post()
   @ApiBody({ type: CreatePartnerAccessDto })
@@ -32,7 +32,7 @@ export class PartnerAccessController {
     );
   }
 
-  @ApiBearerAuth()
+  @ApiBearerAuth('access-token')
   @UseGuards(SuperAdminAuthGuard)
   @Get()
   async getPartnerAccessCodes(): Promise<PartnerAccessEntity[]> {
@@ -47,7 +47,7 @@ export class PartnerAccessController {
     return this.partnerAccessService.getValidPartnerAccessCode(partnerAccessCode.toUpperCase());
   }
 
-  @ApiBearerAuth()
+  @ApiBearerAuth('access-token')
   @Post('assign')
   @UseGuards(FirebaseAuthGuard)
   @ApiBody({ type: ValidatePartnerAccessCodeDto })

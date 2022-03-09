@@ -1,10 +1,10 @@
+import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { Logger } from './logger/logger';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { ValidationPipe } from '@nestjs/common';
-import { ExceptionsFilter } from './utils/exceptions.filter';
 import { LoggingInterceptor } from './logger/logging.interceptor';
+import { ExceptionsFilter } from './utils/exceptions.filter';
 
 async function bootstrap() {
   const PORT = process.env.PORT || 35001;
@@ -16,6 +16,10 @@ async function bootstrap() {
     .setTitle('Bloom backend API')
     .setDescription('Bloom backend API')
     .setVersion('1.0.0')
+    .addBearerAuth(
+      { type: 'http', scheme: 'bearer', bearerFormat: 'JWT', in: 'header' },
+      'access-token',
+    )
     .build();
 
   const document = SwaggerModule.createDocument(app, options);

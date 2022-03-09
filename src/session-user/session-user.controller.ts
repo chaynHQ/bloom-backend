@@ -14,7 +14,7 @@ export class SessionUserController {
   constructor(private readonly sessionUserService: SessionUserService) {}
 
   @Post()
-  @ApiBearerAuth()
+  @ApiBearerAuth('access-token')
   @UseGuards(FirebaseAuthGuard)
   async createSessionUser(@Req() req: Request, @Body() createSessionUserDto: UpdateSessionUserDto) {
     return await this.sessionUserService.createSessionUser(
@@ -24,7 +24,7 @@ export class SessionUserController {
   }
 
   @Post('/complete')
-  @ApiBearerAuth()
+  @ApiBearerAuth('access-token')
   @UseGuards(FirebaseAuthGuard)
   async update(@Req() req: Request, @Body() completeSessionUserDto: UpdateSessionUserDto) {
     return await this.sessionUserService.completeSessionUser(

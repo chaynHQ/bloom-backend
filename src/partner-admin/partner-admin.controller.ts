@@ -12,7 +12,7 @@ import { SuperAdminAuthGuard } from './super-admin-auth.guard';
 export class PartnerAdminController {
   constructor(private partnerAdminService: PartnerAdminService) {}
 
-  @ApiBearerAuth()
+  @ApiBearerAuth('access-token')
   @UseGuards(SuperAdminAuthGuard)
   @Post()
   @ApiBody({ type: CreatePartnerAdminDto })
