@@ -1,8 +1,9 @@
 import moment from 'moment';
-import { CourseUserEntity } from 'src/entities/course-user.entity';
-import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
-import { SimplybookBodyDto } from 'src/partner-access/dtos/zapier-body.dto';
+import { CourseUserEntity } from '../entities/course-user.entity';
+import { PartnerAccessEntity } from '../entities/partner-access.entity';
+import { TherapySessionEntity } from '../entities/therapy-session.entity';
 import { UserEntity } from '../entities/user.entity';
+import { SimplybookBodyDto } from '../partner-access/dtos/zapier-body.dto';
 import { GetUserDto } from '../user/dtos/get-user.dto';
 
 export const formatCourseUserObjects = (courseUserObjects: CourseUserEntity[]) => {
@@ -34,6 +35,39 @@ export const formatCourseUserObjects = (courseUserObjects: CourseUserEntity[]) =
   });
 };
 
+export const formatPartnerAccessObjects = (partnerAccessObjects: PartnerAccessEntity[]) => {
+  return partnerAccessObjects.map((partnerAccess) => {
+    return {
+      id: partnerAccess.id,
+      createdAt: partnerAccess.createdAt,
+      updatedAt: partnerAccess.updatedAt,
+      activatedAt: partnerAccess.activatedAt,
+      featureLiveChat: partnerAccess.featureLiveChat,
+      featureTherapy: partnerAccess.featureTherapy,
+      accessCode: partnerAccess.accessCode,
+      active: partnerAccess.active,
+      therapySessionsRemaining: partnerAccess.therapySessionsRemaining,
+      therapySessionsRedeemed: partnerAccess.therapySessionsRedeemed,
+      partner: partnerAccess.partner,
+      therapySessions: partnerAccess.therapySession?.map((ts) => {
+        return {
+          id: ts.id,
+          action: ts.action,
+          clientTimezone: ts.clientTimezone,
+          serviceName: ts.serviceName,
+          serviceProviderName: ts.serviceProviderName,
+          serviceProviderEmail: ts.serviceProviderEmail,
+          startDateTime: ts.startDateTime,
+          endDateTime: ts.endDateTime,
+          cancelledAt: ts.cancelledAt,
+          rescheduledFrom: ts.rescheduledFrom,
+          completedAt: ts.completedAt,
+        };
+      }),
+    };
+  });
+};
+
 export const formatUserObject = (userObject: UserEntity): GetUserDto => {
   return {
     user: {
@@ -45,21 +79,7 @@ export const formatUserObject = (userObject: UserEntity): GetUserDto => {
       languageDefault: userObject.languageDefault,
     },
     partnerAccesses: userObject.partnerAccess
-      ? userObject.partnerAccess.map((partnerAccess) => {
-          return {
-            id: partnerAccess.id,
-            createdAt: partnerAccess.createdAt,
-            updatedAt: partnerAccess.updatedAt,
-            activatedAt: partnerAccess.activatedAt,
-            featureLiveChat: partnerAccess.featureLiveChat,
-            featureTherapy: partnerAccess.featureTherapy,
-            accessCode: partnerAccess.accessCode,
-            active: partnerAccess.active,
-            therapySessionsRemaining: partnerAccess.therapySessionsRemaining,
-            therapySessionsRedeemed: partnerAccess.therapySessionsRedeemed,
-            partner: partnerAccess.partner,
-          };
-        })
+      ? formatPartnerAccessObjects(userObject.partnerAccess)
       : null,
     partnerAdmin: userObject.partnerAdmin
       ? {
