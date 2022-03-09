@@ -52,7 +52,7 @@ export class WebhooksService {
       .toLowerCase();
   };
 
-  async updateCrispProfileSessionsData(action, email) {
+  async updateCrispProfileTherapyData(action, email) {
     let partnerAccessUpdateCrisp = {};
     const crispResponse = await getCrispPeopleData(email);
     const crispData = crispResponse.data.data.data;
@@ -76,56 +76,43 @@ export class WebhooksService {
     return 'ok';
   }
 
-  private async upadateTherapySession(
+  private async updateTherapySession(
     action,
     simplyBookDto: SimplybookBodyDto,
     partnerAccess: PartnerAccessEntity,
   ): Promise<string> {
-    const therapySessions = await this.therapySessionRepository.find({
-      partnerAccessId: partnerAccess.id,
-    });
-
-    const activeSessions = therapySessions
-      .filter((ts) => {
-        return ts.cancelledAt === null && ts.completedAt === null;
-      })
-      .sort((a: any, b: any) => {
-        return a.start_date_time - b.start_date_time;
+    if (action === SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING) {
+      const therapySession = formatTherapySessionObject(simplyBookDto, partnerAccess.id);
+      await this.therapySessionRepository.save(therapySession);
+    } else {
+      const therapySession = await this.therapySessionRepository.findOne({
+        partnerAccessId: partnerAccess.id,
+        bookingCode: simplyBookDto.booking_code,
       });
 
-    if (action !== SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING && activeSessions.length === 0) {
-      throw new HttpException('No active therapy sessions', HttpStatus.FORBIDDEN);
+      if (!therapySession) {
+        throw new HttpException('Therapy session not found', HttpStatus.FORBIDDEN);
+      }
+
+      therapySession.action = action;
+
+      if (action === SIMPLYBOOK_ACTION_ENUM.UPDATED_BOOKING) {
+        therapySession.rescheduledFrom = therapySession.startDateTime;
+      }
+      if (action === SIMPLYBOOK_ACTION_ENUM.COMPLETED_BOOKING) {
+        therapySession.completedAt = new Date();
+      }
+      if (action === SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING) {
+        therapySession.cancelledAt = new Date();
+      }
+
+      await this.therapySessionRepository.save(therapySession);
     }
-
-    if (action !== SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING) {
-      activeSessions[0].action = action;
-    }
-
-    switch (action) {
-      case SIMPLYBOOK_ACTION_ENUM.UPDATED_BOOKING:
-        activeSessions[0].rescheduledFrom = activeSessions[0].startDateTime;
-        break;
-      case SIMPLYBOOK_ACTION_ENUM.COMPLETED_BOOKING:
-        activeSessions[0].completedAt = new Date();
-        break;
-      case SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING:
-        activeSessions[0].cancelledAt = new Date();
-        break;
-      default:
-        break;
-    }
-
-    const therapySessionObject =
-      action === SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING
-        ? formatTherapySessionObject(simplyBookDto, partnerAccess.id)
-        : activeSessions[0];
-
-    await this.therapySessionRepository.save(therapySessionObject);
 
     return 'Successful';
   }
 
-  async updatePartnerAccessBooking(simplyBookDto: SimplybookBodyDto): Promise<string> {
+  async updatePartnerAccessTherapy(simplyBookDto: SimplybookBodyDto): Promise<string> {
     const { action, client_email } = simplyBookDto;
     const userDetails = await this.userRepository.findOne({ email: client_email });
 
@@ -146,11 +133,11 @@ export class WebhooksService {
     });
 
     if (usersPartnerAccesses.length === 0) {
-      throw new HttpException('Unable to find partner access code', HttpStatus.BAD_REQUEST);
+      throw new HttpException('Unable to find partner access', HttpStatus.BAD_REQUEST);
     }
     let hasFeatureLiveChat = false;
 
-    const partnerAccess: PartnerAccessEntity[] = usersPartnerAccesses
+    const therapyPartnerAccesses: PartnerAccessEntity[] = usersPartnerAccesses
       .filter((pa) => {
         if (pa.featureLiveChat === true) {
           hasFeatureLiveChat = true;
@@ -161,32 +148,34 @@ export class WebhooksService {
         return a.createdAt - b.createdAt;
       });
 
-    if (partnerAccess.length === 0) {
+    if (therapyPartnerAccesses.length === 0) {
       throw new HttpException('No therapy sessions remaining', HttpStatus.FORBIDDEN);
     }
 
-    hasFeatureLiveChat && this.updateCrispProfileSessionsData(action, client_email);
+    const therapyPartnerAccess = therapyPartnerAccesses[0]; // First assigned partner access with therapy sessions remaining
+
+    hasFeatureLiveChat && this.updateCrispProfileTherapyData(action, client_email);
 
     let partnerAccessUpdateDetails = {};
 
     if (action === SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING) {
       partnerAccessUpdateDetails = {
-        therapySessionsRemaining: partnerAccess[0].therapySessionsRemaining - 1,
-        therapySessionsRedeemed: partnerAccess[0].therapySessionsRedeemed + 1,
+        therapySessionsRemaining: therapyPartnerAccess.therapySessionsRemaining - 1,
+        therapySessionsRedeemed: therapyPartnerAccess.therapySessionsRedeemed + 1,
       };
     }
 
     if (action === SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING) {
       partnerAccessUpdateDetails = {
-        therapySessionsRemaining: partnerAccess[0].therapySessionsRemaining + 1,
-        therapySessionsRedeemed: partnerAccess[0].therapySessionsRedeemed - 1,
+        therapySessionsRemaining: therapyPartnerAccess.therapySessionsRemaining + 1,
+        therapySessionsRedeemed: therapyPartnerAccess.therapySessionsRedeemed - 1,
       };
     }
 
     try {
-      await this.upadateTherapySession(action, simplyBookDto, partnerAccess[0]);
+      await this.updateTherapySession(action, simplyBookDto, therapyPartnerAccess[0]);
       await this.partnerAccessRepository.save(
-        Object.assign(partnerAccess[0], { ...partnerAccessUpdateDetails }),
+        Object.assign(therapyPartnerAccess, { ...partnerAccessUpdateDetails }),
       );
 
       return 'Successful';
