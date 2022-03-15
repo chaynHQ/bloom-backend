@@ -179,7 +179,7 @@ export class WebhooksService {
 
       return 'Successful';
     } catch (error) {
-      return error;
+      throw error;
     }
   }
 
