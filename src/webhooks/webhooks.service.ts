@@ -153,7 +153,6 @@ export class WebhooksService {
     }
 
     const therapyPartnerAccess = therapyPartnerAccesses[0]; // First assigned partner access with therapy sessions remaining
-
     hasFeatureLiveChat && this.updateCrispProfileTherapyData(action, client_email);
 
     let partnerAccessUpdateDetails = {};
@@ -173,7 +172,7 @@ export class WebhooksService {
     }
 
     try {
-      await this.updateTherapySession(action, simplyBookDto, therapyPartnerAccess[0]);
+      await this.updateTherapySession(action, simplyBookDto, therapyPartnerAccess);
       await this.partnerAccessRepository.save(
         Object.assign(therapyPartnerAccess, { ...partnerAccessUpdateDetails }),
       );
