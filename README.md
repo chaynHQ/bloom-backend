@@ -72,20 +72,6 @@ Listening on localhost:35001, CTRL+C to stop
 
 _Note: you can use an application like Postman to test the apis locally_
 
-### Run locally (without Docker)
-
-To run the project without Docker, you'll need to make sure PostgreSQL is installed and running on your system.
-
-**The first time you run the project, create the Bloom database**
-
-```
-CREATE DATABASE bloom WITH OWNER = postgres ENCODING = 'UTF8' CONNECTION LIMIT = -1;
-```
-
-```
-cat ./bloom_db_local.sql | docker exec -i bloom-local-db pg_restore --verbose --clean --no-acl --no-owner -U postgres -d bloom
-```
-
 **Run the app**
 
 ```bash
