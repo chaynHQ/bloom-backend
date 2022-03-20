@@ -1,16 +1,16 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { AuthService } from 'src/auth/auth.service';
-import { IFirebaseUser } from 'src/firebase/firebase-user.interface';
-import { generateRandomString, hasFeatureLiveChat } from 'src/utils/utils';
 import {
   addCrispProfile,
   createCrispProfileData,
   deleteCrispProfile,
 } from '../api/crisp/crisp-api';
+import { AuthService } from '../auth/auth.service';
+import { IFirebaseUser } from '../firebase/firebase-user.interface';
 import { PartnerAccessService } from '../partner-access/partner-access.service';
 import { PartnerRepository } from '../partner/partner.repository';
 import { formatUserObject } from '../utils/serialize';
+import { generateRandomString, hasFeatureLiveChat } from '../utils/utils';
 import { CreateUserDto } from './dtos/create-user.dto';
 import { GetUserDto } from './dtos/get-user.dto';
 import { UserRepository } from './user.repository';
