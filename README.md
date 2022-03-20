@@ -14,98 +14,206 @@ Instagram - [@chaynhq](https://www.instagram.com/chaynhq/)
 
 Youtube - [Chayn Team](https://www.youtube.com/channel/UC5_1Ci2SWVjmbeH8_USm-Bg)
 
+# Bloom Backend
+
+[![Bloom Backend CI Pipeline](https://github.com/chaynHQ/bloom-backend/actions/workflows/.ci.yml/badge.svg)](https://github.com/chaynHQ/bloom-backend/actions/workflows/.ci.yml)
+
+**Currently in active development**
+
 ## Technologies Used:
 
-- Nest Js - Nest is a NodeJs framework used in building scalable and reliable server-side applications.
-- PostgreSQL - open source object-relational database system
-- TypeORM is an Object Relational Mapper library running in NodeJs and written in TypeScript.
-- Docker - open source containerization platform.
-- Heroku - Heroku is a platform as a service (PaaS) that enables developers to build, run, and operate applications entirely in the cloud.
-- GitHub Actions - GitHub Actions makes it easy to automate all your software workflows, now with world-class CI/CD.
+- [NestJS](https://nestjs.com/) - NodeJs framework for building scalable and reliable server-side applications
+- [PostgreSQL](https://www.postgresql.org/about/) - Object-relational SQL database system
+- [TypeORM](https://github.com/typeorm/typeorm) - Object Relational Mapper library
+- [Firebase](https://firebase.google.com/docs/auth) - User authentication
+- [Storyblok](https://www.storyblok.com/) - Headless CMS for pages and courses content
+- [Simplybook](https://simplybook.me/en/) - Appointment booking system used for therapy
+- [Slack](https://api.slack.com/messaging/webhooks) - Slack webhooks to send messages to the team
+- [Rollbar](https://rollbar.com/) - Error reporting
+- [Crisp](https://crisp.chat/en/) - User messaging
+- [Docker](https://www.docker.com/) - Containers for api and db
+- [Heroku](https://heroku.com) - Build, deploy and operate staging and production apps
+- [GitHub Actions](https://github.com/features/actions) - CI pipeline
 - Swagger - API documentation
-- Firebase - User Authentication
 
-## Development Setup
+## Local development
 
-- Install npm modules `yarn install`. To install [yarn](https://classic.yarnpkg.com/lang/en/docs/install/#mac-stable)
-- Copy `.env.example` and rename as `.env`
+### Prerequisites
 
-## Adding environmental variables
+- NodeJS v12.x
+- Yarn v1.x
+- Docker
 
-Use the `.env` file located in your application and append the environmental variable that you wish to use.
-Look at `.env.example` for reference.
+### Install dependencies
 
-## Starting the app (without Docker)
+```bash
+yarn
+```
 
-To run the project without Docker, you'll need to make sure PostgreSQL is installed and running on your system. The `.env` variables may need to be updated to the credentials used on your local system. To install [PostgreSQL](https://www.PostgreSQLql.org/download/) on your machine
+### Create `.env` file
 
-Follow these steps the first ever time youre running this project on your machine:
+Environment variables must be added to a local `.env` file. Create this file using `.env.example` for reference, and adding values for local development.
 
-- Create a database in your local database and name it `bloom`.
-  (You can use this SQL statement: `CREATE DATABASE bloom WITH OWNER = postgres ENCODING = 'UTF8' CONNECTION LIMIT = -1;`)
-- Run `cat ./bloom_db_local.sql | docker exec -i bloom-local-db pg_restore --verbose --clean --no-acl --no-owner -U postgres -d bloom`
+### Run locally (with Docker) - RECOMMENDED
 
-Follow these steps to run the project:
+The project is containerized and can be run solely in docker - both the PostgreSQL database and NestJS app.
 
-- Run `yarn start:dev`
-- You should see this in the shell output:
-  ```shell
-  Listening on localhost:35001, CTRL+C to stop
-  ```
+First make sure the docker app is running (just open the app). Then run
 
-## Starting the app (with Docker) - RECOMMENDED
+```bash
+docker-compose up
+```
 
-The project is containerized and can be run solely in docker - both the PostgreSQL database and NestJs app. To use Docker, make sure it is already installed and running on your machine. For more information on how to install [docker](https://www.docker.com/get-started)
+You should see this in the shell output:
 
-- Run `docker-compose up`
-- You should see this in the shell output in docker:
-  `shell Listening on localhost:35001, CTRL+C to stop `
+```shell
+Listening on localhost:35001, CTRL+C to stop
+```
 
 _Note: you can use an application like Postman to test the apis locally_
 
-## Swagger
+**Run the app**
 
-Swagger automatically reflects all the endpoints that have been created. It also gives details of an api's url and exposes a JSON object needed to make a request and also what an api's response looks like.
-
-To access Swagger simply run the project and visit:
-
-```shell
-http://localhost:35001/api/
+```bash
+yarn start:dev
 ```
 
-## Firebase
+You should see this in the shell output:
 
-Authentication is an essential part of any application, but can be quite stressful to set up from scratch. This is one problem Firebase solves with its authentication product. To learn more about [Firebase](https://firebase.google.com/)
+```shell
+Listening on localhost:35001, CTRL+C to stop
+```
 
-## TypeOrm Migrations
+### Database migrations
 
-A migration in TypeORM is a single file with SQL queries to update a database schema as needed. To get started with migrations:
+A migration in TypeORM is a single file with SQL queries to update a database schema as updates/additions are made. Read more about migrations [here](https://github.com/typeorm/typeorm/blob/master/docs/migrations.md).
 
-1. Generate Migration
+Migrations are automatically run when the app is built docker (locally) or Heroku for staging and production apps.
 
-- `yarn migration:generate -- bloom_backend` - This command generates sql queries.
+**You'll need to generate and run a migration each time you add or update a database field or table.**
 
-2. Run Migration
+To generate a new migration
 
-- `yarn migration:run` - This command updates the database schema
+```bash
+yarn migration:generate -- bloom_backend
+```
 
-3. Revert Migration
+To run (apply) migrations
 
-- `yarn migration:revert` - Reverting a migration runs the down method in the migration file. This is useful in case we made a schema change we no longer want.
+```bash
+yarn migration:run
+```
 
-## Deployment
+To revert a migration
 
-There is no need to run the build command when pushing changes to GitHub. Simply create a pull request (PR) for the feature/bug fix you're working on and the GitHub Actions implemented will handle building the application and Heroku will handle to deployment of the changes automatically. The automatic deployment is set to work with the Staging and Production environment respectively. _Note: There are rules set for each branch. You wont be able to merge your changes without your PR being reveiwed_
+```bash
+yarn migration:revert
+```
 
-`If for any reason a new environment variable is created please reach out to Anna Hughes to add the variable to the staging and production environment as needed.`
+**New environment variables must be added to Heroku before release.**
 
-## Slack
+### Run unit tests
 
-Slack is a workplace communication tool. Slack is being used to notify the team when an unknown email is used to try and register an account on the bloom platform
+To run all unit tests
 
-## Crisp
+```bash
+yarn test:unit
+```
 
-Crisp is used for users to message the Chayn team in relation to bloom course content or other queries and support. Some of our users\* are allowed access to the crisp chat functionality. For those users only, we want their crisp user profile to reflect key data from our database, so the chayn member can see details about their bloom usage for more context.
+To have your unit tests running in the background as you change code:
+
+```bash
+yarn test:unit:watch
+```
+
+### Formatting and linting
+
+To run linting
+
+```bash
+yarn lint
+```
+
+To lint and fix
+
+```bash
+yarn lint:fix
+```
+
+Formatting and linting is provided by ESLint and Prettier (see the relevant configs for details).
+
+Workspace settings for VSCode are included for consistent linting and formatting.
+
+## Git flow and deployment
+
+Create new branches from the `develop` base branch. There is no need to run the build command before pushing changes to GitHub, simply push and create a pull request for the new branch. GitHub Actions will run build and linting tasks automatically. Squash and merge feature/bug branches into `develop`.
+
+When changes are ready to be deployed to staging, merge `develop` into `staging`. This will trigger an automatic deployment to the production app by Heroku.
+
+When changes have been tested in staging, merge `staging` into `main`. This will trigger an automatic deployment to the production app by Heroku.
+
+## Swagger
+
+Swagger automatically reflects all of the endpoints in the app, showing their urls and example request and response objects.
+
+To access Swagger simply run the project and visit http://localhost:35001/api/
+
+## Database models
+
+![Database models](database_models.jpg 'Database models')
+
+**User**
+Stores basic profile data for a user and relationships.
+
+**Partner**
+Stores basic profile data for a partner and relationships.
+
+**Partner Admin**
+Stores relationship between a partner and a user, and the partner access records created by the partner admin.
+
+**Partner Access**
+Stores the features assigned for a user by a partner. When a partner access record is created by a partner admin user, it is initially unassigned but the unique code generated will be shared with the user. When the user registers using this code, the partner access will be assigned/related to the user, granting them access to extra features. See `assignPartnerAccess`. Currently there are "tiers" of access determined by the frontend, however if future partners want different features for their users, settings for their features/tiers should be added to the `Partner` model.
+
+**Therapy Session**
+Stores data related to therapy sessions booked via Simplybook, copying the session time and details about the therapist etc. The duplication of data here (vs leaving it in Simplybook) was made to allow therapy reporting to be included in Data Studio. This model also allows for displaying therapy session data on the frontend. Populated by Simplybook -> Zapier webhooks.
+
+**Course**
+Stores data related to courses in Storyblok, copying the story id's. The `Course` records allow us to relate users to courses (via `CourseUser`) and a `Course` to `Session` records, which is required e.g. to check if a user completed a course. The slug and name etc are also stored for convenience, e.g. to be used in reporting. Populated and updated by Storyblok webhooks when course stories are published.
+
+**Session**
+Stores data related to courses in Storyblok, copying the story id's. The `Session` records allow us to relate users to sessions (via `SessionUser`). The slug and name etc are also stored for convenience, e.g. to be used in reporting. Populated and updated by Storyblok webhooks when course stories are published.
+
+**CourseUser**
+Stores relationship between a `User` and `Course` records, once a user has started a course. A users progress (`completed`) for the course is updated (`true`) when all related `SessionUser` records are `completed` for the related `Course`.
+
+**SessionUser**
+Stores relationship between a `User` and `Session` records, once a user has started a session. A users session progress (`completed`) for the session is updated (true) when the `/complete` endpoint is called.
+
+## Key concepts
+
+### User types
+
+There are several user types with different features enabled.
+
+**Public user** - joins Bloom without a partner, with access to self guided and live courses.
+
+**Partner user** - joins Bloom via a partner (and access code) with access to extra features and courses enabled by the partner(s).
+
+**Partner admin user** - a partner team member who uses the app to complete Bloom admin tasks such as creating new partner access codes.
+
+### Authentication
+
+User authentication is handled by [Firebase Auth](https://firebase.google.com/docs/auth). Bearer tokens are sent in api request headers and verified in [auth.service.ts](src/auth/auth.service.ts). The user record is fetched using the retrieved user email of the token.
+
+### Crisp profiles
+
+Crisp is the messaging platform used to message the Chayn team in relation to bloom course content or other queries and support. For public users, this 1-1 chat feature is available on _live_ courses only. For partner users, This 1-1 chat feature is available to users with a `PartnerAccess` that has 1-1 chat enabled.
+
+Users who have access to 1-1 chat also have a profile on Crisp that reflects data from our database regarding their partners, access and course progress. See [crisp-api.ts](src/api/crisp/crisp-api.ts)
+
+### Reporting
+
+<!-- TODO -->
 
 ## License
 

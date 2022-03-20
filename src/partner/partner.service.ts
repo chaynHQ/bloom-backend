@@ -16,7 +16,7 @@ export class PartnerService {
       if (error.code === '23505') {
         throw new HttpException(error.detail, HttpStatus.BAD_REQUEST);
       }
-      return error;
+      throw error;
     }
   }
 
