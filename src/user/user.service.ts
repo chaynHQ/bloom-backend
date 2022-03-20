@@ -1,7 +1,13 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { AuthService } from 'src/auth/auth.service';
 import { IFirebaseUser } from 'src/firebase/firebase-user.interface';
-import { addCrispProfile, createCrispProfileData } from '../api/crisp/crisp-api';
+import { generateRandomString, hasFeatureLiveChat } from 'src/utils/utils';
+import {
+  addCrispProfile,
+  createCrispProfileData,
+  deleteCrispProfile,
+} from '../api/crisp/crisp-api';
 import { PartnerAccessService } from '../partner-access/partner-access.service';
 import { PartnerRepository } from '../partner/partner.repository';
 import { formatUserObject } from '../utils/serialize';
@@ -17,6 +23,7 @@ export class UserService {
     @InjectRepository(PartnerRepository)
     private partnerRepository: PartnerRepository,
     private readonly partnerAccessService: PartnerAccessService,
+    private readonly authService: AuthService,
   ) {}
 
   public async createUser(createUserDto: CreateUserDto): Promise<GetUserDto> {
@@ -84,5 +91,27 @@ export class UserService {
     }
 
     return formatUserObject(queryResult);
+  }
+
+  public async deleteUser({ partnerAccesses, user }: GetUserDto) {
+    //Delete User From Firebase
+    await this.authService.deleteFirebaseUser(user.firebaseUid);
+
+    //Delete Crisp People Profile
+    if (hasFeatureLiveChat(partnerAccesses)) {
+      await deleteCrispProfile(user.email);
+    }
+
+    //Randomise User Data in DB
+    const randomString = generateRandomString(20);
+
+    user.name = randomString;
+    user.email = randomString;
+    user.firebaseUid = randomString;
+    user.isActive = false;
+
+    await this.userRepository.save(user);
+
+    return 'Successful';
   }
 }

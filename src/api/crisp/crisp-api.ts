@@ -194,3 +194,17 @@ export const updateCrispProfile = async (
     throw error;
   }
 };
+
+export const deleteCrispProfile = async (email: string) => {
+  try {
+    await apiCall({
+      url: `${baseUrl}/people/profile/${email}`,
+      type: 'delete',
+      headers,
+    });
+
+    return 'ok';
+  } catch (error) {
+    throw error;
+  }
+};
