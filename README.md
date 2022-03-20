@@ -156,7 +156,7 @@ When changes have been tested in staging, merge `staging` into `main`. This will
 
 Swagger automatically reflects all of the endpoints in the app, showing their urls and example request and response objects.
 
-To access Swagger simply run the project and visit http://localhost:35001/api/
+To access Swagger simply run the project and visit http://localhost:35001/swagger
 
 ## Database models
 
@@ -213,7 +213,7 @@ Users who have access to 1-1 chat also have a profile on Crisp that reflects dat
 
 ### Reporting
 
-<!-- TODO -->
+Google Data Studio is an online tool for converting data into customizable informative reports and dashboards. Reports are private and wont be shared with anyone.
 
 ## License
 
