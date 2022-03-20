@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiBody, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Request } from 'express';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
 import { FirebaseAuthGuard } from '../firebase/firebase-auth.guard';
@@ -18,6 +18,9 @@ export class PartnerAccessController {
   constructor(private readonly partnerAccessService: PartnerAccessService) {}
 
   @ApiBearerAuth('access-token')
+  @ApiOperation({
+    description: 'Creates an unassigned but the unique code that will be shared with the user',
+  })
   @UseGuards(PartnerAdminAuthGuard)
   @Post()
   @ApiBody({ type: CreatePartnerAccessDto })
@@ -33,6 +36,9 @@ export class PartnerAccessController {
   }
 
   @ApiBearerAuth('access-token')
+  @ApiOperation({
+    description: 'Returns a list of partner access codes',
+  })
   @UseGuards(SuperAdminAuthGuard)
   @Get()
   async getPartnerAccessCodes(): Promise<PartnerAccessEntity[]> {
@@ -40,6 +46,9 @@ export class PartnerAccessController {
   }
 
   @Post('validate-code')
+  @ApiOperation({
+    description: 'Validates a partner access code',
+  })
   @ApiBody({ type: ValidatePartnerAccessCodeDto })
   async validatePartnerAccessCode(
     @Body() { partnerAccessCode }: ValidatePartnerAccessCodeDto,
@@ -48,6 +57,9 @@ export class PartnerAccessController {
   }
 
   @ApiBearerAuth('access-token')
+  @ApiOperation({
+    description: 'Assigns a partner access code to a user, granting them access to extra featuress',
+  })
   @Post('assign')
   @UseGuards(FirebaseAuthGuard)
   @ApiBody({ type: ValidatePartnerAccessCodeDto })
