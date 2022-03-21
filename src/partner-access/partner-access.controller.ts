@@ -19,7 +19,8 @@ export class PartnerAccessController {
 
   @ApiBearerAuth('access-token')
   @ApiOperation({
-    description: 'Creates an unassigned but the unique code that will be shared with the user',
+    description:
+      'Creates an unassigned partner access record, with a unique code that will be shared with the user to register with. The payload sets the features enabled for this partner access / future user.',
   })
   @UseGuards(PartnerAdminAuthGuard)
   @Post()

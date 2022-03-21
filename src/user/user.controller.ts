@@ -24,7 +24,8 @@ export class UserController {
 
   @ApiBearerAuth('access-token')
   @ApiOperation({
-    description: 'Returns basic profile data including partner access and course/session data',
+    description:
+      'Returns user profile data with their nested partner access, partner admin, course user and session user data.',
   })
   @Post('/me')
   @UseGuards(FirebaseAuthGuard)
