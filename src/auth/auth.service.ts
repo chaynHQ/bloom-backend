@@ -1,4 +1,10 @@
-import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  HttpException,
+  HttpStatus,
+  Inject,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { DecodedIdToken } from 'firebase-admin/lib/auth/token-verifier';
 import { FIREBASE } from '../firebase/firebase-factory';
 import { FirebaseServices } from '../firebase/firebase.types';
@@ -33,6 +39,15 @@ export class AuthService {
       return decodedToken;
     } catch (err) {
       throw new UnauthorizedException('Unauthorized: token is expired or invalid');
+    }
+  }
+
+  public async deleteFirebaseUser(firebaseUid: string) {
+    try {
+      await this.firebase.admin.auth().deleteUser(firebaseUid);
+      return 'ok';
+    } catch (error) {
+      throw new HttpException(error.message, HttpStatus.BAD_REQUEST);
     }
   }
 }

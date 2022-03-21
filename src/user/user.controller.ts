@@ -32,4 +32,11 @@ export class UserController {
   async getUser(@Req() req: Request): Promise<GetUserDto> {
     return req['user'];
   }
+
+  @ApiBearerAuth()
+  @Post('/delete')
+  @UseGuards(FirebaseAuthGuard)
+  async deleteUser(@Req() req: Request): Promise<string> {
+    return await this.userService.deleteUser(req['user'] as GetUserDto);
+  }
 }
