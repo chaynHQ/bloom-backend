@@ -1,10 +1,11 @@
-import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Post, Put, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Request } from 'express';
 import { FirebaseAuthGuard } from '../firebase/firebase-auth.guard';
 import { ControllerDecorator } from '../utils/controller.decorator';
 import { CreateUserDto } from './dtos/create-user.dto';
 import { GetUserDto } from './dtos/get-user.dto';
+import { UpdateUserDto } from './dtos/update-user.dto';
 import { UserService } from './user.service';
 
 @ApiTags('Users')
@@ -38,5 +39,12 @@ export class UserController {
   @UseGuards(FirebaseAuthGuard)
   async deleteUser(@Req() req: Request): Promise<string> {
     return await this.userService.deleteUser(req['user'] as GetUserDto);
+  }
+
+  @ApiBearerAuth()
+  @Put()
+  @UseGuards(FirebaseAuthGuard)
+  async updateUser(@Body() updateUserDto: UpdateUserDto, @Req() req: Request) {
+    return await this.userService.updateUser(updateUserDto, req['user'] as GetUserDto);
   }
 }
