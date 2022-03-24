@@ -10,7 +10,7 @@ import { IFirebaseUser } from '../firebase/firebase-user.interface';
 import { PartnerAccessService } from '../partner-access/partner-access.service';
 import { PartnerRepository } from '../partner/partner.repository';
 import { formatUserObject } from '../utils/serialize';
-import { generateRandomString, hasFeatureLiveChat } from '../utils/utils';
+import { generateRandomString } from '../utils/utils';
 import { CreateUserDto } from './dtos/create-user.dto';
 import { GetUserDto } from './dtos/get-user.dto';
 import { UserRepository } from './user.repository';
@@ -49,13 +49,12 @@ export class UserService {
 
         partnerAccessResponse.partner = getPartnerResponse;
 
-        if (!!partnerAccessResponse.featureLiveChat) {
-          addCrispProfile({
-            email: createUserResponse.email,
-            person: { nickname: createUserResponse.name },
-            data: createCrispProfileData(createUserResponse, [partnerAccessResponse]),
-          });
-        }
+        addCrispProfile({
+          email: createUserResponse.email,
+          person: { nickname: createUserResponse.name },
+          data: createCrispProfileData(createUserResponse, [partnerAccessResponse]),
+        });
+
         createUserResponse.partnerAccess = [partnerAccessResponse];
         return formatUserObject(createUserResponse);
       }
@@ -91,14 +90,13 @@ export class UserService {
     return formatUserObject(queryResult);
   }
 
-  public async deleteUser({ partnerAccesses, user }: GetUserDto) {
+  public async deleteUser({ user }: GetUserDto) {
     //Delete User From Firebase
     await this.authService.deleteFirebaseUser(user.firebaseUid);
 
     //Delete Crisp People Profile
-    if (hasFeatureLiveChat(partnerAccesses)) {
-      await deleteCrispProfile(user.email);
-    }
+
+    await deleteCrispProfile(user.email);
 
     //Randomise User Data in DB
     const randomString = generateRandomString(20);
