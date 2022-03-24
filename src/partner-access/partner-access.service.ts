@@ -109,9 +109,7 @@ export class PartnerAccessService {
 
     await this.partnerAccessRepository.save(partnerAccess);
 
-    if (!!partnerAccess.featureLiveChat || partnerAccesses.find((pa) => pa.featureLiveChat)) {
-      await updateCrispProfileAccesses(user, partnerAccesses, courses);
-    }
+    await updateCrispProfileAccesses(user, partnerAccesses, courses);
 
     return partnerAccess;
   }

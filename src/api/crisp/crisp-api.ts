@@ -86,9 +86,7 @@ export const updateCrispProfileAccesses = async (
   if (!!hasCrispProfile) {
     // Crisp profile exists, just update/replace PartnerAccess data
     updateCrispProfile(createCrispProfileData(user, partnerAccesses, courses), user.email);
-  }
-
-  if (!hasCrispProfile && partnerAccesses.find((pa) => !!pa.featureLiveChat)) {
+  } else {
     // Create new crisp profile
     addCrispProfile({
       email: user.email,
