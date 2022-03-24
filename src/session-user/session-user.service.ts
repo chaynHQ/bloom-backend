@@ -1,7 +1,6 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import _ from 'lodash';
-import { hasFeatureLiveChat } from 'src/utils/utils';
 import { updateCrispProfileCourse, updateCrispProfileSession } from '../api/crisp/crisp-api';
 import { CourseUserService } from '../course-user/course-user.service';
 import { CourseService } from '../course/course.service';
@@ -51,9 +50,7 @@ export class SessionUserService {
         courseId: courseUser.courseId,
       });
 
-      if (hasFeatureLiveChat(partnerAccesses)) {
-        updateCrispProfileCourse(course.name, userEmail, PROGRESS_STATUS.COMPLETED);
-      }
+      updateCrispProfileCourse(course.name, userEmail, PROGRESS_STATUS.COMPLETED);
 
       return Object.assign({}, courseUser, updatedCourseUser);
     }
@@ -85,10 +82,7 @@ export class SessionUserService {
     });
   }
 
-  public async createSessionUser(
-    { user, partnerAccesses }: GetUserDto,
-    { storyblokId }: UpdateSessionUserDto,
-  ) {
+  public async createSessionUser({ user }: GetUserDto, { storyblokId }: UpdateSessionUserDto) {
     const session = await this.sessionService.getSessionByStoryblokId(storyblokId);
 
     if (!session) {
@@ -108,9 +102,7 @@ export class SessionUserService {
         courseId,
       });
 
-      if (hasFeatureLiveChat(partnerAccesses)) {
-        updateCrispProfileCourse(session.course.name, user.email, PROGRESS_STATUS.STARTED);
-      }
+      updateCrispProfileCourse(session.course.name, user.email, PROGRESS_STATUS.STARTED);
     }
 
     let sessionUser = await this.getSessionUser({
@@ -165,9 +157,7 @@ export class SessionUserService {
         courseId,
       });
 
-      if (hasFeatureLiveChat(partnerAccesses)) {
-        updateCrispProfileCourse(session.course.name, user.email, PROGRESS_STATUS.STARTED);
-      }
+      updateCrispProfileCourse(session.course.name, user.email, PROGRESS_STATUS.STARTED);
 
       courseUser.sessionUser = [];
     }

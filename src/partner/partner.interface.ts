@@ -3,6 +3,4 @@ export interface IPartner {
   createdAt?: Date | string;
   updatedAt?: Date | string;
   name?: string;
-  logo?: string;
-  primaryColour?: string;
 }

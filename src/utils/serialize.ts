@@ -76,7 +76,8 @@ export const formatUserObject = (userObject: UserEntity): GetUserDto => {
       updatedAt: userObject.updatedAt,
       name: userObject.name,
       email: userObject.email,
-      languageDefault: userObject.languageDefault,
+      firebaseUid: userObject.firebaseUid,
+      isActive: userObject.isActive,
     },
     partnerAccesses: userObject.partnerAccess
       ? formatPartnerAccessObjects(userObject.partnerAccess)

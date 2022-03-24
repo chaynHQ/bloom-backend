@@ -1,5 +1,3 @@
-import { LANGUAGE_DEFAULT } from '../utils/constants';
-
 export interface IUser {
   id: string;
   createdAt: Date | string;
@@ -7,5 +5,5 @@ export interface IUser {
   firebaseUid?: string;
   name: string;
   email: string;
-  languageDefault: LANGUAGE_DEFAULT;
+  isActive: boolean;
 }
