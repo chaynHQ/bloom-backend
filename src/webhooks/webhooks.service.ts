@@ -135,13 +135,9 @@ export class WebhooksService {
     if (usersPartnerAccesses.length === 0) {
       throw new HttpException('Unable to find partner access', HttpStatus.BAD_REQUEST);
     }
-    let hasFeatureLiveChat = false;
 
     const therapyPartnerAccesses: PartnerAccessEntity[] = usersPartnerAccesses
       .filter((pa) => {
-        if (pa.featureLiveChat === true) {
-          hasFeatureLiveChat = true;
-        }
         return pa.featureTherapy === true && pa.therapySessionsRemaining > 0;
       })
       .sort((a: any, b: any) => {
@@ -153,7 +149,7 @@ export class WebhooksService {
     }
 
     const therapyPartnerAccess = therapyPartnerAccesses[0]; // First assigned partner access with therapy sessions remaining
-    hasFeatureLiveChat && this.updateCrispProfileTherapyData(action, client_email);
+    this.updateCrispProfileTherapyData(action, client_email);
 
     let partnerAccessUpdateDetails = {};
 

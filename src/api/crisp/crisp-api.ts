@@ -86,9 +86,7 @@ export const updateCrispProfileAccesses = async (
   if (!!hasCrispProfile) {
     // Crisp profile exists, just update/replace PartnerAccess data
     updateCrispProfile(createCrispProfileData(user, partnerAccesses, courses), user.email);
-  }
-
-  if (!hasCrispProfile && partnerAccesses.find((pa) => !!pa.featureLiveChat)) {
+  } else {
     // Create new crisp profile
     addCrispProfile({
       email: user.email,
@@ -190,6 +188,20 @@ export const updateCrispProfile = async (
       data: { data: peopleData },
       headers,
     });
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const deleteCrispProfile = async (email: string) => {
+  try {
+    await apiCall({
+      url: `${baseUrl}/people/profile/${email}`,
+      type: 'delete',
+      headers,
+    });
+
+    return 'ok';
   } catch (error) {
     throw error;
   }
