@@ -124,7 +124,7 @@ export class UserService {
     user.name = updateUserDto?.name ?? user.name;
     user.contactPermission = updateUserDto?.contactPermission ?? user.contactPermission;
 
-    // await this.userRepository.save(user);
+    await this.userRepository.save(user);
 
     return user;
   }
