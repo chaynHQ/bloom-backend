@@ -12,12 +12,6 @@ export class PartnerEntity extends BaseEntity {
   @Column({ unique: true })
   name: string;
 
-  @Column({ nullable: true })
-  logo: string;
-
-  @Column({ nullable: true })
-  primaryColour: string;
-
   @OneToMany(() => PartnerAdminEntity, (partnerAdminEntity) => partnerAdminEntity.partner, {
     onDelete: 'CASCADE',
   })

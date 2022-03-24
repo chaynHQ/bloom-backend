@@ -28,12 +28,10 @@ export class UserService {
   ) {}
 
   public async createUser(createUserDto: CreateUserDto): Promise<GetUserDto> {
-    const { name, email, firebaseUid, languageDefault, partnerAccessCode, contactPermission } =
-      createUserDto;
+    const { name, email, firebaseUid, partnerAccessCode, contactPermission } = createUserDto;
     const createUserObject = this.userRepository.create({
       name,
       email,
-      languageDefault,
       firebaseUid,
       contactPermission,
     });
