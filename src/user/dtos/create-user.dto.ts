@@ -1,14 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import {
-  IsBoolean,
-  IsDefined,
-  IsEmail,
-  IsEnum,
-  IsNotEmpty,
-  IsOptional,
-  IsString,
-} from 'class-validator';
-import { LANGUAGE_DEFAULT } from '../../utils/constants';
+import { IsBoolean, IsDefined, IsEmail, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class CreateUserDto {
   @IsString()
@@ -28,12 +19,6 @@ export class CreateUserDto {
   @IsNotEmpty()
   @ApiProperty({ type: String })
   firebaseUid: string;
-
-  @IsEnum(LANGUAGE_DEFAULT)
-  @IsNotEmpty()
-  @IsDefined()
-  @ApiProperty({ type: String })
-  languageDefault: LANGUAGE_DEFAULT;
 
   @IsOptional()
   @IsString()

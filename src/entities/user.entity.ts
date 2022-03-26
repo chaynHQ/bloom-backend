@@ -1,7 +1,6 @@
 import { Column, Entity, OneToMany, OneToOne, PrimaryGeneratedColumn } from 'typeorm';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
 import { PartnerAdminEntity } from '../entities/partner-admin.entity';
-import { LANGUAGE_DEFAULT } from '../utils/constants';
 import { BaseEntity } from './base.entity';
 import { CourseUserEntity } from './course-user.entity';
 
@@ -18,9 +17,6 @@ export class UserEntity extends BaseEntity {
 
   @Column({ unique: true })
   email: string;
-
-  @Column()
-  languageDefault: LANGUAGE_DEFAULT;
 
   @Column()
   contactPermission!: boolean;

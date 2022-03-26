@@ -43,7 +43,6 @@ export const createCrispProfileData = (
   courses?: ICoursesWithSessions[],
 ) => {
   let profileData = {
-    language_default: user.languageDefault,
     partners: partnerAccesses.map((pa) => pa.partner.name).join('; '),
     feature_live_chat: !!partnerAccesses.find((pa) => !!pa.featureLiveChat),
     feature_therapy: !!partnerAccesses.find((pa) => !!pa.featureTherapy),
