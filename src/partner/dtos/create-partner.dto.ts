@@ -7,12 +7,4 @@ export class CreatePartnerDto {
   @IsDefined()
   @ApiProperty({ type: String })
   name: string;
-
-  @IsString()
-  @ApiProperty({ type: String })
-  logo: string;
-
-  @IsString()
-  @ApiProperty({ type: String })
-  primaryColour: string;
 }
