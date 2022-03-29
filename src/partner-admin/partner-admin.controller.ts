@@ -2,6 +2,7 @@ import { Body, Controller, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { PartnerAdminEntity } from '../entities/partner-admin.entity';
 import { ControllerDecorator } from '../utils/controller.decorator';
+import { CreatePartnerAdminUserDto } from './dtos/create-partner-admin-user.dto';
 import { CreatePartnerAdminDto } from './dtos/create-partner-admin.dto';
 import { PartnerAdminService } from './partner-admin.service';
 import { SuperAdminAuthGuard } from './super-admin-auth.guard';
@@ -24,5 +25,12 @@ export class PartnerAdminController {
     @Body() createPartnerAdminDto: CreatePartnerAdminDto,
   ): Promise<PartnerAdminEntity | unknown> {
     return this.partnerAdminService.createPartnerAdmin(createPartnerAdminDto);
+  }
+
+  // @UseGuards(SuperAdminAuthGuard)
+  @Post('create-user')
+  @ApiBody({ type: CreatePartnerAdminUserDto })
+  async createPartnerAdminUser(@Body() createPartnerAdminUserDto: CreatePartnerAdminUserDto) {
+    return this.partnerAdminService.createPartnerAdminUser(createPartnerAdminUserDto);
   }
 }
