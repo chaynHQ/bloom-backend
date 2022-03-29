@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { CoursePartnerRepository } from 'src/course-partner/course-partner.repository';
 import { CoursePartnerService } from 'src/course-partner/course-partner.service';
 import { CourseRepository } from 'src/course/course.repository';
+import { PartnerAdminRepository } from 'src/partner-admin/partner-admin.repository';
 import { PartnerRepository } from 'src/partner/partner.repository';
 import { PartnerService } from 'src/partner/partner.service';
 import { SessionRepository } from 'src/session/session.repository';
@@ -22,6 +23,7 @@ import { WebhooksService } from './webhooks.service';
       CoursePartnerRepository,
       PartnerRepository,
       TherapySessionRepository,
+      PartnerAdminRepository,
     ]),
   ],
   providers: [WebhooksService, CoursePartnerService, PartnerService],
