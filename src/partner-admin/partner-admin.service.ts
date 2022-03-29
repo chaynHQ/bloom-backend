@@ -37,6 +37,7 @@ export class PartnerAdminService {
   async createPartnerAdminUser({
     email,
     partner,
+    name,
   }: CreatePartnerAdminUserDto): Promise<PartnerAdminEntity | unknown> {
     try {
       const partnerResponse = await this.partnerService.getPartner(partner);
@@ -51,7 +52,7 @@ export class PartnerAdminService {
       );
 
       const user = await this.userRepository.save({
-        name: 'Partner Admin',
+        name,
         email,
         firebaseUid: firebaseUser.user.uid,
         contactPermission: true,

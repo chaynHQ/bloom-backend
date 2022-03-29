@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { CourseUserModule } from 'src/course-user/course-user.module';
 import { CourseUserRepository } from 'src/course-user/course-user.repository';
 import { CourseUserService } from 'src/course-user/course-user.service';
+import { PartnerAdminRepository } from 'src/partner-admin/partner-admin.repository';
 import { SessionUserModule } from 'src/session-user/session-user.module';
 import { AuthService } from '../auth/auth.service';
 import { FirebaseModule } from '../firebase/firebase.module';
@@ -20,6 +21,7 @@ import { UserService } from './user.service';
       PartnerAccessRepository,
       PartnerRepository,
       CourseUserRepository,
+      PartnerAdminRepository,
     ]),
     FirebaseModule,
     SessionUserModule,

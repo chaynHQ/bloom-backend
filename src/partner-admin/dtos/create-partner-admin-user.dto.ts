@@ -4,6 +4,12 @@ import { IsDefined, IsEmail, IsNotEmpty, IsString, MinLength } from 'class-valid
 export class CreatePartnerAdminUserDto {
   @IsNotEmpty()
   @IsDefined()
+  @IsString()
+  @ApiProperty({ type: String })
+  name: string;
+
+  @IsNotEmpty()
+  @IsDefined()
   @ApiProperty({ type: String })
   @IsEmail()
   email: string;
