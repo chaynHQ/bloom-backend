@@ -27,7 +27,12 @@ export class PartnerAdminController {
     return this.partnerAdminService.createPartnerAdmin(createPartnerAdminDto);
   }
 
-  // @UseGuards(SuperAdminAuthGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    description:
+      'Creates a user and partner team member who uses the app to complete Bloom admin tasks such as creating new partner access codes',
+  })
+  @UseGuards(SuperAdminAuthGuard)
   @Post('create-user')
   @ApiBody({ type: CreatePartnerAdminUserDto })
   async createPartnerAdminUser(@Body() createPartnerAdminUserDto: CreatePartnerAdminUserDto) {
