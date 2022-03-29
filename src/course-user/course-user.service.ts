@@ -38,9 +38,12 @@ export class CourseUserService {
     });
   }
 
-  async completeCourse({ userId, courseId }: CourseUserDto): Promise<CourseUserEntity> {
+  async completeCourse(
+    { userId, courseId }: CourseUserDto,
+    completed: boolean,
+  ): Promise<CourseUserEntity> {
     const courseUser = await this.courseUserRepository.findOne({ where: { userId, courseId } });
-    courseUser.completed = true;
+    courseUser.completed = completed;
     courseUser.completedAt = new Date();
 
     return await this.courseUserRepository.save(courseUser);
