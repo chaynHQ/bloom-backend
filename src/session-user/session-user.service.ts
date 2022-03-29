@@ -7,7 +7,6 @@ import { CourseService } from '../course/course.service';
 import { CourseUserEntity } from '../entities/course-user.entity';
 import { CourseEntity } from '../entities/course.entity';
 import { SessionUserEntity } from '../entities/session-user.entity';
-import { IPartnerAccessWithPartner } from '../partner-access/partner-access.interface';
 import { SessionService } from '../session/session.service';
 import { GetUserDto } from '../user/dtos/get-user.dto';
 import { UserRepository } from '../user/user.repository';
@@ -31,7 +30,6 @@ export class SessionUserService {
   private async checkCourseComplete(
     courseUser: CourseUserEntity,
     course: CourseEntity,
-    partnerAccesses: IPartnerAccessWithPartner[],
     userEmail: string,
   ): Promise<CourseUserEntity> {
     const userSessionIds = courseUser.sessionUser.map((sessionUser) => {
@@ -44,18 +42,19 @@ export class SessionUserService {
 
     const courseIsComplete = _.xor(courseSessionIds, userSessionIds).length == 0;
 
-    if (courseIsComplete) {
-      const updatedCourseUser = await this.courseUserService.completeCourse({
+    const updatedCourseUser = await this.courseUserService.completeCourse(
+      {
         userId: courseUser.userId,
         courseId: courseUser.courseId,
-      });
+      },
+      courseIsComplete,
+    );
 
-      updateCrispProfileCourse(course.name, userEmail, PROGRESS_STATUS.COMPLETED);
+    const crispStatus = courseIsComplete ? PROGRESS_STATUS.COMPLETED : PROGRESS_STATUS.STARTED;
 
-      return Object.assign({}, courseUser, updatedCourseUser);
-    }
+    updateCrispProfileCourse(course.name, userEmail, crispStatus);
 
-    return courseUser;
+    return Object.assign({}, courseUser, updatedCourseUser);
   }
 
   private async getSessionUser({
@@ -135,8 +134,8 @@ export class SessionUserService {
   }
 
   public async completeSessionUser(
-    { user, partnerAccesses }: GetUserDto,
-    { storyblokId }: UpdateSessionUserDto,
+    { user }: GetUserDto,
+    { storyblokId, completed }: UpdateSessionUserDto,
   ) {
     const session = await this.sessionService.getSessionByStoryblokId(storyblokId);
 
@@ -168,20 +167,20 @@ export class SessionUserService {
     });
 
     if (sessionUser) {
-      sessionUser.completed = true;
+      sessionUser.completed = completed;
       sessionUser.completedAt = new Date();
       await this.sessionUserRepository.save(sessionUser);
 
       courseUser.sessionUser.map((su) => {
         if (su.sessionId === id) {
-          su.completed = true;
+          su.completed = completed;
         }
       });
     } else {
       sessionUser = await this.createSessionUserRecord({
         sessionId: id,
         courseUserId: courseUser.id,
-        completed: true,
+        completed,
       });
       sessionUser.session = session;
       courseUser.sessionUser.push(sessionUser);
@@ -189,16 +188,13 @@ export class SessionUserService {
 
     // Attach data to object to be serialized for response
     const course = await this.courseService.getCourseWithSessions(courseId);
-    courseUser = await this.checkCourseComplete(courseUser, course, partnerAccesses, user.email);
+    courseUser = await this.checkCourseComplete(courseUser, course, user.email);
     courseUser.course = course;
     const formattedResponse = formatCourseUserObjects([courseUser])[0];
 
-    updateCrispProfileSession(
-      session.course.name,
-      session.name,
-      PROGRESS_STATUS.COMPLETED,
-      user.email,
-    );
+    const crispStatus = completed ? PROGRESS_STATUS.COMPLETED : PROGRESS_STATUS.STARTED;
+
+    updateCrispProfileSession(session.course.name, session.name, crispStatus, user.email);
 
     return formattedResponse;
   }
