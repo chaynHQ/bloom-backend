@@ -12,6 +12,9 @@ export class PartnerEntity extends BaseEntity {
   @Column({ unique: true })
   name: string;
 
+  @Column({ type: Boolean, default: true })
+  isActive: boolean;
+
   @OneToMany(() => PartnerAdminEntity, (partnerAdminEntity) => partnerAdminEntity.partner, {
     onDelete: 'CASCADE',
   })
