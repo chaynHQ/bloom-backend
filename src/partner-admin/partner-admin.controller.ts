@@ -35,7 +35,9 @@ export class PartnerAdminController {
   @UseGuards(SuperAdminAuthGuard)
   @Post('create-user')
   @ApiBody({ type: CreatePartnerAdminUserDto })
-  async createPartnerAdminUser(@Body() createPartnerAdminUserDto: CreatePartnerAdminUserDto) {
+  async createPartnerAdminUser(
+    @Body() createPartnerAdminUserDto: CreatePartnerAdminUserDto,
+  ): Promise<PartnerAdminEntity | unknown> {
     return this.partnerAdminService.createPartnerAdminUser(createPartnerAdminUserDto);
   }
 }
