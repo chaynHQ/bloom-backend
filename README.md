@@ -144,6 +144,20 @@ Formatting and linting is provided by ESLint and Prettier (see the relevant conf
 
 Workspace settings for VSCode are included for consistent linting and formatting.
 
+### Seed Local Database
+
+Before you start, make sure:
+
+1. bloom-local-db container is running in Docker
+2. you are logged into the Heroku via your terminal. Read more about the Heroku Cli [here](https://devcenter.heroku.com/articles/heroku-cli)
+3. Replace <HEROKU_APP_NAME> with the correct Heroku app name
+
+After the above has been confirmed, run
+
+```bash
+bash seed-local-db.sh
+```
+
 ## Git flow and deployment
 
 Create new branches from the `develop` base branch. There is no need to run the build command before pushing changes to GitHub, simply push and create a pull request for the new branch. GitHub Actions will run build and linting tasks automatically. Squash and merge feature/bug branches into `develop`.
