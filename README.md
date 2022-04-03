@@ -150,7 +150,8 @@ Before you start, make sure:
 
 1. bloom-local-db container is running in Docker
 2. you are logged into the Heroku via your terminal. Read more about the Heroku Cli [here](https://devcenter.heroku.com/articles/heroku-cli)
-3. Replace <HEROKU_APP_NAME> with the correct Heroku app name
+3. Replace <HEROKU_APP_NAME> with the correct Heroku app name in the `seed-local-db.sh file`
+4. Run `chmod +x ./seed-local-db.sh` in your terminal to make the file executable
 
 After the above has been confirmed, run
 
