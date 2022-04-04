@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { PartnerAdminRepository } from 'src/partner-admin/partner-admin.repository';
 import { CourseUserRepository } from '../course-user/course-user.repository';
 import { CourseUserService } from '../course-user/course-user.service';
 import { CourseRepository } from '../course/course.repository';
@@ -25,6 +26,7 @@ import { SessionUserService } from './session-user.service';
       SessionRepository,
       PartnerAccessRepository,
       CourseRepository,
+      PartnerAdminRepository,
     ]),
   ],
   controllers: [SessionUserController],

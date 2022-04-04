@@ -1,7 +1,13 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsDefined, IsEmail, IsNotEmpty, IsString } from 'class-validator';
+import { IsDefined, IsEmail, IsNotEmpty, IsString, MinLength } from 'class-validator';
 
 export class CreatePartnerAdminUserDto {
+  @IsNotEmpty()
+  @IsDefined()
+  @IsString()
+  @ApiProperty({ type: String })
+  name: string;
+
   @IsNotEmpty()
   @IsDefined()
   @ApiProperty({ type: String })
@@ -12,11 +18,6 @@ export class CreatePartnerAdminUserDto {
   @IsDefined()
   @ApiProperty({ type: String })
   @IsString()
-  partnerId: string;
-
-  @IsString()
-  @IsDefined()
-  @IsNotEmpty()
-  @ApiProperty({ type: String })
-  firebaseUid: string;
+  @MinLength(3)
+  partner: string;
 }
