@@ -16,6 +16,7 @@ import { formatCourseUserObjects } from '../utils/serialize';
 import { SessionUserDto } from './dtos/session-user.dto';
 import { UpdateSessionUserDto } from './dtos/update-session-user.dto';
 import { SessionUserRepository } from './session-user.repository';
+
 @Injectable()
 export class SessionUserService {
   constructor(
@@ -27,7 +28,7 @@ export class SessionUserService {
     private readonly courseService: CourseService,
   ) {}
 
-  private async checkCourseComplete(
+  private async checkCourseIsComplete(
     courseUser: CourseUserEntity,
     course: CourseEntity,
     userEmail: string,
@@ -42,19 +43,22 @@ export class SessionUserService {
 
     const courseIsComplete = _.xor(courseSessionIds, userSessionIds).length == 0;
 
-    const updatedCourseUser = await this.courseUserService.completeCourse(
-      {
-        userId: courseUser.userId,
-        courseId: courseUser.courseId,
-      },
-      courseIsComplete,
-    );
+    if (courseUser.completed !== courseIsComplete) {
+      await this.courseUserService.setCourseUserCompleted(
+        {
+          userId: courseUser.userId,
+          courseId: courseUser.courseId,
+        },
+        courseIsComplete,
+      );
 
-    const crispStatus = courseIsComplete ? PROGRESS_STATUS.COMPLETED : PROGRESS_STATUS.STARTED;
+      const crispStatus = courseIsComplete ? PROGRESS_STATUS.COMPLETED : PROGRESS_STATUS.STARTED;
+      updateCrispProfileCourse(course.name, userEmail, crispStatus);
 
-    updateCrispProfileCourse(course.name, userEmail, crispStatus);
+      courseUser.completed = courseIsComplete;
+    }
 
-    return Object.assign({}, courseUser, updatedCourseUser);
+    return courseUser;
   }
 
   private async getSessionUser({
@@ -133,9 +137,10 @@ export class SessionUserService {
     return formattedResponse;
   }
 
-  public async completeSessionUser(
+  public async setSessionUserCompleted(
     { user }: GetUserDto,
-    { storyblokId, completed }: UpdateSessionUserDto,
+    { storyblokId }: UpdateSessionUserDto,
+    completed: boolean,
   ) {
     const session = await this.sessionService.getSessionByStoryblokId(storyblokId);
 
@@ -150,17 +155,6 @@ export class SessionUserService {
       courseId,
     });
 
-    if (!courseUser) {
-      courseUser = await this.courseUserService.createCourseUser({
-        userId: user.id,
-        courseId,
-      });
-
-      updateCrispProfileCourse(session.course.name, user.email, PROGRESS_STATUS.STARTED);
-
-      courseUser.sessionUser = [];
-    }
-
     let sessionUser = await this.getSessionUser({
       sessionId: id,
       courseUserId: courseUser.id,
@@ -168,7 +162,7 @@ export class SessionUserService {
 
     if (sessionUser) {
       sessionUser.completed = completed;
-      sessionUser.completedAt = new Date();
+      sessionUser.completedAt = completed ? new Date() : null;
       await this.sessionUserRepository.save(sessionUser);
 
       courseUser.sessionUser.map((su) => {
@@ -181,6 +175,7 @@ export class SessionUserService {
         sessionId: id,
         courseUserId: courseUser.id,
         completed,
+        completedAt: completed ? new Date() : null,
       });
       sessionUser.session = session;
       courseUser.sessionUser.push(sessionUser);
@@ -188,7 +183,7 @@ export class SessionUserService {
 
     // Attach data to object to be serialized for response
     const course = await this.courseService.getCourseWithSessions(courseId);
-    courseUser = await this.checkCourseComplete(courseUser, course, user.email);
+    courseUser = await this.checkCourseIsComplete(courseUser, course, user.email);
     courseUser.course = course;
     const formattedResponse = formatCourseUserObjects([courseUser])[0];
 
