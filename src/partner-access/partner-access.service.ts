@@ -3,7 +3,6 @@ import { InjectRepository } from '@nestjs/typeorm/dist/common';
 import _ from 'lodash';
 import moment from 'moment';
 import { updateCrispProfileAccesses } from '../api/crisp/crisp-api';
-import { CourseUserService } from '../course-user/course-user.service';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
 import { GetUserDto } from '../user/dtos/get-user.dto';
 import { PartnerAccessCodeStatusEnum } from '../utils/constants';
@@ -15,7 +14,6 @@ export class PartnerAccessService {
   constructor(
     @InjectRepository(PartnerAccessRepository)
     private partnerAccessRepository: PartnerAccessRepository,
-    private readonly courseUserService: CourseUserService,
   ) {}
 
   async createPartnerAccess(

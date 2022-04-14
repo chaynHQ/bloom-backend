@@ -33,10 +33,26 @@ export class SessionUserController {
   })
   @ApiBearerAuth('access-token')
   @UseGuards(FirebaseAuthGuard)
-  async update(@Req() req: Request, @Body() completeSessionUserDto: UpdateSessionUserDto) {
-    return await this.sessionUserService.completeSessionUser(
+  async complete(@Req() req: Request, @Body() updateSessionUserDto: UpdateSessionUserDto) {
+    return await this.sessionUserService.setSessionUserCompleted(
       req['user'] as GetUserDto,
-      completeSessionUserDto,
+      updateSessionUserDto,
+      true,
+    );
+  }
+
+  @Post('/incomplete')
+  @ApiOperation({
+    description:
+      'Updates a users sessions progress to incomplete, undoing a previous complete action',
+  })
+  @ApiBearerAuth('access-token')
+  @UseGuards(FirebaseAuthGuard)
+  async incomplete(@Req() req: Request, @Body() updateSessionUserDto: UpdateSessionUserDto) {
+    return await this.sessionUserService.setSessionUserCompleted(
+      req['user'] as GetUserDto,
+      updateSessionUserDto,
+      false,
     );
   }
 }

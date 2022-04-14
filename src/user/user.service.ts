@@ -91,13 +91,14 @@ export class UserService {
     return formatUserObject(queryResult);
   }
 
-  public async deleteUser({ user }: GetUserDto) {
+  public async deleteUser({ user, partnerAdmin }: GetUserDto) {
     //Delete User From Firebase
     await this.authService.deleteFirebaseUser(user.firebaseUid);
 
     //Delete Crisp People Profile
-
-    await deleteCrispProfile(user.email);
+    if (!partnerAdmin) {
+      await deleteCrispProfile(user.email);
+    }
 
     //Randomise User Data in DB
     const randomString = generateRandomString(20);

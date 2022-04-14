@@ -16,4 +16,8 @@ export class SessionUserDto {
   @IsBoolean()
   @ApiProperty({ type: Boolean })
   completed?: boolean;
+
+  @IsBoolean()
+  @ApiProperty({ type: Date })
+  completedAt?: Date;
 }
