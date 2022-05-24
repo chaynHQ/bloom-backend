@@ -77,11 +77,13 @@ export class SessionUserService {
     sessionId,
     courseUserId,
     completed,
+    completedAt,
   }: SessionUserDto): Promise<SessionUserEntity> {
     return await this.sessionUserRepository.save({
       sessionId,
       courseUserId,
       completed,
+      completedAt,
     });
   }
 
