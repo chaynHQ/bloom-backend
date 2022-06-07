@@ -7,6 +7,6 @@ export class bloomBackend1654446770100 implements MigrationInterface {
 	    SET "completedAt"=COALESCE(CAST(sessionuser."updatedAt" AS DATE), CURRENT_DATE)
 	    WHERE sessionuser."completedAt" IS NULL AND sessionuser."completed"=true;`);
   }
-
+  // eslint-disable-next-line
   public async down(): Promise<void> {}
 }
