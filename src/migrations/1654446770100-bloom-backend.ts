@@ -8,5 +8,8 @@ export class bloomBackend1654446770100 implements MigrationInterface {
 	    WHERE sessionuser."completedAt" IS NULL AND sessionuser."completed"=true;`);
   }
   // eslint-disable-next-line
-  public async down(): Promise<void> {}
+  public async down(): Promise<void> {
+    // Note that it doesn't make sense to add a down as there
+    // is no way of identifying which session_users were changed.
+  }
 }
