@@ -12,7 +12,7 @@ import { GetUserDto } from '../user/dtos/get-user.dto';
 import { UserRepository } from '../user/user.repository';
 import { UserService } from '../user/user.service';
 import { PROGRESS_STATUS, STORYBLOK_STORY_STATUS_ENUM } from '../utils/constants';
-import { formatCourseUserObject, formatCourseUserObjects } from '../utils/serialize';
+import { formatCourseUserObjects } from '../utils/serialize';
 import { SessionUserDto } from './dtos/session-user.dto';
 import { UpdateSessionUserDto } from './dtos/update-session-user.dto';
 import { SessionUserRepository } from './session-user.repository';
@@ -136,7 +136,8 @@ export class SessionUserService {
       courseId,
     });
 
-    return formatCourseUserObject(updatedCourseUser);
+    const formattedResponse = formatCourseUserObjects([updatedCourseUser])[0];
+    return formattedResponse;
   }
 
   public async setSessionUserCompleted(
