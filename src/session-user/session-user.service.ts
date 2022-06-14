@@ -130,12 +130,13 @@ export class SessionUserService {
       );
     }
 
-    // Attach data to object to be serialized for response
-    const course = await this.courseService.getCourse(courseId);
-    sessionUser.session = session;
-    courseUser.sessionUser.push(sessionUser);
-    courseUser.course = course;
-    const formattedResponse = formatCourseUserObjects([courseUser])[0];
+    // Retrieve data for response
+    const updatedCourseUser = await this.courseUserService.getCourseUser({
+      userId: user.id,
+      courseId,
+    });
+
+    const formattedResponse = formatCourseUserObjects([updatedCourseUser])[0];
     return formattedResponse;
   }
 
