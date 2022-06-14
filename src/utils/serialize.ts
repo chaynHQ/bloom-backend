@@ -7,36 +7,34 @@ import { SimplybookBodyDto } from '../partner-access/dtos/zapier-body.dto';
 import { GetUserDto } from '../user/dtos/get-user.dto';
 
 export const formatCourseUserObjects = (courseUserObjects: CourseUserEntity[]) => {
-  return courseUserObjects.map((courseUser) => {
-    return {
-      id: courseUser.course.id,
-      createdAt: courseUser.createdAt,
-      updatedAt: courseUser.updatedAt,
-      name: courseUser.course.name,
-      slug: courseUser.course.slug,
-      status: courseUser.course.status,
-      storyblokId: courseUser.course.storyblokId,
-      storyblokUuid: courseUser.course.storyblokUuid,
-      completed: courseUser.completed,
-      sessions: courseUser.sessionUser?.map((sessionUser) => {
-        return {
-          id: sessionUser.session.id,
-          createdAt: sessionUser.createdAt,
-          updatedAt: sessionUser.updatedAt,
-          name: sessionUser.session.name,
-          slug: sessionUser.session.slug,
-          storyblokId: sessionUser.session.storyblokId,
-          storyblokUuid: sessionUser.session.storyblokUuid,
-          status: sessionUser.session.status,
-          completed: sessionUser.completed,
-        };
-      }),
-    };
-  });
+  return courseUserObjects.map((courseUser) => formatCourseUserObject(courseUser));
 };
 
 export const formatCourseUserObject = (courseUser: CourseUserEntity) => {
-  return formatCourseUserObjects([courseUser])[0]; // formatCourseUserObjects will return a list with just one entry. This entry is then returned.
+  return {
+    id: courseUser.course.id,
+    createdAt: courseUser.createdAt,
+    updatedAt: courseUser.updatedAt,
+    name: courseUser.course.name,
+    slug: courseUser.course.slug,
+    status: courseUser.course.status,
+    storyblokId: courseUser.course.storyblokId,
+    storyblokUuid: courseUser.course.storyblokUuid,
+    completed: courseUser.completed,
+    sessions: courseUser.sessionUser?.map((sessionUser) => {
+      return {
+        id: sessionUser.session.id,
+        createdAt: sessionUser.createdAt,
+        updatedAt: sessionUser.updatedAt,
+        name: sessionUser.session.name,
+        slug: sessionUser.session.slug,
+        storyblokId: sessionUser.session.storyblokId,
+        storyblokUuid: sessionUser.session.storyblokUuid,
+        status: sessionUser.session.status,
+        completed: sessionUser.completed,
+      };
+    }),
+  };
 };
 
 export const formatPartnerAccessObjects = (partnerAccessObjects: PartnerAccessEntity[]) => {
