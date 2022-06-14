@@ -13,6 +13,7 @@ export class CourseUserService {
   async getCourseUser({ courseId, userId }: CourseUserDto): Promise<CourseUserEntity> {
     return await this.courseUserRepository
       .createQueryBuilder('course_user')
+      .leftJoinAndSelect('course_user.course', 'course')
       .leftJoinAndSelect('course_user.sessionUser', 'sessionUser')
       .leftJoinAndSelect('sessionUser.session', 'session')
       .where('course_user.userId = :userId', { userId })
