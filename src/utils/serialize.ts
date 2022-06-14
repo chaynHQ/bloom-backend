@@ -37,6 +37,10 @@ export const formatCourseUserObject = (courseUser: CourseUserEntity) => {
   };
 };
 
+export const formatCourseUserObject = (courseUser: CourseUserEntity) => {
+  return formatCourseUserObjects([courseUser])[0]; // formatCourseUserObjects will return a list with just one entry. This entry is then returned.
+};
+
 export const formatPartnerAccessObjects = (partnerAccessObjects: PartnerAccessEntity[]) => {
   return partnerAccessObjects.map((partnerAccess) => {
     return {
