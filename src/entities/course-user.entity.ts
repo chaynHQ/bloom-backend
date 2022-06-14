@@ -32,6 +32,7 @@ export class CourseUserEntity extends BaseEntity {
 
   @Column()
   courseId: string;
+
   @ManyToOne(() => CourseEntity, (courseEntity) => courseEntity.courseUser)
   @JoinTable({ name: 'course', joinColumn: { name: 'courseId' } })
   course: CourseEntity;
