@@ -1,4 +1,4 @@
-import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
+import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { Request } from 'express';
 import { AuthService } from '../auth/auth.service';
 import { UserRepository } from '../user/user.repository';
@@ -8,15 +8,16 @@ export class PartnerAdminAuthGuard implements CanActivate {
   constructor(private authService: AuthService, private usersRepository: UserRepository) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const request = context.switchToHttp().getRequest<Request>();
-
+    const request = await context.switchToHttp().getRequest<Request>();
     const { authorization } = request.headers;
-
     if (!authorization) {
-      throw new UnauthorizedException('Unauthorized: missing required Authorization token');
+      return false;
     }
 
     const { uid } = await this.authService.parseAuth(authorization);
+    if (!uid) {
+      return false;
+    }
 
     const user = await this.usersRepository
       .createQueryBuilder('user')
@@ -24,10 +25,14 @@ export class PartnerAdminAuthGuard implements CanActivate {
       .leftJoinAndSelect('partnerAdmin.partner', 'partner')
       .where('user.firebaseUid = :uid', { uid })
       .getOne();
+    if (user.partnerAdmin?.partner == null) {
+      return false;
+    }
 
-    request['partnerId'] = user.partnerAdmin.partner.id;
+    request['partnerId'] = user.partnerAdmin.partner.id; // TODO is this the best way to be handling user details
     request['partnerAdminId'] = user.partnerAdmin.id;
 
-    return true;
+    if (user.partnerAdmin.id) return true;
+    return false;
   }
 }
