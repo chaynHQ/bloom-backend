@@ -1,5 +1,5 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm/dist/common';
+import { InjectRepository } from '@nestjs/typeorm';
 import _ from 'lodash';
 import moment from 'moment';
 import { updateCrispProfileAccesses } from '../api/crisp/crisp-api';
@@ -21,11 +21,14 @@ export class PartnerAccessService {
     partnerId: string,
     partnerAdminId: string,
   ): Promise<PartnerAccessEntity> {
-    const partnerAccess = this.partnerAccessRepository.create(createPartnerAccessDto);
-    partnerAccess.partnerAdminId = partnerAdminId;
-    partnerAccess.partnerId = partnerId;
-    partnerAccess.accessCode = await this.generateAccessCode(6);
-
+    const partnerAccessBase = this.partnerAccessRepository.create(createPartnerAccessDto);
+    const accessCode = await this.generateAccessCode(6);
+    const partnerAccess = {
+      ...partnerAccessBase,
+      partnerAdminId,
+      partnerId,
+      accessCode,
+    };
     return await this.partnerAccessRepository.save(partnerAccess);
   }
 
