@@ -88,16 +88,4 @@ describe('PartnerAdminAuthGuard', () => {
       expect(error).toBe(badAuthMessage);
     }
   });
-  it('should return false when the authtoken cannot be resolved', async () => {
-    const badAuthMessage = 'bad auth token';
-    jest
-      .spyOn(mockAuthService, 'parseAuth')
-      .mockImplementation(() => Promise.reject(badAuthMessage));
-    try {
-      await guard.canActivate(context);
-      fail('it should not reach here');
-    } catch (error) {
-      expect(error).toBe(badAuthMessage);
-    }
-  });
 });
