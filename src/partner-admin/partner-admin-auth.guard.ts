@@ -8,7 +8,7 @@ export class PartnerAdminAuthGuard implements CanActivate {
   constructor(private authService: AuthService, private usersRepository: UserRepository) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const request = await context.switchToHttp().getRequest<Request>();
+    const request = context.switchToHttp().getRequest<Request>();
     const { authorization } = request.headers;
     if (!authorization) {
       return false;
