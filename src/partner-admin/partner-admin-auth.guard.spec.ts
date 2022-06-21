@@ -34,7 +34,7 @@ describe('PartnerAdminAuthGuard', () => {
     guard = new PartnerAdminAuthGuard(mockAuthService, mockUserRepository);
     context = createMock<ExecutionContext>({
       switchToHttp: jest.fn().mockReturnValue({
-        getRequest: jest.fn().mockResolvedValue({ headers: { authorization: 'authed!' } }),
+        getRequest: jest.fn().mockReturnValue({ headers: { authorization: 'authed!' } }),
       }),
     });
   });
