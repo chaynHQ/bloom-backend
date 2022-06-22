@@ -12,7 +12,7 @@ import { GetUserDto } from '../user/dtos/get-user.dto';
 import { UserRepository } from '../user/user.repository';
 import { UserService } from '../user/user.service';
 import { PROGRESS_STATUS, STORYBLOK_STORY_STATUS_ENUM } from '../utils/constants';
-import { formatCourseUserObjects } from '../utils/serialize';
+import { formatCourseUserObject, formatCourseUserObjects } from '../utils/serialize';
 import { SessionUserDto } from './dtos/session-user.dto';
 import { UpdateSessionUserDto } from './dtos/update-session-user.dto';
 import { SessionUserRepository } from './session-user.repository';
@@ -130,13 +130,13 @@ export class SessionUserService {
       );
     }
 
-    // Attach data to object to be serialized for response
-    const course = await this.courseService.getCourse(courseId);
-    sessionUser.session = session;
-    courseUser.sessionUser.push(sessionUser);
-    courseUser.course = course;
-    const formattedResponse = formatCourseUserObjects([courseUser])[0];
-    return formattedResponse;
+    // Retrieve data for response
+    const updatedCourseUser = await this.courseUserService.getCourseUser({
+      userId: user.id,
+      courseId,
+    });
+
+    return formatCourseUserObject(updatedCourseUser);
   }
 
   public async setSessionUserCompleted(
