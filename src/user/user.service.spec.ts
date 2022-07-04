@@ -145,7 +145,7 @@ describe('UserService', () => {
           therapySessionsRemaining: 6,
           updatedAt: now,
         },
-      ]); // TODO check this
+      ]);
 
       expect(repoSpyCreate).toBeCalledWith(createUserDto);
       expect(partnerAccessSpy).toBeCalled();
@@ -164,7 +164,7 @@ describe('UserService', () => {
       }).rejects.toThrow(PartnerAccessCodeStatusEnum.ALREADY_IN_USE);
     });
     // TODO - what do we want to happen here?
-    it('when supplied with user dto and partner access that has an incorrect partner, it should return a user without public access', async () => {
+    it('when supplied with user dto and partner access that has an incorrect partner id, it should return a user without partner access', async () => {
       jest.spyOn(mockPartnerRepository, 'findOne').mockResolvedValue(undefined);
       const user = await service.createUser({ ...createUserDto, partnerAccessCode: '123456' });
       expect(user.partnerAccesses).toBeUndefined();
