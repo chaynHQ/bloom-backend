@@ -1,12 +1,12 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import {
-  addCrispProfile,
-  createCrispProfileData,
-  deleteCrispProfile,
-} from '../api/crisp/crisp-api';
+import { createCrispProfileData } from 'src/api/crisp/utils/createCrispProfileData';
+import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
+import { PartnerEntity } from 'src/entities/partner.entity';
+import { IFirebaseUser } from 'src/firebase/firebase-user.interface';
+import { IPartnerAccessWithPartner } from 'src/partner-access/partner-access.interface';
+import { addCrispProfile, deleteCrispProfile } from '../api/crisp/crisp-api';
 import { AuthService } from '../auth/auth.service';
-import { IFirebaseUser } from '../firebase/firebase-user.interface';
 import { PartnerAccessService } from '../partner-access/partner-access.service';
 import { PartnerRepository } from '../partner/partner.repository';
 import { formatUserObject } from '../utils/serialize';
@@ -38,28 +38,40 @@ export class UserService {
 
     try {
       const createUserResponse = await this.userRepository.save(createUserObject);
-      if (partnerAccessCode) {
-        const partnerAccessResponse = await this.partnerAccessService.assignPartnerAccessOnSignup(
-          partnerAccessCode,
-          createUserResponse.id,
-        );
 
-        const getPartnerResponse = await this.partnerRepository.findOne({
-          id: partnerAccessResponse.partnerId,
-        });
+      const partnerAccessResponse: PartnerAccessEntity | undefined = partnerAccessCode
+        ? await this.partnerAccessService.assignPartnerAccessOnSignup(
+            partnerAccessCode,
+            createUserResponse.id,
+          )
+        : undefined;
 
-        partnerAccessResponse.partner = getPartnerResponse;
+      const partnerResponse: PartnerEntity | undefined = partnerAccessResponse
+        ? await this.partnerRepository.findOne({
+            id: partnerAccessResponse.partnerId,
+          })
+        : undefined;
 
-        addCrispProfile({
-          email: createUserResponse.email,
-          person: { nickname: createUserResponse.name },
-          data: createCrispProfileData(createUserResponse, [partnerAccessResponse]),
-        });
+      const partnerAccessWithPartner: IPartnerAccessWithPartner | undefined =
+        partnerResponse && partnerAccessResponse
+          ? { ...partnerAccessResponse, partner: partnerResponse }
+          : undefined;
 
-        createUserResponse.partnerAccess = [partnerAccessResponse];
-        return formatUserObject(createUserResponse);
-      }
-      return { user: createUserResponse };
+      addCrispProfile({
+        email: createUserResponse.email,
+        person: { nickname: createUserResponse.name },
+        data: createCrispProfileData(
+          createUserResponse,
+          partnerAccessWithPartner ? [partnerAccessWithPartner] : [],
+        ),
+      });
+
+      return partnerAccessResponse && partnerResponse
+        ? formatUserObject({
+            ...createUserResponse,
+            ...(partnerAccessResponse ? { partnerAccess: [partnerAccessResponse] } : {}),
+          })
+        : { user: createUserResponse };
     } catch (error) {
       if (error.code === '23505') {
         throw new HttpException(error.detail, HttpStatus.CONFLICT);
