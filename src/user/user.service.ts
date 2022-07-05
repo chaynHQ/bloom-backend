@@ -5,7 +5,11 @@ import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { PartnerEntity } from 'src/entities/partner.entity';
 import { IFirebaseUser } from 'src/firebase/firebase-user.interface';
 import { IPartnerAccessWithPartner } from 'src/partner-access/partner-access.interface';
-import { addCrispProfile, deleteCrispProfile } from '../api/crisp/crisp-api';
+import {
+  addCrispProfile,
+  deleteCrispProfile,
+  updateCrispProfileData,
+} from '../api/crisp/crisp-api';
 import { AuthService } from '../auth/auth.service';
 import { PartnerAccessService } from '../partner-access/partner-access.service';
 import { PartnerRepository } from '../partner/partner.repository';
@@ -57,7 +61,8 @@ export class UserService {
           ? { ...partnerAccessResponse, partner: partnerResponse }
           : undefined;
 
-      addCrispProfile({
+      // Creates the profile - TODO - possibly remove the data section of this request
+      await addCrispProfile({
         email: createUserResponse.email,
         person: { nickname: createUserResponse.name },
         data: createCrispProfileData(
@@ -65,6 +70,14 @@ export class UserService {
           partnerAccessWithPartner ? [partnerAccessWithPartner] : [],
         ),
       });
+      // Updates the profile data
+      await updateCrispProfileData(
+        createCrispProfileData(
+          createUserResponse,
+          partnerAccessWithPartner ? [partnerAccessWithPartner] : [],
+        ),
+        createUserResponse.email,
+      );
 
       return partnerAccessResponse && partnerResponse
         ? formatUserObject({

@@ -2,7 +2,7 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import StoryblokClient from 'storyblok-js-client';
 import apiCall from '../api/apiCalls';
-import { getCrispPeopleData, updateCrispProfile } from '../api/crisp/crisp-api';
+import { getCrispPeopleData, updateCrispProfileData } from '../api/crisp/crisp-api';
 import { CoursePartnerService } from '../course-partner/course-partner.service';
 import { CourseRepository } from '../course/course.repository';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
@@ -71,7 +71,7 @@ export class WebhooksService {
       };
     }
 
-    updateCrispProfile(partnerAccessUpdateCrisp, email);
+    updateCrispProfileData(partnerAccessUpdateCrisp, email);
 
     return 'ok';
   }
