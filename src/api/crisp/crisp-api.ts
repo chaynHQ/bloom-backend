@@ -34,14 +34,20 @@ export const updateCrispProfileAccesses = async (
 
   if (!!hasCrispProfile) {
     // Crisp profile exists, just update/replace PartnerAccess data
-    updateCrispProfileData(createCrispProfileData(user, partnerAccesses, courses), user.email);
+    await updateCrispProfileData(
+      createCrispProfileData(user, partnerAccesses, courses),
+      user.email,
+    );
   } else {
     // Create new crisp profile
-    addCrispProfile({
+    await addCrispProfile({
       email: user.email,
       person: { nickname: user.name },
-      data: createCrispProfileData(user, partnerAccesses, courses),
     });
+    await updateCrispProfileData(
+      createCrispProfileData(user, partnerAccesses, courses),
+      user.email,
+    );
   }
 
   return 'ok';
