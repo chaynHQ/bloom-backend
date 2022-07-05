@@ -34,7 +34,7 @@ export const updateCrispProfileAccesses = async (
 
   if (!!hasCrispProfile) {
     // Crisp profile exists, just update/replace PartnerAccess data
-    updateCrispProfile(createCrispProfileData(user, partnerAccesses, courses), user.email);
+    updateCrispProfileData(createCrispProfileData(user, partnerAccesses, courses), user.email);
   } else {
     // Create new crisp profile
     addCrispProfile({
@@ -53,7 +53,7 @@ export const updateCrispProfileCourse = async (
   status: PROGRESS_STATUS,
 ) => {
   const courseKey = formatCourseKey(courseName);
-  updateCrispProfile({ [`${courseKey}`]: status }, userEmail);
+  updateCrispProfileData({ [`${courseKey}`]: status }, userEmail);
 
   return 'ok';
 };
@@ -82,12 +82,12 @@ export const updateCrispProfileSession = async (
   if (status === PROGRESS_STATUS.STARTED) {
     if (index === -1) {
       startedSessions.push(sessionName);
-      updateCrispProfile({ [sessionsStartedKey]: startedSessions.join('; ') }, email);
+      updateCrispProfileData({ [sessionsStartedKey]: startedSessions.join('; ') }, email);
     }
   } else if (status === PROGRESS_STATUS.COMPLETED) {
     index !== -1 && startedSessions.splice(index, 1);
     completedSessions.push(sessionName);
-    updateCrispProfile(
+    updateCrispProfileData(
       {
         [sessionsStartedKey]: startedSessions.join('; '),
         [sessionsCompletedKey]: completedSessions.join('; '),
@@ -126,7 +126,7 @@ export const addCrispProfile = async (
   }
 };
 
-export const updateCrispProfile = async (
+export const updateCrispProfileData = async (
   peopleData: PeopleData,
   email: string,
 ): Promise<AxiosResponse<CrispResponse>> => {
