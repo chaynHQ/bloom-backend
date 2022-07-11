@@ -61,16 +61,11 @@ export class UserService {
           ? { ...partnerAccessResponse, partner: partnerResponse }
           : undefined;
 
-      // Creates the profile - TODO - possibly remove the data section of this request
       await addCrispProfile({
         email: createUserResponse.email,
         person: { nickname: createUserResponse.name },
-        data: createCrispProfileData(
-          createUserResponse,
-          partnerAccessWithPartner ? [partnerAccessWithPartner] : [],
-        ),
       });
-      // Updates the profile data
+
       await updateCrispProfileData(
         createCrispProfileData(
           createUserResponse,
