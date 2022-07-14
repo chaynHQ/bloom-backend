@@ -5,7 +5,7 @@ import { AuthService } from 'src/auth/auth.service';
 import { PartnerAdminEntity } from 'src/entities/partner-admin.entity';
 import { UserEntity } from 'src/entities/user.entity';
 import { UserRepository } from 'src/user/user.repository';
-import { createQueryBuilderMock } from '../../test/utils/mocks';
+import { createQueryBuilderMock } from '../../test/utils/mockUtils';
 import { PartnerAdminAuthGuard } from './partner-admin-auth.guard';
 
 const userEntity: UserEntity = {

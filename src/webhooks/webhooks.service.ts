@@ -15,14 +15,6 @@ import { formatTherapySessionObject } from '../utils/serialize';
 import { StoryDto } from './dto/story.dto';
 import { TherapySessionRepository } from './therapy-session.repository';
 
-const Storyblok = new StoryblokClient({
-  accessToken: storyblokToken,
-  cache: {
-    clear: 'auto',
-    type: 'memory',
-  },
-});
-
 @Injectable()
 export class WebhooksService {
   constructor(
@@ -180,9 +172,23 @@ export class WebhooksService {
   }
 
   async updateStory({ action, story_id }: StoryDto) {
-    const {
-      data: { story },
-    } = await Storyblok.get(`cdn/stories/${story_id}`);
+    let story;
+    const Storyblok = new StoryblokClient({
+      accessToken: storyblokToken,
+      cache: {
+        clear: 'auto',
+        type: 'memory',
+      },
+    });
+
+    try {
+      const {
+        data: { story: storyblokData },
+      } = await Storyblok.get(`cdn/stories/${story_id}`);
+      story = storyblokData;
+    } catch (error) {
+      throw new HttpException(error, HttpStatus.NOT_FOUND);
+    }
 
     if (!story) {
       throw new HttpException('STORY NOT FOUND', HttpStatus.NOT_FOUND);
@@ -215,30 +221,32 @@ export class WebhooksService {
           story.content?.included_for_partners,
           course.id,
         );
+        return course;
       } else if (story.content?.component === 'Session') {
-        const { id } = await this.courseRepository.findOne({
+        const course = await this.courseRepository.findOne({
           storyblokUuid: story.content.course,
         });
 
-        if (!id) {
+        if (!course.id) {
           throw new HttpException('COURSE NOT FOUND', HttpStatus.NOT_FOUND);
         }
 
-        let session = await this.sessionRepository.findOne({
+        const session = await this.sessionRepository.findOne({
           storyblokId: story.id,
         });
 
-        if (!!session) {
-          session.status = action;
-          session.slug = story.full_slug;
-          session.name = story.name;
-        } else {
-          session = this.sessionRepository.create({ ...storyData, ...{ courseId: id } });
-        }
-
-        await this.sessionRepository.save(session);
+        const newSession = !!session
+          ? {
+              ...session,
+              status: action,
+              slug: story.full_slug,
+              name: story.name,
+              course: course,
+              courseId: course.id,
+            }
+          : this.sessionRepository.create({ ...storyData, ...{ courseId: course.id } });
+        return await this.sessionRepository.save(newSession);
       }
-      return 'ok';
     } catch (error) {
       throw error;
     }
