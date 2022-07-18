@@ -6,7 +6,7 @@ import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { PartnerEntity } from 'src/entities/partner.entity';
 import { PartnerAccessCodeStatusEnum } from 'src/utils/constants';
 import { Repository } from 'typeorm';
-import { createQueryBuilderMock } from '../../test/utils/mocks';
+import { createQueryBuilderMock } from '../../test/utils/mockUtils';
 import { AuthService } from '../auth/auth.service';
 import { UserEntity } from '../entities/user.entity';
 import { PartnerAccessService } from '../partner-access/partner-access.service';
