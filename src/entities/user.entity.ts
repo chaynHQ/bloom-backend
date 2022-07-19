@@ -1,4 +1,4 @@
-import { Column, Entity, OneToMany, OneToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, Generated, OneToMany, OneToOne, PrimaryGeneratedColumn } from 'typeorm';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
 import { PartnerAdminEntity } from '../entities/partner-admin.entity';
 import { BaseEntity } from './base.entity';
@@ -35,4 +35,8 @@ export class UserEntity extends BaseEntity {
 
   @OneToMany(() => CourseUserEntity, (courseUser) => courseUser.user)
   courseUser: CourseUserEntity[];
+
+  @Column({ unique: true })
+  @Generated('uuid')
+  crispTokenId: string;
 }
