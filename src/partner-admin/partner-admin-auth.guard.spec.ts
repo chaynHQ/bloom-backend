@@ -17,6 +17,7 @@ const userEntity: UserEntity = {
   name: 'name',
   contactPermission: false,
   isSuperAdmin: false,
+  crispTokenId: '123',
   partnerAccess: [],
   partnerAdmin: { id: 'partnerAdminId', partner: {} } as PartnerAdminEntity,
   isActive: true,

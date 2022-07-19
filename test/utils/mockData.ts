@@ -1,5 +1,7 @@
 import { CourseEntity } from 'src/entities/course.entity';
 import { SessionEntity } from 'src/entities/session.entity';
+import { UserEntity } from 'src/entities/user.entity';
+import { IFirebaseUser } from 'src/firebase/firebase-user.interface';
 import { STORYBLOK_STORY_STATUS_ENUM } from 'src/utils/constants';
 import { StoryblokResult } from 'storyblok-js-client';
 
@@ -85,4 +87,39 @@ export const mockSession: SessionEntity = {
   updatedAt: new Date(100),
   courseId: 'courseId1',
   course: { ...mockCourse },
+};
+
+export const mockIFirebaseUser: IFirebaseUser = {
+  iss: '',
+  aud: '',
+  auth_time: 1,
+  user_id: '',
+  sub: '',
+  iat: 1,
+  exp: 1,
+  email: '',
+  email_verified: true,
+  firebase: {
+    identities: {
+      email: [],
+    },
+    sign_in_provider: '',
+  },
+  uid: '',
+};
+
+export const mockUserEntity: UserEntity = {
+  id: '1',
+  isSuperAdmin: false,
+  isActive: true,
+  createdAt: new Date(),
+  partnerAccess: [],
+  partnerAdmin: null,
+  courseUser: [],
+  updatedAt: new Date(),
+  crispTokenId: '123',
+  firebaseUid: '123',
+  contactPermission: true,
+  email: 'user@email.com',
+  name: 'name',
 };
