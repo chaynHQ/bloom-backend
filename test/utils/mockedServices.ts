@@ -3,8 +3,12 @@ import { CoursePartnerService } from 'src/course-partner/course-partner.service'
 import { CourseRepository } from 'src/course/course.repository';
 import { CourseEntity } from 'src/entities/course.entity';
 import { SessionEntity } from 'src/entities/session.entity';
+import { UserEntity } from 'src/entities/user.entity';
 import { SessionRepository } from 'src/session/session.repository';
-import { mockCourse, mockSession } from './mockData';
+import { CreateUserDto } from 'src/user/dtos/create-user.dto';
+import { UpdateUserDto } from 'src/user/dtos/update-user.dto';
+import { mockCourse, mockSession, mockUserEntity } from './mockData';
+import { createQueryBuilderMock } from './mockUtils';
 
 export const mockSessionRepositoryMethods: PartialFuncReturn<SessionRepository> = {
   findOne: async () => {
@@ -34,4 +38,24 @@ export const mockCoursePartnerRepositoryMethods: PartialFuncReturn<CoursePartner
   updateCoursePartners: async () => {
     return [];
   },
+};
+
+export const mockUserRepositoryMethods = {
+  createQueryBuilder: createQueryBuilderMock(),
+  create: (dto: CreateUserDto): UserEntity | Error => {
+    return {
+      ...mockUserEntity,
+      ...dto,
+    };
+  },
+  update: (dto: UpdateUserDto): UserEntity | Error => {
+    return {
+      ...mockUserEntity,
+      ...dto,
+    };
+  },
+  findOne: () => {
+    return mockUserEntity;
+  },
+  save: (arg) => arg,
 };
