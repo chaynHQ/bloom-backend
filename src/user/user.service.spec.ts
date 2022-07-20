@@ -5,6 +5,8 @@ import apiCall from 'src/api/apiCalls';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { PartnerEntity } from 'src/entities/partner.entity';
 import { PartnerAccessCodeStatusEnum } from 'src/utils/constants';
+import { mockIFirebaseUser, mockUserEntity } from 'test/utils/mockData';
+import { mockUserRepositoryMethods } from 'test/utils/mockedServices';
 import { Repository } from 'typeorm';
 import { createQueryBuilderMock } from '../../test/utils/mockUtils';
 import { AuthService } from '../auth/auth.service';
@@ -13,6 +15,7 @@ import { PartnerAccessService } from '../partner-access/partner-access.service';
 import { PartnerRepository } from '../partner/partner.repository';
 import { PartnerService } from '../partner/partner.service';
 import { CreateUserDto } from './dtos/create-user.dto';
+import { UpdateUserDto } from './dtos/update-user.dto';
 import { UserRepository } from './user.repository';
 import { UserService } from './user.service';
 
@@ -21,6 +24,10 @@ const createUserDto: CreateUserDto = {
   name: 'name',
   firebaseUid: 'iiiiod',
   contactPermission: false,
+};
+const updateUserDto: UpdateUserDto = {
+  name: 'new name',
+  contactPermission: true,
 };
 
 jest.mock('src/api/apiCalls');
@@ -44,23 +51,7 @@ describe('UserService', () => {
         UserService,
         {
           provide: UserRepository,
-          useFactory: jest.fn(() => ({
-            createQueryBuilder: createQueryBuilderMock(),
-            create: (dto: CreateUserDto): UserEntity | Error => {
-              return {
-                ...dto,
-                id: '1',
-                isSuperAdmin: false,
-                isActive: true,
-                createdAt: new Date(),
-                partnerAccess: [],
-                partnerAdmin: null,
-                courseUser: [],
-                updatedAt: new Date(),
-              };
-            },
-            save: jest.fn((arg) => arg),
-          })),
+          useFactory: jest.fn(() => mockUserRepositoryMethods),
         },
         {
           provide: PartnerService,
@@ -168,6 +159,40 @@ describe('UserService', () => {
       jest.spyOn(mockPartnerRepository, 'findOne').mockResolvedValue(undefined);
       const user = await service.createUser({ ...createUserDto, partnerAccessCode: '123456' });
       expect(user.partnerAccesses).toBeUndefined();
+    });
+  });
+  describe('getUser', () => {
+    it('when supplied a firebase user dto, it should return a user', async () => {
+      const repoSpyCreateQueryBuilder = jest.spyOn(repo, 'createQueryBuilder');
+
+      repoSpyCreateQueryBuilder
+        .mockImplementation(
+          createQueryBuilderMock() as never, // TODO resolve this typescript issue
+        )
+        .mockImplementationOnce(
+          createQueryBuilderMock({
+            getOne: jest.fn().mockResolvedValue(mockUserEntity),
+          }) as never,
+        );
+
+      const user = await service.getUser(mockIFirebaseUser);
+      expect(user.user.email).toBe('user@email.com');
+      expect(user.partnerAdmin).toBeNull();
+      expect(user.partnerAccesses).toEqual([]);
+    });
+  });
+
+  describe('updateUser', () => {
+    it('when supplied a firebase user dto, it should return a user', async () => {
+      const repoSpySave = jest.spyOn(repo, 'save');
+
+      const user = await service.updateUser(updateUserDto, { user: mockUserEntity });
+      expect(user.name).toBe('new name');
+      expect(user.email).toBe('user@email.com');
+      expect(user.contactPermission).toBe(true);
+
+      expect(repoSpySave).toBeCalledWith({ ...mockUserEntity, ...updateUserDto });
+      expect(repoSpySave).toBeCalled();
     });
   });
 });

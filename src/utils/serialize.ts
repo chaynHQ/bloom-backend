@@ -80,6 +80,7 @@ export const formatUserObject = (userObject: UserEntity): GetUserDto => {
       email: userObject.email,
       firebaseUid: userObject.firebaseUid,
       isActive: userObject.isActive,
+      crispTokenId: userObject.crispTokenId,
     },
     partnerAccesses: userObject.partnerAccess
       ? formatPartnerAccessObjects(userObject.partnerAccess)

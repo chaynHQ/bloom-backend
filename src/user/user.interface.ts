@@ -6,4 +6,5 @@ export interface IUser {
   name: string;
   email: string;
   isActive: boolean;
+  crispTokenId: string;
 }

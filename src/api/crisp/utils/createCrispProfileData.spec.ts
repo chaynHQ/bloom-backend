@@ -9,6 +9,7 @@ const userDto = {
   createdAt: new Date(),
   updatedAt: new Date(),
   isActive: true,
+  crispTokenId: '123',
 };
 const partnerAccess = {
   featureLiveChat: true,
