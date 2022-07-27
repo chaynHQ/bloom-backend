@@ -40,7 +40,7 @@ export class PartnerController {
   }
 
   @ApiBearerAuth('access-token')
-  // @UseGuards(SuperAdminAuthGuard)
+  @UseGuards(SuperAdminAuthGuard)
   @Post('delete')
   @ApiOperation({ description: 'Deletes a partner profile and makes partnerAccess inactive' })
   @ApiBody({ type: DeletePartnerDto })
