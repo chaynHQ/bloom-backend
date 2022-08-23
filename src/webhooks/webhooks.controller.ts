@@ -19,6 +19,12 @@ export class WebhooksController {
     return this.webhooksService.updatePartnerAccessTherapy(simplybookBodyDto);
   }
 
+  @UseGuards(ZapierAuthGuard)
+  @Post('feedback')
+  async sendFeedbackEmail(): Promise<string> {
+    return this.webhooksService.sendFeedbackEmail();
+  }
+
   @Post('storyblok')
   @ApiBody({ type: StoryDto })
   async updateStory(@Body() storyDto: StoryDto) {
