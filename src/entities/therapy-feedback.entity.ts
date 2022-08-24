@@ -6,7 +6,7 @@ export class TherapyFeedbackEntity extends BaseEntity {
   @PrimaryGeneratedColumn('uuid', { name: 'therapyFeedbackId' })
   id: string;
 
-  @Column()
+  @Column({ unique: true })
   bookingCode: string;
 
   @Column()
