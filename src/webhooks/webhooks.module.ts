@@ -14,7 +14,6 @@ import { TherapySessionRepository } from './therapy-session.repository';
 import { WebhooksController } from './webhooks.controller';
 import { WebhooksService } from './webhooks.service';
 
-// TODO add therapy feedback repository
 @Module({
   imports: [
     TypeOrmModule.forFeature([
