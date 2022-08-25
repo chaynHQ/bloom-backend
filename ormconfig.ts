@@ -1,6 +1,6 @@
-import { databaseUrl, isProduction } from './src/utils/constants';
-import { PostgresConnectionOptions } from 'typeorm/driver/postgres/PostgresConnectionOptions';
 import * as PostgressConnectionStringParser from 'pg-connection-string';
+import { PostgresConnectionOptions } from 'typeorm/driver/postgres/PostgresConnectionOptions';
+import { databaseUrl, isProduction } from './src/utils/constants';
 
 const { host, port, user, password, database } = PostgressConnectionStringParser.parse(databaseUrl);
 
@@ -12,7 +12,7 @@ const config: PostgresConnectionOptions = {
   password,
   database,
   entities: ['dist/src/**/*.entity.js'],
-  synchronize: !isProduction,
+  synchronize: false,
   migrationsRun: isProduction,
   migrations: ['dist/src/migrations/*.js'],
   cli: {
