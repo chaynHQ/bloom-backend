@@ -17,6 +17,6 @@ export class EmailCampaignEntity extends BaseEntity {
   @Column()
   email: string;
 
-  @Column({ type: 'timestamptz', nullable: true })
+  @Column({ type: 'timestamptz' })
   emailSentDateTime: Date;
 }
