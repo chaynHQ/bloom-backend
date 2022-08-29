@@ -1,4 +1,4 @@
-import { EmailCampaignEntity } from 'src/entities/email_campaign.entity';
+import { EmailCampaignEntity } from 'src/entities/email-campaign.entity';
 import { EntityRepository, Repository } from 'typeorm';
 
 @EntityRepository(EmailCampaignEntity)
