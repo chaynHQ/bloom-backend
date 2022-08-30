@@ -107,3 +107,12 @@ export const mailchimpTherapyFromEmail = getEnv(
   process.env.MAILCHIMP_THERAPY_FROM_EMAIL,
   'MAILCHIMP_THERAPY_FROM_EMAIL',
 );
+
+export const simplybookCredentials = getEnv(
+  process.env.SIMPLYBOOK_CREDENTIALS,
+  'SIMPLYBOOK_CREDENTIALS',
+);
+export const simplybookCompanyName = getEnv(
+  process.env.SIMPLYBOOK_COMPANY_NAME,
+  'SIMPLYBOOK_COMPANY_NAME',
+);
