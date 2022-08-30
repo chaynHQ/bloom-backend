@@ -20,9 +20,9 @@ export class WebhooksController {
   }
 
   @UseGuards(ZapierAuthGuard)
-  @Post('feedback')
-  async sendFeedbackEmail(): Promise<string> {
-    return this.webhooksService.sendFeedbackEmail();
+  @Post('therapy-feedback')
+  async sendTherapyFeedbackEmail(): Promise<string> {
+    return this.webhooksService.sendTherapyFeedbackEmail();
   }
 
   @Post('storyblok')

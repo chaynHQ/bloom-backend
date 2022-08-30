@@ -29,7 +29,7 @@ export class WebhooksService {
     private therapySessionRepository: TherapySessionRepository,
   ) {}
 
-  sendFeedbackEmail() {
+  sendTherapyFeedbackEmail() {
     // TODO request information from simplybook
     // TODO trigger mailchimp API to send emails
     // TODO store sent emails in DB
