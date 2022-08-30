@@ -49,14 +49,13 @@ const getBookingsForDate: (date: Date) => Promise<Booking[]> = async (date: Date
   return bookingsResponse.data.data;
 };
 
-export const getBookingInfoForDate: (date: Date) => Promise<SimplybookBookingInfo[]> = async (
-  date: Date,
-) => {
-  const bookings: Booking[] = await getBookingsForDate(date);
+export const getTherapyBookingInfoForDate: (date: Date) => Promise<SimplybookBookingInfo[]> =
+  async (date: Date) => {
+    const bookings: Booking[] = await getBookingsForDate(date);
 
-  return bookings.map((booking) => ({
-    clientEmail: booking.client.email,
-    bookingCode: booking.code,
-    date: date,
-  }));
-};
+    return bookings.map((booking) => ({
+      clientEmail: booking.client.email,
+      bookingCode: booking.code,
+      date: date,
+    }));
+  };
