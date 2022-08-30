@@ -29,6 +29,7 @@
     "prepare": "husky install"
   },
   "dependencies": {
+    "@mailchimp/mailchimp_marketing": "^3.0.78",
     "@nestjs/common": "^8.0.0",
     "@nestjs/config": "^1.0.2",
     "@nestjs/core": "^8.0.0",
