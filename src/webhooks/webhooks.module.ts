@@ -9,6 +9,7 @@ import { PartnerService } from 'src/partner/partner.service';
 import { SessionRepository } from 'src/session/session.repository';
 import { PartnerAccessRepository } from '../partner-access/partner-access.repository';
 import { UserRepository } from '../user/user.repository';
+import { EmailCampaignRepository } from './email-campaign/email-campaign.repository';
 import { TherapySessionRepository } from './therapy-session.repository';
 import { WebhooksController } from './webhooks.controller';
 import { WebhooksService } from './webhooks.service';
@@ -24,6 +25,7 @@ import { WebhooksService } from './webhooks.service';
       PartnerRepository,
       TherapySessionRepository,
       PartnerAdminRepository,
+      EmailCampaignRepository,
     ]),
   ],
   providers: [WebhooksService, CoursePartnerService, PartnerService],
