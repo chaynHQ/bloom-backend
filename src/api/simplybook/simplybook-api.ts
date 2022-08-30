@@ -17,11 +17,12 @@ type SimplybookBookingInfo = {
 };
 
 const DATE_FORMAT_LENGTH = 'YYYY-mm-dd'.length;
+const SIMPLYBOOK_API_URL = 'https://user-api-v2.simplybook.me/admin/auth';
 
 const getAuthToken: () => Promise<string> = async () => {
   const response = await axios({
     method: 'post',
-    url: 'https://user-api-v2.simplybook.me/admin/auth',
+    url: SIMPLYBOOK_API_URL,
     data: JSON.parse(simplybookCredentials),
     headers: {
       'Content-Type': 'application/json',
