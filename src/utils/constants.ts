@@ -99,3 +99,11 @@ export const mailchimpMandrillApiKey = getEnv(
   process.env.MAILCHIMP_MANDRILL_API_KEY,
   'MAILCHIMP_MANDRILL_API_KEY',
 );
+export const mailchimpTherapyTemplateId = getEnv(
+  process.env.MAILCHIMP_THERAPY_TEMPLATE_ID,
+  'MAILCHIMP_THERAPY_TEMPLATE_ID',
+);
+export const mailchimpTherapyFromEmail = getEnv(
+  process.env.MAILCHIMP_THERAPY_FROM_EMAIL,
+  'MAILCHIMP_THERAPY_FROM_EMAIL',
+);
