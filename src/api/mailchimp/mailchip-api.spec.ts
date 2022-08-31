@@ -25,19 +25,19 @@ jest.mock('@mailchimp/mailchimp_transactional', () =>
   })),
 );
 
-describe('Mailchimp api', () => {
+describe('MailchimpClient', () => {
   const mailchimpClient = new MailchimpClient();
   it('healthCheck', async () => {
     await expect(mailchimpClient.healthCheck()).resolves.toEqual('PONG!');
   });
 
-  it('sends therapy email', async () => {
+  it('sends therapy email successfully', async () => {
     const response = await mailchimpClient.sendTherapyFeedbackEmail('test@test.com');
     expect(response[0]).toHaveProperty('status', MAILCHIMP_EMAIL_STATUS.SENT);
     expect(response[0]).toHaveProperty('email', 'test@test.com');
   });
 
-  it('sends template email', async () => {
+  it('sendTemplateEmail sends template email successfully', async () => {
     const response = await mailchimpClient.sendTemplateEmail('tid', {
       from_email: 'a@b.com',
       subject: 'blah',
@@ -51,7 +51,7 @@ describe('Mailchimp api', () => {
     expect(response[0]).toHaveProperty('status', MAILCHIMP_EMAIL_STATUS.SENT);
     expect(response[0]).toHaveProperty('email', 'b@c.com');
   });
-  it('sends template email when error thrown', async () => {
+  it('sendTemplateEmail throws when error thrown', async () => {
     await expect(
       mailchimpClient.sendTemplateEmail('throw error', {
         from_email: 'a@b.com',
