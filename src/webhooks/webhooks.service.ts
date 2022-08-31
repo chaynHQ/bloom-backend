@@ -1,6 +1,6 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { getTherapyBookingInfoForDate } from 'src/api/simplybook/simplybook-api';
+import { getBookingsForDate } from 'src/api/simplybook/simplybook-api';
 import StoryblokClient from 'storyblok-js-client';
 import apiCall from '../api/apiCalls';
 import { getCrispPeopleData, updateCrispProfileData } from '../api/crisp/crisp-api';
@@ -39,7 +39,7 @@ export class WebhooksService {
   sendTherapyFeedbackEmail() {
     const yesterday = new Date(new Date().valueOf() - MILLISECONDS_IN_A_DAY);
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const therapyInfoForYesterday = getTherapyBookingInfoForDate(yesterday);
+    const bookingsYesterday = getBookingsForDate(yesterday);
 
     // TODO trigger mailchimp API to send emails
     // TODO store sent emails in DB

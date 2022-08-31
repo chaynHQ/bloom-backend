@@ -3,7 +3,7 @@ import axios from 'axios';
 
 import { simplybookCompanyName, simplybookCredentials } from 'src/utils/constants';
 
-type Booking = {
+type BookingReponse = {
   client: {
     name: string;
     email: string;
@@ -11,7 +11,7 @@ type Booking = {
   code: string;
 };
 
-type SimplybookBookingInfo = {
+type BookingInfo = {
   clientEmail: string;
   bookingCode: string;
   date: Date;
@@ -38,7 +38,7 @@ const getAuthToken: () => Promise<string> = async () => {
   }
 };
 
-const getBookingsForDate: (date: Date) => Promise<Booking[]> = async (date: Date) => {
+const queryBookingsForDate: (date: Date) => Promise<BookingReponse[]> = async (date: Date) => {
   const token = await getAuthToken();
 
   const simplybookFilterDateString = date.toISOString().substring(0, DATE_FORMAT_LENGTH);
@@ -63,24 +63,22 @@ const getBookingsForDate: (date: Date) => Promise<Booking[]> = async (date: Date
   }
 };
 
-export const getTherapyBookingInfoForDate: (date: Date) => Promise<SimplybookBookingInfo[]> =
-  async (date: Date) => {
-    // TODO Refactor naming
-    try {
-      const bookings: Booking[] = await getBookingsForDate(date);
+export const getBookingsForDate: (date: Date) => Promise<BookingInfo[]> = async (date: Date) => {
+  try {
+    const bookings: BookingReponse[] = await queryBookingsForDate(date);
 
-      return bookings.map((booking) => ({
-        clientEmail: booking.client.email,
-        bookingCode: booking.code,
-        date: date,
-      }));
-    } catch (error) {
-      handleError(
-        `Failed to retrieve client booking information for ${date} from Simplybook.`,
-        error,
-      );
-    }
-  };
+    return bookings.map((booking) => ({
+      clientEmail: booking.client.email,
+      bookingCode: booking.code,
+      date: date,
+    }));
+  } catch (error) {
+    handleError(
+      `Failed to retrieve client booking information for ${date} from Simplybook.`,
+      error,
+    );
+  }
+};
 
 const handleError = (error: any, message: string) => {
   LOGGER.error(message, error);
