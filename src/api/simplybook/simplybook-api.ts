@@ -34,9 +34,7 @@ const getAuthToken: () => Promise<string> = async () => {
 
     return response.data.token;
   } catch (error) {
-    LOGGER.error('Failed to authenticate against Simplybook API.', error);
-
-    throw error;
+    handleError('Failed to authenticate against Simplybook API.', error);
   }
 };
 
@@ -58,21 +56,33 @@ const getBookingsForDate: (date: Date) => Promise<Booking[]> = async (date: Date
 
     return bookingsResponse.data.data;
   } catch (error) {
-    LOGGER.error(
-      `Failed to retrieve client booking information for ${date} from Simplybook API.`,
+    handleError(
+      `Failed to retrieve client booking information for ${date} from Simplybook.`,
       error,
     );
-    throw error;
   }
 };
 
 export const getTherapyBookingInfoForDate: (date: Date) => Promise<SimplybookBookingInfo[]> =
   async (date: Date) => {
-    const bookings: Booking[] = await getBookingsForDate(date);
+    // TODO Refactor naming
+    try {
+      const bookings: Booking[] = await getBookingsForDate(date);
 
-    return bookings.map((booking) => ({
-      clientEmail: booking.client.email,
-      bookingCode: booking.code,
-      date: date,
-    }));
+      return bookings.map((booking) => ({
+        clientEmail: booking.client.email,
+        bookingCode: booking.code,
+        date: date,
+      }));
+    } catch (error) {
+      handleError(
+        `Failed to retrieve client booking information for ${date} from Simplybook.`,
+        error,
+      );
+    }
   };
+
+const handleError = (error: any, message: string) => {
+  LOGGER.error(message, error);
+  throw new Error(`${message}: ${error})`);
+};
