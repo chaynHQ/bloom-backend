@@ -95,8 +95,7 @@ export const slackWebhookUrl = getEnv(process.env.SLACK_WEBHOOK_URL, 'SLACK_WEBH
 
 export const storyblokToken = getEnv(process.env.STORYBLOK_PUBLIC_TOKEN, 'STORYBLOK_PUBLIC_TOKEN');
 
-export const mailchimpApiKey = getEnv(process.env.MAILCHIMP_API_KEY, 'MAILCHIMP_API_KEY');
-export const mailchimpServerPrefix = getEnv(
-  process.env.MAILCHIMP_SERVER_PREFIX,
-  'MAILCHIMP_SERVER_PREFIX',
+export const mailchimpMandrillApiKey = getEnv(
+  process.env.MAILCHIMP_MANDRILL_API_KEY,
+  'MAILCHIMP_MANDRILL_API_KEY',
 );
