@@ -1,4 +1,4 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { getBookingsForDate } from 'src/api/simplybook/simplybook-api';
 import StoryblokClient from 'storyblok-js-client';
@@ -20,6 +20,8 @@ const MILLISECONDS_IN_A_DAY = 1000 * 60 * 60 * 24;
 
 @Injectable()
 export class WebhooksService {
+  private readonly logger = new Logger('WebhookService');
+
   constructor(
     @InjectRepository(PartnerAccessRepository)
     private partnerAccessRepository: PartnerAccessRepository,
@@ -33,18 +35,23 @@ export class WebhooksService {
   ) {}
 
   /**
-   * Send therapy emails to clients who had a therapy booking yesterday.
+   * Send therapy emails to clients who had their first therapy booking yesterday.
    *
    */
-  sendTherapyFeedbackEmail() {
-    const yesterday = new Date(new Date().valueOf() - MILLISECONDS_IN_A_DAY);
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const bookingsYesterday = getBookingsForDate(yesterday);
+  sendFirstTherapySessionFeedbackEmail() {
+    try {
+      const yesterday = new Date(new Date().valueOf() - MILLISECONDS_IN_A_DAY);
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const bookingsYesterday = getBookingsForDate(yesterday);
 
-    // TODO trigger mailchimp API to send emails
-    // TODO store sent emails in DB
+      // TODO trigger mailchimp API to send emails
+      // TODO store sent emails in DB
 
-    return 'sent email';
+      return 'sent email';
+    } catch (error) {
+      this.logger.error('Could not send feedback email to first time therapy users', error);
+      throw new Error(`'Could not send feedback email to first time therapy users': ${error})`);
+    }
   }
 
   renameKeys = (obj: { [x: string]: any }) => {
