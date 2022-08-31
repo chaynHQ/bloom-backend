@@ -22,7 +22,7 @@ export class WebhooksController {
   @UseGuards(ZapierAuthGuard)
   @Post('therapy-feedback')
   async sendTherapyFeedbackEmail(): Promise<string> {
-    return this.webhooksService.sendTherapyFeedbackEmail();
+    return this.webhooksService.sendFirstTherapySessionFeedbackEmail();
   }
 
   @Post('storyblok')
