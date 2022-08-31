@@ -11,9 +11,6 @@ export class EmailCampaignEntity extends BaseEntity {
   @Column()
   campaignType: CAMPAIGN_TYPE;
 
-  @Column({ unique: true })
-  campaignInfo: string;
-
   @Column()
   email: string;
 
