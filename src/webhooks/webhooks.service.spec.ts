@@ -2,6 +2,7 @@ jest.mock('storyblok-js-client', jest.fn());
 
 import { createMock } from '@golevelup/ts-jest';
 import { Test, TestingModule } from '@nestjs/testing';
+import { MailchimpClient } from 'src/api/mailchimp/mailchip-api';
 import { CoursePartnerRepository } from 'src/course-partner/course-partner.repository';
 import { CoursePartnerService } from 'src/course-partner/course-partner.service';
 import { CourseRepository } from 'src/course/course.repository';
@@ -26,6 +27,7 @@ import {
   mockCourseRepositoryMethods,
   mockSessionRepositoryMethods,
 } from 'test/utils/mockedServices';
+import { EmailCampaignRepository } from './email-campaign/email-campaign.repository';
 import { TherapySessionRepository } from './therapy-session.repository';
 import { WebhooksService } from './webhooks.service';
 
@@ -70,6 +72,8 @@ describe('WebhooksService', () => {
         PartnerService,
         PartnerRepository,
         PartnerAdminRepository,
+        EmailCampaignRepository,
+        MailchimpClient,
       ],
     }).compile();
 
