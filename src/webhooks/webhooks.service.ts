@@ -34,11 +34,8 @@ export class WebhooksService {
     private therapySessionRepository: TherapySessionRepository,
     @InjectRepository(EmailCampaignRepository)
     private emailCampaignRepository: EmailCampaignRepository,
-    // TODO inject directly without instatiation
     private mailchimpClient: MailchimpClient,
-  ) {
-    this.mailchimpClient = new MailchimpClient();
-  }
+  ) {}
 
   async sendFirstTherapySessionFeedbackEmail() {
     const yesterday = new Date(new Date().setDate(new Date().getDate() - 1));
