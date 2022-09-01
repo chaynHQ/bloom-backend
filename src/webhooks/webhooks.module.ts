@@ -27,10 +27,9 @@ import { WebhooksService } from './webhooks.service';
       TherapySessionRepository,
       PartnerAdminRepository,
       EmailCampaignRepository,
-      MailchimpClient,
     ]),
   ],
-  providers: [WebhooksService, CoursePartnerService, PartnerService],
+  providers: [WebhooksService, CoursePartnerService, PartnerService, MailchimpClient],
   controllers: [WebhooksController],
 })
 export class WebhooksModule {}
