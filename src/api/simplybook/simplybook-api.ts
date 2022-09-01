@@ -11,7 +11,7 @@ type BookingReponse = {
   code: string;
 };
 
-type BookingInfo = {
+export type BookingInfo = {
   clientEmail: string;
   bookingCode: string;
   date: Date;
