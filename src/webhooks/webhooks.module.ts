@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { MailchimpClient } from 'src/api/mailchimp/mailchip-api';
 import { CoursePartnerRepository } from 'src/course-partner/course-partner.repository';
 import { CoursePartnerService } from 'src/course-partner/course-partner.service';
 import { CourseRepository } from 'src/course/course.repository';
@@ -26,6 +27,7 @@ import { WebhooksService } from './webhooks.service';
       TherapySessionRepository,
       PartnerAdminRepository,
       EmailCampaignRepository,
+      MailchimpClient,
     ]),
   ],
   providers: [WebhooksService, CoursePartnerService, PartnerService],
