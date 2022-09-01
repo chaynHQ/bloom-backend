@@ -41,25 +41,37 @@ export class WebhooksService {
     const yesterday = new Date(new Date().setDate(new Date().getDate() - 1));
     const bookings = await getBookingsForDate(yesterday);
 
-    bookings.forEach((booking) => {
-      this.mailchimpClient.sendTherapyFeedbackEmail(booking.clientEmail);
+    let feedbackEmailsSent = 0;
+    for (const booking of bookings) {
+      if (await this.isFirstBooking(booking.clientEmail)) {
+        this.mailchimpClient.sendTherapyFeedbackEmail(booking.clientEmail);
 
-      this.logger.log(
-        `First therapy session feedack email sent [email: ${
-          booking.clientEmail
-        }, session date: ${yesterday.toLocaleDateString()}]`,
-      );
+        this.logger.log(
+          `First therapy session feedback email sent [email: ${
+            booking.clientEmail
+          }, session date: ${yesterday.toLocaleDateString()}]`,
+        );
 
-      this.emailCampaignRepository.create({
-        campaignType: CAMPAIGN_TYPE.THERAPY_FEEDBACK,
-        email: booking.clientEmail,
-        emailSentDateTime: new Date(),
-      });
-    });
+        await this.emailCampaignRepository.save({
+          campaignType: CAMPAIGN_TYPE.THERAPY_FEEDBACK,
+          email: booking.clientEmail,
+          emailSentDateTime: new Date(),
+        });
 
-    return `First therapy session feedback emails sent to ${
-      bookings.length
-    } client(s) for date: ${yesterday.toLocaleDateString()}`;
+        this.logger.log(
+          `First therapy session feedback email saved in db [email: ${
+            booking.clientEmail
+          }, session date: ${yesterday.toLocaleDateString()}]`,
+        );
+        feedbackEmailsSent++;
+      }
+    }
+    return `First therapy session feedback emails sent to ${feedbackEmailsSent} client(s) for date: ${yesterday.toLocaleDateString()}`;
+  }
+
+  private async isFirstBooking(email: string) {
+    const matchingEntries = await this.emailCampaignRepository.find({ email });
+    return matchingEntries.length === 0;
   }
 
   renameKeys = (obj: { [x: string]: any }) => {
