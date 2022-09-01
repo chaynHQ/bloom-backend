@@ -1,5 +1,7 @@
 import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { MailchimpClient } from 'src/api/mailchimp/mailchip-api';
+import { getBookingsForDate } from 'src/api/simplybook/simplybook-api';
 import StoryblokClient from 'storyblok-js-client';
 import apiCall from '../api/apiCalls';
 import { getCrispPeopleData, updateCrispProfileData } from '../api/crisp/crisp-api';
@@ -13,13 +15,8 @@ import { UserRepository } from '../user/user.repository';
 import { CAMPAIGN_TYPE, SIMPLYBOOK_ACTION_ENUM, storyblokToken } from '../utils/constants';
 import { formatTherapySessionObject } from '../utils/serialize';
 import { StoryDto } from './dto/story.dto';
-import { EmailCampaignDto } from './email-campaign/dto/email-campaign.dto';
 import { EmailCampaignRepository } from './email-campaign/email-campaign.repository';
 import { TherapySessionRepository } from './therapy-session.repository';
-
-// TODO remove esline disable
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const MILLISECONDS_IN_A_DAY = 1000 * 60 * 60 * 24;
 
 @Injectable()
 export class WebhooksService {
@@ -37,30 +34,28 @@ export class WebhooksService {
     private therapySessionRepository: TherapySessionRepository,
     @InjectRepository(EmailCampaignRepository)
     private emailCampaignRepository: EmailCampaignRepository,
+    private mailchimpClient: MailchimpClient,
   ) {}
 
-  sendFeedbackEmail() {
-    // TODO request information from simplybook
-    // TODO trigger mailchimp API to send emails
-    // TODO store sent emails in DB
+  async sendFirstTherapySessionFeedbackEmail() {
+    const yesterday = new Date(new Date().setDate(new Date().getDate() - 1));
+    const bookings = await getBookingsForDate(yesterday);
 
-    const timeOfEmail = new Date();
-    const stubs: EmailCampaignDto[] = [
-      {
-        campaignType: CAMPAIGN_TYPE.THERAPY_FEEDBACK,
-        email: 'tech@chayn.co',
-        emailSentDateTime: timeOfEmail,
-      },
-      {
-        campaignType: CAMPAIGN_TYPE.THERAPY_FEEDBACK,
-        email: 'team@chayn.co',
-        emailSentDateTime: timeOfEmail,
-      },
-    ];
+    bookings.forEach((booking) => {
+      this.mailchimpClient.sendTherapyFeedbackEmail(booking.clientEmail);
 
-    stubs.forEach(this.emailCampaignRepository.create);
-    // TODO send back response
-    return 'sent email';
+      this.logger.log(
+        `First therapy session feedack email sent [email: ${booking.clientEmail}, session date: ${yesterday}]`,
+      );
+
+      this.emailCampaignRepository.create({
+        campaignType: CAMPAIGN_TYPE.THERAPY_FEEDBACK,
+        email: booking.clientEmail,
+        emailSentDateTime: new Date(),
+      });
+    });
+
+    return `First therapy session feedback emails sent for date: ${yesterday}`;
   }
 
   renameKeys = (obj: { [x: string]: any }) => {
