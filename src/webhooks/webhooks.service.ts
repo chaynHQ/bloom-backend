@@ -1,6 +1,5 @@
 import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { getBookingsForDate } from 'src/api/simplybook/simplybook-api';
 import StoryblokClient from 'storyblok-js-client';
 import apiCall from '../api/apiCalls';
 import { getCrispPeopleData, updateCrispProfileData } from '../api/crisp/crisp-api';
@@ -11,11 +10,15 @@ import { SimplybookBodyDto } from '../partner-access/dtos/zapier-body.dto';
 import { PartnerAccessRepository } from '../partner-access/partner-access.repository';
 import { SessionRepository } from '../session/session.repository';
 import { UserRepository } from '../user/user.repository';
-import { SIMPLYBOOK_ACTION_ENUM, storyblokToken } from '../utils/constants';
+import { CAMPAIGN_TYPE, SIMPLYBOOK_ACTION_ENUM, storyblokToken } from '../utils/constants';
 import { formatTherapySessionObject } from '../utils/serialize';
 import { StoryDto } from './dto/story.dto';
+import { EmailCampaignDto } from './email-campaign/dto/email-campaign.dto';
+import { EmailCampaignRepository } from './email-campaign/email-campaign.repository';
 import { TherapySessionRepository } from './therapy-session.repository';
 
+// TODO remove esline disable
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const MILLISECONDS_IN_A_DAY = 1000 * 60 * 60 * 24;
 
 @Injectable()
@@ -32,26 +35,32 @@ export class WebhooksService {
     private readonly coursePartnerService: CoursePartnerService,
     @InjectRepository(TherapySessionRepository)
     private therapySessionRepository: TherapySessionRepository,
+    @InjectRepository(EmailCampaignRepository)
+    private emailCampaignRepository: EmailCampaignRepository,
   ) {}
 
-  /**
-   * Send therapy emails to clients who had their first therapy booking yesterday.
-   *
-   */
-  sendFirstTherapySessionFeedbackEmail() {
-    try {
-      const yesterday = new Date(new Date().valueOf() - MILLISECONDS_IN_A_DAY);
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const bookingsYesterday = getBookingsForDate(yesterday);
+  sendFeedbackEmail() {
+    // TODO request information from simplybook
+    // TODO trigger mailchimp API to send emails
+    // TODO store sent emails in DB
 
-      // TODO trigger mailchimp API to send emails
-      // TODO store sent emails in DB
+    const timeOfEmail = new Date();
+    const stubs: EmailCampaignDto[] = [
+      {
+        campaignType: CAMPAIGN_TYPE.THERAPY_FEEDBACK,
+        email: 'tech@chayn.co',
+        emailSentDateTime: timeOfEmail,
+      },
+      {
+        campaignType: CAMPAIGN_TYPE.THERAPY_FEEDBACK,
+        email: 'team@chayn.co',
+        emailSentDateTime: timeOfEmail,
+      },
+    ];
 
-      return 'sent email';
-    } catch (error) {
-      this.logger.error('Could not send feedback email to first time therapy users', error);
-      throw new Error(`'Could not send feedback email to first time therapy users': ${error})`);
-    }
+    stubs.forEach(this.emailCampaignRepository.create);
+    // TODO send back response
+    return 'sent email';
   }
 
   renameKeys = (obj: { [x: string]: any }) => {
