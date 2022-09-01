@@ -45,7 +45,9 @@ export class WebhooksService {
       this.mailchimpClient.sendTherapyFeedbackEmail(booking.clientEmail);
 
       this.logger.log(
-        `First therapy session feedack email sent [email: ${booking.clientEmail}, session date: ${yesterday}]`,
+        `First therapy session feedack email sent [email: ${
+          booking.clientEmail
+        }, session date: ${yesterday.toLocaleDateString()}]`,
       );
 
       this.emailCampaignRepository.create({
@@ -55,7 +57,9 @@ export class WebhooksService {
       });
     });
 
-    return `First therapy session feedback emails sent for date: ${yesterday}`;
+    return `First therapy session feedback emails sent to ${
+      bookings.length
+    } client(s) for date: ${yesterday.toLocaleDateString()}`;
   }
 
   renameKeys = (obj: { [x: string]: any }) => {
