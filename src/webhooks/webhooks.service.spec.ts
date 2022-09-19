@@ -1,8 +1,7 @@
-jest.mock('storyblok-js-client', jest.fn());
-
 import { createMock } from '@golevelup/ts-jest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MailchimpClient } from 'src/api/mailchimp/mailchip-api';
+import { SlackMessageClient } from 'src/api/slack/slack-api';
 import { CoursePartnerRepository } from 'src/course-partner/course-partner.repository';
 import { CoursePartnerService } from 'src/course-partner/course-partner.service';
 import { CourseRepository } from 'src/course/course.repository';
@@ -14,18 +13,24 @@ import { PartnerRepository } from 'src/partner/partner.repository';
 import { PartnerService } from 'src/partner/partner.service';
 import { SessionRepository } from 'src/session/session.repository';
 import { UserRepository } from 'src/user/user.repository';
-import { STORYBLOK_STORY_STATUS_ENUM } from 'src/utils/constants';
+import { SIMPLYBOOK_ACTION_ENUM, STORYBLOK_STORY_STATUS_ENUM } from 'src/utils/constants';
 import StoryblokClient from 'storyblok-js-client';
 import {
   mockCourse,
   mockCourseStoryblokResult,
+  mockPartnerAccessEntity,
   mockSession,
   mockSessionStoryblokResult,
+  simplybookBodyBase,
 } from 'test/utils/mockData';
 import {
   mockCoursePartnerRepositoryMethods,
   mockCourseRepositoryMethods,
+  mockPartnerAccessRepositoryMethods,
   mockSessionRepositoryMethods,
+  mockSlackMessageClientMethods,
+  mockTherapySessionRepositoryMethods,
+  mockUserRepositoryMethods,
 } from 'test/utils/mockedServices';
 import { EmailCampaignRepository } from './email-campaign/email-campaign.repository';
 import { TherapySessionRepository } from './therapy-session.repository';
@@ -40,6 +45,22 @@ jest.mock('storyblok-js-client', () => {
     };
   });
 });
+jest.mock('../api/crisp/crisp-api', () => {
+  return {
+    updateCrispProfileData: () => {
+      return;
+    },
+    getCrispPeopleData: () => {
+      return {
+        error: false,
+        reason: undefined,
+        data: {
+          data: {},
+        },
+      };
+    },
+  };
+});
 
 describe('WebhooksService', () => {
   let service: WebhooksService;
@@ -48,13 +69,25 @@ describe('WebhooksService', () => {
   const mockedCoursePartnerService = createMock<CoursePartnerService>(
     mockCoursePartnerRepositoryMethods,
   );
+  const mockedUserRepository = createMock<UserRepository>(mockUserRepositoryMethods);
+  const mockedTherapySessionRepository = createMock<TherapySessionRepository>(
+    mockTherapySessionRepositoryMethods,
+  );
+  const mockedSlackMessageClient = createMock<SlackMessageClient>(mockSlackMessageClientMethods);
+  const mockedPartnerAccessRepository = createMock<PartnerAccessRepository>(
+    mockPartnerAccessRepositoryMethods,
+  );
 
   beforeEach(async () => {
+    jest.clearAllMocks();
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         WebhooksService,
-        PartnerAccessRepository,
-        UserRepository,
+        { provide: PartnerAccessRepository, useValue: mockedPartnerAccessRepository },
+        {
+          provide: UserRepository,
+          useValue: mockedUserRepository,
+        },
         {
           provide: CourseRepository,
           useValue: mockedCourseRepository,
@@ -67,13 +100,20 @@ describe('WebhooksService', () => {
           provide: CoursePartnerService,
           useValue: mockedCoursePartnerService,
         },
-        TherapySessionRepository,
+        {
+          provide: TherapySessionRepository,
+          useValue: mockedTherapySessionRepository,
+        },
         CoursePartnerRepository,
         PartnerService,
         PartnerRepository,
         PartnerAdminRepository,
         EmailCampaignRepository,
         MailchimpClient,
+        {
+          provide: SlackMessageClient,
+          useValue: mockedSlackMessageClient,
+        },
       ],
     }).compile();
 
@@ -267,6 +307,97 @@ describe('WebhooksService', () => {
       courseFindOneRepoSpy.mockClear();
       courseCreateRepoSpy.mockClear();
       courseSaveRepoSpy.mockClear();
+    });
+  });
+  describe('updatePartnerAccessTherapy', () => {
+    it('should update the booking time when action is update and time is different TODO ', async () => {
+      const newStartTime = '2022-09-12T09:30:00+0000';
+      const therapyRepoFindOneSpy = jest.spyOn(mockedTherapySessionRepository, 'findOne');
+      const booking = await service.updatePartnerAccessTherapy({
+        ...simplybookBodyBase,
+        start_date_time: newStartTime,
+        end_date_time: '2022-09-12T010:30:00+0000',
+        action: SIMPLYBOOK_ACTION_ENUM.UPDATED_BOOKING,
+      });
+      expect(booking).toHaveProperty('startDateTime', new Date(newStartTime));
+      expect(therapyRepoFindOneSpy).toBeCalled();
+    });
+
+    it('should throw when action is on a user that doesnt  exist', async () => {
+      const userFindOneRepoSpy = jest
+        .spyOn(mockedUserRepository, 'findOne')
+        .mockImplementationOnce(() => undefined);
+      await expect(service.updatePartnerAccessTherapy(simplybookBodyBase)).rejects.toThrowError(
+        'Unable to find user',
+      );
+      expect(userFindOneRepoSpy).toBeCalled();
+    });
+
+    it('should set a booking as cancelled when action is cancel', async () => {
+      await expect(
+        service.updatePartnerAccessTherapy({
+          ...simplybookBodyBase,
+          ...{ action: SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING },
+        }),
+      ).resolves.toHaveProperty('action', SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING);
+    });
+    it('should set a booking as cancelled when action is cancel and there are no therapy sessions remaining TODO', async () => {
+      // mock that there is no therapy sessions remaining on partner access
+      const partnerAccessFindSpy = jest
+        .spyOn(mockedPartnerAccessRepository, 'find')
+        .mockImplementationOnce(async () => {
+          return [{ ...mockPartnerAccessEntity, therapySessionsRemaining: 0 }];
+        });
+      await expect(
+        service.updatePartnerAccessTherapy({
+          ...simplybookBodyBase,
+          ...{ action: SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING },
+        }),
+      ).resolves.toHaveProperty('action', SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING);
+      expect(partnerAccessFindSpy).toBeCalled();
+    });
+
+    it('should throw if no partnerAccess exists when user tries to create a booking', async () => {
+      jest.spyOn(mockedPartnerAccessRepository, 'find').mockImplementationOnce(async () => {
+        return [];
+      });
+      await expect(
+        service.updatePartnerAccessTherapy({
+          ...simplybookBodyBase,
+          ...{ action: SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING },
+        }),
+      ).rejects.toThrow('Unable to find partner access');
+    });
+    it('should deduct therapyRemaining when user creates a new booking', async () => {
+      jest.spyOn(mockedPartnerAccessRepository, 'find').mockImplementationOnce(async () => {
+        return [
+          { ...mockPartnerAccessEntity, therapySessionsRemaining: 6, therapySessionsRedeemed: 0 },
+        ];
+      });
+
+      const partnerAccessSaveSpy = jest.spyOn(mockedPartnerAccessRepository, 'save');
+      await expect(
+        service.updatePartnerAccessTherapy({
+          ...simplybookBodyBase,
+          ...{ action: SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING },
+        }),
+      ).resolves.toHaveProperty('action', SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING);
+      expect(partnerAccessSaveSpy).toBeCalledWith({
+        featureTherapy: true,
+        id: 'pa1',
+        therapySessionsRedeemed: 1,
+        therapySessionsRemaining: 5,
+      });
+    });
+    it('should not update partner access when user updates booking', async () => {
+      const partnerAccessSaveSpy = jest.spyOn(mockedPartnerAccessRepository, 'save');
+      await expect(
+        service.updatePartnerAccessTherapy({
+          ...simplybookBodyBase,
+          ...{ action: SIMPLYBOOK_ACTION_ENUM.UPDATED_BOOKING },
+        }),
+      ).resolves.toHaveProperty('action', SIMPLYBOOK_ACTION_ENUM.UPDATED_BOOKING);
+      expect(partnerAccessSaveSpy).toBeCalledTimes(0);
     });
   });
 });

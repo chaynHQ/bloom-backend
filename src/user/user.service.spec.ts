@@ -6,7 +6,7 @@ import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { PartnerEntity } from 'src/entities/partner.entity';
 import { PartnerAccessCodeStatusEnum } from 'src/utils/constants';
 import { mockIFirebaseUser, mockUserEntity } from 'test/utils/mockData';
-import { mockUserRepositoryMethods } from 'test/utils/mockedServices';
+import { mockUserRepositoryMethodsFactory } from 'test/utils/mockedServices';
 import { Repository } from 'typeorm';
 import { createQueryBuilderMock } from '../../test/utils/mockUtils';
 import { AuthService } from '../auth/auth.service';
@@ -51,7 +51,7 @@ describe('UserService', () => {
         UserService,
         {
           provide: UserRepository,
-          useFactory: jest.fn(() => mockUserRepositoryMethods),
+          useFactory: jest.fn(() => mockUserRepositoryMethodsFactory),
         },
         {
           provide: PartnerService,
