@@ -148,7 +148,7 @@ export const mockTherapySessionEntity = {
   id: 'ts1',
 } as TherapySessionEntity;
 
-export const simplybookBodyBase: SimplybookBodyDto = {
+export const mockSimplybookBodyBase: SimplybookBodyDto = {
   action: SIMPLYBOOK_ACTION_ENUM.UPDATED_BOOKING,
   start_date_time: '2022-09-12T07:30:00+0000',
   end_date_time: '2022-09-12T08:30:00+0000',
