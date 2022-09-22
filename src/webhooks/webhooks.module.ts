@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { MailchimpClient } from 'src/api/mailchimp/mailchip-api';
+import { SlackMessageClient } from 'src/api/slack/slack-api';
 import { CoursePartnerRepository } from 'src/course-partner/course-partner.repository';
 import { CoursePartnerService } from 'src/course-partner/course-partner.service';
 import { CourseRepository } from 'src/course/course.repository';
@@ -29,7 +30,13 @@ import { WebhooksService } from './webhooks.service';
       EmailCampaignRepository,
     ]),
   ],
-  providers: [WebhooksService, CoursePartnerService, PartnerService, MailchimpClient],
+  providers: [
+    WebhooksService,
+    CoursePartnerService,
+    PartnerService,
+    MailchimpClient,
+    SlackMessageClient,
+  ],
   controllers: [WebhooksController],
 })
 export class WebhooksModule {}
