@@ -13,6 +13,7 @@ import { CreateUserDto } from 'src/user/dtos/create-user.dto';
 import { UpdateUserDto } from 'src/user/dtos/update-user.dto';
 import { UserRepository } from 'src/user/user.repository';
 import { TherapySessionRepository } from 'src/webhooks/therapy-session.repository';
+import { WebhooksService } from 'src/webhooks/webhooks.service';
 import {
   mockCourse,
   mockPartnerAccessEntity,
@@ -108,6 +109,12 @@ export const mockPartnerAccessRepositoryMethods: PartialFuncReturn<PartnerAccess
 
 export const mockSlackMessageClientMethods: PartialFuncReturn<SlackMessageClient> = {
   sendMessageToTherapySlackChannel: async () => {
-    return;
+    return 'successful test message';
+  },
+};
+
+export const mockWebhooksServiceMethods: PartialFuncReturn<WebhooksService> = {
+  updatePartnerAccessTherapy: async () => {
+    return mockTherapySessionEntity;
   },
 };

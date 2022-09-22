@@ -21,7 +21,7 @@ import {
   mockPartnerAccessEntity,
   mockSession,
   mockSessionStoryblokResult,
-  simplybookBodyBase,
+  mockSimplybookBodyBase,
 } from 'test/utils/mockData';
 import {
   mockCoursePartnerRepositoryMethods,
@@ -314,7 +314,7 @@ describe('WebhooksService', () => {
       const newStartTime = '2022-09-12T09:30:00+0000';
       const therapyRepoFindOneSpy = jest.spyOn(mockedTherapySessionRepository, 'findOne');
       const booking = await service.updatePartnerAccessTherapy({
-        ...simplybookBodyBase,
+        ...mockSimplybookBodyBase,
         start_date_time: newStartTime,
         end_date_time: '2022-09-12T010:30:00+0000',
         action: SIMPLYBOOK_ACTION_ENUM.UPDATED_BOOKING,
@@ -327,7 +327,7 @@ describe('WebhooksService', () => {
       const userFindOneRepoSpy = jest
         .spyOn(mockedUserRepository, 'findOne')
         .mockImplementationOnce(() => undefined);
-      await expect(service.updatePartnerAccessTherapy(simplybookBodyBase)).rejects.toThrowError(
+      await expect(service.updatePartnerAccessTherapy(mockSimplybookBodyBase)).rejects.toThrowError(
         'Unable to find user',
       );
       expect(userFindOneRepoSpy).toBeCalled();
@@ -336,7 +336,7 @@ describe('WebhooksService', () => {
     it('should set a booking as cancelled when action is cancel', async () => {
       await expect(
         service.updatePartnerAccessTherapy({
-          ...simplybookBodyBase,
+          ...mockSimplybookBodyBase,
           ...{ action: SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING },
         }),
       ).resolves.toHaveProperty('action', SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING);
@@ -350,7 +350,7 @@ describe('WebhooksService', () => {
         });
       await expect(
         service.updatePartnerAccessTherapy({
-          ...simplybookBodyBase,
+          ...mockSimplybookBodyBase,
           ...{ action: SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING },
         }),
       ).resolves.toHaveProperty('action', SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING);
@@ -363,7 +363,7 @@ describe('WebhooksService', () => {
       });
       await expect(
         service.updatePartnerAccessTherapy({
-          ...simplybookBodyBase,
+          ...mockSimplybookBodyBase,
           ...{ action: SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING },
         }),
       ).rejects.toThrow('Unable to find partner access');
@@ -378,7 +378,7 @@ describe('WebhooksService', () => {
       const partnerAccessSaveSpy = jest.spyOn(mockedPartnerAccessRepository, 'save');
       await expect(
         service.updatePartnerAccessTherapy({
-          ...simplybookBodyBase,
+          ...mockSimplybookBodyBase,
           ...{ action: SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING },
         }),
       ).resolves.toHaveProperty('action', SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING);
@@ -393,7 +393,7 @@ describe('WebhooksService', () => {
       const partnerAccessSaveSpy = jest.spyOn(mockedPartnerAccessRepository, 'save');
       await expect(
         service.updatePartnerAccessTherapy({
-          ...simplybookBodyBase,
+          ...mockSimplybookBodyBase,
           ...{ action: SIMPLYBOOK_ACTION_ENUM.UPDATED_BOOKING },
         }),
       ).resolves.toHaveProperty('action', SIMPLYBOOK_ACTION_ENUM.UPDATED_BOOKING);
