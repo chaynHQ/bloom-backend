@@ -1,4 +1,4 @@
-import { Body, Controller, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Logger, Post, UseGuards } from '@nestjs/common';
 import { ApiBody, ApiTags } from '@nestjs/swagger';
 import { ControllerDecorator } from 'src/utils/controller.decorator';
 import { SimplybookBodyDto } from '../partner-access/dtos/zapier-body.dto';
@@ -11,12 +11,20 @@ import { WebhooksService } from './webhooks.service';
 @Controller('webhooks')
 export class WebhooksController {
   constructor(private readonly webhooksService: WebhooksService) {}
+  private readonly logger = new Logger('WebhookService');
 
   @UseGuards(ZapierAuthGuard)
   @Post('simplybook')
   @ApiBody({ type: SimplybookBodyDto })
   async updatePartnerAccessTherapy(@Body() simplybookBodyDto: SimplybookBodyDto): Promise<string> {
-    return this.webhooksService.updatePartnerAccessTherapy(simplybookBodyDto);
+    const updatedPartnerAccessTherapy = await this.webhooksService.updatePartnerAccessTherapy(
+      simplybookBodyDto,
+    );
+    this.logger.log(
+      `Updated partner access therapy: ${updatedPartnerAccessTherapy.clientEmail} - ${updatedPartnerAccessTherapy.bookingCode}`,
+    );
+
+    return 'Successful';
   }
 
   @UseGuards(ZapierAuthGuard)

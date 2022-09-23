@@ -1,8 +1,11 @@
 import { CourseEntity } from 'src/entities/course.entity';
+import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { SessionEntity } from 'src/entities/session.entity';
+import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
 import { UserEntity } from 'src/entities/user.entity';
 import { IFirebaseUser } from 'src/firebase/firebase-user.interface';
-import { STORYBLOK_STORY_STATUS_ENUM } from 'src/utils/constants';
+import { SimplybookBodyDto } from 'src/partner-access/dtos/zapier-body.dto';
+import { SIMPLYBOOK_ACTION_ENUM, STORYBLOK_STORY_STATUS_ENUM } from 'src/utils/constants';
 import { StoryblokResult } from 'storyblok-js-client';
 
 export const mockSessionStoryblokResult = {
@@ -123,3 +126,43 @@ export const mockUserEntity: UserEntity = {
   email: 'user@email.com',
   name: 'name',
 };
+
+export const mockTherapySessionEntity = {
+  action: SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING,
+  createdAt: new Date(),
+  partnerAccessId: 'pa1',
+  partnerAccess: { id: 'pa1' } as PartnerAccessEntity,
+  updatedAt: new Date(),
+  serviceName: 'bloomtherapy',
+  serviceProviderEmail: 'therapist@test.com',
+  serviceProviderName: 'Therapist name',
+  bookingCode: '123',
+  clientTimezone: 'Europe/London',
+  clientEmail: 'client@test.com',
+  name: 'client name',
+  startDateTime: new Date('2022-09-12T07:30:00+0100'),
+  endDateTime: new Date('2022-09-12T08:30:00+0100'),
+  cancelledAt: null,
+  rescheduledFrom: null,
+  completedAt: null,
+  id: 'ts1',
+} as TherapySessionEntity;
+
+export const mockSimplybookBodyBase: SimplybookBodyDto = {
+  action: SIMPLYBOOK_ACTION_ENUM.UPDATED_BOOKING,
+  start_date_time: '2022-09-12T07:30:00+0000',
+  end_date_time: '2022-09-12T08:30:00+0000',
+  client_email: 'testuser@test.com',
+  client_timezone: 'Europe/London',
+  booking_code: 'abc',
+  service_name: 'bloom therapy',
+  service_provider_email: 'therapist@test.com',
+  service_provider_name: 'therapist@test.com',
+};
+
+export const mockPartnerAccessEntity = {
+  id: 'pa1',
+  therapySessionsRemaining: 5,
+  therapySessionsRedeemed: 1,
+  featureTherapy: true,
+} as PartnerAccessEntity;
