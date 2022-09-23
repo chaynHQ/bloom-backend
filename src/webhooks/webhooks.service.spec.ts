@@ -22,6 +22,7 @@ import {
   mockSession,
   mockSessionStoryblokResult,
   mockSimplybookBodyBase,
+  mockTherapySessionEntity,
 } from 'test/utils/mockData';
 import {
   mockCoursePartnerRepositoryMethods,
@@ -398,6 +399,62 @@ describe('WebhooksService', () => {
         }),
       ).resolves.toHaveProperty('action', SIMPLYBOOK_ACTION_ENUM.UPDATED_BOOKING);
       expect(partnerAccessSaveSpy).toBeCalledTimes(0);
+    });
+    it('should error if user creates booking when no therapy sessions remaining ', async () => {
+      jest.spyOn(mockedPartnerAccessRepository, 'find').mockImplementationOnce(async () => {
+        return [
+          {
+            ...mockPartnerAccessEntity,
+            therapySessionsRemaining: 0,
+            therapySessionsRedeemed: 6,
+          },
+        ];
+      });
+
+      await expect(
+        service.updatePartnerAccessTherapy({
+          ...mockSimplybookBodyBase,
+          ...{ action: SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING },
+        }),
+      ).rejects.toThrowError('No therapy sessions remaining');
+    });
+    it('if user has 2 partner access codes and booking is tied to second code, user should be able to update booking', async () => {
+      jest.spyOn(mockedPartnerAccessRepository, 'find').mockImplementationOnce(async () => {
+        return [
+          {
+            ...mockPartnerAccessEntity,
+            id: 'partnerAccessId1',
+            partnerId: 'partnerId1',
+            therapySessionsRemaining: 6,
+            therapySessionsRedeemed: 0,
+          },
+          {
+            ...mockPartnerAccessEntity,
+            id: 'partnerAccessId2',
+            partnerId: 'partnerId2',
+            therapySessionsRemaining: 6,
+            therapySessionsRedeemed: 0,
+          },
+        ];
+      });
+      const therapySessionFindOneSpy = jest
+        .spyOn(mockedTherapySessionRepository, 'findOne')
+        .mockImplementationOnce(async (args: any) => {
+          // if statement to ensure the two partner access Ids are passed
+          if (args.where?.filter((el) => el.partnerAccessId).length === 2) {
+            return { ...mockTherapySessionEntity, partnerAccessId: 'partnerAccessId2' };
+          } else {
+            throw new Error('Unable to find therapy session');
+          }
+        });
+
+      await expect(
+        service.updatePartnerAccessTherapy({
+          ...mockSimplybookBodyBase,
+          ...{ action: SIMPLYBOOK_ACTION_ENUM.UPDATED_BOOKING },
+        }),
+      ).resolves.toHaveProperty('action', SIMPLYBOOK_ACTION_ENUM.UPDATED_BOOKING);
+      expect(therapySessionFindOneSpy).toBeCalledTimes(1);
     });
   });
 });
