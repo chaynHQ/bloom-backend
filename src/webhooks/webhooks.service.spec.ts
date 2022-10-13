@@ -58,6 +58,9 @@ jest.mock('src/api/simplybook/simplybook-api', () => {
         date: new Date(2022, 9, 10),
       },
     ],
+    getAuthToken: async () => {
+      return 'token';
+    },
   };
 });
 jest.mock('../api/crisp/crisp-api', () => {
