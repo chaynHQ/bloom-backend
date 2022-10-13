@@ -1,11 +1,16 @@
 import { CourseEntity } from 'src/entities/course.entity';
+import { EmailCampaignEntity } from 'src/entities/email-campaign.entity';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { SessionEntity } from 'src/entities/session.entity';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
 import { UserEntity } from 'src/entities/user.entity';
 import { IFirebaseUser } from 'src/firebase/firebase-user.interface';
 import { SimplybookBodyDto } from 'src/partner-access/dtos/zapier-body.dto';
-import { SIMPLYBOOK_ACTION_ENUM, STORYBLOK_STORY_STATUS_ENUM } from 'src/utils/constants';
+import {
+  CAMPAIGN_TYPE,
+  SIMPLYBOOK_ACTION_ENUM,
+  STORYBLOK_STORY_STATUS_ENUM,
+} from 'src/utils/constants';
 import { StoryblokResult } from 'storyblok-js-client';
 
 export const mockSessionStoryblokResult = {
@@ -166,3 +171,12 @@ export const mockPartnerAccessEntity = {
   therapySessionsRedeemed: 1,
   featureTherapy: true,
 } as PartnerAccessEntity;
+
+export const mockEmailCampaignEntity: EmailCampaignEntity = {
+  email: 'test@test.com',
+  emailSentDateTime: new Date(),
+  id: 'id',
+  createdAt: new Date(),
+  updatedAt: new Date(),
+  campaignType: CAMPAIGN_TYPE.THERAPY_FEEDBACK,
+};

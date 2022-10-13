@@ -23,15 +23,15 @@ const LOGGER = new Logger('SimplybookAPI');
 
 const getAuthToken: () => Promise<string> = async () => {
   try {
-    const response = await axios({
-      method: 'post',
-      url: `${SIMPLYBOOK_API_BASE_URL}/auth`,
-      data: JSON.parse(simplybookCredentials),
-      headers: {
-        'Content-Type': 'application/json',
+    const response = await axios.post(
+      `${SIMPLYBOOK_API_BASE_URL}/auth`,
+      JSON.parse(simplybookCredentials),
+      {
+        headers: {
+          'Content-Type': 'application/json',
+        },
       },
-    });
-
+    );
     return response.data.token;
   } catch (error) {
     handleError('Failed to authenticate against Simplybook API.', error);
@@ -44,16 +44,16 @@ const queryBookingsForDate: (date: Date) => Promise<BookingReponse[]> = async (d
   const simplybookFilterDateString = date.toISOString().substring(0, DATE_FORMAT_LENGTH);
 
   try {
-    const bookingsResponse = await axios({
-      method: 'get',
-      url: `${SIMPLYBOOK_API_BASE_URL}/bookings?filter[date]=${simplybookFilterDateString}&filter[status]=confirmed`,
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Company-Login': simplybookCompanyName,
-        'X-Token': `${token}`,
+    const bookingsResponse = await axios.get(
+      `${SIMPLYBOOK_API_BASE_URL}/bookings?filter[date]=${simplybookFilterDateString}&filter[status]=confirmed`,
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Company-Login': simplybookCompanyName,
+          'X-Token': `${token}`,
+        },
       },
-    });
-
+    );
     return bookingsResponse.data.data;
   } catch (error) {
     handleError(

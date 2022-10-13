@@ -5,6 +5,7 @@ import { MailchimpClient } from 'src/api/mailchimp/mailchip-api';
 import { getBookingsForDate } from 'src/api/simplybook/simplybook-api';
 import { SlackMessageClient } from 'src/api/slack/slack-api';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
+import { getYesterdaysDate } from 'src/utils/utils';
 import StoryblokClient from 'storyblok-js-client';
 import { getCrispPeopleData, updateCrispProfileData } from '../api/crisp/crisp-api';
 import { CoursePartnerService } from '../course-partner/course-partner.service';
@@ -41,19 +42,18 @@ export class WebhooksService {
   ) {}
 
   async sendFirstTherapySessionFeedbackEmail() {
-    const yesterday = new Date(new Date().setDate(new Date().getDate() - 1));
+    const yesterday = getYesterdaysDate();
     const bookings = await getBookingsForDate(yesterday);
 
     let feedbackEmailsSent = 0;
     for (const booking of bookings) {
       if (await this.isFirstBooking(booking.clientEmail)) {
         this.mailchimpClient.sendTherapyFeedbackEmail(booking.clientEmail);
-
-        this.logger.log(
-          `First therapy session feedback email sent [email: ${
-            booking.clientEmail
-          }, session date: ${yesterday.toLocaleDateString()}]`,
-        );
+        const emailLog = `First therapy session feedback email sent [email: ${
+          booking.clientEmail
+        }, session date: ${yesterday.toLocaleDateString()}]`;
+        this.logger.log(emailLog);
+        this.slackMessageClient.sendMessageToTherapySlackChannel(emailLog);
 
         await this.emailCampaignRepository.save({
           campaignType: CAMPAIGN_TYPE.THERAPY_FEEDBACK,
