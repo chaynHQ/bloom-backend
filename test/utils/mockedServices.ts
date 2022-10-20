@@ -1,8 +1,10 @@
 import { PartialFuncReturn } from '@golevelup/ts-jest';
+import { MailchimpClient } from 'src/api/mailchimp/mailchip-api';
 import { SlackMessageClient } from 'src/api/slack/slack-api';
 import { CoursePartnerService } from 'src/course-partner/course-partner.service';
 import { CourseRepository } from 'src/course/course.repository';
 import { CourseEntity } from 'src/entities/course.entity';
+import { EmailCampaignEntity } from 'src/entities/email-campaign.entity';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { SessionEntity } from 'src/entities/session.entity';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
@@ -12,10 +14,12 @@ import { SessionRepository } from 'src/session/session.repository';
 import { CreateUserDto } from 'src/user/dtos/create-user.dto';
 import { UpdateUserDto } from 'src/user/dtos/update-user.dto';
 import { UserRepository } from 'src/user/user.repository';
+import { EmailCampaignRepository } from 'src/webhooks/email-campaign/email-campaign.repository';
 import { TherapySessionRepository } from 'src/webhooks/therapy-session.repository';
 import { WebhooksService } from 'src/webhooks/webhooks.service';
 import {
   mockCourse,
+  mockEmailCampaignEntity,
   mockPartnerAccessEntity,
   mockSession,
   mockTherapySessionEntity,
@@ -117,4 +121,17 @@ export const mockWebhooksServiceMethods: PartialFuncReturn<WebhooksService> = {
   updatePartnerAccessTherapy: async () => {
     return mockTherapySessionEntity;
   },
+};
+
+export const mockMailchimpClientMethods: PartialFuncReturn<MailchimpClient> = {
+  sendTherapyFeedbackEmail: async () => {
+    return [];
+  },
+};
+
+export const mockEmailCampaignRepositoryMethods: PartialFuncReturn<EmailCampaignRepository> = {
+  find: async (arg) => {
+    return [{ ...mockEmailCampaignEntity, ...(arg ? arg : {}) }] as EmailCampaignEntity[];
+  },
+  save: async (arg) => arg as EmailCampaignEntity,
 };

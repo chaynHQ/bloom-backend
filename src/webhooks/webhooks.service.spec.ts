@@ -14,6 +14,7 @@ import { PartnerService } from 'src/partner/partner.service';
 import { SessionRepository } from 'src/session/session.repository';
 import { UserRepository } from 'src/user/user.repository';
 import { SIMPLYBOOK_ACTION_ENUM, STORYBLOK_STORY_STATUS_ENUM } from 'src/utils/constants';
+import { getYesterdaysDate } from 'src/utils/utils';
 import StoryblokClient from 'storyblok-js-client';
 import {
   mockCourse,
@@ -27,6 +28,8 @@ import {
 import {
   mockCoursePartnerRepositoryMethods,
   mockCourseRepositoryMethods,
+  mockEmailCampaignRepositoryMethods,
+  mockMailchimpClientMethods,
   mockPartnerAccessRepositoryMethods,
   mockSessionRepositoryMethods,
   mockSlackMessageClientMethods,
@@ -45,6 +48,20 @@ jest.mock('storyblok-js-client', () => {
       get: async () => mockSessionStoryblokResult,
     };
   });
+});
+jest.mock('src/api/simplybook/simplybook-api', () => {
+  return {
+    getBookingsForDate: async () => [
+      {
+        bookingCode: 'bookingCodeA',
+        clientEmail: 'ellie@chayn.co',
+        date: new Date(2022, 9, 10),
+      },
+    ],
+    getAuthToken: async () => {
+      return 'token';
+    },
+  };
 });
 jest.mock('../api/crisp/crisp-api', () => {
   return {
@@ -65,6 +82,7 @@ jest.mock('../api/crisp/crisp-api', () => {
 
 describe('WebhooksService', () => {
   let service: WebhooksService;
+  const mockedMailchimpClient = createMock<MailchimpClient>(mockMailchimpClientMethods);
   const mockedSessionRepository = createMock<SessionRepository>(mockSessionRepositoryMethods);
   const mockedCourseRepository = createMock<CourseRepository>(mockCourseRepositoryMethods);
   const mockedCoursePartnerService = createMock<CoursePartnerService>(
@@ -77,6 +95,9 @@ describe('WebhooksService', () => {
   const mockedSlackMessageClient = createMock<SlackMessageClient>(mockSlackMessageClientMethods);
   const mockedPartnerAccessRepository = createMock<PartnerAccessRepository>(
     mockPartnerAccessRepositoryMethods,
+  );
+  const mockedEmailCampaignRepository = createMock<EmailCampaignRepository>(
+    mockEmailCampaignRepositoryMethods,
   );
 
   beforeEach(async () => {
@@ -105,16 +126,20 @@ describe('WebhooksService', () => {
           provide: TherapySessionRepository,
           useValue: mockedTherapySessionRepository,
         },
+        {
+          provide: MailchimpClient,
+          useValue: mockedMailchimpClient,
+        },
         CoursePartnerRepository,
         PartnerService,
         PartnerRepository,
         PartnerAdminRepository,
         EmailCampaignRepository,
-        MailchimpClient,
         {
           provide: SlackMessageClient,
           useValue: mockedSlackMessageClient,
         },
+        { provide: EmailCampaignRepository, useValue: mockedEmailCampaignRepository },
       ],
     }).compile();
 
@@ -455,6 +480,17 @@ describe('WebhooksService', () => {
         }),
       ).resolves.toHaveProperty('action', SIMPLYBOOK_ACTION_ENUM.UPDATED_BOOKING);
       expect(therapySessionFindOneSpy).toBeCalledTimes(1);
+    });
+  });
+  describe('sendFirstTherapySessionFeedbackEmail', () => {
+    it('should send email to those with bookings yesterday', async () => {
+      jest.spyOn(mockedEmailCampaignRepository, 'find').mockImplementationOnce(async () => {
+        return [];
+      });
+      const sentEmails = await service.sendFirstTherapySessionFeedbackEmail();
+      expect(sentEmails).toBe(
+        `First therapy session feedback emails sent to 1 client(s) for date: ${getYesterdaysDate().toLocaleDateString()}`,
+      );
     });
   });
 });
