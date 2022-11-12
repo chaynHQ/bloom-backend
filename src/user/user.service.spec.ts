@@ -1,7 +1,7 @@
 import { createMock, DeepMocked } from '@golevelup/ts-jest';
 import { HttpException, HttpStatus } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import apiCall from 'src/api/apiCalls';
+import { addCrispProfile } from 'src/api/crisp/crisp-api';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { PartnerEntity } from 'src/entities/partner.entity';
 import { PartnerAccessCodeStatusEnum } from 'src/utils/constants';
@@ -30,7 +30,7 @@ const updateUserDto: UpdateUserDto = {
   contactPermission: true,
 };
 
-jest.mock('src/api/apiCalls');
+jest.mock('src/api/crisp/crisp-api');
 
 describe('UserService', () => {
   let service: UserService;
@@ -90,7 +90,11 @@ describe('UserService', () => {
       expect(user.partnerAccesses).toBe(undefined);
       expect(repoSpyCreate).toBeCalledWith(createUserDto);
       expect(repoSpySave).toBeCalled();
-      expect(apiCall).toBeCalled();
+      expect(addCrispProfile).toBeCalledWith({
+        email: user.user.email,
+        person: { nickname: 'name' },
+        segments: ['public'],
+      });
     });
     it('when supplied with user dto and partner access, it should return a new partner user', async () => {
       const repoSpyCreate = jest.spyOn(repo, 'create');
@@ -116,7 +120,7 @@ describe('UserService', () => {
         } as PartnerAccessEntity);
       const partnerRepoSpy = jest
         .spyOn(mockPartnerRepository, 'findOne')
-        .mockResolvedValue({ id: '123' } as PartnerEntity);
+        .mockResolvedValue({ id: '123', name: 'Bumble' } as PartnerEntity);
 
       const user = await service.createUser({ ...createUserDto, partnerAccessCode: '123456' });
       expect(user.user.email).toBe('user@email.com');
@@ -143,7 +147,11 @@ describe('UserService', () => {
       expect(partnerRepoSpy).toBeCalled();
       expect(repoSpySave).toBeCalled();
 
-      expect(apiCall).toBeCalled();
+      expect(addCrispProfile).toBeCalledWith({
+        email: user.user.email,
+        person: { nickname: 'name' },
+        segments: ['bumble'],
+      });
     });
 
     it('when supplied with user dto and partner access that has already been used, it should return an error', async () => {

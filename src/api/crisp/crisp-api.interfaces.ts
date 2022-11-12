@@ -5,12 +5,27 @@ export interface CrispResponse {
     data: unknown;
   };
 }
-
+export interface CrispProfileResponse {
+  error: boolean;
+  reason: string;
+  data: {
+    segments: string[];
+  };
+}
 export interface NewPeopleProfile {
   email: string;
   person: {
     nickname: string;
   };
+  segments: string[];
+}
+
+export interface UpdatePeopleProfile {
+  email?: string;
+  person?: {
+    nickname: string;
+  };
+  segments?: string[];
 }
 
 export interface NewPeopleProfileResponse extends CrispResponse {
