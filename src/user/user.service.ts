@@ -60,10 +60,14 @@ export class UserService {
         partnerResponse && partnerAccessResponse
           ? { ...partnerAccessResponse, partner: partnerResponse }
           : undefined;
+      const partnerSegment = partnerAccessWithPartner
+        ? partnerAccessWithPartner.partner.name
+        : 'public';
 
       await addCrispProfile({
         email: createUserResponse.email,
         person: { nickname: createUserResponse.name },
+        segments: [partnerSegment.toLowerCase()],
       });
 
       await updateCrispProfileData(

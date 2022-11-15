@@ -5,10 +5,12 @@ import { IUser } from '../../user/user.interface';
 import { crispToken, crispWebsiteId, PROGRESS_STATUS } from '../../utils/constants';
 import apiCall from '../apiCalls';
 import {
+  CrispProfileResponse,
   CrispResponse,
   NewPeopleProfile,
   NewPeopleProfileResponse,
   PeopleData,
+  UpdatePeopleProfile,
 } from './crisp-api.interfaces';
 import {
   createCrispProfileData,
@@ -29,21 +31,29 @@ export const updateCrispProfileAccesses = async (
   partnerAccesses: IPartnerAccessWithPartner[],
   courses: ICoursesWithSessions[],
 ) => {
-  const crispResponse = await getCrispPeopleData(user.email);
-  const hasCrispProfile = crispResponse['reason'] === 'resolved';
-
+  const crispDataResponse = await getCrispPeopleData(user.email);
+  const hasCrispProfile =
+    crispDataResponse.data?.error === false && crispDataResponse.data?.reason === 'resolved';
+  const partnerSegment =
+    partnerAccesses.length > 0
+      ? partnerAccesses.map((pa) => pa.partner.name.toLowerCase())
+      : ['public'];
   if (!!hasCrispProfile) {
     // Crisp profile exists, just update/replace PartnerAccess data
-
     await updateCrispProfileData(
       createCrispProfileData(user, partnerAccesses, courses),
       user.email,
     );
+    const profileData = await getCrispProfile(user.email);
+    const profileSegments = profileData?.data?.data?.segments;
+    const segments = partnerSegment.concat(profileSegments ? profileSegments : []);
+    await updateCrispProfile({ segments: segments }, user.email);
   } else {
     // Create new crisp profile
     await addCrispProfile({
       email: user.email,
       person: { nickname: user.name },
+      segments: partnerSegment,
     });
     await updateCrispProfileData(
       createCrispProfileData(user, partnerAccesses, courses),
@@ -142,6 +152,34 @@ export const updateCrispProfileData = async (
       url: `${baseUrl}/people/data/${email}`,
       type: 'patch',
       data: { data: peopleData },
+      headers,
+    });
+  } catch (error) {
+    throw error;
+  }
+};
+export const updateCrispProfile = async (
+  peopleProfile: UpdatePeopleProfile,
+  email: string,
+): Promise<AxiosResponse<CrispResponse>> => {
+  try {
+    return await apiCall({
+      url: `${baseUrl}/people/profile/${email}`,
+      type: 'patch',
+      data: peopleProfile,
+      headers,
+    });
+  } catch (error) {
+    throw error;
+  }
+};
+export const getCrispProfile = async (
+  email: string,
+): Promise<AxiosResponse<CrispProfileResponse>> => {
+  try {
+    return await apiCall({
+      url: `${baseUrl}/people/profile/${email}`,
+      type: 'get',
       headers,
     });
   } catch (error) {

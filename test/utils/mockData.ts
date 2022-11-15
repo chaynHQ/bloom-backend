@@ -1,6 +1,7 @@
 import { CourseEntity } from 'src/entities/course.entity';
 import { EmailCampaignEntity } from 'src/entities/email-campaign.entity';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
+import { PartnerEntity } from 'src/entities/partner.entity';
 import { SessionEntity } from 'src/entities/session.entity';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
 import { UserEntity } from 'src/entities/user.entity';
@@ -171,6 +172,7 @@ export const mockPartnerAccessEntity = {
   therapySessionsRedeemed: 1,
   featureTherapy: true,
 } as PartnerAccessEntity;
+export const mockPartnerEntity = { name: 'Bumble' } as PartnerEntity;
 
 export const mockEmailCampaignEntity: EmailCampaignEntity = {
   email: 'test@test.com',
