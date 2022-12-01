@@ -24,6 +24,7 @@ const createUserDto: CreateUserDto = {
   name: 'name',
   firebaseUid: 'iiiiod',
   contactPermission: false,
+  signUpLanguage: 'en',
 };
 const updateUserDto: UpdateUserDto = {
   name: 'new name',
