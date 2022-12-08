@@ -18,6 +18,9 @@ export class UserEntity extends BaseEntity {
   @Column({ unique: true })
   email: string;
 
+  @Column({ nullable: true })
+  signUpLanguage: string;
+
   @Column()
   contactPermission!: boolean;
 

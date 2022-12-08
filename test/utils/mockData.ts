@@ -131,6 +131,7 @@ export const mockUserEntity: UserEntity = {
   contactPermission: true,
   email: 'user@email.com',
   name: 'name',
+  signUpLanguage: 'en',
 };
 
 export const mockTherapySessionEntity = {
