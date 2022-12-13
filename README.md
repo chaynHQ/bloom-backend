@@ -150,9 +150,9 @@ Workspace settings for VSCode are included for consistent linting and formatting
 
 ### Seed Local Database
 
-One way to add data to your local database is to seed it using a backup file. Please get in touch with the team if you would like to access the backup file.
+If you're a volunteer, the way to add data to your local database is to seed it using a backup file. Please get in touch with the team to get access to the backup file. 
 
-Another option to seed the database is to use the following script. Before you start, make sure:
+If you're staff and have access to Heroku, you also have the option to seed the database via the following script. Before you start, make sure:
 
 1. bloom-local-db container is running in Docker
 2. you are logged into the Heroku via your terminal. Read more about the Heroku Cli [here](https://devcenter.heroku.com/articles/heroku-cli)
