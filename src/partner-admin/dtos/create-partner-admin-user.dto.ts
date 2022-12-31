@@ -19,5 +19,5 @@ export class CreatePartnerAdminUserDto {
   @ApiProperty({ type: String })
   @IsString()
   @MinLength(3)
-  partner: string;
+  partnerId: string;
 }

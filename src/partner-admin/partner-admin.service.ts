@@ -36,11 +36,11 @@ export class PartnerAdminService {
 
   async createPartnerAdminUser({
     email,
-    partner,
+    partnerId,
     name,
   }: CreatePartnerAdminUserDto): Promise<PartnerAdminEntity | unknown> {
     try {
-      const partnerResponse = await this.partnerService.getPartner(partner);
+      const partnerResponse = await this.partnerService.getPartnerById(partnerId);
 
       if (!partnerResponse) {
         throw new HttpException('Partner does not exist', HttpStatus.BAD_REQUEST);

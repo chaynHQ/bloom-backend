@@ -25,7 +25,7 @@ export class PartnerController {
   }
 
   @ApiBearerAuth('access-token')
-  @ApiOperation({ description: 'Retuns profile data for all partners' })
+  @ApiOperation({ description: 'Returns profile data for all partners' })
   @UseGuards(SuperAdminAuthGuard)
   @Get()
   async getPartners(): Promise<PartnerEntity[]> {

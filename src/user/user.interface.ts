@@ -7,4 +7,5 @@ export interface IUser {
   email: string;
   isActive: boolean;
   crispTokenId: string;
+  isSuperAdmin: boolean;
 }
