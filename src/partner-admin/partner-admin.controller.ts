@@ -16,7 +16,7 @@ export class PartnerAdminController {
   @ApiBearerAuth('access-token')
   @ApiOperation({
     description:
-      'Creates a partner team member who uses the app to complete Bloom admin tasks such as creating new partner access codes',
+      'Makes an already existing team member a partner admin team member who uses the app to complete Bloom admin tasks such as creating new partner access codes',
   })
   @UseGuards(SuperAdminAuthGuard)
   @Post()
@@ -27,6 +27,7 @@ export class PartnerAdminController {
     return this.partnerAdminService.createPartnerAdmin(createPartnerAdminDto);
   }
 
+  // TODO can we make this the generic post endpoint?
   @ApiBearerAuth('access-token')
   @ApiOperation({
     description:
