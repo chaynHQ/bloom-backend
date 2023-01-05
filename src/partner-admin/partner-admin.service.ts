@@ -51,14 +51,14 @@ export class PartnerAdminService {
         generateRandomString(10),
       );
 
-      const user = await this.userRepository.save({
+      const user = await this.userRepository.create({
         name,
         email,
         firebaseUid: firebaseUser.user.uid,
         contactPermission: true,
       });
 
-      return await this.partnerAdminRepository.save({
+      return await this.partnerAdminRepository.create({
         userId: user.id,
         partnerId: partnerResponse.id,
       });
