@@ -1,6 +1,7 @@
 import { CourseEntity } from 'src/entities/course.entity';
 import { EmailCampaignEntity } from 'src/entities/email-campaign.entity';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
+import { PartnerAdminEntity } from 'src/entities/partner-admin.entity';
 import { PartnerEntity } from 'src/entities/partner.entity';
 import { SessionEntity } from 'src/entities/session.entity';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
@@ -182,4 +183,15 @@ export const mockEmailCampaignEntity: EmailCampaignEntity = {
   createdAt: new Date(),
   updatedAt: new Date(),
   campaignType: CAMPAIGN_TYPE.THERAPY_FEEDBACK,
+};
+
+export const mockPartnerAdminEntity: PartnerAdminEntity = {
+  id: 'paid',
+  userId: mockUserEntity.id,
+  user: mockUserEntity,
+  partner: mockPartnerEntity,
+  partnerId: mockPartnerEntity.id,
+  partnerAccess: [mockPartnerAccessEntity],
+  createdAt: new Date(),
+  updatedAt: new Date(),
 };
