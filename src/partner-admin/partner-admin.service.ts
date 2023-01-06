@@ -63,6 +63,9 @@ export class PartnerAdminService {
         partnerId: partnerResponse.id,
       });
     } catch (error) {
+      if (error.code === 'auth/email-already-in-use') {
+        throw new HttpException('This email address is already in use', HttpStatus.BAD_REQUEST);
+      }
       throw error;
     }
   }
