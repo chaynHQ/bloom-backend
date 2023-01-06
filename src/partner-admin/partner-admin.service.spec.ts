@@ -1,3 +1,4 @@
+import { createMock, DeepMocked } from '@golevelup/ts-jest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PartnerAdminEntity } from 'src/entities/partner-admin.entity';
 import { FIREBASE } from 'src/firebase/firebase-factory';
@@ -21,8 +22,11 @@ const dto: CreatePartnerAdminUserDto = {
 describe('PartnerAdminService', () => {
   let service: PartnerAdminService;
   let repo: PartnerAdminRepository;
+  let mockUserRepository: DeepMocked<UserRepository>;
 
   beforeEach(async () => {
+    mockUserRepository = createMock<UserRepository>();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PartnerAdminService,
@@ -45,11 +49,7 @@ describe('PartnerAdminService', () => {
         },
         {
           provide: UserRepository,
-          useFactory: jest.fn(() => ({
-            save: (arg) => {
-              return { ...mockUserEntity, ...arg };
-            },
-          })),
+          useValue: mockUserRepository,
         },
         {
           provide: FIREBASE,
@@ -76,11 +76,18 @@ describe('PartnerAdminService', () => {
   describe('createPartnerAdmin', () => {
     it('when supplied with correct data should create partner admin', async () => {
       const repoSpySave = jest.spyOn(repo, 'save');
+      jest.spyOn(mockUserRepository, 'save').mockResolvedValue(mockUserEntity);
 
       const response = await service.createPartnerAdminUser(dto);
       expect(response).toHaveProperty('partnerId', dto.partnerId);
       expect(response).toHaveProperty('userId', mockUserEntity.id);
       expect(repoSpySave).toBeCalled();
     });
+  });
+  it('when supplied with an email that already exists, it should throw', async () => {
+    jest
+      .spyOn(mockUserRepository, 'save')
+      .mockRejectedValueOnce(new Error('auth/email-already-in-use'));
+    await expect(service.createPartnerAdminUser(dto)).rejects.toThrow('auth/email-already-in-use');
   });
 });
