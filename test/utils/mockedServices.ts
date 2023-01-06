@@ -75,6 +75,7 @@ export const mockUserRepositoryMethods: PartialFuncReturn<UserRepository> = {
   findOne: async ({ email: client_email }) => {
     return { ...mockUserEntity, ...(client_email ? { email: client_email } : {}) } as UserEntity;
   },
+  save: async (arg) => arg as UserEntity,
 };
 
 export const mockUserRepositoryMethodsFactory = {
@@ -140,7 +141,6 @@ export const mockEmailCampaignRepositoryMethods: PartialFuncReturn<EmailCampaign
 
 export const mockPartnerServiceMethods = {
   getPartnerById: async (arg): Promise<PartnerEntity> => {
-    console.log(mockPartnerEntity);
     return { ...mockPartnerEntity, id: arg };
   },
 };

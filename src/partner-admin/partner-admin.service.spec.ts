@@ -4,7 +4,7 @@ import { FIREBASE } from 'src/firebase/firebase-factory';
 import { PartnerService } from 'src/partner/partner.service';
 import { UserRepository } from 'src/user/user.repository';
 import { mockPartnerAdminEntity, mockPartnerEntity, mockUserEntity } from 'test/utils/mockData';
-import { mockPartnerServiceMethods, mockUserRepositoryMethods } from 'test/utils/mockedServices';
+import { mockPartnerServiceMethods } from 'test/utils/mockedServices';
 import { Repository } from 'typeorm';
 import { createQueryBuilderMock } from '../../test/utils/mockUtils';
 import { CreatePartnerAdminUserDto } from './dtos/create-partner-admin-user.dto';
@@ -45,7 +45,11 @@ describe('PartnerAdminService', () => {
         },
         {
           provide: UserRepository,
-          useValue: mockUserRepositoryMethods,
+          useFactory: jest.fn(() => ({
+            save: (arg) => {
+              return { ...mockUserEntity, ...arg };
+            },
+          })),
         },
         {
           provide: FIREBASE,
@@ -71,13 +75,12 @@ describe('PartnerAdminService', () => {
   });
   describe('createPartnerAdmin', () => {
     it('when supplied with correct data should create partner admin', async () => {
-      const repoSpyCreate = jest.spyOn(repo, 'create');
+      const repoSpySave = jest.spyOn(repo, 'save');
 
       const response = await service.createPartnerAdminUser(dto);
       expect(response).toHaveProperty('partnerId', dto.partnerId);
-      expect(response).toHaveProperty('user.id', mockUserEntity.id);
-      expect(response).toHaveProperty('user.email', dto.email);
-      expect(repoSpyCreate).toBeCalled();
+      expect(response).toHaveProperty('userId', mockUserEntity.id);
+      expect(repoSpySave).toBeCalled();
     });
   });
 });
