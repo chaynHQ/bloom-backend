@@ -36,11 +36,11 @@ export class PartnerAdminService {
 
   async createPartnerAdminUser({
     email,
-    partner,
+    partnerId,
     name,
   }: CreatePartnerAdminUserDto): Promise<PartnerAdminEntity | unknown> {
     try {
-      const partnerResponse = await this.partnerService.getPartner(partner);
+      const partnerResponse = await this.partnerService.getPartnerById(partnerId);
 
       if (!partnerResponse) {
         throw new HttpException('Partner does not exist', HttpStatus.BAD_REQUEST);
@@ -63,6 +63,9 @@ export class PartnerAdminService {
         partnerId: partnerResponse.id,
       });
     } catch (error) {
+      if (error.code === 'auth/email-already-in-use') {
+        throw new HttpException('This email address is already in use', HttpStatus.BAD_REQUEST);
+      }
       throw error;
     }
   }

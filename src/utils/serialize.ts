@@ -81,6 +81,7 @@ export const formatUserObject = (userObject: UserEntity): GetUserDto => {
       firebaseUid: userObject.firebaseUid,
       isActive: userObject.isActive,
       crispTokenId: userObject.crispTokenId,
+      isSuperAdmin: userObject.isSuperAdmin,
     },
     partnerAccesses: userObject.partnerAccess
       ? formatPartnerAccessObjects(userObject.partnerAccess)

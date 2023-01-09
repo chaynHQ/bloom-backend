@@ -38,10 +38,17 @@ export class PartnerService {
     return await this.partnerRepository.find();
   }
 
+  // TODO - unsure why we would be getting partner by name rather than ID
   async getPartner(name: string): Promise<PartnerEntity> {
     return await this.partnerRepository
       .createQueryBuilder('partner')
       .where('LOWER(partner.name) LIKE LOWER(:name)', { name: `%${name.toLowerCase()}%` })
+      .getOne();
+  }
+  async getPartnerById(partnerId: string): Promise<PartnerEntity> {
+    return await this.partnerRepository
+      .createQueryBuilder('partner')
+      .where('partner.partnerId = :partnerId', { partnerId })
       .getOne();
   }
 

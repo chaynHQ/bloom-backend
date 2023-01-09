@@ -6,6 +6,7 @@ import { CourseRepository } from 'src/course/course.repository';
 import { CourseEntity } from 'src/entities/course.entity';
 import { EmailCampaignEntity } from 'src/entities/email-campaign.entity';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
+import { PartnerEntity } from 'src/entities/partner.entity';
 import { SessionEntity } from 'src/entities/session.entity';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
 import { UserEntity } from 'src/entities/user.entity';
@@ -21,6 +22,7 @@ import {
   mockCourse,
   mockEmailCampaignEntity,
   mockPartnerAccessEntity,
+  mockPartnerEntity,
   mockSession,
   mockTherapySessionEntity,
   mockUserEntity,
@@ -73,6 +75,7 @@ export const mockUserRepositoryMethods: PartialFuncReturn<UserRepository> = {
   findOne: async ({ email: client_email }) => {
     return { ...mockUserEntity, ...(client_email ? { email: client_email } : {}) } as UserEntity;
   },
+  save: async (arg) => arg as UserEntity,
 };
 
 export const mockUserRepositoryMethodsFactory = {
@@ -134,4 +137,10 @@ export const mockEmailCampaignRepositoryMethods: PartialFuncReturn<EmailCampaign
     return [{ ...mockEmailCampaignEntity, ...(arg ? arg : {}) }] as EmailCampaignEntity[];
   },
   save: async (arg) => arg as EmailCampaignEntity,
+};
+
+export const mockPartnerServiceMethods = {
+  getPartnerById: async (arg): Promise<PartnerEntity> => {
+    return { ...mockPartnerEntity, id: arg };
+  },
 };
