@@ -2,6 +2,7 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import _ from 'lodash';
 import moment from 'moment';
+import { Logger } from 'src/logger/logger';
 import { updateCrispProfileAccesses } from '../api/crisp/crisp-api';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
 import { GetUserDto } from '../user/dtos/get-user.dto';
@@ -11,6 +12,8 @@ import { PartnerAccessRepository } from './partner-access.repository';
 
 @Injectable()
 export class PartnerAccessService {
+  private readonly logger = new Logger('PartnerAccessService');
+
   constructor(
     @InjectRepository(PartnerAccessRepository)
     private partnerAccessRepository: PartnerAccessRepository,
@@ -97,20 +100,19 @@ export class PartnerAccessService {
   ): Promise<PartnerAccessEntity> {
     const partnerAccess = await this.getValidPartnerAccessCode(partnerAccessCode);
 
-    partnerAccesses.map(async (pa) => {
-      if (partnerAccess.partner.id === pa.partner.id && pa.active === true) {
-        pa.active = false;
-        await this.partnerAccessRepository.save(pa);
-      }
-    });
-
     partnerAccess.userId = user.id;
     partnerAccess.activatedAt = new Date();
     partnerAccesses.push(partnerAccess);
 
     await this.partnerAccessRepository.save(partnerAccess);
-
-    await updateCrispProfileAccesses(user, partnerAccesses, courses);
+    try {
+      await updateCrispProfileAccesses(user, partnerAccesses, courses);
+    } catch (error) {
+      this.logger.error(
+        `Error: Unable to update crisp profile for ${user.email}. Error: ${error.message} `,
+        error,
+      );
+    }
 
     return partnerAccess;
   }
