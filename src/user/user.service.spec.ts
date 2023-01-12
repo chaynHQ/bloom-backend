@@ -169,6 +169,50 @@ describe('UserService', () => {
       const user = await service.createUser({ ...createUserDto, partnerAccessCode: '123456' });
       expect(user.partnerAccesses).toBeUndefined();
     });
+    it('when supplied with user dto and partnerId but no partner, it should return a user with partner access', async () => {
+      const now = new Date();
+
+      jest.spyOn(mockPartnerAccessService, 'assignPartnerAccessOnSignup').mockResolvedValue({
+        partner: { id: '123' } as PartnerEntity,
+        userId: '123',
+        partnerId: '123',
+        accessCode: '123456',
+        therapySession: [],
+        featureLiveChat: true,
+        featureTherapy: true,
+        therapySessionsRedeemed: 0,
+        therapySessionsRemaining: 6,
+        id: 'id',
+        active: true,
+        activatedAt: now,
+        updatedAt: now,
+        createdAt: now,
+      } as PartnerAccessEntity);
+      jest
+        .spyOn(mockPartnerRepository, 'findOne')
+        .mockResolvedValue({ id: '123', name: 'Bumble' } as PartnerEntity);
+      const user = await service.createUser({
+        ...createUserDto,
+        partnerAccessCode: '123456',
+        partnerId: '123',
+      });
+      expect(user.partnerAccesses).toEqual([
+        {
+          accessCode: '123456',
+          activatedAt: now,
+          active: true,
+          createdAt: now,
+          featureLiveChat: true,
+          featureTherapy: true,
+          id: 'id',
+          partner: { id: '123' },
+          therapySessions: [],
+          therapySessionsRedeemed: 0,
+          therapySessionsRemaining: 6,
+          updatedAt: now,
+        },
+      ]);
+    });
   });
   describe('getUser', () => {
     it('when supplied a firebase user dto, it should return a user', async () => {

@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import * as crispApi from 'src/api/crisp/crisp-api';
 import { GetUserDto } from 'src/user/dtos/get-user.dto';
-import { mockUserEntity } from 'test/utils/mockData';
+import { mockPartnerEntity, mockUserEntity } from 'test/utils/mockData';
 import { Repository } from 'typeorm';
 import { createQueryBuilderMock } from '../../test/utils/mockUtils';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
@@ -158,6 +158,21 @@ describe('PartnerAccessService', () => {
         userId: mockGetUserDto.user.id,
         activatedAt: partnerAccess.activatedAt, // need to just fudge this as it is test specific
       });
+    });
+  });
+  describe('assignPartnerAccessOnSignUp', () => {
+    it('when partnerId is supplied, it should create a partner access and assign to user', async () => {
+      const partnerAccess = await service.assignPartnerAccessOnSignup({
+        partnerId: mockPartnerEntity.id,
+        userId: mockGetUserDto.user.id,
+      });
+
+      expect(partnerAccess.partnerAdminId).toBeNull();
+      expect(partnerAccess.partnerAdmin).toBeNull();
+
+      expect(partnerAccess.userId).toBe(mockGetUserDto.user.id);
+      expect(partnerAccess.featureLiveChat).toBeTruthy();
+      expect(partnerAccess.featureTherapy).toBeFalsy();
     });
   });
 });

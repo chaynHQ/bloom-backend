@@ -10,6 +10,13 @@ import { PartnerAccessCodeStatusEnum } from '../utils/constants';
 import { CreatePartnerAccessDto } from './dtos/create-partner-access.dto';
 import { PartnerAccessRepository } from './partner-access.repository';
 
+// TODO storing base service minimum here but this might need to be a config setup eventually
+const basePartnerAccess = {
+  featureTherapy: false,
+  featureLiveChat: true,
+  therapySessionsRemaining: 0,
+  therapySessionsRedeemed: 0,
+};
 @Injectable()
 export class PartnerAccessService {
   private readonly logger = new Logger('PartnerAccessService');
@@ -22,7 +29,7 @@ export class PartnerAccessService {
   async createPartnerAccess(
     createPartnerAccessDto: CreatePartnerAccessDto,
     partnerId: string,
-    partnerAdminId: string,
+    partnerAdminId: string | null,
   ): Promise<PartnerAccessEntity> {
     const partnerAccessBase = this.partnerAccessRepository.create(createPartnerAccessDto);
     const accessCode = await this.generateAccessCode(6);
@@ -83,11 +90,18 @@ export class PartnerAccessService {
       .getMany();
   }
 
-  async assignPartnerAccessOnSignup(
-    partnerAccessCode: string,
-    userId: string,
-  ): Promise<PartnerAccessEntity> {
-    const partnerAccess = await this.getValidPartnerAccessCode(partnerAccessCode);
+  async assignPartnerAccessOnSignup({
+    partnerAccessCode,
+    userId,
+    partnerId,
+  }: {
+    partnerAccessCode?: string;
+    userId: string;
+    partnerId?: string;
+  }): Promise<PartnerAccessEntity> {
+    const partnerAccess = partnerAccessCode
+      ? await this.getValidPartnerAccessCode(partnerAccessCode)
+      : await this.createPartnerAccess({ ...basePartnerAccess }, partnerId, null);
 
     partnerAccess.userId = userId;
     partnerAccess.activatedAt = new Date();

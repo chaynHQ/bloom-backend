@@ -32,8 +32,15 @@ export class UserService {
   ) {}
 
   public async createUser(createUserDto: CreateUserDto): Promise<GetUserDto> {
-    const { name, email, firebaseUid, partnerAccessCode, contactPermission, signUpLanguage } =
-      createUserDto;
+    const {
+      name,
+      email,
+      firebaseUid,
+      partnerAccessCode,
+      contactPermission,
+      signUpLanguage,
+      partnerId,
+    } = createUserDto;
     const createUserObject = this.userRepository.create({
       name,
       email,
@@ -45,12 +52,14 @@ export class UserService {
     try {
       const createUserResponse = await this.userRepository.save(createUserObject);
 
-      const partnerAccessResponse: PartnerAccessEntity | undefined = partnerAccessCode
-        ? await this.partnerAccessService.assignPartnerAccessOnSignup(
-            partnerAccessCode,
-            createUserResponse.id,
-          )
-        : undefined;
+      const partnerAccessResponse: PartnerAccessEntity | undefined =
+        partnerAccessCode || partnerId
+          ? await this.partnerAccessService.assignPartnerAccessOnSignup({
+              partnerAccessCode,
+              userId: createUserResponse.id,
+              partnerId,
+            })
+          : undefined;
 
       const partnerResponse: PartnerEntity | undefined = partnerAccessResponse
         ? await this.partnerRepository.findOne({
