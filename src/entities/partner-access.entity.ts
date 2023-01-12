@@ -30,7 +30,7 @@ export class PartnerAccessEntity extends BaseEntity {
   @JoinTable({ name: 'partner', joinColumn: { name: 'partnerId' } })
   partner: PartnerEntity;
 
-  @Column()
+  @Column({ nullable: true })
   partnerAdminId: string;
   @ManyToOne(() => PartnerAdminEntity, (partnerAdminEntity) => partnerAdminEntity.partnerAccess, {
     eager: true,
