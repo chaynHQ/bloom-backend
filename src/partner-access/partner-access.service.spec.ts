@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { updateCrispProfileAccesses } from 'src/api/crisp/crisp-api';
+import * as crispApi from 'src/api/crisp/crisp-api';
 import { GetUserDto } from 'src/user/dtos/get-user.dto';
 import { mockUserEntity } from 'test/utils/mockData';
 import { Repository } from 'typeorm';
@@ -135,7 +135,29 @@ describe('PartnerAccessService', () => {
         activatedAt: partnerAccess.activatedAt, // need to just fudge this as it is test specific
       });
 
-      expect(updateCrispProfileAccesses).toBeCalledWith(mockGetUserDto.user, [partnerAccess], []);
+      expect(crispApi.updateCrispProfileAccesses).toBeCalledWith(
+        mockGetUserDto.user,
+        [partnerAccess],
+        [],
+      );
+    });
+    it('should assign partner access even if crisp profile api fails', async () => {
+      const repoSpyCreateQueryBuilder = jest.spyOn(repo, 'createQueryBuilder');
+      // Mocks that the accesscode already exists
+      repoSpyCreateQueryBuilder.mockImplementation(
+        createQueryBuilderMock({ getOne: jest.fn().mockResolvedValue({ id: '123456' }) }) as never, // TODO resolve this typescript issue
+      );
+      jest.spyOn(crispApi, 'updateCrispProfileAccesses').mockImplementationOnce(async () => {
+        throw new Error('Test throw');
+      });
+
+      const partnerAccess = await service.assignPartnerAccess(mockGetUserDto, '123456');
+
+      expect(partnerAccess).toEqual({
+        id: '123456',
+        userId: mockGetUserDto.user.id,
+        activatedAt: partnerAccess.activatedAt, // need to just fudge this as it is test specific
+      });
     });
   });
 });
