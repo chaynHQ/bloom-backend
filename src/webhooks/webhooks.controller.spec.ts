@@ -8,15 +8,15 @@ import { WebhooksService } from './webhooks.service';
 
 describe('AppController', () => {
   let webhooksController: WebhooksController;
-  const mockedWebhooksService = createMock<WebhooksService>(mockWebhooksServiceMethods);
+  const mockWebhooksService = createMock<WebhooksService>(mockWebhooksServiceMethods);
 
   beforeEach(async () => {
-    const webhooksService: TestingModule = await Test.createTestingModule({
+    const webhooks: TestingModule = await Test.createTestingModule({
       controllers: [WebhooksController],
-      providers: [{ provide: WebhooksService, useValue: mockedWebhooksService }],
+      providers: [{ provide: WebhooksService, useValue: mockWebhooksService }],
     }).compile();
 
-    webhooksController = webhooksService.get<WebhooksController>(WebhooksController);
+    webhooksController = webhooks.get<WebhooksController>(WebhooksController);
   });
 
   describe('Webhooks controller', () => {
@@ -27,7 +27,7 @@ describe('AppController', () => {
     });
     it('updatePartnerAccessTherapy should error  if service returns errors', async () => {
       jest
-        .spyOn(mockedWebhooksService, 'updatePartnerAccessTherapy')
+        .spyOn(mockWebhooksService, 'updatePartnerAccessTherapy')
         .mockImplementationOnce(async () => {
           throw new HttpException('Therapy session not found', HttpStatus.FORBIDDEN);
         });
