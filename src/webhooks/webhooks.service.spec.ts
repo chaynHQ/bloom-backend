@@ -73,7 +73,12 @@ jest.mock('../api/crisp/crisp-api', () => {
         error: false,
         reason: undefined,
         data: {
-          data: {},
+          data: {
+            data: {
+              therapy_sessions_remaining: 10,
+              therapy_sessions_redeemed: 10,
+            },
+          },
         },
       };
     },

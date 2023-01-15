@@ -14,7 +14,7 @@ Instagram - [@chaynhq](https://www.instagram.com/chaynhq/)
 
 Youtube - [Chayn Team](https://www.youtube.com/channel/UC5_1Ci2SWVjmbeH8_USm-Bg)
 
-If you'd like to help Bloom by tackling any of our open Github issues, please get in touch with us to express your interest in volunteering via [this form](https://forms.gle/qXfDdPgJxYwvMmVP7). We'll get back to you to schedule an onboarding call. 
+If you'd like to help Bloom by tackling any of our open Github issues, please get in touch with us to express your interest in volunteering via [this form](https://forms.gle/qXfDdPgJxYwvMmVP7). We'll get back to you to schedule an onboarding call.
 
 # Bloom Backend
 
@@ -42,7 +42,7 @@ If you'd like to help Bloom by tackling any of our open Github issues, please ge
 
 ### Prerequisites
 
-- NodeJS v12.x
+- NodeJS v16.x
 - Yarn v1.x
 - Docker
 
@@ -150,7 +150,7 @@ Workspace settings for VSCode are included for consistent linting and formatting
 
 ### Seed Local Database
 
-If you're a volunteer, the way to add data to your local database is to seed it using a backup file. Please get in touch with the team to get access to the backup file. 
+If you're a volunteer, the way to add data to your local database is to seed it using a backup file. Please get in touch with the team to get access to the backup file.
 
 If you're staff and have access to Heroku, you also have the option to seed the database via the following script. Before you start, make sure:
 

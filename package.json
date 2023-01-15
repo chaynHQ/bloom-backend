@@ -40,7 +40,7 @@
     "@types/lodash": "^4.14.176",
     "axios": "^0.24.0",
     "class-transformer": "^0.4.0",
-    "class-validator": "^0.13.1",
+    "class-validator": "^0.14.0",
     "dotenv": "^10.0.0",
     "firebase": "^9.4.1",
     "firebase-admin": "^10.0.0",
@@ -83,7 +83,7 @@
     "typescript": "^4.3.5"
   },
   "engines": {
-    "node": "12.x",
+    "node": "16.x",
     "yarn": "1.x"
   },
   "jest": {
