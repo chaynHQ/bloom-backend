@@ -1,10 +1,7 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { createCrispProfileData } from 'src/api/crisp/utils/createCrispProfileData';
-import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
-import { PartnerEntity } from 'src/entities/partner.entity';
 import { IFirebaseUser } from 'src/firebase/firebase-user.interface';
-import { IPartnerAccessWithPartner } from 'src/partner-access/partner-access.interface';
 import {
   addCrispProfile,
   deleteCrispProfile,
@@ -12,7 +9,6 @@ import {
 } from '../api/crisp/crisp-api';
 import { AuthService } from '../auth/auth.service';
 import { PartnerAccessService } from '../partner-access/partner-access.service';
-import { PartnerRepository } from '../partner/partner.repository';
 import { formatUserObject } from '../utils/serialize';
 import { generateRandomString } from '../utils/utils';
 import { CreateUserDto } from './dtos/create-user.dto';
@@ -25,8 +21,6 @@ export class UserService {
   constructor(
     @InjectRepository(UserRepository)
     private userRepository: UserRepository,
-    @InjectRepository(PartnerRepository)
-    private partnerRepository: PartnerRepository,
     private readonly partnerAccessService: PartnerAccessService,
     private readonly authService: AuthService,
   ) {}
@@ -51,8 +45,8 @@ export class UserService {
 
     try {
       const createUserResponse = await this.userRepository.save(createUserObject);
-
-      const partnerAccessResponse: PartnerAccessEntity | undefined =
+      // Only assign Partner access code if partner access or partner id is supplied
+      const partnerAccessWithPartner =
         partnerAccessCode || partnerId
           ? await this.partnerAccessService.assignPartnerAccessOnSignup({
               partnerAccessCode,
@@ -61,16 +55,7 @@ export class UserService {
             })
           : undefined;
 
-      const partnerResponse: PartnerEntity | undefined = partnerAccessResponse
-        ? await this.partnerRepository.findOne({
-            id: partnerAccessResponse.partnerId,
-          })
-        : undefined;
-
-      const partnerAccessWithPartner: IPartnerAccessWithPartner | undefined =
-        partnerResponse && partnerAccessResponse
-          ? { ...partnerAccessResponse, partner: partnerResponse }
-          : undefined;
+      // partner segment is for crisp API
       const partnerSegment = partnerAccessWithPartner
         ? partnerAccessWithPartner.partner.name
         : 'public';
@@ -89,10 +74,10 @@ export class UserService {
         createUserResponse.email,
       );
 
-      return partnerAccessResponse && partnerResponse
+      return partnerAccessWithPartner
         ? formatUserObject({
             ...createUserResponse,
-            ...(partnerAccessResponse ? { partnerAccess: [partnerAccessResponse] } : {}),
+            ...(partnerAccessWithPartner ? { partnerAccess: [partnerAccessWithPartner] } : {}),
           })
         : { user: createUserResponse };
     } catch (error) {

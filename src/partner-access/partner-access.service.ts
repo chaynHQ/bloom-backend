@@ -2,7 +2,9 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import _ from 'lodash';
 import moment from 'moment';
+import { PartnerEntity } from 'src/entities/partner.entity';
 import { Logger } from 'src/logger/logger';
+import { PartnerRepository } from 'src/partner/partner.repository';
 import { updateCrispProfileAccesses } from '../api/crisp/crisp-api';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
 import { GetUserDto } from '../user/dtos/get-user.dto';
@@ -24,6 +26,8 @@ export class PartnerAccessService {
   constructor(
     @InjectRepository(PartnerAccessRepository)
     private partnerAccessRepository: PartnerAccessRepository,
+    @InjectRepository(PartnerRepository)
+    private partnerRepository: PartnerRepository,
   ) {}
 
   async createPartnerAccess(
@@ -99,13 +103,35 @@ export class PartnerAccessService {
     userId: string;
     partnerId?: string;
   }): Promise<PartnerAccessEntity> {
-    const partnerAccess = partnerAccessCode
+    // If partnerId supplied, check if partnerId is valid
+    const validPartnerAccess = partnerAccessCode
       ? await this.getValidPartnerAccessCode(partnerAccessCode)
-      : await this.createPartnerAccess({ ...basePartnerAccess }, partnerId, null);
+      : undefined;
 
-    partnerAccess.userId = userId;
-    partnerAccess.activatedAt = new Date();
-    return await this.partnerAccessRepository.save(partnerAccess);
+    // Get partner from partnerId supplied or from the partnerId on access code
+    const partnerResponse: PartnerEntity | undefined = validPartnerAccess
+      ? await this.partnerRepository.findOne({
+          id: validPartnerAccess.partnerId,
+        })
+      : await this.partnerRepository.findOne({
+          id: partnerId,
+        });
+
+    if (partnerResponse === undefined) {
+      throw new HttpException('Invalid partnerId supplied', HttpStatus.BAD_REQUEST);
+    }
+
+    // Base partner access is for bumble. For future iterations we might want to store this base config somewhere
+    const partnerAccessBase =
+      validPartnerAccess || (await this.createPartnerAccess(basePartnerAccess, partnerId, null));
+    const partnerAccess = {
+      ...partnerAccessBase,
+      userId,
+      activatedAt: new Date(),
+    };
+    const updatedPartnerAccess = await this.partnerAccessRepository.save(partnerAccess);
+
+    return { ...updatedPartnerAccess, partner: partnerResponse };
   }
 
   async assignPartnerAccess(
