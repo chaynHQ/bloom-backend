@@ -171,22 +171,6 @@ describe('PartnerAccessService', () => {
     });
   });
   describe('assignPartnerAccessOnSignUp', () => {
-    it('when partnerId is supplied, it should create a partner access and assign to user', async () => {
-      const validCodeSpy = jest.spyOn(service, 'getValidPartnerAccessCode');
-
-      const partnerAccess = await service.assignPartnerAccessOnSignup({
-        partnerId: mockPartnerEntity.id,
-        userId: mockGetUserDto.user.id,
-      });
-
-      expect(partnerAccess.partnerAdminId).toBeNull();
-      expect(partnerAccess.partnerAdmin).toBeNull();
-
-      expect(partnerAccess.userId).toBe(mockGetUserDto.user.id);
-      expect(partnerAccess.featureLiveChat).toBeTruthy();
-      expect(partnerAccess.featureTherapy).toBeFalsy();
-      expect(validCodeSpy).toBeCalledTimes(0);
-    });
     it('when partnerAccess is supplied, it should create a partner access and assign to user', async () => {
       const validCodeSpy = jest.spyOn(service, 'getValidPartnerAccessCode');
       jest.spyOn(repo, 'createQueryBuilder').mockImplementationOnce(
@@ -206,6 +190,24 @@ describe('PartnerAccessService', () => {
       expect(partnerAccess.featureLiveChat).toBeTruthy();
       expect(partnerAccess.featureTherapy).toBeTruthy();
       expect(validCodeSpy).toBeCalled();
+    });
+  });
+  describe('assignPartnerAccessOnSignUpWithoutCode', () => {
+    it('when partnerId is supplied, it should create a partner access and assign to user', async () => {
+      const validCodeSpy = jest.spyOn(service, 'getValidPartnerAccessCode');
+
+      const partnerAccess = await service.assignPartnerAccessOnSignupWithoutCode({
+        partnerId: mockPartnerEntity.id,
+        userId: mockGetUserDto.user.id,
+      });
+
+      expect(partnerAccess.partnerAdminId).toBeNull();
+      expect(partnerAccess.partnerAdmin).toBeNull();
+
+      expect(partnerAccess.userId).toBe(mockGetUserDto.user.id);
+      expect(partnerAccess.featureLiveChat).toBeTruthy();
+      expect(partnerAccess.featureTherapy).toBeFalsy();
+      expect(validCodeSpy).toBeCalledTimes(0);
     });
   });
 });

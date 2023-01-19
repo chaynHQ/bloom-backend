@@ -46,14 +46,17 @@ export class UserService {
     try {
       const createUserResponse = await this.userRepository.save(createUserObject);
       // Only assign Partner access code if partner access or partner id is supplied
-      const partnerAccessWithPartner =
-        partnerAccessCode || partnerId
-          ? await this.partnerAccessService.assignPartnerAccessOnSignup({
-              partnerAccessCode,
-              userId: createUserResponse.id,
-              partnerId,
-            })
-          : undefined;
+      const partnerAccessWithPartner = partnerAccessCode
+        ? await this.partnerAccessService.assignPartnerAccessOnSignup({
+            partnerAccessCode,
+            userId: createUserResponse.id,
+          })
+        : partnerId
+        ? await this.partnerAccessService.assignPartnerAccessOnSignupWithoutCode({
+            partnerId,
+            userId: createUserResponse.id,
+          })
+        : undefined;
 
       // partner segment is for crisp API
       const partnerSegment = partnerAccessWithPartner

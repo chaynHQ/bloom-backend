@@ -97,33 +97,43 @@ export class PartnerAccessService {
   async assignPartnerAccessOnSignup({
     partnerAccessCode,
     userId,
-    partnerId,
   }: {
     partnerAccessCode?: string;
     userId: string;
+  }): Promise<PartnerAccessEntity> {
+    const validPartnerAccess = await this.getValidPartnerAccessCode(partnerAccessCode);
+
+    const partnerResponse: PartnerEntity | undefined = await this.partnerRepository.findOne({
+      id: validPartnerAccess.partnerId,
+    });
+
+    const partnerAccess = {
+      ...validPartnerAccess,
+      userId,
+      activatedAt: new Date(),
+    };
+    const updatedPartnerAccess = await this.partnerAccessRepository.save(partnerAccess);
+
+    return { ...updatedPartnerAccess, partner: partnerResponse };
+  }
+  async assignPartnerAccessOnSignupWithoutCode({
+    userId,
+    partnerId,
+  }: {
+    userId: string;
     partnerId?: string;
   }): Promise<PartnerAccessEntity> {
-    // If partnerId supplied, check if partnerId is valid
-    const validPartnerAccess = partnerAccessCode
-      ? await this.getValidPartnerAccessCode(partnerAccessCode)
-      : undefined;
-
     // Get partner from partnerId supplied or from the partnerId on access code
-    const partnerResponse: PartnerEntity | undefined = validPartnerAccess
-      ? await this.partnerRepository.findOne({
-          id: validPartnerAccess.partnerId,
-        })
-      : await this.partnerRepository.findOne({
-          id: partnerId,
-        });
+    const partnerResponse: PartnerEntity | undefined = await this.partnerRepository.findOne({
+      id: partnerId,
+    });
 
     if (partnerResponse === undefined) {
       throw new HttpException('Invalid partnerId supplied', HttpStatus.BAD_REQUEST);
     }
 
     // Base partner access is for bumble. For future iterations we might want to store this base config somewhere
-    const partnerAccessBase =
-      validPartnerAccess || (await this.createPartnerAccess(basePartnerAccess, partnerId, null));
+    const partnerAccessBase = await this.createPartnerAccess(basePartnerAccess, partnerId, null);
     const partnerAccess = {
       ...partnerAccessBase,
       userId,

@@ -152,7 +152,7 @@ describe('UserService', () => {
     });
     it('when supplied with user dto and partnerId but no partner access code, it should return a user with partner access', async () => {
       jest
-        .spyOn(mockPartnerAccessService, 'assignPartnerAccessOnSignup')
+        .spyOn(mockPartnerAccessService, 'assignPartnerAccessOnSignupWithoutCode')
         .mockResolvedValue(mockPartnerAccessEntity);
       jest.spyOn(mockPartnerRepository, 'findOne').mockResolvedValue(mockPartnerEntity);
       const user = await service.createUser({
