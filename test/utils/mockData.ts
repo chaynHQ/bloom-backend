@@ -171,7 +171,11 @@ export const mockSimplybookBodyBase: SimplybookBodyDto = {
   service_provider_name: 'therapist@test.com',
 };
 
-export const mockPartnerEntity = { name: 'Bumble', id: 'partnerId' } as PartnerEntity;
+export const mockPartnerEntity = {
+  name: 'Bumble',
+  id: 'partnerId',
+  partnerFeature: [],
+} as PartnerEntity;
 
 export const mockPartnerAccessEntity = {
   id: 'pa1',
