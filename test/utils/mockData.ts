@@ -168,13 +168,24 @@ export const mockSimplybookBodyBase: SimplybookBodyDto = {
   service_provider_name: 'therapist@test.com',
 };
 
+export const mockPartnerEntity = { name: 'Bumble', id: 'partnerId' } as PartnerEntity;
+
 export const mockPartnerAccessEntity = {
   id: 'pa1',
   therapySessionsRemaining: 5,
   therapySessionsRedeemed: 1,
   featureTherapy: true,
+  featureLiveChat: true,
+  accessCode: '123456',
+  partner: mockPartnerEntity,
+  partnerAdmin: null,
+  partnerAdminId: null,
+  createdAt: new Date(),
+  activatedAt: new Date(),
+  therapySession: [],
+  updatedAt: new Date(),
+  active: true,
 } as PartnerAccessEntity;
-export const mockPartnerEntity = { name: 'Bumble' } as PartnerEntity;
 
 export const mockEmailCampaignEntity: EmailCampaignEntity = {
   email: 'test@test.com',

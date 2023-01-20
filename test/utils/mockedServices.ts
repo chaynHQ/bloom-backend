@@ -11,6 +11,7 @@ import { SessionEntity } from 'src/entities/session.entity';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
 import { UserEntity } from 'src/entities/user.entity';
 import { PartnerAccessRepository } from 'src/partner-access/partner-access.repository';
+import { PartnerRepository } from 'src/partner/partner.repository';
 import { SessionRepository } from 'src/session/session.repository';
 import { CreateUserDto } from 'src/user/dtos/create-user.dto';
 import { UpdateUserDto } from 'src/user/dtos/update-user.dto';
@@ -99,6 +100,7 @@ export const mockUserRepositoryMethodsFactory = {
 };
 
 export const mockPartnerAccessRepositoryMethods: PartialFuncReturn<PartnerAccessRepository> = {
+  createQueryBuilder: createQueryBuilderMock(),
   create: (dto) => {
     return {
       ...mockPartnerAccessEntity,
@@ -112,6 +114,22 @@ export const mockPartnerAccessRepositoryMethods: PartialFuncReturn<PartnerAccess
     return [{ ...mockPartnerAccessEntity, ...(arg ? { ...arg } : {}) }] as PartnerAccessEntity[];
   },
   save: async (arg) => arg as PartnerAccessEntity,
+};
+
+export const mockPartnerRepositoryMethods: PartialFuncReturn<PartnerRepository> = {
+  create: (dto) => {
+    return {
+      ...mockPartnerEntity,
+      ...dto,
+    } as PartnerEntity;
+  },
+  findOne: async (arg) => {
+    return { ...mockPartnerEntity, ...(arg ? { ...arg } : {}) } as PartnerEntity;
+  },
+  find: async (arg) => {
+    return [{ ...mockPartnerEntity, ...(arg ? { ...arg } : {}) }] as PartnerEntity[];
+  },
+  save: async (arg) => arg as PartnerEntity,
 };
 
 export const mockSlackMessageClientMethods: PartialFuncReturn<SlackMessageClient> = {

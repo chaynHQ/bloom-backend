@@ -46,7 +46,10 @@ export const updateCrispProfileAccesses = async (
     );
     const profileData = await getCrispProfile(user.email);
     const profileSegments = profileData?.data?.data?.segments;
-    const segments = partnerSegment.concat(profileSegments ? profileSegments : []);
+    const segments = partnerSegment
+      .concat(profileSegments ? profileSegments : [])
+      // Remove duplicate segments as crisp will fail if it finds duplicates
+      .filter((segment, index, array) => array.indexOf(segment) === index);
     await updateCrispProfile({ segments: segments }, user.email);
   } else {
     // Create new crisp profile

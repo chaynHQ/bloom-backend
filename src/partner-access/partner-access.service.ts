@@ -2,6 +2,9 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import _ from 'lodash';
 import moment from 'moment';
+import { PartnerEntity } from 'src/entities/partner.entity';
+import { Logger } from 'src/logger/logger';
+import { PartnerRepository } from 'src/partner/partner.repository';
 import { updateCrispProfileAccesses } from '../api/crisp/crisp-api';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
 import { GetUserDto } from '../user/dtos/get-user.dto';
@@ -9,17 +12,28 @@ import { PartnerAccessCodeStatusEnum } from '../utils/constants';
 import { CreatePartnerAccessDto } from './dtos/create-partner-access.dto';
 import { PartnerAccessRepository } from './partner-access.repository';
 
+// TODO storing base service minimum here but this might need to be a config setup eventually
+const basePartnerAccess = {
+  featureTherapy: false,
+  featureLiveChat: true,
+  therapySessionsRemaining: 0,
+  therapySessionsRedeemed: 0,
+};
 @Injectable()
 export class PartnerAccessService {
+  private readonly logger = new Logger('PartnerAccessService');
+
   constructor(
     @InjectRepository(PartnerAccessRepository)
     private partnerAccessRepository: PartnerAccessRepository,
+    @InjectRepository(PartnerRepository)
+    private partnerRepository: PartnerRepository,
   ) {}
 
   async createPartnerAccess(
     createPartnerAccessDto: CreatePartnerAccessDto,
     partnerId: string,
-    partnerAdminId: string,
+    partnerAdminId: string | null,
   ): Promise<PartnerAccessEntity> {
     const partnerAccessBase = this.partnerAccessRepository.create(createPartnerAccessDto);
     const accessCode = await this.generateAccessCode(6);
@@ -80,15 +94,54 @@ export class PartnerAccessService {
       .getMany();
   }
 
-  async assignPartnerAccessOnSignup(
-    partnerAccessCode: string,
-    userId: string,
-  ): Promise<PartnerAccessEntity> {
-    const partnerAccess = await this.getValidPartnerAccessCode(partnerAccessCode);
+  async assignPartnerAccessOnSignup({
+    partnerAccessCode,
+    userId,
+  }: {
+    partnerAccessCode?: string;
+    userId: string;
+  }): Promise<PartnerAccessEntity> {
+    const validPartnerAccess = await this.getValidPartnerAccessCode(partnerAccessCode);
 
-    partnerAccess.userId = userId;
-    partnerAccess.activatedAt = new Date();
-    return await this.partnerAccessRepository.save(partnerAccess);
+    const partnerResponse: PartnerEntity | undefined = await this.partnerRepository.findOne({
+      id: validPartnerAccess.partnerId,
+    });
+
+    const partnerAccess = {
+      ...validPartnerAccess,
+      userId,
+      activatedAt: new Date(),
+    };
+    const updatedPartnerAccess = await this.partnerAccessRepository.save(partnerAccess);
+
+    return { ...updatedPartnerAccess, partner: partnerResponse };
+  }
+  async assignPartnerAccessOnSignupWithoutCode({
+    userId,
+    partnerId,
+  }: {
+    userId: string;
+    partnerId?: string;
+  }): Promise<PartnerAccessEntity> {
+    // Get partner from partnerId supplied or from the partnerId on access code
+    const partnerResponse: PartnerEntity | undefined = await this.partnerRepository.findOne({
+      id: partnerId,
+    });
+
+    if (partnerResponse === undefined) {
+      throw new HttpException('Invalid partnerId supplied', HttpStatus.BAD_REQUEST);
+    }
+
+    // Base partner access is for bumble. For future iterations we might want to store this base config somewhere
+    const partnerAccessBase = await this.createPartnerAccess(basePartnerAccess, partnerId, null);
+    const partnerAccess = {
+      ...partnerAccessBase,
+      userId,
+      activatedAt: new Date(),
+    };
+    const updatedPartnerAccess = await this.partnerAccessRepository.save(partnerAccess);
+
+    return { ...updatedPartnerAccess, partner: partnerResponse };
   }
 
   async assignPartnerAccess(
@@ -97,20 +150,19 @@ export class PartnerAccessService {
   ): Promise<PartnerAccessEntity> {
     const partnerAccess = await this.getValidPartnerAccessCode(partnerAccessCode);
 
-    partnerAccesses.map(async (pa) => {
-      if (partnerAccess.partner.id === pa.partner.id && pa.active === true) {
-        pa.active = false;
-        await this.partnerAccessRepository.save(pa);
-      }
-    });
-
     partnerAccess.userId = user.id;
     partnerAccess.activatedAt = new Date();
     partnerAccesses.push(partnerAccess);
 
     await this.partnerAccessRepository.save(partnerAccess);
-
-    await updateCrispProfileAccesses(user, partnerAccesses, courses);
+    try {
+      await updateCrispProfileAccesses(user, partnerAccesses, courses);
+    } catch (error) {
+      this.logger.error(
+        `Error: Unable to update crisp profile for ${user.email}. Error: ${error.message} `,
+        error,
+      );
+    }
 
     return partnerAccess;
   }
