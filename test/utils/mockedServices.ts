@@ -5,12 +5,16 @@ import { CoursePartnerService } from 'src/course-partner/course-partner.service'
 import { CourseRepository } from 'src/course/course.repository';
 import { CourseEntity } from 'src/entities/course.entity';
 import { EmailCampaignEntity } from 'src/entities/email-campaign.entity';
+import { FeatureEntity } from 'src/entities/feature.entity';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
+import { PartnerFeatureEntity } from 'src/entities/partner-feature.entity';
 import { PartnerEntity } from 'src/entities/partner.entity';
 import { SessionEntity } from 'src/entities/session.entity';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
 import { UserEntity } from 'src/entities/user.entity';
+import { FeatureRepository } from 'src/feature/feature.repository';
 import { PartnerAccessRepository } from 'src/partner-access/partner-access.repository';
+import { PartnerFeatureRepository } from 'src/partner-feature/partner-feature.repository';
 import { PartnerRepository } from 'src/partner/partner.repository';
 import { SessionRepository } from 'src/session/session.repository';
 import { CreateUserDto } from 'src/user/dtos/create-user.dto';
@@ -22,8 +26,10 @@ import { WebhooksService } from 'src/webhooks/webhooks.service';
 import {
   mockCourse,
   mockEmailCampaignEntity,
+  mockFeatureEntity,
   mockPartnerAccessEntity,
   mockPartnerEntity,
+  mockPartnerFeatureEntity,
   mockSession,
   mockTherapySessionEntity,
   mockUserEntity,
@@ -161,4 +167,47 @@ export const mockPartnerServiceMethods = {
   getPartnerById: async (arg): Promise<PartnerEntity> => {
     return { ...mockPartnerEntity, id: arg };
   },
+};
+export const mockPartnerFeatureServiceMethods = {
+  createPartnerFeature: async (arg): Promise<PartnerFeatureEntity> => {
+    return { ...mockPartnerFeatureEntity, ...arg };
+  },
+};
+export const mockFeatureServiceMethods = {
+  createFeature: async (arg): Promise<PartnerFeatureEntity> => {
+    return { ...mockPartnerFeatureEntity, ...arg };
+  },
+};
+
+export const mockPartnerFeatureRepositoryMethods: PartialFuncReturn<PartnerFeatureRepository> = {
+  createQueryBuilder: createQueryBuilderMock(),
+  create: (dto) => {
+    return {
+      ...mockPartnerFeatureEntity,
+      ...dto,
+    } as PartnerFeatureEntity;
+  },
+  findOne: async (arg) => {
+    return { ...mockPartnerFeatureEntity, ...(arg ? { ...arg } : {}) } as PartnerFeatureEntity;
+  },
+  find: async (arg) => {
+    return [{ ...mockPartnerFeatureEntity, ...(arg ? { ...arg } : {}) }] as PartnerFeatureEntity[];
+  },
+  save: async (arg) => arg as PartnerFeatureEntity,
+};
+export const mockFeatureRepositoryMethods: PartialFuncReturn<FeatureRepository> = {
+  createQueryBuilder: createQueryBuilderMock(),
+  create: (dto) => {
+    return {
+      ...mockFeatureEntity,
+      ...dto,
+    } as FeatureEntity;
+  },
+  findOne: async (arg) => {
+    return { ...mockFeatureEntity, ...(arg ? { ...arg } : {}) } as FeatureEntity;
+  },
+  find: async (arg) => {
+    return [{ ...mockFeatureEntity, ...(arg ? { ...arg } : {}) }] as FeatureEntity[];
+  },
+  save: async (arg) => arg as FeatureEntity,
 };

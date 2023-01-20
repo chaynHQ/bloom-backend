@@ -6,9 +6,11 @@ import { AuthModule } from './auth/auth.module';
 import { CoursePartnerModule } from './course-partner/course-partner.module';
 import { CourseUserModule } from './course-user/course-user.module';
 import { CourseModule } from './course/course.module';
+import { FeatureModule } from './feature/feature.module';
 import { LoggerModule } from './logger/logger.module';
 import { PartnerAccessModule } from './partner-access/partner-access.module';
 import { PartnerAdminModule } from './partner-admin/partner-admin.module';
+import { PartnerFeatureModule } from './partner-feature/partner-feature.module';
 import { PartnerModule } from './partner/partner.module';
 import { SessionUserModule } from './session-user/session-user.module';
 import { SessionModule } from './session/session.module';
@@ -33,6 +35,8 @@ import { WebhooksModule } from './webhooks/webhooks.module';
     SessionUserModule,
     CoursePartnerModule,
     SubscriptionUserModule,
+    FeatureModule,
+    PartnerFeatureModule,
   ],
 })
 export class AppModule {}

@@ -51,6 +51,14 @@ export class PartnerService {
       .where('partner.partnerId = :partnerId', { partnerId })
       .getOne();
   }
+  async getPartnerWithPartnerFeatures(id: string): Promise<PartnerEntity> {
+    return await this.partnerRepository
+      .createQueryBuilder('partner')
+      .leftJoinAndSelect('partner.partnerFeature', 'partnerFeature')
+      .leftJoinAndSelect('partnerFeature.feature', 'feature')
+      .where('partner.partnerId = :partnerId', { partnerId: id })
+      .getOne();
+  }
 
   async deletePartner({ partnerId }: DeletePartnerDto): Promise<string> {
     try {

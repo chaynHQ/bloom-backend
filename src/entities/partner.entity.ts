@@ -3,6 +3,7 @@ import { BaseBloomEntity } from '../entities/base.entity';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
 import { PartnerAdminEntity } from '../entities/partner-admin.entity';
 import { CoursePartnerEntity } from './course-partner.entity';
+import { PartnerFeatureEntity } from './partner-feature.entity';
 
 @Entity({ name: 'partner' })
 export class PartnerEntity extends BaseBloomEntity {
@@ -27,4 +28,7 @@ export class PartnerEntity extends BaseBloomEntity {
 
   @OneToMany(() => CoursePartnerEntity, (coursePartnerEntity) => coursePartnerEntity.partner)
   partner: PartnerEntity[];
+
+  @OneToMany(() => PartnerFeatureEntity, (partnerFeatureEntity) => partnerFeatureEntity.partner)
+  partnerFeature: PartnerFeatureEntity[];
 }
