@@ -1,6 +1,5 @@
 import { createMock, DeepMocked } from '@golevelup/ts-jest';
 import { Test, TestingModule } from '@nestjs/testing';
-import { PartnerFeatureEntity } from 'src/entities/partner-feature.entity';
 import { FeatureService } from 'src/feature/feature.service';
 import { PartnerRepository } from 'src/partner/partner.repository';
 import { PartnerService } from 'src/partner/partner.service';
@@ -12,7 +11,6 @@ import {
   mockPartnerRepositoryMethods,
   mockPartnerServiceMethods,
 } from 'test/utils/mockedServices';
-import { Repository } from 'typeorm';
 import { PartnerFeatureRepository } from './partner-feature.repository';
 import { PartnerFeatureService } from './partner-feature.service';
 
@@ -24,7 +22,6 @@ const createPartnerFeatureDto = {
 
 describe('PartnerFeatureService', () => {
   let service: PartnerFeatureService;
-  let repo: PartnerFeatureRepository;
   let mockPartnerRepository: DeepMocked<PartnerRepository>;
   let mockPartnerService: DeepMocked<PartnerService>;
   let mockUserService: DeepMocked<UserService>;
@@ -66,7 +63,6 @@ describe('PartnerFeatureService', () => {
     }).compile();
 
     service = module.get<PartnerFeatureService>(PartnerFeatureService);
-    repo = module.get<Repository<PartnerFeatureEntity>>(PartnerFeatureRepository);
   });
 
   it('should be defined', () => {
