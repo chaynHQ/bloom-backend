@@ -25,6 +25,11 @@ export class CreateUserDto {
   @ApiProperty({ type: String })
   partnerAccessCode?: string;
 
+  @IsOptional()
+  @IsString()
+  @ApiProperty({ type: String })
+  partnerId?: string;
+
   @IsDefined()
   @IsBoolean()
   @ApiProperty({ type: Boolean })

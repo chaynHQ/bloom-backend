@@ -413,12 +413,7 @@ describe('WebhooksService', () => {
           ...{ action: SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING },
         }),
       ).resolves.toHaveProperty('action', SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING);
-      expect(partnerAccessSaveSpy).toBeCalledWith({
-        featureTherapy: true,
-        id: 'pa1',
-        therapySessionsRedeemed: 1,
-        therapySessionsRemaining: 5,
-      });
+      expect(partnerAccessSaveSpy).toBeCalledWith(mockPartnerAccessEntity);
     });
     it('should not update partner access when user updates booking', async () => {
       const partnerAccessSaveSpy = jest.spyOn(mockedPartnerAccessRepository, 'save');
