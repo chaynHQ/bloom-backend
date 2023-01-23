@@ -36,6 +36,7 @@ export class PartnerController {
 
   @Get(':name')
   @ApiOperation({ description: 'Returns profile data for a partner' })
+  @UseGuards(SuperAdminAuthGuard) // Temporary super admin auth guard
   @ApiParam({ name: 'name', description: 'Gets partner by name' })
   async getPartner(@Param() { name }): Promise<IPartner> {
     // annoyingly the frontend doesn't have the id when features are needed
