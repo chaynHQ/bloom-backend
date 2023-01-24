@@ -23,6 +23,7 @@ const userEntity: UserEntity = {
   isActive: true,
   courseUser: [],
   signUpLanguage: 'en',
+  subscriptionUser: [],
 };
 describe('PartnerAdminAuthGuard', () => {
   let guard: PartnerAdminAuthGuard;

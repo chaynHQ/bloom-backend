@@ -133,6 +133,7 @@ export const mockUserEntity: UserEntity = {
   email: 'user@email.com',
   name: 'name',
   signUpLanguage: 'en',
+  subscriptionUser: [],
 };
 
 export const mockTherapySessionEntity = {
