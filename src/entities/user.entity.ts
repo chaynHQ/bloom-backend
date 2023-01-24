@@ -3,6 +3,7 @@ import { PartnerAccessEntity } from '../entities/partner-access.entity';
 import { PartnerAdminEntity } from '../entities/partner-admin.entity';
 import { BaseEntity } from './base.entity';
 import { CourseUserEntity } from './course-user.entity';
+import { SubscriptionUserEntity } from './subscription-user.entity';
 
 @Entity({ name: 'user' })
 export class UserEntity extends BaseEntity {
@@ -38,6 +39,9 @@ export class UserEntity extends BaseEntity {
 
   @OneToMany(() => CourseUserEntity, (courseUser) => courseUser.user)
   courseUser: CourseUserEntity[];
+
+  @OneToMany(() => SubscriptionUserEntity, (subscriptionUser) => subscriptionUser.user)
+  subscriptionUser: SubscriptionUserEntity[];
 
   @Column({ unique: true })
   @Generated('uuid')
