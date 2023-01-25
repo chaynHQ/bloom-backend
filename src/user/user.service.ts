@@ -104,6 +104,8 @@ export class UserService {
       .leftJoinAndSelect('courseUser.course', 'course')
       .leftJoinAndSelect('courseUser.sessionUser', 'sessionUser')
       .leftJoinAndSelect('sessionUser.session', 'session')
+      .leftJoinAndSelect('user.subscriptionUser', 'subscriptionUser')
+      .leftJoinAndSelect('subscriptionUser.subscription', 'subscription')
       .where('user.firebaseUid = :uid', { uid })
       .getOne();
 
