@@ -2,6 +2,7 @@ import { ICoursesWithSessions } from 'src/course/course.interface';
 import { ITherapySession } from 'src/webhooks/therapy-session.interface';
 import { IPartnerAccessWithPartner } from '../../partner-access/partner-access.interface';
 import { IPartnerAdminWithPartner } from '../../partner-admin/partner-admin.interface';
+import { ISubscriptionUser } from '../../subscription-user/subscription-user.interface';
 import { IUser } from '../user.interface';
 
 export class GetUserDto {
@@ -10,4 +11,5 @@ export class GetUserDto {
   partnerAdmin?: IPartnerAdminWithPartner;
   courses?: ICoursesWithSessions[];
   therapySessions?: ITherapySession[];
+  subscriptions?: ISubscriptionUser[];
 }
