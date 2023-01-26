@@ -23,9 +23,8 @@ export class SubscriptionUserController {
     @Req() req: Request,
     @Body() createSubscriptionUserDto: CreateSubscriptionUserDto,
   ) {
-    console.log('body', createSubscriptionUserDto);
     return await this.subscriptionUserService.createWhatsappSubscription(
-      req['user'].user.id,
+      req['user'],
       createSubscriptionUserDto,
     );
   }

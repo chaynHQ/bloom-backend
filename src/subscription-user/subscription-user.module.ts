@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ZapierWebhookClient } from '../api/zapier/zapier-webhook-client';
 import { FirebaseModule } from '../firebase/firebase.module';
 import { PartnerAccessRepository } from '../partner-access/partner-access.repository';
 import { PartnerAccessService } from '../partner-access/partner-access.service';
@@ -24,6 +25,12 @@ import { SubscriptionUserService } from './subscription-user.service';
     FirebaseModule,
   ],
   controllers: [SubscriptionUserController],
-  providers: [SubscriptionUserService, SubscriptionService, UserService, PartnerAccessService],
+  providers: [
+    SubscriptionUserService,
+    SubscriptionService,
+    UserService,
+    PartnerAccessService,
+    ZapierWebhookClient,
+  ],
 })
 export class SubscriptionUserModule {}
