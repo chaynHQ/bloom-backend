@@ -1,8 +1,9 @@
-import { Controller, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Request } from 'express';
 import { FirebaseAuthGuard } from '../firebase/firebase-auth.guard';
 import { ControllerDecorator } from '../utils/controller.decorator';
+import { CreateSubscriptionUserDto } from './dto/create-subscription-user.dto';
 import { SubscriptionUserService } from './subscription-user.service';
 
 @ApiTags('Subscription User')
@@ -17,9 +18,15 @@ export class SubscriptionUserController {
     description:
       'Stores relationship between a `User` and whatsapp subscription record, if an active subscription does not yet exist',
   })
-  // TODO add body which contains phone number
   @UseGuards(FirebaseAuthGuard)
-  async createWhatsappSubscription(@Req() req: Request) {
-    return await this.subscriptionUserService.createWhatsappSubscription(req['user']);
+  async createWhatsappSubscription(
+    @Req() req: Request,
+    @Body() createSubscriptionUserDto: CreateSubscriptionUserDto,
+  ) {
+    console.log('body', createSubscriptionUserDto);
+    return await this.subscriptionUserService.createWhatsappSubscription(
+      req['user'].user.id,
+      createSubscriptionUserDto,
+    );
   }
 }

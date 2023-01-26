@@ -131,6 +131,7 @@ export const formatSubscriptionObject = (
   return userSubscriptions.map((userSubscription) => ({
     subscriptionId: userSubscription.id,
     subscriptionName: userSubscription.subscription.name,
+    subscriptionInfo: userSubscription.subscriptionInfo,
     createdAt: userSubscription.createdAt,
     cancelledAt: userSubscription.cancelledAt,
   }));
