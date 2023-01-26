@@ -10,7 +10,7 @@ export class SubscriptionService {
     private subscriptionRepository: SubscriptionRepository,
   ) {}
 
-  async getSubscription(id: string): Promise<SubscriptionEntity> {
-    return await this.subscriptionRepository.findOne({ id });
+  async getSubscription(name: string): Promise<SubscriptionEntity> {
+    return await this.subscriptionRepository.findOne({ name });
   }
 }
