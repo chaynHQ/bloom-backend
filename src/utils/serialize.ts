@@ -1,9 +1,11 @@
 import moment from 'moment';
 import { CourseUserEntity } from '../entities/course-user.entity';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
+import { SubscriptionUserEntity } from '../entities/subscription-user.entity';
 import { TherapySessionEntity } from '../entities/therapy-session.entity';
 import { UserEntity } from '../entities/user.entity';
 import { SimplybookBodyDto } from '../partner-access/dtos/zapier-body.dto';
+import { ISubscriptionUser } from '../subscription-user/subscription-user.interface';
 import { GetUserDto } from '../user/dtos/get-user.dto';
 
 export const formatCourseUserObjects = (courseUserObjects: CourseUserEntity[]) => {
@@ -95,6 +97,10 @@ export const formatUserObject = (userObject: UserEntity): GetUserDto => {
         }
       : null,
     courses: userObject.courseUser ? formatCourseUserObjects(userObject.courseUser) : [],
+    subscriptions:
+      userObject.subscriptionUser.length > 0
+        ? formatSubscriptionObjects(userObject.subscriptionUser)
+        : [],
   };
 };
 
@@ -117,4 +123,16 @@ export const formatTherapySessionObject = (
     completedAt: null,
     partnerAccessId,
   };
+};
+
+export const formatSubscriptionObjects = (
+  userSubscriptions: SubscriptionUserEntity[],
+): ISubscriptionUser[] => {
+  return userSubscriptions.map((userSubscription) => ({
+    subscriptionId: userSubscription.id,
+    subscriptionName: userSubscription.subscription.name,
+    subscriptionInfo: userSubscription.subscriptionInfo,
+    createdAt: userSubscription.createdAt,
+    cancelledAt: userSubscription.cancelledAt,
+  }));
 };

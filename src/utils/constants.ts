@@ -116,3 +116,8 @@ export const simplybookCompanyName = getEnv(
   process.env.SIMPLYBOOK_COMPANY_NAME,
   'SIMPLYBOOK_COMPANY_NAME',
 );
+
+export const respondIoZapierWebhook = getEnv(
+  process.env.RESPOND_IO_ZAPIER_WEBHOOK,
+  'RESPOND_IO_ZAPIER_WEBHOOK',
+);

@@ -9,6 +9,9 @@ export class SubscriptionUserEntity extends BaseEntity {
   id: string;
 
   @Column()
+  subscriptionInfo: string;
+
+  @Column()
   subscriptionId: string;
   @ManyToOne(() => SubscriptionEntity, (subscriptionEntity) => subscriptionEntity.subscriptionUser)
   @JoinTable({ name: 'subscription', joinColumn: { name: 'subscriptionId' } })
