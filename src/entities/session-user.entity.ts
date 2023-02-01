@@ -1,11 +1,11 @@
 import { Column, Entity, JoinTable, ManyToOne, PrimaryGeneratedColumn, Unique } from 'typeorm';
-import { BaseEntity } from './base.entity';
+import { BaseBloomEntity } from './base.entity';
 import { CourseUserEntity } from './course-user.entity';
 import { SessionEntity } from './session.entity';
 
 @Entity({ name: 'session_user' })
 @Unique('session_user_index_name', ['courseUserId', 'sessionId'])
-export class SessionUserEntity extends BaseEntity {
+export class SessionUserEntity extends BaseBloomEntity {
   @PrimaryGeneratedColumn('uuid', { name: 'sessionUserId' })
   id: string;
 
