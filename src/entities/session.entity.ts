@@ -1,11 +1,11 @@
 import { Column, Entity, JoinTable, ManyToOne, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { STORYBLOK_STORY_STATUS_ENUM } from '../utils/constants';
-import { BaseEntity } from './base.entity';
+import { BaseBloomEntity } from './base.entity';
 import { CourseEntity } from './course.entity';
 import { SessionUserEntity } from './session-user.entity';
 
 @Entity({ name: 'session' })
-export class SessionEntity extends BaseEntity {
+export class SessionEntity extends BaseBloomEntity {
   @PrimaryGeneratedColumn('uuid', { name: 'sessionId' })
   id: string;
 

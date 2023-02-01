@@ -1,10 +1,10 @@
 import { Column, Entity, JoinTable, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
-import { BaseEntity } from './base.entity';
+import { BaseBloomEntity } from './base.entity';
 import { SubscriptionEntity } from './subscription.entity';
 import { UserEntity } from './user.entity';
 
 @Entity({ name: 'subscription_user' })
-export class SubscriptionUserEntity extends BaseEntity {
+export class SubscriptionUserEntity extends BaseBloomEntity {
   @PrimaryGeneratedColumn('uuid', { name: 'subscriptionUserId' })
   id: string;
 

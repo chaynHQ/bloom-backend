@@ -10,11 +10,11 @@ import {
 import { PartnerAdminEntity } from '../entities/partner-admin.entity';
 import { PartnerEntity } from '../entities/partner.entity';
 import { UserEntity } from '../entities/user.entity';
-import { BaseEntity } from './base.entity';
+import { BaseBloomEntity } from './base.entity';
 import { TherapySessionEntity } from './therapy-session.entity';
 
 @Entity({ name: 'partner_access' })
-export class PartnerAccessEntity extends BaseEntity {
+export class PartnerAccessEntity extends BaseBloomEntity {
   @PrimaryGeneratedColumn('uuid', { name: 'partnerAccessId' })
   id: string;
 

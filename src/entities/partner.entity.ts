@@ -1,11 +1,11 @@
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
-import { BaseEntity } from '../entities/base.entity';
+import { BaseBloomEntity } from '../entities/base.entity';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
 import { PartnerAdminEntity } from '../entities/partner-admin.entity';
 import { CoursePartnerEntity } from './course-partner.entity';
 
 @Entity({ name: 'partner' })
-export class PartnerEntity extends BaseEntity {
+export class PartnerEntity extends BaseBloomEntity {
   @PrimaryGeneratedColumn('uuid', { name: 'partnerId' })
   id: string;
 
