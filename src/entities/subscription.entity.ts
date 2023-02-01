@@ -1,8 +1,7 @@
-import { BaseEntity, Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import { BaseEntity } from './base.entity';
 import { SubscriptionUserEntity } from './subscription-user.entity';
 
-// NB: The base entity imported here is wrong. The base entity within the project should be imported.
-// This should be fixed by adding a createdAt and updatedAt column to the subscription table (via migration) at a later date.
 @Entity({ name: 'subscription' })
 export class SubscriptionEntity extends BaseEntity {
   @PrimaryGeneratedColumn('uuid', { name: 'subscriptionId' })
