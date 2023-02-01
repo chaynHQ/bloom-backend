@@ -1,10 +1,10 @@
 import { Column, Entity, JoinTable, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 import { SIMPLYBOOK_ACTION_ENUM } from '../utils/constants';
-import { BaseEntity } from './base.entity';
+import { BaseBloomEntity } from './base.entity';
 import { PartnerAccessEntity } from './partner-access.entity';
 
 @Entity({ name: 'therapy_session' })
-export class TherapySessionEntity extends BaseEntity {
+export class TherapySessionEntity extends BaseBloomEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 

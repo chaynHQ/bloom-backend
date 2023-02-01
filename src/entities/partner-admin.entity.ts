@@ -1,5 +1,3 @@
-import { PartnerEntity } from '../entities/partner.entity';
-import { UserEntity } from '../entities/user.entity';
 import {
   Column,
   Entity,
@@ -10,11 +8,13 @@ import {
   OneToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { BaseEntity } from './base.entity';
+import { PartnerEntity } from '../entities/partner.entity';
+import { UserEntity } from '../entities/user.entity';
+import { BaseBloomEntity } from './base.entity';
 import { PartnerAccessEntity } from './partner-access.entity';
 
 @Entity({ name: 'partner_admin' })
-export class PartnerAdminEntity extends BaseEntity {
+export class PartnerAdminEntity extends BaseBloomEntity {
   @PrimaryGeneratedColumn('uuid', { name: 'partnerAdminId' })
   id: string;
 

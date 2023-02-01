@@ -1,10 +1,10 @@
 import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 
 import { CAMPAIGN_TYPE } from 'src/utils/constants';
-import { BaseEntity } from './base.entity';
+import { BaseBloomEntity } from './base.entity';
 
 @Entity({ name: 'email_campaign' })
-export class EmailCampaignEntity extends BaseEntity {
+export class EmailCampaignEntity extends BaseBloomEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 

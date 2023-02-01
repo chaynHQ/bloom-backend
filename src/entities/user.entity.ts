@@ -1,12 +1,12 @@
 import { Column, Entity, Generated, OneToMany, OneToOne, PrimaryGeneratedColumn } from 'typeorm';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
 import { PartnerAdminEntity } from '../entities/partner-admin.entity';
-import { BaseEntity } from './base.entity';
+import { BaseBloomEntity } from './base.entity';
 import { CourseUserEntity } from './course-user.entity';
 import { SubscriptionUserEntity } from './subscription-user.entity';
 
 @Entity({ name: 'user' })
-export class UserEntity extends BaseEntity {
+export class UserEntity extends BaseBloomEntity {
   @PrimaryGeneratedColumn('uuid', { name: 'userId' })
   id: string;
 
