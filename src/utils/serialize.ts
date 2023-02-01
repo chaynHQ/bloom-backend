@@ -99,7 +99,7 @@ export const formatUserObject = (userObject: UserEntity): GetUserDto => {
     courses: userObject.courseUser ? formatCourseUserObjects(userObject.courseUser) : [],
     subscriptions:
       userObject.subscriptionUser.length > 0
-        ? formatSubscriptionObject(userObject.subscriptionUser)
+        ? formatSubscriptionObjects(userObject.subscriptionUser)
         : [],
   };
 };
@@ -125,7 +125,7 @@ export const formatTherapySessionObject = (
   };
 };
 
-export const formatSubscriptionObject = (
+export const formatSubscriptionObjects = (
   userSubscriptions: SubscriptionUserEntity[],
 ): ISubscriptionUser[] => {
   return userSubscriptions.map((userSubscription) => ({
