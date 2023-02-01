@@ -16,7 +16,7 @@ export class SubscriptionUserController {
   @ApiBearerAuth('access-token')
   @ApiOperation({
     description:
-      'Stores relationship between a `User` and whatsapp subscription record, if an active subscription does not yet exist',
+      'Stores relationship between a `User` and the subscription record for the whatsapp service (if an active subscription does not yet exist for that user)',
   })
   @UseGuards(FirebaseAuthGuard)
   async createWhatsappSubscription(
