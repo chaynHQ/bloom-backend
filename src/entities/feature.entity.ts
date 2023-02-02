@@ -1,9 +1,9 @@
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
-import { BaseEntity } from '../entities/base.entity';
+import { BaseBloomEntity } from '../entities/base.entity';
 import { PartnerFeatureEntity } from './partner-feature.entity';
 
 @Entity({ name: 'feature' })
-export class FeatureEntity extends BaseEntity {
+export class FeatureEntity extends BaseBloomEntity {
   @PrimaryGeneratedColumn('uuid', { name: 'featureId' })
   id: string;
 

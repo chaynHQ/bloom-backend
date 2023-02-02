@@ -1,10 +1,10 @@
 import { Column, Entity, JoinTable, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
-import { BaseEntity } from '../entities/base.entity';
+import { BaseBloomEntity } from '../entities/base.entity';
 import { FeatureEntity } from './feature.entity';
 import { PartnerEntity } from './partner.entity';
 
 @Entity({ name: 'partner_feature' })
-export class PartnerFeatureEntity extends BaseEntity {
+export class PartnerFeatureEntity extends BaseBloomEntity {
   @PrimaryGeneratedColumn('uuid', { name: 'partnerFeatureId' })
   id: string;
   @Column()
