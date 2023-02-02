@@ -1,7 +1,9 @@
 import { CourseEntity } from 'src/entities/course.entity';
 import { EmailCampaignEntity } from 'src/entities/email-campaign.entity';
+import { FeatureEntity } from 'src/entities/feature.entity';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { PartnerAdminEntity } from 'src/entities/partner-admin.entity';
+import { PartnerFeatureEntity } from 'src/entities/partner-feature.entity';
 import { PartnerEntity } from 'src/entities/partner.entity';
 import { SessionEntity } from 'src/entities/session.entity';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
@@ -169,7 +171,11 @@ export const mockSimplybookBodyBase: SimplybookBodyDto = {
   service_provider_name: 'therapist@test.com',
 };
 
-export const mockPartnerEntity = { name: 'Bumble', id: 'partnerId' } as PartnerEntity;
+export const mockPartnerEntity = {
+  name: 'Bumble',
+  id: 'partnerId',
+  partnerFeature: [],
+} as PartnerEntity;
 
 export const mockPartnerAccessEntity = {
   id: 'pa1',
@@ -207,3 +213,20 @@ export const mockPartnerAdminEntity: PartnerAdminEntity = {
   createdAt: new Date(),
   updatedAt: new Date(),
 };
+
+export const mockFeatureEntity = {
+  createdAt: new Date(),
+  updatedAt: new Date(),
+  id: 'featureId',
+  name: 'Test feature',
+  partnerFeature: {},
+} as FeatureEntity;
+
+export const mockPartnerFeatureEntity = {
+  createdAt: new Date(),
+  updatedAt: new Date(),
+  id: 'partnerFeatureId',
+  partnerId: mockPartnerEntity.id,
+  feature: mockFeatureEntity,
+  featureId: mockFeatureEntity.id,
+} as PartnerFeatureEntity;
