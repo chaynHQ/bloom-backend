@@ -19,7 +19,6 @@ export class FeatureController {
   async createFeature(
     @Body() createFeatureDto: CreateFeatureDto,
   ): Promise<FeatureEntity | unknown> {
-    console.log('im inside create feature');
     return this.featureService.createFeature(createFeatureDto);
   }
 

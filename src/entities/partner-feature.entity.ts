@@ -12,7 +12,9 @@ export class PartnerFeatureEntity extends BaseEntity {
 
   @Column()
   partnerId: string;
-  @ManyToOne(() => PartnerEntity, (partnerEntity) => partnerEntity.partnerFeature)
+  @ManyToOne(() => PartnerEntity, (partnerEntity) => partnerEntity.partnerFeature, {
+    onDelete: 'CASCADE',
+  })
   @JoinTable({ name: 'partner', joinColumn: { name: 'partnerId' } })
   partner: PartnerEntity;
 
