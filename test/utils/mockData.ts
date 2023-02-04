@@ -229,4 +229,5 @@ export const mockPartnerFeatureEntity = {
   partnerId: mockPartnerEntity.id,
   feature: mockFeatureEntity,
   featureId: mockFeatureEntity.id,
+  active: true,
 } as PartnerFeatureEntity;

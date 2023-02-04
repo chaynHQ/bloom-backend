@@ -1,5 +1,5 @@
-import { Body, Controller, Patch, Post, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { SuperAdminAuthGuard } from 'src/partner-admin/super-admin-auth.guard';
 import { ControllerDecorator } from 'src/utils/controller.decorator';
 import { CreatePartnerFeatureDto } from './dtos/create-partner-feature.dto';
@@ -35,5 +35,14 @@ export class PartnerFeatureController {
   ) {
     return await this.partnerFeatureService.updatePartnerFeature(id, updatePartnerFeatureDto);
   }
+
+  @Get('/automatic-access-code/:partnerName')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    description: 'Gets partner Feature record for assign access code on sign up .',
+  })
+  @ApiParam({ name: 'partnerName', description: 'Updates partner feature by id' })
+  async getAutomaticAccessCodeFeatureForPartner(@Param() { partnerName }) {
+    return await this.partnerFeatureService.getAutomaticAccessCodeFeatureForPartner(partnerName);
   }
 }

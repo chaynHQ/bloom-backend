@@ -1,6 +1,10 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
+export enum FEATURES {
+  AUTOMATIC_ACCESS_CODE = 'AUTOMATIC_ACCESS_CODE',
+}
+
 export enum PROGRESS_STATUS {
   STARTED = 'Started',
   COMPLETED = 'Completed',
