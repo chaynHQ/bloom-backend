@@ -22,13 +22,18 @@ export class PartnerFeatureController {
     return await this.partnerFeatureService.createPartnerFeature(createPartnerFeatureDto);
   }
 
-  @Patch()
+  @Patch(':id')
   @ApiBearerAuth('access-token')
   @ApiOperation({
     description: 'Updates relationship between a `Partner` and `Feature` records.',
   })
+  @ApiParam({ name: 'id', description: 'Updates partner feature by id' })
   @UseGuards(SuperAdminAuthGuard)
-  async updatePartnerFeature(@Body() updatePartnerFeatureDto: UpdatePartnerFeatureDto) {
-    return await this.partnerFeatureService.createPartnerFeature(updatePartnerFeatureDto);
+  async updatePartnerFeature(
+    @Param() { id },
+    @Body() updatePartnerFeatureDto: UpdatePartnerFeatureDto,
+  ) {
+    return await this.partnerFeatureService.updatePartnerFeature(id, updatePartnerFeatureDto);
+  }
   }
 }
