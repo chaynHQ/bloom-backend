@@ -111,9 +111,16 @@ export const formatPartnerObject = (partnerObject: PartnerEntity): IPartner => {
   return {
     name: partnerObject.name,
     id: partnerObject.id,
-    partnerFeature: partnerObject.partnerFeature.map<IPartnerFeature>((pf) => {
-      return { partnerId: pf.id, featureId: pf.featureId, feature: pf.feature, active: pf.active };
-    }),
+    partnerFeature: partnerObject.partnerFeature
+      ? partnerObject.partnerFeature.map<IPartnerFeature>((pf) => {
+          return {
+            partnerId: pf.id,
+            featureId: pf.featureId,
+            feature: pf.feature,
+            active: pf.active,
+          };
+        })
+      : [],
   };
 };
 

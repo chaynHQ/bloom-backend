@@ -1,4 +1,11 @@
-import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  CanActivate,
+  ExecutionContext,
+  HttpException,
+  HttpStatus,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { Request } from 'express';
 import { AuthService } from '../auth/auth.service';
 import { UserService } from '../user/user.service';
@@ -17,9 +24,16 @@ export class FirebaseAuthGuard implements CanActivate {
       throw new UnauthorizedException('Unauthorized: missing required Authorization token');
     }
 
-    const user = await this.authService.parseAuth(authorization);
-    request['user'] = await this.userService.getUser(user as IFirebaseUser);
+    try {
+      const user = await this.authService.parseAuth(authorization);
 
+      request['user'] = await this.userService.getUser(user as IFirebaseUser);
+    } catch (error) {
+      throw new HttpException(
+        'Error retrieving user in auth guard',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
     return true;
   }
 }
