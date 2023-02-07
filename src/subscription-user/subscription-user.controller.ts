@@ -45,7 +45,10 @@ export class SubscriptionUserController {
     description: 'Cancel an active whatsapp subscription',
   })
   @UseGuards(FirebaseAuthGuard)
-  async cancelWhatsappSubscription(@Body() updateSubscriptionsDto: UpdateSubscriptionUserDto) {
+  async cancelWhatsappSubscription(
+    @Req() req: Request,
+    @Body() updateSubscriptionsDto: UpdateSubscriptionUserDto,
+  ) {
     // This endpoint cannot be used to activate a subscription, it can only be used to cancel.
     if (updateSubscriptionsDto.isActive) {
       throw new HttpException(
@@ -53,6 +56,9 @@ export class SubscriptionUserController {
         HttpStatus.METHOD_NOT_ALLOWED,
       );
     }
-    return this.subscriptionUserService.cancelWhatsappSubscription(updateSubscriptionsDto);
+    return this.subscriptionUserService.cancelWhatsappSubscription(
+      req['user'],
+      updateSubscriptionsDto,
+    );
   }
 }
