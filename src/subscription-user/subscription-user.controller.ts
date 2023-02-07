@@ -1,9 +1,19 @@
-import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  HttpException,
+  HttpStatus,
+  Patch,
+  Post,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Request } from 'express';
 import { FirebaseAuthGuard } from '../firebase/firebase-auth.guard';
 import { ControllerDecorator } from '../utils/controller.decorator';
 import { CreateSubscriptionUserDto } from './dto/create-subscription-user.dto';
+import { UpdateSubscriptionUserDto } from './dto/update-subscription-user.dto';
 import { SubscriptionUserService } from './subscription-user.service';
 
 @ApiTags('Subscription User')
@@ -27,5 +37,22 @@ export class SubscriptionUserController {
       req['user'],
       createSubscriptionUserDto,
     );
+  }
+
+  @Patch('/whatsapp')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    description: 'Cancel an active whatsapp subscription',
+  })
+  @UseGuards(FirebaseAuthGuard)
+  async cancelWhatsappSubscription(@Body() updateSubscriptionsDto: UpdateSubscriptionUserDto) {
+    // This endpoint cannot be used to activate a subscription, it can only be used to cancel.
+    if (updateSubscriptionsDto.isActive) {
+      throw new HttpException(
+        'Cannot create active subscriptions via this method. Please use the subscribe flow. ',
+        HttpStatus.METHOD_NOT_ALLOWED,
+      );
+    }
+    return this.subscriptionUserService.cancelWhatsappSubscription(updateSubscriptionsDto);
   }
 }
