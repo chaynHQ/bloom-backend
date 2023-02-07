@@ -57,6 +57,10 @@ export class SubscriptionUserService {
 
     if (subscription) {
       if (!subscription.cancelledAt) {
+        await this.zapierClient.deleteContactFromRespondIO({
+          phonenumber: subscription.subscriptionInfo,
+        });
+
         subscription.cancelledAt = new Date();
         return this.subscriptionUserRepository.save(subscription);
       } else {
