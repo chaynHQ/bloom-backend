@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { AxiosResponse } from 'axios';
-import { respondIoZapierWebhook } from '../../utils/constants';
+import { respondIoCreateContactWebhook } from '../../utils/constants';
 import apiCall from '../apiCalls';
 
 @Injectable()
@@ -13,7 +13,7 @@ export class ZapierWebhookClient {
   }: AddContactParams): Promise<AxiosResponse<any, any> | string> {
     try {
       const response = await apiCall({
-        url: respondIoZapierWebhook,
+        url: respondIoCreateContactWebhook,
         type: 'post',
         data: {
           phonenumber,
