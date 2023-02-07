@@ -48,19 +48,20 @@ export class SubscriptionUserService {
     }
   }
 
-  async cancelWhatsappSubscription({ id }: UpdateSubscriptionUserDto) {
+  async cancelWhatsappSubscription({ user }: GetUserDto, { id }: UpdateSubscriptionUserDto) {
     const subscription = await this.subscriptionUserRepository
       .createQueryBuilder('subscription_user')
       .where('subscription_user.subscriptionUserId = :id', { id })
+      .andWhere('subscription_user.userId = :userId', { userId: user.id })
       .getOne();
 
     if (subscription) {
       if (!subscription.cancelledAt) {
         subscription.cancelledAt = new Date();
-        // TODO Remove contact from Respond.io
         return this.subscriptionUserRepository.save(subscription);
+      } else {
+        throw new HttpException('Subscription has already been cancelled', HttpStatus.CONFLICT);
       }
-      throw new HttpException('Subscription has already been cancelled', HttpStatus.CONFLICT);
     } else {
       throw new HttpException('Could not find subscription', HttpStatus.BAD_REQUEST);
     }
