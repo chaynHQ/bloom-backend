@@ -125,3 +125,8 @@ export const respondIoCreateContactWebhook = getEnv(
   process.env.RESPOND_IO_CREATE_CONTACT_WEBHOOK,
   'RESPOND_IO_CREATE_CONTACT_WEBHOOK',
 );
+
+export const respondIoDeleteContactWebhook = getEnv(
+  process.env.RESPOND_IO_DELETE_CONTACT_WEBHOOK,
+  'RESPOND_IO_DELETE_CONTACT_WEBHOOK',
+);
