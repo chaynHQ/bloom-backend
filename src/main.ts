@@ -28,7 +28,7 @@ async function bootstrap() {
   const logger = app.get(Logger);
   app.useLogger(logger);
   app.useGlobalInterceptors(new LoggingInterceptor());
-  app.useGlobalPipes(new ValidationPipe());
+  app.useGlobalPipes(new ValidationPipe({ transform: true }));
   app.useGlobalFilters(new ExceptionsFilter());
   await app.listen(PORT);
   console.log(`Listening on localhost:${PORT}, CTRL+C to stop`);

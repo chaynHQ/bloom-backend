@@ -1,16 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsBoolean, IsDefined, IsNotEmpty, IsString } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsDate, IsDefined, IsNotEmpty } from 'class-validator';
 
 export class UpdateSubscriptionUserDto {
-  @IsBoolean()
+  @IsDate()
   @IsNotEmpty()
   @IsDefined()
-  @ApiProperty({ type: Boolean })
-  isActive: boolean;
-
-  @IsString()
-  @IsNotEmpty()
-  @IsDefined()
-  @ApiProperty({ type: String })
-  id: string;
+  @ApiProperty({ type: Date })
+  @Type(() => Date)
+  cancelledAt: Date;
 }
