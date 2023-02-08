@@ -48,7 +48,11 @@ export class SubscriptionUserService {
     }
   }
 
-  async cancelWhatsappSubscription({ user }: GetUserDto, { id }: UpdateSubscriptionUserDto) {
+  async cancelWhatsappSubscription(
+    { user }: GetUserDto,
+    { cancelledAt }: UpdateSubscriptionUserDto,
+    id: string,
+  ) {
     const subscription = await this.subscriptionUserRepository
       .createQueryBuilder('subscription_user')
       .where('subscription_user.subscriptionUserId = :id', { id })
@@ -61,7 +65,7 @@ export class SubscriptionUserService {
           phonenumber: subscription.subscriptionInfo,
         });
 
-        subscription.cancelledAt = new Date();
+        subscription.cancelledAt = cancelledAt;
         return this.subscriptionUserRepository.save(subscription);
       } else {
         throw new HttpException('Subscription has already been cancelled', HttpStatus.CONFLICT);
