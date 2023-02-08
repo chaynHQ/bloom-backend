@@ -92,7 +92,7 @@ export class PartnerFeatureService {
       const partnerFeature = await this.partnerFeatureRepository
         .createQueryBuilder('partnerFeature')
         .leftJoinAndSelect('partnerFeature.feature', 'feature')
-        .where('UPPER(feature.name) LIKE UPPER(:name)', {
+        .where('LOWER(feature.name) LIKE LOWER(:name)', {
           name: FEATURES.AUTOMATIC_ACCESS_CODE,
         })
         .andWhere('partnerFeature.partnerId = :partnerId', { partnerId: partner.id })
