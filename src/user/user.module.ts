@@ -4,6 +4,7 @@ import { CourseUserModule } from 'src/course-user/course-user.module';
 import { CourseUserRepository } from 'src/course-user/course-user.repository';
 import { CourseUserService } from 'src/course-user/course-user.service';
 import { PartnerAdminRepository } from 'src/partner-admin/partner-admin.repository';
+import { PartnerService } from 'src/partner/partner.service';
 import { SessionUserModule } from 'src/session-user/session-user.module';
 import { AuthService } from '../auth/auth.service';
 import { FirebaseModule } from '../firebase/firebase.module';
@@ -28,6 +29,6 @@ import { UserService } from './user.service';
     CourseUserModule,
   ],
   controllers: [UserController],
-  providers: [UserService, AuthService, PartnerAccessService, CourseUserService],
+  providers: [UserService, AuthService, PartnerAccessService, PartnerService, CourseUserService],
 })
 export class UserModule {}
