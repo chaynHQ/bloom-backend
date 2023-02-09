@@ -51,12 +51,20 @@ export class PartnerService {
       .where('partner.partnerId = :partnerId', { partnerId })
       .getOne();
   }
-  async getPartnerWithPartnerFeatures(name: string): Promise<PartnerEntity> {
+  async getPartnerWithPartnerFeaturesByName(name: string): Promise<PartnerEntity> {
     return await this.partnerRepository
       .createQueryBuilder('partner')
       .leftJoinAndSelect('partner.partnerFeature', 'partnerFeature')
       .leftJoinAndSelect('partnerFeature.feature', 'feature')
       .where('LOWER(partner.name) LIKE LOWER(:name)', { name })
+      .getOne();
+  }
+  async getPartnerWithPartnerFeaturesById(partnerId: string): Promise<PartnerEntity> {
+    return await this.partnerRepository
+      .createQueryBuilder('partner')
+      .leftJoinAndSelect('partner.partnerFeature', 'partnerFeature')
+      .leftJoinAndSelect('partnerFeature.feature', 'feature')
+      .where('partner.partnerId = :partnerId', { partnerId })
       .getOne();
   }
 
