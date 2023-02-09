@@ -30,6 +30,7 @@ export class UserService {
     @InjectRepository(UserRepository)
     private userRepository: UserRepository,
     private readonly partnerAccessService: PartnerAccessService,
+    private readonly partnerService: PartnerService,
     private readonly authService: AuthService,
   ) {}
 

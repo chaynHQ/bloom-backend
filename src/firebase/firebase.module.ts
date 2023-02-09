@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { CourseUserRepository } from 'src/course-user/course-user.repository';
 import { CourseUserService } from 'src/course-user/course-user.service';
 import { PartnerAdminRepository } from 'src/partner-admin/partner-admin.repository';
+import { PartnerService } from 'src/partner/partner.service';
 import { PartnerAccessRepository } from '../partner-access/partner-access.repository';
 import { PartnerAccessService } from '../partner-access/partner-access.service';
 import { PartnerRepository } from '../partner/partner.repository';
@@ -20,7 +21,13 @@ import { FIREBASE, firebaseFactory } from './firebase-factory';
       PartnerAdminRepository,
     ]),
   ],
-  providers: [firebaseFactory, UserService, PartnerAccessService, CourseUserService],
+  providers: [
+    firebaseFactory,
+    UserService,
+    PartnerAccessService,
+    CourseUserService,
+    PartnerService,
+  ],
   exports: [FIREBASE],
 })
 export class FirebaseModule {}
