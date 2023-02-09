@@ -9,8 +9,12 @@ import {
   mockPartnerAccessEntity,
   mockPartnerEntity,
   mockUserEntity,
+  mockUserRecord,
 } from 'test/utils/mockData';
-import { mockUserRepositoryMethodsFactory } from 'test/utils/mockedServices';
+import {
+  mockAuthServiceMethods,
+  mockUserRepositoryMethodsFactory,
+} from 'test/utils/mockedServices';
 import { Repository } from 'typeorm';
 import { createQueryBuilderMock } from '../../test/utils/mockUtils';
 import { AuthService } from '../auth/auth.service';
@@ -25,11 +29,19 @@ import { UserService } from './user.service';
 
 const createUserDto: CreateUserDto = {
   email: 'user@email.com',
+  password: 'password',
   name: 'name',
-  firebaseUid: 'iiiiod',
   contactPermission: false,
   signUpLanguage: 'en',
 };
+const createUserRepositoryDto = {
+  email: 'user@email.com',
+  name: 'name',
+  contactPermission: false,
+  signUpLanguage: 'en',
+  firebaseUid: mockUserRecord.uid,
+};
+
 const updateUserDto: UpdateUserDto = {
   name: 'new name',
   contactPermission: true,
@@ -46,7 +58,8 @@ describe('UserService', () => {
   let mockPartnerAccessService: DeepMocked<PartnerAccessService>;
 
   beforeEach(async () => {
-    mockAuthService = createMock<AuthService>();
+    jest.clearAllMocks();
+    mockAuthService = createMock<AuthService>(mockAuthServiceMethods);
     mockPartnerService = createMock<PartnerService>();
     mockPartnerAccessService = createMock<PartnerAccessService>();
     mockPartnerRepository = createMock<PartnerRepository>();
@@ -93,7 +106,7 @@ describe('UserService', () => {
       expect(user.user.email).toBe('user@email.com');
       expect(user.partnerAdmin).toBeUndefined();
       expect(user.partnerAccesses).toBe(undefined);
-      expect(repoSpyCreate).toBeCalledWith(createUserDto);
+      expect(repoSpyCreate).toBeCalledWith(createUserRepositoryDto);
       expect(repoSpySave).toBeCalled();
       expect(addCrispProfile).toBeCalledWith({
         email: user.user.email,
@@ -124,7 +137,7 @@ describe('UserService', () => {
         { ...partnerAccessData, therapySessions: therapySession },
       ]);
 
-      expect(repoSpyCreate).toBeCalledWith(createUserDto);
+      expect(repoSpyCreate).toBeCalledWith(createUserRepositoryDto);
       expect(partnerAccessSpy).toBeCalled();
       expect(repoSpySave).toBeCalled();
 
