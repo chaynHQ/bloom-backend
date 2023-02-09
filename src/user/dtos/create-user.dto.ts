@@ -14,11 +14,11 @@ export class CreateUserDto {
   @ApiProperty({ type: String })
   email: string;
 
-  @IsString()
-  @IsDefined()
+  // @IsStrongPassword()
   @IsNotEmpty()
+  @IsDefined()
   @ApiProperty({ type: String })
-  firebaseUid: string;
+  password: string;
 
   @IsOptional()
   @IsString()
