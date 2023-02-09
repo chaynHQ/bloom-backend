@@ -94,46 +94,28 @@ export class PartnerAccessService {
       .getMany();
   }
 
-  async assignPartnerAccessOnSignup({
-    partnerAccessCode,
-    userId,
-  }: {
-    partnerAccessCode?: string;
-    userId: string;
-  }): Promise<PartnerAccessEntity> {
-    const validPartnerAccess = await this.getValidPartnerAccessCode(partnerAccessCode);
-
+  async assignPartnerAccessOnSignup(
+    partnerAccess: PartnerAccessEntity,
+    userId: string,
+  ): Promise<PartnerAccessEntity> {
     const partnerResponse: PartnerEntity | undefined = await this.partnerRepository.findOne({
-      id: validPartnerAccess.partnerId,
+      id: partnerAccess.partnerId,
     });
 
-    const partnerAccess = {
-      ...validPartnerAccess,
+    const updatedPartnerAccess = await this.partnerAccessRepository.save({
+      ...partnerAccess,
       userId,
       activatedAt: new Date(),
-    };
-    const updatedPartnerAccess = await this.partnerAccessRepository.save(partnerAccess);
+    });
 
     return { ...updatedPartnerAccess, partner: partnerResponse };
   }
-  async assignPartnerAccessOnSignupWithoutCode({
-    userId,
-    partnerId,
-  }: {
-    userId: string;
-    partnerId?: string;
-  }): Promise<PartnerAccessEntity> {
-    // Get partner from partnerId supplied or from the partnerId on access code
-    const partnerResponse: PartnerEntity | undefined = await this.partnerRepository.findOne({
-      id: partnerId,
-    });
-
-    if (partnerResponse === undefined) {
-      throw new HttpException('Invalid partnerId supplied', HttpStatus.BAD_REQUEST);
-    }
-
+  async createAndAssignPartnerAccess(
+    partner: PartnerEntity,
+    userId: string,
+  ): Promise<PartnerAccessEntity> {
     // Base partner access is for bumble. For future iterations we might want to store this base config somewhere
-    const partnerAccessBase = await this.createPartnerAccess(basePartnerAccess, partnerId, null);
+    const partnerAccessBase = await this.createPartnerAccess(basePartnerAccess, partner.id, null);
     const partnerAccess = {
       ...partnerAccessBase,
       userId,
@@ -141,7 +123,7 @@ export class PartnerAccessService {
     };
     const updatedPartnerAccess = await this.partnerAccessRepository.save(partnerAccess);
 
-    return { ...updatedPartnerAccess, partner: partnerResponse };
+    return { ...updatedPartnerAccess, partner: partner };
   }
 
   async assignPartnerAccess(
