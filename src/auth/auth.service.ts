@@ -42,6 +42,19 @@ export class AuthService {
     }
   }
 
+  public async createFirebaseUser(email: string, password: string) {
+    const userRecord = await this.firebase.admin.auth().createUser({
+      email,
+      password,
+    });
+    return userRecord;
+  }
+
+  public async getFirebaseUser(email: string) {
+    const userRecord = await this.firebase.admin.auth().getUserByEmail(email);
+    return userRecord;
+  }
+
   public async deleteFirebaseUser(firebaseUid: string) {
     try {
       await this.firebase.admin.auth().deleteUser(firebaseUid);
