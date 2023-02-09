@@ -147,7 +147,10 @@ export class SessionUserService {
     const session = await this.sessionService.getSessionByStoryblokId(storyblokId);
 
     if (!session) {
-      throw new HttpException('SESSION NOT FOUND', HttpStatus.NOT_FOUND);
+      throw new HttpException(
+        `Session not found for storyblok id: ${storyblokId}`,
+        HttpStatus.NOT_FOUND,
+      );
     }
 
     const { id, courseId } = session;
@@ -156,6 +159,13 @@ export class SessionUserService {
       userId: user.id,
       courseId,
     });
+
+    if (!courseUser) {
+      throw new HttpException(
+        `Course user not found for user with id: ${user.id}`,
+        HttpStatus.NOT_FOUND,
+      );
+    }
 
     let sessionUser = await this.getSessionUser({
       sessionId: id,
