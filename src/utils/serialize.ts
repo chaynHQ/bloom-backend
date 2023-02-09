@@ -101,7 +101,7 @@ export const formatUserObject = (userObject: UserEntity): GetUserDto => {
       : null,
     courses: userObject.courseUser ? formatCourseUserObjects(userObject.courseUser) : [],
     subscriptions:
-      userObject.subscriptionUser.length > 0
+      userObject.subscriptionUser && userObject.subscriptionUser.length > 0
         ? formatSubscriptionObjects(userObject.subscriptionUser)
         : [],
   };
