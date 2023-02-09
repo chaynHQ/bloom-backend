@@ -162,7 +162,7 @@ export class SessionUserService {
 
     if (!courseUser) {
       throw new HttpException(
-        `Course user not found for user with id: ${user.id}`,
+        `Course user not found for user with id: ${user.id}. Could not complete session ${session.id}.`,
         HttpStatus.NOT_FOUND,
       );
     }
