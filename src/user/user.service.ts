@@ -2,6 +2,7 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { createCrispProfileData } from 'src/api/crisp/utils/createCrispProfileData';
 import { IFirebaseUser } from 'src/firebase/firebase-user.interface';
+import { EMAIL_ALREADY_EXISTS, INVALID_EMAIL, WEAK_PASSWORD } from 'src/utils/errors';
 import {
   addCrispProfile,
   deleteCrispProfile,
@@ -29,17 +30,49 @@ export class UserService {
     const {
       name,
       email,
-      firebaseUid,
       partnerAccessCode,
       contactPermission,
       signUpLanguage,
       partnerId,
+      password,
     } = createUserDto;
+    let firebaseUser = null;
+
+    try {
+      firebaseUser = await this.authService.createFirebaseUser(email, password);
+    } catch (err) {
+      const errorCode = err.code;
+
+      if (errorCode === 'auth/invalid-email') {
+        throw new HttpException(INVALID_EMAIL, HttpStatus.BAD_REQUEST);
+      }
+      if (
+        errorCode === 'auth/weak-password' ||
+        err.message.includes('The password must be a string with at least 6 characters')
+      ) {
+        throw new HttpException(WEAK_PASSWORD, HttpStatus.BAD_REQUEST);
+      }
+      if (errorCode !== 'auth/email-already-in-use' && errorCode !== 'auth/email-already-exists') {
+        throw err;
+      }
+    }
+    if (!firebaseUser) {
+      try {
+        firebaseUser = await this.authService.getFirebaseUser(email);
+      } catch (err) {
+        throw new HttpException(err, HttpStatus.BAD_REQUEST);
+      }
+    }
+
+    if (!firebaseUser) {
+      throw new Error('Unable to create firebase user');
+    }
+
     const createUserObject = this.userRepository.create({
       name,
       email,
-      firebaseUid,
       contactPermission,
+      firebaseUid: firebaseUser.uid,
       signUpLanguage,
     });
 
@@ -84,6 +117,13 @@ export class UserService {
           })
         : { user: createUserResponse };
     } catch (error) {
+      if (
+        error.message.includes('already exists') ||
+        error.message.includes('UQ_e12875dfb3b1d92d7d7c5377e22') ||
+        error.message.includes('UQ_905432b2c46bdcfe1a0dd3cdeff')
+      ) {
+        throw new HttpException(EMAIL_ALREADY_EXISTS, HttpStatus.CONFLICT);
+      }
       if (error.code === '23505') {
         throw new HttpException(error.detail, HttpStatus.CONFLICT);
       }

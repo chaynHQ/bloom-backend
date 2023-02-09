@@ -1,4 +1,5 @@
 import { PartialFuncReturn } from '@golevelup/ts-jest';
+import { UserRecord } from 'firebase-admin/lib/auth/user-record';
 import { MailchimpClient } from 'src/api/mailchimp/mailchip-api';
 import { SlackMessageClient } from 'src/api/slack/slack-api';
 import { CoursePartnerService } from 'src/course-partner/course-partner.service';
@@ -33,6 +34,7 @@ import {
   mockSession,
   mockTherapySessionEntity,
   mockUserEntity,
+  mockUserRecord,
 } from './mockData';
 import { createQueryBuilderMock } from './mockUtils';
 
@@ -176,6 +178,14 @@ export const mockPartnerFeatureServiceMethods = {
 export const mockFeatureServiceMethods = {
   createFeature: async (arg): Promise<PartnerFeatureEntity> => {
     return { ...mockPartnerFeatureEntity, ...arg };
+  },
+};
+export const mockAuthServiceMethods = {
+  createFirebaseUser: async (): Promise<UserRecord> => {
+    return mockUserRecord;
+  },
+  getFirebaseUser: async (): Promise<UserRecord> => {
+    return mockUserRecord;
   },
 };
 

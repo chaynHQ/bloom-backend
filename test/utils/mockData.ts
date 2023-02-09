@@ -1,3 +1,4 @@
+import { UserRecord } from 'firebase-admin/lib/auth/user-record';
 import { CourseEntity } from 'src/entities/course.entity';
 import { EmailCampaignEntity } from 'src/entities/email-campaign.entity';
 import { FeatureEntity } from 'src/entities/feature.entity';
@@ -231,3 +232,7 @@ export const mockPartnerFeatureEntity = {
   featureId: mockFeatureEntity.id,
   active: true,
 } as PartnerFeatureEntity;
+
+export const mockUserRecord = {
+  uid: 'FirebaseUuid',
+} as UserRecord;
