@@ -5,6 +5,7 @@ import { SubscriptionUserEntity } from '../entities/subscription-user.entity';
 import { SubscriptionService } from '../subscription/subscription.service';
 import { GetUserDto } from '../user/dtos/get-user.dto';
 import { CreateSubscriptionUserDto } from './dto/create-subscription-user.dto';
+import { UpdateSubscriptionUserDto } from './dto/update-subscription-user.dto';
 import { SubscriptionUserRepository } from './subscription-user.repository';
 
 @Injectable()
@@ -44,6 +45,33 @@ export class SubscriptionUserService {
       });
     } else {
       throw new HttpException('Whatsapp subscription already exists for user', HttpStatus.CONFLICT);
+    }
+  }
+
+  async cancelWhatsappSubscription(
+    { user }: GetUserDto,
+    { cancelledAt }: UpdateSubscriptionUserDto,
+    id: string,
+  ) {
+    const subscription = await this.subscriptionUserRepository
+      .createQueryBuilder('subscription_user')
+      .where('subscription_user.subscriptionUserId = :id', { id })
+      .andWhere('subscription_user.userId = :userId', { userId: user.id })
+      .getOne();
+
+    if (subscription) {
+      if (!subscription.cancelledAt) {
+        await this.zapierClient.deleteContactFromRespondIO({
+          phonenumber: subscription.subscriptionInfo,
+        });
+
+        subscription.cancelledAt = cancelledAt;
+        return this.subscriptionUserRepository.save(subscription);
+      } else {
+        throw new HttpException('Subscription has already been cancelled', HttpStatus.CONFLICT);
+      }
+    } else {
+      throw new HttpException('Could not find subscription', HttpStatus.BAD_REQUEST);
     }
   }
 }

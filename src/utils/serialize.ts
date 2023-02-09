@@ -1,4 +1,7 @@
 import moment from 'moment';
+import { PartnerEntity } from 'src/entities/partner.entity';
+import { IPartnerFeature } from 'src/partner-feature/partner-feature.interface';
+import { IPartner } from 'src/partner/partner.interface';
 import { CourseUserEntity } from '../entities/course-user.entity';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
 import { SubscriptionUserEntity } from '../entities/subscription-user.entity';
@@ -52,7 +55,7 @@ export const formatPartnerAccessObjects = (partnerAccessObjects: PartnerAccessEn
       active: partnerAccess.active,
       therapySessionsRemaining: partnerAccess.therapySessionsRemaining,
       therapySessionsRedeemed: partnerAccess.therapySessionsRedeemed,
-      partner: partnerAccess.partner,
+      partner: formatPartnerObject(partnerAccess.partner),
       therapySessions: partnerAccess.therapySession?.map((ts) => {
         return {
           id: ts.id,
@@ -93,7 +96,7 @@ export const formatUserObject = (userObject: UserEntity): GetUserDto => {
           id: userObject.partnerAdmin.id,
           createdAt: userObject.partnerAdmin.createdAt,
           updatedAt: userObject.partnerAdmin.updatedAt,
-          partner: userObject.partnerAdmin.partner,
+          partner: formatPartnerObject(userObject.partnerAdmin.partner),
         }
       : null,
     courses: userObject.courseUser ? formatCourseUserObjects(userObject.courseUser) : [],
@@ -101,6 +104,23 @@ export const formatUserObject = (userObject: UserEntity): GetUserDto => {
       userObject.subscriptionUser.length > 0
         ? formatSubscriptionObjects(userObject.subscriptionUser)
         : [],
+  };
+};
+
+export const formatPartnerObject = (partnerObject: PartnerEntity): IPartner => {
+  return {
+    name: partnerObject.name,
+    id: partnerObject.id,
+    partnerFeature: partnerObject.partnerFeature
+      ? partnerObject.partnerFeature.map<IPartnerFeature>((pf) => {
+          return {
+            partnerId: pf.id,
+            featureId: pf.featureId,
+            feature: pf.feature,
+            active: pf.active,
+          };
+        })
+      : [],
   };
 };
 

@@ -1,9 +1,10 @@
-import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { Request } from 'express';
 import { FirebaseAuthGuard } from '../firebase/firebase-auth.guard';
 import { ControllerDecorator } from '../utils/controller.decorator';
 import { CreateSubscriptionUserDto } from './dto/create-subscription-user.dto';
+import { UpdateSubscriptionUserDto } from './dto/update-subscription-user.dto';
 import { SubscriptionUserService } from './subscription-user.service';
 
 @ApiTags('Subscription User')
@@ -26,6 +27,25 @@ export class SubscriptionUserController {
     return await this.subscriptionUserService.createWhatsappSubscription(
       req['user'],
       createSubscriptionUserDto,
+    );
+  }
+
+  @Patch('/whatsapp/:id')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    description: 'Cancel an active whatsapp subscription',
+  })
+  @ApiParam({ name: 'id', description: 'Cancels subscribtion by id' })
+  @UseGuards(FirebaseAuthGuard)
+  async cancelWhatsappSubscription(
+    @Req() req: Request,
+    @Param() { id },
+    @Body() updateSubscriptionsDto: UpdateSubscriptionUserDto,
+  ) {
+    return this.subscriptionUserService.cancelWhatsappSubscription(
+      req['user'],
+      updateSubscriptionsDto,
+      id,
     );
   }
 }

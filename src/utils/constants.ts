@@ -1,6 +1,10 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
+export enum FEATURES {
+  AUTOMATIC_ACCESS_CODE = 'AUTOMATIC_ACCESS_CODE',
+}
+
 export enum PROGRESS_STATUS {
   STARTED = 'Started',
   COMPLETED = 'Completed',
@@ -117,7 +121,12 @@ export const simplybookCompanyName = getEnv(
   'SIMPLYBOOK_COMPANY_NAME',
 );
 
-export const respondIoZapierWebhook = getEnv(
-  process.env.RESPOND_IO_ZAPIER_WEBHOOK,
-  'RESPOND_IO_ZAPIER_WEBHOOK',
+export const respondIoCreateContactWebhook = getEnv(
+  process.env.RESPOND_IO_CREATE_CONTACT_WEBHOOK,
+  'RESPOND_IO_CREATE_CONTACT_WEBHOOK',
+);
+
+export const respondIoDeleteContactWebhook = getEnv(
+  process.env.RESPOND_IO_DELETE_CONTACT_WEBHOOK,
+  'RESPOND_IO_DELETE_CONTACT_WEBHOOK',
 );
