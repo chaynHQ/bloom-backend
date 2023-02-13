@@ -8,12 +8,12 @@ import { FEATURES } from 'src/utils/constants';
 import {
   CREATE_USER_EMAIL_ALREADY_EXISTS,
   CREATE_USER_INVALID_EMAIL,
-  CREATE_USER_WEAK_PASSWORD
+  CREATE_USER_WEAK_PASSWORD,
 } from 'src/utils/errors';
 import {
   addCrispProfile,
   deleteCrispProfile,
-  updateCrispProfileData
+  updateCrispProfileData,
 } from '../api/crisp/crisp-api';
 import { AuthService } from '../auth/auth.service';
 import { PartnerAccessService } from '../partner-access/partner-access.service';
@@ -43,19 +43,15 @@ export class UserService {
   ) {}
 
   public async createUser(createUserDto: CreateUserDto): Promise<GetUserDto> {
-      const {
-      email,
-      partnerAccessCode,
-      partnerId,password,
-    } = createUserDto;
-    
+    const { email, partnerAccessCode, partnerId, password } = createUserDto;
+
     const signUpType =
-    !partnerAccessCode && !partnerId
-      ? SIGNUP_TYPE.PUBLIC_USER
-      : partnerAccessCode
-      ? SIGNUP_TYPE.PARTNER_USER_WITH_CODE
-      : SIGNUP_TYPE.PARTNER_USER_WITHOUT_CODE;
-    
+      !partnerAccessCode && !partnerId
+        ? SIGNUP_TYPE.PUBLIC_USER
+        : partnerAccessCode
+        ? SIGNUP_TYPE.PARTNER_USER_WITH_CODE
+        : SIGNUP_TYPE.PARTNER_USER_WITHOUT_CODE;
+
     let firebaseUser = null;
 
     try {
@@ -101,13 +97,15 @@ export class UserService {
         throw new HttpException(err, HttpStatus.BAD_REQUEST);
       }
     }
-  
 
     let formattedUserObject: GetUserDto | null = null;
 
     try {
       if (signUpType === SIGNUP_TYPE.PARTNER_USER_WITHOUT_CODE) {
-        formattedUserObject = await this.createPartnerUserWithoutCode(createUserDto, firebaseUser.uid);
+        formattedUserObject = await this.createPartnerUserWithoutCode(
+          createUserDto,
+          firebaseUser.uid,
+        );
       } else if (signUpType === SIGNUP_TYPE.PARTNER_USER_WITH_CODE) {
         formattedUserObject = await this.createPartnerUserWithCode(createUserDto, firebaseUser.uid);
       } else {
@@ -134,81 +132,6 @@ export class UserService {
       );
 
       return formattedUserObject;
-
-<<<<<<< HEAD
-    const {
-      name,
-      email,
-      partnerAccessCode,
-      contactPermission,
-      signUpLanguage,
-      partnerId,
-      password,
-    } = createUserDto;
-    let firebaseUser = null;
-
-    try {
-      firebaseUser = await this.authService.createFirebaseUser(email, password);
-      this.logger.log(`Create user: Firebase user created: ${email}`);
-    } catch (err) {
-      const errorCode = err.code;
-      if (errorCode === 'auth/invalid-email') {
-        this.logger.warn(
-          `Create user: user tried to create email with invalid email: ${email} - ${err}`,
-        );
-        throw new HttpException(CREATE_USER_INVALID_EMAIL, HttpStatus.BAD_REQUEST);
-      }
-      if (
-        errorCode === 'auth/weak-password' ||
-        err.message.includes('The password must be a string with at least 6 characters')
-      ) {
-        this.logger.warn(`Create user: user tried to create email with weak password - ${err}`);
-        throw new HttpException(CREATE_USER_WEAK_PASSWORD, HttpStatus.BAD_REQUEST);
-      }
-      if (errorCode !== 'auth/email-already-in-use' && errorCode !== 'auth/email-already-exists') {
-        this.logger.error(`Create user: Error creating firebase user - ${email}: ${err}`);
-        throw err;
-      } else {
-        this.logger.warn(
-          `Create user: Unable to create firebase user as user already exists: ${email}`,
-        );
-      }
-    }
-    if (!firebaseUser) {
-      this.logger.log(
-        `Create user: Firebase user already exists so fetching firebase user: ${email}`,
-      );
-
-      try {
-        firebaseUser = await this.authService.getFirebaseUser(email);
-        if (!firebaseUser) {
-          throw new Error('Create user: Unable to create firebase user or get firebase user');
-        }
-      } catch (err) {
-        this.logger.error(`Create user: getFirebaseUser error - ${email}: ${err}`);
-        throw new HttpException(err, HttpStatus.BAD_REQUEST);
-      }
-    }
-
-    const createUserObject = this.userRepository.create({
-      name,
-      email,
-      contactPermission,
-      firebaseUid: firebaseUser.uid,
-      signUpLanguage,
-    });
-=======
-    const { partnerAccessCode, partnerId, firebaseUid } = createUserDto;
-
-    const signUpType =
-      !partnerAccessCode && !partnerId
-        ? SIGNUP_TYPE.PUBLIC_USER
-        : partnerAccessCode
-        ? SIGNUP_TYPE.PARTNER_USER_WITH_CODE
-        : SIGNUP_TYPE.PARTNER_USER_WITHOUT_CODE;
-
-    let formattedUserObject: GetUserDto | null = null;
->>>>>>> b98015a (Refactor createUser into 3 sign up types
     } catch (error) {
       if (error.code === '23505') {
         throw new HttpException(error.detail, HttpStatus.CONFLICT);
