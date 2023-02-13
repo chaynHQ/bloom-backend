@@ -2,7 +2,12 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { createCrispProfileData } from 'src/api/crisp/utils/createCrispProfileData';
 import { IFirebaseUser } from 'src/firebase/firebase-user.interface';
-import { EMAIL_ALREADY_EXISTS, INVALID_EMAIL, WEAK_PASSWORD } from 'src/utils/errors';
+import { Logger } from 'src/logger/logger';
+import {
+  CREATE_USER_EMAIL_ALREADY_EXISTS,
+  CREATE_USER_INVALID_EMAIL,
+  CREATE_USER_WEAK_PASSWORD,
+} from 'src/utils/errors';
 import {
   addCrispProfile,
   deleteCrispProfile,
@@ -19,6 +24,8 @@ import { UserRepository } from './user.repository';
 
 @Injectable()
 export class UserService {
+  private readonly logger = new Logger('UserService');
+
   constructor(
     @InjectRepository(UserRepository)
     private userRepository: UserRepository,
@@ -40,32 +47,45 @@ export class UserService {
 
     try {
       firebaseUser = await this.authService.createFirebaseUser(email, password);
+      this.logger.log(`Create user: Firebase user created: ${email}`);
     } catch (err) {
       const errorCode = err.code;
-
       if (errorCode === 'auth/invalid-email') {
-        throw new HttpException(INVALID_EMAIL, HttpStatus.BAD_REQUEST);
+        this.logger.warn(
+          `Create user: user tried to create email with invalid email: ${email} - ${err}`,
+        );
+        throw new HttpException(CREATE_USER_INVALID_EMAIL, HttpStatus.BAD_REQUEST);
       }
       if (
         errorCode === 'auth/weak-password' ||
         err.message.includes('The password must be a string with at least 6 characters')
       ) {
-        throw new HttpException(WEAK_PASSWORD, HttpStatus.BAD_REQUEST);
+        this.logger.warn(`Create user: user tried to create email with weak password - ${err}`);
+        throw new HttpException(CREATE_USER_WEAK_PASSWORD, HttpStatus.BAD_REQUEST);
       }
       if (errorCode !== 'auth/email-already-in-use' && errorCode !== 'auth/email-already-exists') {
+        this.logger.error(`Create user: Error creating firebase user - ${email}: ${err}`);
         throw err;
+      } else {
+        this.logger.warn(
+          `Create user: Unable to create firebase user as user already exists: ${email}`,
+        );
       }
     }
     if (!firebaseUser) {
+      this.logger.log(
+        `Create user: Firebase user already exists so fetching firebase user: ${email}`,
+      );
+
       try {
         firebaseUser = await this.authService.getFirebaseUser(email);
+        if (!firebaseUser) {
+          throw new Error('Create user: Unable to create firebase user or get firebase user');
+        }
       } catch (err) {
+        this.logger.error(`Create user: getFirebaseUser error - ${email}: ${err}`);
         throw new HttpException(err, HttpStatus.BAD_REQUEST);
       }
-    }
-
-    if (!firebaseUser) {
-      throw new Error('Unable to create firebase user');
     }
 
     const createUserObject = this.userRepository.create({
@@ -101,6 +121,7 @@ export class UserService {
         person: { nickname: createUserResponse.name },
         segments: [partnerSegment.toLowerCase()],
       });
+      this.logger.log(`Create user: Added crisp profile  for ${email} `);
 
       await updateCrispProfileData(
         createCrispProfileData(
@@ -109,6 +130,7 @@ export class UserService {
         ),
         createUserResponse.email,
       );
+      this.logger.log(`Create user: Updated crisp profile data for ${email} `);
 
       return partnerAccessWithPartner
         ? formatUserObject({
@@ -122,11 +144,13 @@ export class UserService {
         error.message.includes('UQ_e12875dfb3b1d92d7d7c5377e22') ||
         error.message.includes('UQ_905432b2c46bdcfe1a0dd3cdeff')
       ) {
-        throw new HttpException(EMAIL_ALREADY_EXISTS, HttpStatus.CONFLICT);
+        this.logger.warn(`Create user: User already exists ${email}`);
+        throw new HttpException(CREATE_USER_EMAIL_ALREADY_EXISTS, HttpStatus.CONFLICT);
       }
       if (error.code === '23505') {
         throw new HttpException(error.detail, HttpStatus.CONFLICT);
       }
+      this.logger.error(`Create user: Error creating user ${email}: ${error}`);
       throw error;
     }
   }
