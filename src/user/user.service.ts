@@ -46,12 +46,11 @@ export class UserService {
     const { email, partnerAccessCode, partnerId, password } = createUserDto;
 
     const signUpType =
-      !partnerAccessCode && !partnerId
-        ? SIGNUP_TYPE.PUBLIC_USER
-        : partnerAccessCode
-        ? SIGNUP_TYPE.PARTNER_USER_WITH_CODE
-        : SIGNUP_TYPE.PARTNER_USER_WITHOUT_CODE;
-
+      partnerAccessCode || partnerId
+        ? partnerAccessCode
+          ? SIGNUP_TYPE.PARTNER_USER_WITH_CODE
+          : SIGNUP_TYPE.PARTNER_USER_WITHOUT_CODE
+        : SIGNUP_TYPE.PUBLIC_USER;
     let firebaseUser = null;
 
     try {
