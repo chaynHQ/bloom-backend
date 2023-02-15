@@ -133,9 +133,20 @@ export class UserService {
 
       return formattedUserObject;
     } catch (error) {
+      const userAlreadyExists = (err) =>
+        err.message.includes('already exists') ||
+        err.message.includes('UQ_e12875dfb3b1d92d7d7c5377e22') ||
+        err.message.includes(
+          'duplicate key value violates unique constraint "UQ_905432b2c46bdcfe1a0dd3cdeff"',
+        );
+      if (userAlreadyExists(error)) {
+        this.logger.warn(`Create user: User already exists ${email}`);
+        throw new HttpException(CREATE_USER_EMAIL_ALREADY_EXISTS, HttpStatus.CONFLICT);
+      }
       if (error.code === '23505') {
         throw new HttpException(error.detail, HttpStatus.CONFLICT);
       }
+      this.logger.error(`Create user: Error creating user ${email}: ${error}`);
       throw error;
     }
   }
@@ -156,9 +167,6 @@ export class UserService {
 
       return { user: createUserResponse };
     } catch (error) {
-      if (error.code === '23505') {
-        throw new HttpException(error.detail, HttpStatus.CONFLICT);
-      }
       throw error;
     }
   }
@@ -202,9 +210,6 @@ export class UserService {
         ...(partnerAccessWithPartner ? { partnerAccess: [partnerAccessWithPartner] } : {}),
       });
     } catch (error) {
-      if (error.code === '23505') {
-        throw new HttpException(error.detail, HttpStatus.CONFLICT);
-      }
       throw error;
     }
   }
@@ -238,18 +243,6 @@ export class UserService {
         ...(partnerAccessWithPartner ? { partnerAccess: [partnerAccessWithPartner] } : {}),
       });
     } catch (error) {
-      if (
-        error.message.includes('already exists') ||
-        error.message.includes('UQ_e12875dfb3b1d92d7d7c5377e22') ||
-        error.message.includes('UQ_905432b2c46bdcfe1a0dd3cdeff')
-      ) {
-        this.logger.warn(`Create user: User already exists ${email}`);
-        throw new HttpException(CREATE_USER_EMAIL_ALREADY_EXISTS, HttpStatus.CONFLICT);
-      }
-      if (error.code === '23505') {
-        throw new HttpException(error.detail, HttpStatus.CONFLICT);
-      }
-      this.logger.error(`Create user: Error creating user ${email}: ${error}`);
       throw error;
     }
   }
