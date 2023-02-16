@@ -41,6 +41,10 @@ export enum PartnerAccessCodeStatusEnum {
   CODE_EXPIRED = 'CODE_EXPIRED',
 }
 
+export enum WhatsappSubscriptionStatusEnum {
+  ALREADY_EXISTS = 'ALREADY_EXISTS',
+}
+
 const getEnv = (env: string, envName: string): string => {
   try {
     if (!env) throw `Unable to get environemt variable ${envName}`;

@@ -2,14 +2,18 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ZapierWebhookClient } from '../api/zapier/zapier-webhook-client';
 import { SubscriptionUserEntity } from '../entities/subscription-user.entity';
+import { Logger } from '../logger/logger';
 import { SubscriptionService } from '../subscription/subscription.service';
 import { GetUserDto } from '../user/dtos/get-user.dto';
+import { WhatsappSubscriptionStatusEnum } from '../utils/constants';
 import { CreateSubscriptionUserDto } from './dto/create-subscription-user.dto';
 import { UpdateSubscriptionUserDto } from './dto/update-subscription-user.dto';
 import { SubscriptionUserRepository } from './subscription-user.repository';
 
 @Injectable()
 export class SubscriptionUserService {
+  private readonly logger = new Logger('SubscriptionUserService');
+
   constructor(
     @InjectRepository(SubscriptionUserRepository)
     private subscriptionUserRepository: SubscriptionUserRepository,
@@ -32,19 +36,29 @@ export class SubscriptionUserService {
       },
     });
 
+    this.logger.log(
+      `Existing active whatsapp subscription for user ${user.id}: [${activeWhatsappSubscription}]`,
+    );
+
     if (activeWhatsappSubscription.length === 0) {
+      this.logger.log(`Triggering zapier to add contact to respond.io`);
+
+      const sanitizedPhonenumber = this.sanitizePhonenumber(
+        createSubscriptionUserDto.subscriptionInfo,
+      );
+
       await this.zapierClient.addContactToRespondIO({
-        phonenumber: createSubscriptionUserDto.subscriptionInfo,
+        phonenumber: sanitizedPhonenumber,
         name: user.name,
       });
 
       return await this.subscriptionUserRepository.save({
         subscriptionId: whatsapp.id,
         userId: user.id,
-        subscriptionInfo: createSubscriptionUserDto.subscriptionInfo,
+        subscriptionInfo: sanitizedPhonenumber,
       });
     } else {
-      throw new HttpException('Whatsapp subscription already exists for user', HttpStatus.CONFLICT);
+      throw new HttpException(WhatsappSubscriptionStatusEnum.ALREADY_EXISTS, HttpStatus.CONFLICT);
     }
   }
 
@@ -74,4 +88,8 @@ export class SubscriptionUserService {
       throw new HttpException('Could not find subscription', HttpStatus.BAD_REQUEST);
     }
   }
+
+  sanitizePhonenumber = (phonenumber: string) => {
+    return phonenumber.replace(/\s/g, ''); // remove spaces
+  };
 }
