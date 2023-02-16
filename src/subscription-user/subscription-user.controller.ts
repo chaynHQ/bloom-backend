@@ -1,6 +1,7 @@
 import { Body, Controller, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { Request } from 'express';
+import { SubscriptionUserEntity } from '../entities/subscription-user.entity';
 import { FirebaseAuthGuard } from '../firebase/firebase-auth.guard';
 import { ControllerDecorator } from '../utils/controller.decorator';
 import { CreateSubscriptionUserDto } from './dto/create-subscription-user.dto';
@@ -23,7 +24,7 @@ export class SubscriptionUserController {
   async createWhatsappSubscription(
     @Req() req: Request,
     @Body() createSubscriptionUserDto: CreateSubscriptionUserDto,
-  ) {
+  ): Promise<SubscriptionUserEntity | undefined> {
     return await this.subscriptionUserService.createWhatsappSubscription(
       req['user'],
       createSubscriptionUserDto,
@@ -41,7 +42,7 @@ export class SubscriptionUserController {
     @Req() req: Request,
     @Param() { id },
     @Body() updateSubscriptionsDto: UpdateSubscriptionUserDto,
-  ) {
+  ): Promise<SubscriptionUserEntity | undefined> {
     return this.subscriptionUserService.cancelWhatsappSubscription(
       req['user'],
       updateSubscriptionsDto,
