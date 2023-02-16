@@ -23,7 +23,7 @@ export class ZapierWebhookClient {
           name,
         },
       });
-      this.logger.log('Contact added successfully to respond.io');
+      this.logger.log('Triggered webhook to add contact to respond.io');
       return response;
     } catch (err) {
       this.logger.error('Unable to add contact to respond.io');
