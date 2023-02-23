@@ -1,6 +1,7 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { createCrispProfileData } from 'src/api/crisp/utils/createCrispProfileData';
+import { UserEntity } from 'src/entities/user.entity';
 import { IFirebaseUser } from 'src/firebase/firebase-user.interface';
 import { Logger } from 'src/logger/logger';
 import { PartnerService } from 'src/partner/partner.service';
@@ -306,5 +307,34 @@ export class UserService {
     await this.userRepository.save(user);
 
     return user;
+  }
+  public async deleteCypressTestUsers(): Promise<UserEntity[]> {
+    try {
+      const queryResult = await this.userRepository
+        .createQueryBuilder('user')
+        .select()
+        .where('user.name ILIKE :searchTerm', { searchTerm: `Cypress test` })
+        .getMany();
+
+      const deletedUsers = await Promise.all(
+        queryResult.map(async (user) => {
+          try {
+            await this.authService.deleteFirebaseUser(user.firebaseUid);
+            await this.userRepository.delete(user.id);
+            return user;
+          } catch (error) {
+            this.logger.error(`Unable to delete cypress user: ${user.email} ${error}`);
+            throw new HttpException(
+              `Unable to delete cypress user: ${user.email} ${error}`,
+              HttpStatus.INTERNAL_SERVER_ERROR,
+            );
+          }
+        }),
+      );
+      return deletedUsers;
+    } catch (error) {
+      this.logger.error(`Unable to delete all cypress users`, error);
+      throw error;
+    }
   }
 }
