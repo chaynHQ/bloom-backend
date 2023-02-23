@@ -1,6 +1,8 @@
-import { Body, Controller, Post, Put, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Post, Put, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Request } from 'express';
+import { UserEntity } from 'src/entities/user.entity';
+import { SuperAdminAuthGuard } from 'src/partner-admin/super-admin-auth.guard';
 import { FirebaseAuthGuard } from '../firebase/firebase-auth.guard';
 import { ControllerDecorator } from '../utils/controller.decorator';
 import { CreateUserDto } from './dtos/create-user.dto';
@@ -34,11 +36,26 @@ export class UserController {
     return req['user'];
   }
 
+  // TODO - work out if this is used anywhere and delete if necessary
   @ApiBearerAuth()
   @Post('/delete')
   @UseGuards(FirebaseAuthGuard)
+  async deleteUserRecord(@Req() req: Request): Promise<string> {
+    return await this.userService.deleteUser(req['user'] as GetUserDto);
+  }
+
+  @ApiBearerAuth()
+  @Delete()
+  @UseGuards(FirebaseAuthGuard)
   async deleteUser(@Req() req: Request): Promise<string> {
     return await this.userService.deleteUser(req['user'] as GetUserDto);
+  }
+
+  @ApiBearerAuth('access-token')
+  @Delete('/cypress')
+  @UseGuards(SuperAdminAuthGuard)
+  async deleteCypressUsers(): Promise<UserEntity[]> {
+    return await this.userService.deleteCypressTestUsers();
   }
 
   @ApiBearerAuth()
