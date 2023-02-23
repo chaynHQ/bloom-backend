@@ -40,7 +40,7 @@ export class PartnerController {
   @ApiParam({ name: 'name', description: 'Gets partner by name' })
   async getPartner(@Param() { name }): Promise<IPartner> {
     // annoyingly the frontend doesn't have the id when features are needed
-    const partnerResponse = await this.partnerService.getPartnerWithPartnerFeatures(name);
+    const partnerResponse = await this.partnerService.getPartnerWithPartnerFeaturesByName(name);
     return formatPartnerObject(partnerResponse);
   }
 

@@ -2,6 +2,14 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { createCrispProfileData } from 'src/api/crisp/utils/createCrispProfileData';
 import { IFirebaseUser } from 'src/firebase/firebase-user.interface';
+import { Logger } from 'src/logger/logger';
+import { PartnerService } from 'src/partner/partner.service';
+import { FEATURES } from 'src/utils/constants';
+import {
+  CREATE_USER_EMAIL_ALREADY_EXISTS,
+  CREATE_USER_INVALID_EMAIL,
+  CREATE_USER_WEAK_PASSWORD,
+} from 'src/utils/errors';
 import {
   addCrispProfile,
   deleteCrispProfile,
@@ -16,77 +24,224 @@ import { GetUserDto } from './dtos/get-user.dto';
 import { UpdateUserDto } from './dtos/update-user.dto';
 import { UserRepository } from './user.repository';
 
+enum SIGNUP_TYPE {
+  PUBLIC_USER = 'PUBLIC_USER',
+  PARTNER_USER_WITH_CODE = 'PARTNER_USER_WITH_CODE',
+  PARTNER_USER_WITHOUT_CODE = 'PARTNER_USER_WITHOUT_CODE',
+}
+
 @Injectable()
 export class UserService {
+  private readonly logger = new Logger('UserService');
+
   constructor(
     @InjectRepository(UserRepository)
     private userRepository: UserRepository,
     private readonly partnerAccessService: PartnerAccessService,
+    private readonly partnerService: PartnerService,
     private readonly authService: AuthService,
   ) {}
 
   public async createUser(createUserDto: CreateUserDto): Promise<GetUserDto> {
-    const {
-      name,
-      email,
-      firebaseUid,
-      partnerAccessCode,
-      contactPermission,
-      signUpLanguage,
-      partnerId,
-    } = createUserDto;
-    const createUserObject = this.userRepository.create({
-      name,
-      email,
-      firebaseUid,
-      contactPermission,
-      signUpLanguage,
-    });
+    const { email, partnerAccessCode, partnerId, password } = createUserDto;
+
+    const signUpType =
+      partnerAccessCode || partnerId
+        ? partnerAccessCode
+          ? SIGNUP_TYPE.PARTNER_USER_WITH_CODE
+          : SIGNUP_TYPE.PARTNER_USER_WITHOUT_CODE
+        : SIGNUP_TYPE.PUBLIC_USER;
+    let firebaseUser = null;
 
     try {
-      const createUserResponse = await this.userRepository.save(createUserObject);
-      // Only assign Partner access code if partner access or partner id is supplied
-      const partnerAccessWithPartner = partnerAccessCode
-        ? await this.partnerAccessService.assignPartnerAccessOnSignup({
-            partnerAccessCode,
-            userId: createUserResponse.id,
-          })
-        : partnerId
-        ? await this.partnerAccessService.assignPartnerAccessOnSignupWithoutCode({
-            partnerId,
-            userId: createUserResponse.id,
-          })
-        : undefined;
+      firebaseUser = await this.authService.createFirebaseUser(email, password);
+      this.logger.log(`Create user: Firebase user created: ${email}`);
+    } catch (err) {
+      const errorCode = err.code;
+      if (errorCode === 'auth/invalid-email') {
+        this.logger.warn(
+          `Create user: user tried to create email with invalid email: ${email} - ${err}`,
+        );
+        throw new HttpException(CREATE_USER_INVALID_EMAIL, HttpStatus.BAD_REQUEST);
+      }
+      if (
+        errorCode === 'auth/weak-password' ||
+        err.message.includes('The password must be a string with at least 6 characters')
+      ) {
+        this.logger.warn(`Create user: user tried to create email with weak password - ${err}`);
+        throw new HttpException(CREATE_USER_WEAK_PASSWORD, HttpStatus.BAD_REQUEST);
+      }
+      if (errorCode !== 'auth/email-already-in-use' && errorCode !== 'auth/email-already-exists') {
+        this.logger.error(`Create user: Error creating firebase user - ${email}: ${err}`);
+        throw err;
+      } else {
+        this.logger.warn(
+          `Create user: Unable to create firebase user as user already exists: ${email}`,
+        );
+      }
+    }
 
-      // partner segment is for crisp API
-      const partnerSegment = partnerAccessWithPartner
-        ? partnerAccessWithPartner.partner.name
-        : 'public';
+    if (!firebaseUser) {
+      this.logger.log(
+        `Create user: Firebase user already exists so fetching firebase user: ${email}`,
+      );
+
+      try {
+        firebaseUser = await this.authService.getFirebaseUser(email);
+        if (!firebaseUser) {
+          throw new Error('Create user: Unable to create firebase user or get firebase user');
+        }
+      } catch (err) {
+        this.logger.error(`Create user: getFirebaseUser error - ${email}: ${err}`);
+        throw new HttpException(err, HttpStatus.BAD_REQUEST);
+      }
+    }
+
+    let formattedUserObject: GetUserDto | null = null;
+
+    try {
+      if (signUpType === SIGNUP_TYPE.PARTNER_USER_WITHOUT_CODE) {
+        formattedUserObject = await this.createPartnerUserWithoutCode(
+          createUserDto,
+          firebaseUser.uid,
+        );
+      } else if (signUpType === SIGNUP_TYPE.PARTNER_USER_WITH_CODE) {
+        formattedUserObject = await this.createPartnerUserWithCode(createUserDto, firebaseUser.uid);
+      } else {
+        formattedUserObject = await this.createPublicUser(createUserDto, firebaseUser.uid);
+      }
+
+      const partnerSegment =
+        signUpType === SIGNUP_TYPE.PUBLIC_USER
+          ? 'public'
+          : formattedUserObject.partnerAccesses[0].partner.name.toLowerCase();
 
       await addCrispProfile({
-        email: createUserResponse.email,
-        person: { nickname: createUserResponse.name },
-        segments: [partnerSegment.toLowerCase()],
+        email: formattedUserObject.user.email,
+        person: { nickname: formattedUserObject.user.name },
+        segments: [partnerSegment],
       });
 
       await updateCrispProfileData(
         createCrispProfileData(
-          createUserResponse,
-          partnerAccessWithPartner ? [partnerAccessWithPartner] : [],
+          formattedUserObject.user,
+          SIGNUP_TYPE.PUBLIC_USER ? [] : formattedUserObject.partnerAccesses,
         ),
-        createUserResponse.email,
+        formattedUserObject.user.email,
       );
 
-      return partnerAccessWithPartner
-        ? formatUserObject({
-            ...createUserResponse,
-            ...(partnerAccessWithPartner ? { partnerAccess: [partnerAccessWithPartner] } : {}),
-          })
-        : { user: createUserResponse };
+      return formattedUserObject;
     } catch (error) {
+      const userAlreadyExists = (err) =>
+        err.message.includes('already exists') ||
+        err.message.includes('UQ_e12875dfb3b1d92d7d7c5377e22') ||
+        err.message.includes(
+          'duplicate key value violates unique constraint "UQ_905432b2c46bdcfe1a0dd3cdeff"',
+        );
+      if (userAlreadyExists(error)) {
+        this.logger.warn(`Create user: User already exists ${email}`);
+        throw new HttpException(CREATE_USER_EMAIL_ALREADY_EXISTS, HttpStatus.CONFLICT);
+      }
       if (error.code === '23505') {
         throw new HttpException(error.detail, HttpStatus.CONFLICT);
       }
+      this.logger.error(`Create user: Error creating user ${email}: ${error}`);
+      throw error;
+    }
+  }
+
+  public async createPublicUser(
+    { name, email, contactPermission, signUpLanguage }: CreateUserDto,
+    firebaseUid: string,
+  ) {
+    try {
+      const createUserObject = this.userRepository.create({
+        name,
+        email,
+        firebaseUid,
+        contactPermission,
+        signUpLanguage,
+      });
+      const createUserResponse = await this.userRepository.save(createUserObject);
+
+      return { user: createUserResponse };
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  public async createPartnerUserWithoutCode(
+    { name, email, contactPermission, signUpLanguage, partnerId }: CreateUserDto,
+    firebaseUid: string,
+  ) {
+    try {
+      const partnerResponse = await this.partnerService.getPartnerWithPartnerFeaturesById(
+        partnerId,
+      );
+      if (!partnerResponse) {
+        throw new HttpException('Invalid partnerId supplied', HttpStatus.BAD_REQUEST);
+      }
+      const automaticAccessCodePartnerFeature = partnerResponse.partnerFeature.find(
+        (pf) => pf.feature.name === FEATURES.AUTOMATIC_ACCESS_CODE,
+      );
+      if (!automaticAccessCodePartnerFeature) {
+        throw new HttpException(
+          'Partner does not have automatic access code Feature',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+      const createUserObject = this.userRepository.create({
+        name,
+        email,
+        firebaseUid,
+        contactPermission,
+        signUpLanguage,
+      });
+
+      const createUserResponse = await this.userRepository.save(createUserObject);
+      const partnerAccessWithPartner = await this.partnerAccessService.createAndAssignPartnerAccess(
+        partnerResponse,
+        createUserResponse.id,
+      );
+
+      return formatUserObject({
+        ...createUserResponse,
+        ...(partnerAccessWithPartner ? { partnerAccess: [partnerAccessWithPartner] } : {}),
+      });
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  public async createPartnerUserWithCode(
+    { name, email, contactPermission, signUpLanguage, partnerAccessCode }: CreateUserDto,
+    firebaseUid: string,
+  ) {
+    try {
+      const partnerAccess = await this.partnerAccessService.getValidPartnerAccessCode(
+        partnerAccessCode,
+      );
+
+      const createUserObject = this.userRepository.create({
+        name,
+        email,
+        firebaseUid,
+        contactPermission,
+        signUpLanguage,
+      });
+
+      const createUserResponse = await this.userRepository.save(createUserObject);
+
+      const partnerAccessWithPartner = await this.partnerAccessService.assignPartnerAccessOnSignup(
+        partnerAccess,
+        createUserResponse.id,
+      );
+
+      return formatUserObject({
+        ...createUserResponse,
+        ...(partnerAccessWithPartner ? { partnerAccess: [partnerAccessWithPartner] } : {}),
+      });
+    } catch (error) {
       throw error;
     }
   }

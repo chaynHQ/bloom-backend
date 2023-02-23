@@ -172,16 +172,15 @@ describe('PartnerAccessService', () => {
   });
   describe('assignPartnerAccessOnSignUp', () => {
     it('when partnerAccess is supplied, it should create a partner access and assign to user', async () => {
-      const validCodeSpy = jest.spyOn(service, 'getValidPartnerAccessCode');
       jest.spyOn(repo, 'createQueryBuilder').mockImplementationOnce(
         createQueryBuilderMock({
           getOne: jest.fn().mockResolvedValue(mockPartnerAccessEntity),
         }) as never,
       );
-      const partnerAccess = await service.assignPartnerAccessOnSignup({
-        partnerAccessCode: mockPartnerAccessEntity.accessCode,
-        userId: mockGetUserDto.user.id,
-      });
+      const partnerAccess = await service.assignPartnerAccessOnSignup(
+        mockPartnerAccessEntity,
+        mockGetUserDto.user.id,
+      );
 
       expect(partnerAccess.partnerAdminId).toBeNull();
       expect(partnerAccess.partnerAdmin).toBeNull();
@@ -189,17 +188,14 @@ describe('PartnerAccessService', () => {
       expect(partnerAccess.userId).toBe(mockGetUserDto.user.id);
       expect(partnerAccess.featureLiveChat).toBeTruthy();
       expect(partnerAccess.featureTherapy).toBeTruthy();
-      expect(validCodeSpy).toBeCalled();
     });
   });
-  describe('assignPartnerAccessOnSignUpWithoutCode', () => {
+  describe('createAndAssignPartnerAccess', () => {
     it('when partnerId is supplied, it should create a partner access and assign to user', async () => {
-      const validCodeSpy = jest.spyOn(service, 'getValidPartnerAccessCode');
-
-      const partnerAccess = await service.assignPartnerAccessOnSignupWithoutCode({
-        partnerId: mockPartnerEntity.id,
-        userId: mockGetUserDto.user.id,
-      });
+      const partnerAccess = await service.createAndAssignPartnerAccess(
+        mockPartnerEntity,
+        mockGetUserDto.user.id,
+      );
 
       expect(partnerAccess.partnerAdminId).toBeNull();
       expect(partnerAccess.partnerAdmin).toBeNull();
@@ -207,7 +203,6 @@ describe('PartnerAccessService', () => {
       expect(partnerAccess.userId).toBe(mockGetUserDto.user.id);
       expect(partnerAccess.featureLiveChat).toBeTruthy();
       expect(partnerAccess.featureTherapy).toBeFalsy();
-      expect(validCodeSpy).toBeCalledTimes(0);
     });
   });
 });
