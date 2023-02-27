@@ -24,13 +24,28 @@ export class FirebaseAuthGuard implements CanActivate {
       throw new UnauthorizedException('Unauthorized: missing required Authorization token');
     }
 
+    let user;
     try {
-      const user = await this.authService.parseAuth(authorization);
-
-      request['user'] = await this.userService.getUser(user as IFirebaseUser);
+      user = await this.authService.parseAuth(authorization);
     } catch (error) {
       throw new HttpException(
-        'Error retrieving user in auth guard',
+        `FirebaseAuthGuard - Error parsing firebase user: ${error}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+
+    try {
+      request['user'] = await this.userService.getUser(user as IFirebaseUser);
+    } catch (error) {
+      if (error.message === 'USER NOT FOUND') {
+        throw new HttpException(
+          `FirebaseAuthGuard - Firebase user exists but user no record in bloom database for ${user.email}: ${error}`,
+          HttpStatus.INTERNAL_SERVER_ERROR,
+        );
+      }
+
+      throw new HttpException(
+        `FirebaseAuthGuard - Firebase user exists but error retrieving from bloom database for ${user.email}: ${error}`,
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
