@@ -87,7 +87,9 @@ export class SubscriptionUserService {
         });
 
         subscription.cancelledAt = cancelledAt;
-        return this.subscriptionUserRepository.save(subscription);
+        await this.subscriptionUserRepository.save(subscription);
+
+        return this.getFullSubscriptionInfo({ id: subscription.id, userId: user.id });
       } else {
         throw new HttpException('Subscription has already been cancelled', HttpStatus.CONFLICT);
       }
