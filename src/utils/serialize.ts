@@ -148,12 +148,18 @@ export const formatTherapySessionObject = (
 export const formatSubscriptionObjects = (
   userSubscriptions: SubscriptionUserEntity[],
 ): ISubscriptionUser[] => {
-  return userSubscriptions.map((userSubscription) => ({
+  return userSubscriptions.map((userSubscription) => formatSubscriptionObject(userSubscription));
+};
+
+export const formatSubscriptionObject = (
+  userSubscription: SubscriptionUserEntity,
+): ISubscriptionUser => {
+  return {
     id: userSubscription.id,
     subscriptionId: userSubscription.subscriptionId,
     subscriptionName: userSubscription.subscription.name,
     subscriptionInfo: userSubscription.subscriptionInfo,
     createdAt: userSubscription.createdAt,
     cancelledAt: userSubscription.cancelledAt,
-  }));
+  };
 };

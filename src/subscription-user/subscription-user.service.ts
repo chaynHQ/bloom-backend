@@ -1,13 +1,14 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ZapierWebhookClient } from '../api/zapier/zapier-webhook-client';
-import { SubscriptionUserEntity } from '../entities/subscription-user.entity';
 import { Logger } from '../logger/logger';
 import { SubscriptionService } from '../subscription/subscription.service';
 import { GetUserDto } from '../user/dtos/get-user.dto';
 import { WhatsappSubscriptionStatusEnum } from '../utils/constants';
+import { formatSubscriptionObject } from '../utils/serialize';
 import { CreateSubscriptionUserDto } from './dto/create-subscription-user.dto';
 import { UpdateSubscriptionUserDto } from './dto/update-subscription-user.dto';
+import { ISubscriptionUser } from './subscription-user.interface';
 import { SubscriptionUserRepository } from './subscription-user.repository';
 
 @Injectable()
@@ -24,7 +25,7 @@ export class SubscriptionUserService {
   async createWhatsappSubscription(
     { user }: GetUserDto,
     createSubscriptionUserDto: CreateSubscriptionUserDto,
-  ): Promise<SubscriptionUserEntity | undefined> {
+  ): Promise<ISubscriptionUser | undefined> {
     const whatsapp = await this.subscriptionService.getSubscription('whatsapp');
     // Note that only one active whatsapp subscription is allowed per user.
     // A user with an existing active subscription cannot subscribe for example with a different number.
@@ -53,11 +54,13 @@ export class SubscriptionUserService {
         name: user.name,
       });
 
-      return await this.subscriptionUserRepository.save({
+      const createdSubscription = await this.subscriptionUserRepository.save({
         subscriptionId: whatsapp.id,
         userId: user.id,
         subscriptionInfo: sanitizedPhonenumber,
       });
+
+      return this.getFullSubscriptionInfo({ id: createdSubscription.id, userId: user.id });
     } else {
       throw new HttpException(WhatsappSubscriptionStatusEnum.ALREADY_EXISTS, HttpStatus.CONFLICT);
     }
@@ -91,6 +94,23 @@ export class SubscriptionUserService {
     } else {
       throw new HttpException('Could not find subscription', HttpStatus.BAD_REQUEST);
     }
+  }
+
+  async getFullSubscriptionInfo({
+    id,
+    userId,
+  }: {
+    id: string;
+    userId: string;
+  }): Promise<ISubscriptionUser> {
+    const subscription = await this.subscriptionUserRepository
+      .createQueryBuilder('subscription_user')
+      .leftJoinAndSelect('subscription_user.subscription', 'subscription')
+      .where('subscription_user.subscriptionUserId = :id', { id })
+      .andWhere('subscription_user.userId = :userId', { userId })
+      .getOne();
+
+    return formatSubscriptionObject(subscription);
   }
 
   sanitizePhonenumber = (phonenumber: string) => {
