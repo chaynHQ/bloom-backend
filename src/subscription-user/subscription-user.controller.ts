@@ -6,6 +6,7 @@ import { FirebaseAuthGuard } from '../firebase/firebase-auth.guard';
 import { ControllerDecorator } from '../utils/controller.decorator';
 import { CreateSubscriptionUserDto } from './dto/create-subscription-user.dto';
 import { UpdateSubscriptionUserDto } from './dto/update-subscription-user.dto';
+import { ISubscriptionUser } from './subscription-user.interface';
 import { SubscriptionUserService } from './subscription-user.service';
 
 @ApiTags('Subscription User')
@@ -24,7 +25,7 @@ export class SubscriptionUserController {
   async createWhatsappSubscription(
     @Req() req: Request,
     @Body() createSubscriptionUserDto: CreateSubscriptionUserDto,
-  ): Promise<SubscriptionUserEntity | undefined> {
+  ): Promise<ISubscriptionUser | undefined> {
     return await this.subscriptionUserService.createWhatsappSubscription(
       req['user'],
       createSubscriptionUserDto,
