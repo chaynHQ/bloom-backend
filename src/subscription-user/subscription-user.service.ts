@@ -41,12 +41,13 @@ export class SubscriptionUserService {
     );
 
     if (activeWhatsappSubscription.length === 0) {
-      this.logger.log(`Triggering zapier to add contact to respond.io`);
-
       const sanitizedPhonenumber = this.sanitizePhonenumber(
         createSubscriptionUserDto.subscriptionInfo,
       );
 
+      this.logger.log(
+        `Triggering zapier to add contact (number: ${sanitizedPhonenumber}) to respond.io for user ${user.email}.`,
+      );
       await this.zapierClient.addContactToRespondIO({
         phonenumber: sanitizedPhonenumber,
         name: user.name,
@@ -75,6 +76,9 @@ export class SubscriptionUserService {
 
     if (subscription) {
       if (!subscription.cancelledAt) {
+        this.logger.log(
+          `Triggering zapier to remove contact (number: ${subscription.subscriptionInfo}) from respond.io for user ${user.email}.`,
+        );
         await this.zapierClient.deleteContactFromRespondIO({
           phonenumber: subscription.subscriptionInfo,
         });
