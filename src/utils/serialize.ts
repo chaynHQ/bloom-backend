@@ -149,7 +149,8 @@ export const formatSubscriptionObjects = (
   userSubscriptions: SubscriptionUserEntity[],
 ): ISubscriptionUser[] => {
   return userSubscriptions.map((userSubscription) => ({
-    subscriptionId: userSubscription.id,
+    id: userSubscription.id,
+    subscriptionId: userSubscription.subscriptionId,
     subscriptionName: userSubscription.subscription.name,
     subscriptionInfo: userSubscription.subscriptionInfo,
     createdAt: userSubscription.createdAt,
