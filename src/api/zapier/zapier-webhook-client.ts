@@ -26,7 +26,7 @@ export class ZapierWebhookClient {
       this.logger.log(`Triggered webhook to add contact to respond.io for number ${phonenumber}`);
       return response;
     } catch (err) {
-      this.logger.error('Unable to add contact to respond.io');
+      this.logger.error(`Unable to add contact to respond.io for number ${phonenumber}`);
       throw err;
     }
   }
@@ -47,7 +47,7 @@ export class ZapierWebhookClient {
       );
       return response;
     } catch (err) {
-      this.logger.error(`Unable to delete contact from respond.io.`);
+      this.logger.error(`Unable to delete contact from respond.io with number ${phonenumber}`);
       throw err;
     }
   }
