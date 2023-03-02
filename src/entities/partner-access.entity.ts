@@ -20,7 +20,9 @@ export class PartnerAccessEntity extends BaseBloomEntity {
 
   @Column({ nullable: true })
   userId: string;
-  @ManyToOne(() => UserEntity, (userEntity) => userEntity.partnerAccess)
+  @ManyToOne(() => UserEntity, (userEntity) => userEntity.partnerAccess, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'userId' })
   user: UserEntity;
 
