@@ -7,6 +7,7 @@ import { CourseService } from '../course/course.service';
 import { CourseUserEntity } from '../entities/course-user.entity';
 import { CourseEntity } from '../entities/course.entity';
 import { SessionUserEntity } from '../entities/session-user.entity';
+import { Logger } from '../logger/logger';
 import { SessionService } from '../session/session.service';
 import { GetUserDto } from '../user/dtos/get-user.dto';
 import { UserRepository } from '../user/user.repository';
@@ -19,6 +20,8 @@ import { SessionUserRepository } from './session-user.repository';
 
 @Injectable()
 export class SessionUserService {
+  private readonly logger = new Logger('SessionUserService');
+
   constructor(
     @InjectRepository(SessionUserRepository) private sessionUserRepository: SessionUserRepository,
     @InjectRepository(UserRepository) private userRepository: UserRepository,
@@ -161,9 +164,16 @@ export class SessionUserService {
     });
 
     if (!courseUser) {
-      throw new HttpException(
-        `Course user not found for user with id: ${user.id}. Could not complete session ${session.id}.`,
-        HttpStatus.NOT_FOUND,
+      courseUser = await this.courseUserService.createCourseUser({
+        userId: user.id,
+        courseId,
+      });
+
+      updateCrispProfileCourse(session.course.name, user.email, PROGRESS_STATUS.STARTED);
+
+      this.logger.error(
+        `Course user not found for user (user-id: ${user.id}) for course (course-id: ${courseId}).
+         Creating new course user so that session (session-id: ${session.id}) can be marked compelete`,
       );
     }
 
