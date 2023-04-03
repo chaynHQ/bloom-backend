@@ -28,6 +28,10 @@ export class FirebaseAuthGuard implements CanActivate {
     try {
       user = await this.authService.parseAuth(authorization);
     } catch (error) {
+      if (error.code === 'auth/id-token-expired') {
+        throw new HttpException(`FirebaseAuthGuard - ${error}`, HttpStatus.UNAUTHORIZED);
+      }
+
       throw new HttpException(
         `FirebaseAuthGuard - Error parsing firebase user: ${error}`,
         HttpStatus.INTERNAL_SERVER_ERROR,
