@@ -272,6 +272,18 @@ export class UserService {
     return formatUserObject(queryResult);
   }
 
+  public async getUserById(id: string): Promise<UserEntity | undefined> {
+    const queryResult = await this.userRepository
+      .createQueryBuilder('user')
+      .where('user.id = :id', { id })
+      .getOne();
+
+    if (!queryResult) {
+      throw new HttpException('USER NOT FOUND', HttpStatus.NOT_FOUND);
+    }
+    return queryResult;
+  }
+
   public async deleteUser({ user, partnerAdmin }: GetUserDto) {
     //Delete User From Firebase
     await this.authService.deleteFirebaseUser(user.firebaseUid);
@@ -292,6 +304,32 @@ export class UserService {
     await this.userRepository.save(user);
 
     return 'Successful';
+  }
+
+  public async deleteUserById(id: string): Promise<UserEntity> {
+    //Delete User From Firebase
+    try {
+      const user = await this.getUserById(id);
+      await this.authService.deleteFirebaseUser(user.firebaseUid);
+      //Delete Crisp People Profile
+      await deleteCrispProfile(user.email);
+
+      //Randomise User Data in DB
+      const randomString = generateRandomString(20);
+      const newUser = {
+        ...user,
+        name: randomString,
+        email: `${randomString}@deletedemail.com`,
+        firebaseUid: randomString,
+        isActive: false,
+      };
+
+      await this.userRepository.save(newUser);
+
+      return newUser;
+    } catch (error) {
+      throw error;
+    }
   }
 
   public async updateUser(updateUserDto: UpdateUserDto, { user: { id } }: GetUserDto) {
