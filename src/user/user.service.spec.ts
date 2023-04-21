@@ -245,4 +245,27 @@ describe('UserService', () => {
       expect(repoSpySave).toBeCalled();
     });
   });
+
+  describe('deleteUserById', () => {
+    it('when user id supplied, should soft delete', async () => {
+      const repoSpyCreateQueryBuilder = jest.spyOn(repo, 'createQueryBuilder');
+      repoSpyCreateQueryBuilder
+        .mockImplementation(
+          createQueryBuilderMock() as never, // TODO resolve this typescript issue
+        )
+        .mockImplementationOnce(
+          createQueryBuilderMock({
+            getOne: jest.fn().mockResolvedValue(mockUserEntity),
+          }) as never,
+        );
+
+      const repoSpySave = jest.spyOn(repo, 'save');
+
+      const user = await service.deleteUserById(mockUserEntity.id);
+      expect(user.name).not.toBe(mockUserEntity.name);
+      expect(user.email).not.toBe(mockUserEntity.email);
+
+      expect(repoSpySave).toBeCalled();
+    });
+  });
 });
