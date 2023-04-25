@@ -1,5 +1,5 @@
-import { Body, Controller, Delete, Post, Put, Req, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Delete, Param, Post, Put, Req, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { Request } from 'express';
 import { UserEntity } from 'src/entities/user.entity';
 import { SuperAdminAuthGuard } from 'src/partner-admin/super-admin-auth.guard';
@@ -49,6 +49,14 @@ export class UserController {
   @UseGuards(FirebaseAuthGuard)
   async deleteUser(@Req() req: Request): Promise<string> {
     return await this.userService.deleteUser(req['user'] as GetUserDto);
+  }
+
+  @ApiBearerAuth()
+  @Delete(':id')
+  @ApiParam({ name: 'id', description: 'User id to delete' })
+  @UseGuards(SuperAdminAuthGuard)
+  async adminDeleteUser(@Param() { id }): Promise<UserEntity> {
+    return await this.userService.deleteUserById(id);
   }
 
   @ApiBearerAuth('access-token')
