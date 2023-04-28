@@ -50,6 +50,13 @@ export class UserController {
   async deleteUser(@Req() req: Request): Promise<string> {
     return await this.userService.deleteUser(req['user'] as GetUserDto);
   }
+  // This route must go before the Delete user route below as we want nestjs to check against this one first
+  @ApiBearerAuth('access-token')
+  @Delete('/cypress')
+  @UseGuards(SuperAdminAuthGuard)
+  async deleteCypressUsers(): Promise<UserEntity[]> {
+    return await this.userService.deleteCypressTestUsers();
+  }
 
   @ApiBearerAuth()
   @Delete(':id')
@@ -57,13 +64,6 @@ export class UserController {
   @UseGuards(SuperAdminAuthGuard)
   async adminDeleteUser(@Param() { id }): Promise<UserEntity> {
     return await this.userService.deleteUserById(id);
-  }
-
-  @ApiBearerAuth('access-token')
-  @Delete('/cypress')
-  @UseGuards(SuperAdminAuthGuard)
-  async deleteCypressUsers(): Promise<UserEntity[]> {
-    return await this.userService.deleteCypressTestUsers();
   }
 
   @ApiBearerAuth()
