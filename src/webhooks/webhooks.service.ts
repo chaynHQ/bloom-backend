@@ -148,7 +148,10 @@ export class WebhooksService {
   async updatePartnerAccessTherapy(
     simplyBookDto: SimplybookBodyDto,
   ): Promise<TherapySessionEntity> {
-    const { action, client_email, booking_code } = simplyBookDto;
+    const { action, booking_code } = simplyBookDto;
+    // this ensures that the client email can be matched against the db which contains lower case emails
+    const client_email = simplyBookDto.client_email.toLowerCase();
+
     this.logger.log(
       `UpdatePartnerAccessService method initiated for ${action} - ${client_email} - ${booking_code}`,
     );
