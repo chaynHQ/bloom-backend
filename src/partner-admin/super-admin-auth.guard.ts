@@ -1,4 +1,10 @@
-import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  CanActivate,
+  ExecutionContext,
+  HttpException,
+  HttpStatus,
+  Injectable,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Request } from 'express';
 import { AuthService } from '../auth/auth.service';
@@ -17,13 +23,34 @@ export class SuperAdminAuthGuard implements CanActivate {
     const { authorization } = request.headers;
 
     if (!authorization) {
-      throw new UnauthorizedException('Unauthorized: missing required Authorization token');
+      throw new HttpException(
+        `SuperAdminAuthGuard: Unauthorised missing Authorization token`,
+        HttpStatus.UNAUTHORIZED,
+      );
     }
+    let userUid;
+    try {
+      const { uid } = await this.authService.parseAuth(authorization);
+      userUid = uid;
+    } catch (error) {
+      if (error.code === 'auth/id-token-expired') {
+        throw new HttpException(`SuperAdminAuthGuard - ${error}`, HttpStatus.UNAUTHORIZED);
+      }
 
-    const { uid } = await this.authService.parseAuth(authorization);
+      throw new HttpException(
+        `SuperAdminAuthGuard - Error parsing firebase user: ${error}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+    try {
+      const user = await this.usersRepository.findOne({ firebaseUid: userUid });
 
-    const user = await this.usersRepository.findOne({ firebaseUid: uid });
-
-    return !!user.isSuperAdmin && user.email.indexOf('@chayn.co') !== -1;
+      return !!user.isSuperAdmin && user.email.indexOf('@chayn.co') !== -1;
+    } catch (error) {
+      throw new HttpException(
+        `SuperAdminAuthGuard - Error finding user: ${error}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 }
