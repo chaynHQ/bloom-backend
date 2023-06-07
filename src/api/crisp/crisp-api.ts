@@ -1,6 +1,7 @@
 import { AxiosResponse } from 'axios';
 import { ICoursesWithSessions } from 'src/course/course.interface';
 import { IPartnerAccessWithPartner } from 'src/partner-access/partner-access.interface';
+import { Logger } from '../../logger/logger';
 import { IUser } from '../../user/user.interface';
 import { crispToken, crispWebsiteId, PROGRESS_STATUS } from '../../utils/constants';
 import apiCall from '../apiCalls';
@@ -25,6 +26,8 @@ const headers = {
   'X-Crisp-Tier': 'plugin',
   '-ContentType': 'application/json',
 };
+
+const logger = new Logger('UserService');
 
 export const updateCrispProfileAccesses = async (
   user: IUser,
@@ -142,6 +145,8 @@ export const addCrispProfile = async (
       headers,
     });
   } catch (error) {
+    logger.error(`Could not add crisp profile for user: ${newPeopleProfile.email}`);
+
     throw error;
   }
 };
@@ -158,6 +163,8 @@ export const updateCrispProfileData = async (
       headers,
     });
   } catch (error) {
+    logger.error(`Could not update crisp profile for user: ${email}`);
+
     throw error;
   }
 };
