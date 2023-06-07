@@ -106,10 +106,15 @@ export class UserService {
           createUserDto,
           firebaseUser.uid,
         );
+        this.logger.log(`Create user: (no access code) created partner user in db. User: ${email}`);
       } else if (signUpType === SIGNUP_TYPE.PARTNER_USER_WITH_CODE) {
         formattedUserObject = await this.createPartnerUserWithCode(createUserDto, firebaseUser.uid);
+        this.logger.log(
+          `Create user: (with access code) created partner user in db. User: ${email}`,
+        );
       } else {
         formattedUserObject = await this.createPublicUser(createUserDto, firebaseUser.uid);
+        this.logger.log(`Create user: created public user in db. User: ${email}`);
       }
 
       const partnerSegment =
@@ -122,6 +127,7 @@ export class UserService {
         person: { nickname: formattedUserObject.user.name },
         segments: [partnerSegment],
       });
+      this.logger.log(`Create user: added crisp profile: ${email}`);
 
       await updateCrispProfileData(
         createCrispProfileData(
@@ -130,6 +136,7 @@ export class UserService {
         ),
         formattedUserObject.user.email,
       );
+      this.logger.log(`Create user: updated crisp profile ${email}`);
 
       return formattedUserObject;
     } catch (error) {
