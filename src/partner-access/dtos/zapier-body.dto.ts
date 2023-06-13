@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsDefined, IsEmail, IsEnum, IsNotEmpty, IsString } from 'class-validator';
+import { IsDefined, IsEmail, IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 import { SIMPLYBOOK_ACTION_ENUM } from '../../utils/constants';
 
 export class SimplybookBodyDto {
@@ -17,7 +17,7 @@ export class SimplybookBodyDto {
   client_email: string;
 
   @IsString()
-  @IsDefined()
+  @IsOptional()
   @ApiProperty({ type: String })
   client_timezone: string;
 
