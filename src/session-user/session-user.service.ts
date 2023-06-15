@@ -200,7 +200,7 @@ export class SessionUserService {
         completedAt: completed ? new Date() : null,
       });
       sessionUser.session = session;
-      courseUser.sessionUser.push(sessionUser);
+      courseUser.sessionUser = [sessionUser];
     }
 
     // Attach data to object to be serialized for response
