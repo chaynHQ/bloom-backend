@@ -168,6 +168,7 @@ export class SessionUserService {
         userId: user.id,
         courseId,
       });
+      courseUser.sessionUser = []; // initialise session user array
 
       updateCrispProfileCourse(session.course.name, user.email, PROGRESS_STATUS.STARTED);
 
@@ -200,7 +201,7 @@ export class SessionUserService {
         completedAt: completed ? new Date() : null,
       });
       sessionUser.session = session;
-      courseUser.sessionUser = [sessionUser];
+      courseUser.sessionUser.push(sessionUser);
     }
 
     // Attach data to object to be serialized for response
