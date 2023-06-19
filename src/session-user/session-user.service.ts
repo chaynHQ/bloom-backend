@@ -168,6 +168,7 @@ export class SessionUserService {
         userId: user.id,
         courseId,
       });
+      courseUser.sessionUser = []; // initialise session user array
 
       updateCrispProfileCourse(session.course.name, user.email, PROGRESS_STATUS.STARTED);
 

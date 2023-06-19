@@ -99,7 +99,7 @@ Migrations are automatically run when the app is built docker (locally) or Herok
 To generate a new migration
 
 ```bash
-yarn migration:generate -- bloom_backend
+yarn migration:generate
 ```
 
 To run (apply) migrations
