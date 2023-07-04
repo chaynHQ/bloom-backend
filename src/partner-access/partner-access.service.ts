@@ -148,4 +148,17 @@ export class PartnerAccessService {
 
     return partnerAccess;
   }
+
+  public async deleteCypressTestAccessCode(accessCode: string): Promise<void> {
+    try {
+      const partnerAccess = await this.partnerAccessRepository //get partner access instance for the identifier
+        .createQueryBuilder('partnerAccess')
+        .where('partnerAccess.accessCode = :accessCode', { accessCode })
+        .getOne();
+      await this.partnerAccessRepository.delete(partnerAccess.id);
+    } catch (error) {
+      this.logger.error(`Unable to delete access code`, error);
+      throw error;
+    }
+  }
 }
