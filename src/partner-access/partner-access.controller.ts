@@ -1,6 +1,7 @@
-import { Body, Controller, Delete, Get, Param, Post, Req, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Delete, Get, Post, Req, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Request } from 'express';
+import { isProduction } from 'src/utils/constants';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
 import { FirebaseAuthGuard } from '../firebase/firebase-auth.guard';
 import { PartnerAdminAuthGuard } from '../partner-admin/partner-admin-auth.guard';
@@ -37,11 +38,12 @@ export class PartnerAccessController {
   }
 
   @ApiBearerAuth('access-token')
-  @Delete('/cypress/:accessCode')
-  @ApiParam({ name: 'accessCode', description: 'Access code to delete' })
+  @Delete('/cypress')
   @UseGuards(SuperAdminAuthGuard)
-  async deleteCypressAccessCode(@Param() { accessCode }): Promise<void> {
-    return await this.partnerAccessService.deleteCypressTestAccessCode(accessCode);
+  async deleteCypressAccessCode(): Promise<void> {
+    if (!isProduction) {
+      return await this.partnerAccessService.deleteCypressTestAccessCodes();
+    }
   }
 
   @ApiBearerAuth('access-token')
