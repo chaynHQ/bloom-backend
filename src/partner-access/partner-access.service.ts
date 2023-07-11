@@ -149,13 +149,23 @@ export class PartnerAccessService {
     return partnerAccess;
   }
 
-  public async deleteCypressTestAccessCode(accessCode: string): Promise<void> {
+  public async deleteCypressTestAccessCodes(): Promise<void> {
     try {
-      const partnerAccess = await this.partnerAccessRepository //get partner access instance for the identifier
+      const partnerAccessRecords = await this.partnerAccessRepository //get partner access instances where user is a cypress user
         .createQueryBuilder('partnerAccess')
-        .where('partnerAccess.accessCode = :accessCode', { accessCode })
-        .getOne();
-      await this.partnerAccessRepository.delete(partnerAccess.id);
+        .leftJoinAndSelect('partnerAccess.user', 'user')
+        .where('user.name = :name', { name: 'Cypress test user' })
+        .getMany();
+      await Promise.all(
+        partnerAccessRecords.map(async (access) => {
+          try {
+            await this.partnerAccessRepository.delete(access.id); //permanently delete the access code
+            return access;
+          } catch (error) {
+            this.logger.error(`Unable to delete access code: ${access.id} ${error}`);
+          }
+        }),
+      );
     } catch (error) {
       this.logger.error(`Unable to delete access code`, error);
       throw error;
