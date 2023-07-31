@@ -316,7 +316,6 @@ export class WebhooksService {
       storyblokId: Number(story.id),
       storyblokUuid: story.uuid,
     };
-
     try {
       if (story.content?.component === 'Course') {
         let course = await this.courseRepository.findOne({
@@ -337,7 +336,10 @@ export class WebhooksService {
           course.id,
         );
         return course;
-      } else if (story.content?.component === 'Session') {
+      } else if (
+        story.content?.component === 'Session' ||
+        story.content?.component === 'session_iba'
+      ) {
         const course = await this.courseRepository.findOne({
           storyblokUuid: story.content.course,
         });
