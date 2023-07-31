@@ -300,6 +300,54 @@ describe('WebhooksService', () => {
       sessionFindOneRepoSpy.mockClear();
       sessionCreateRepoSpy.mockClear();
     });
+
+    it('when a session with session_iba type is new, the session should be created', async () => {
+      const sessionSaveRepoSpy = jest.spyOn(mockedSessionRepository, 'save');
+
+      const sessionCreateRepoSpy = jest.spyOn(mockedSessionRepository, 'create');
+      const sessionFindOneRepoSpy = jest
+        .spyOn(mockedSessionRepository, 'findOne')
+        .mockImplementationOnce(async () => undefined);
+
+      const courseFindOneSpy = jest.spyOn(mockedCourseRepository, 'findOne');
+
+      // eslint-disable-next-line
+      // @ts-ignore
+      StoryblokClient.mockImplementationOnce(() => {
+        return {
+          get: async () => {
+            return {
+              ...mockSessionStoryblokResult,
+              data: {
+                story: {
+                  ...mockSessionStoryblokResult.data.story,
+                  content: {
+                    ...mockSessionStoryblokResult.data.story.content,
+                    component: 'session_iba',
+                  },
+                },
+              },
+            };
+          },
+        };
+      });
+      const session = (await service.updateStory({
+        action: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
+        story_id: mockSession.storyblokId,
+        text: '',
+      })) as SessionEntity;
+
+      expect(session).toEqual(mockSession);
+      expect(sessionSaveRepoSpy).toBeCalledWith({
+        ...mockSession,
+      });
+
+      courseFindOneSpy.mockClear();
+      sessionSaveRepoSpy.mockClear();
+      sessionFindOneRepoSpy.mockClear();
+      sessionCreateRepoSpy.mockClear();
+    });
+
     it('when a course is new, the course should be created', async () => {
       const courseFindOneRepoSpy = jest
         .spyOn(mockedCourseRepository, 'findOne')
