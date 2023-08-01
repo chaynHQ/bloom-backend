@@ -1,4 +1,10 @@
-import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
+import {
+  CanActivate,
+  ExecutionContext,
+  HttpException,
+  HttpStatus,
+  Injectable,
+} from '@nestjs/common';
 import { Request } from 'express';
 import { AuthService } from '../auth/auth.service';
 import { UserRepository } from '../user/user.repository';
@@ -13,9 +19,22 @@ export class PartnerAdminAuthGuard implements CanActivate {
     if (!authorization) {
       return false;
     }
+    let userUid;
 
-    const { uid } = await this.authService.parseAuth(authorization);
-    if (!uid) {
+    try {
+      const { uid } = await this.authService.parseAuth(authorization);
+      userUid = uid;
+    } catch (error) {
+      if (error.code === 'auth/id-token-expired') {
+        throw new HttpException(`PartnerAdminAuthGuard - ${error}`, HttpStatus.UNAUTHORIZED);
+      }
+
+      throw new HttpException(
+        `PartnerAdminAuthGuard - Error parsing firebase user: ${error}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+    if (!userUid) {
       return false;
     }
 
@@ -23,7 +42,7 @@ export class PartnerAdminAuthGuard implements CanActivate {
       .createQueryBuilder('user')
       .leftJoinAndSelect('user.partnerAdmin', 'partnerAdmin')
       .leftJoinAndSelect('partnerAdmin.partner', 'partner')
-      .where('user.firebaseUid = :uid', { uid })
+      .where('user.firebaseUid = :uid', { uid: userUid })
       .getOne();
     if (user.partnerAdmin?.partner == null) {
       return false;

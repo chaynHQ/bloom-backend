@@ -88,7 +88,9 @@ describe('PartnerAdminAuthGuard', () => {
       await guard.canActivate(context);
       fail('it should not reach here');
     } catch (error) {
-      expect(error).toBe(badAuthMessage);
+      expect(error.message).toBe(
+        `PartnerAdminAuthGuard - Error parsing firebase user: ${badAuthMessage}`,
+      );
     }
   });
 });
