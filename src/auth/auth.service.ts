@@ -38,7 +38,7 @@ export class AuthService {
 
       return decodedToken;
     } catch (err) {
-      throw new UnauthorizedException(err, 'Unauthorized: token is expired or invalid');
+      throw err;
     }
   }
 
