@@ -9,6 +9,7 @@ import { SuperAdminAuthGuard } from '../partner-admin/super-admin-auth.guard';
 import { GetUserDto } from '../user/dtos/get-user.dto';
 import { ControllerDecorator } from '../utils/controller.decorator';
 import { CreatePartnerAccessDto } from './dtos/create-partner-access.dto';
+import { GetPartnerAccessesDto } from './dtos/get-partner-access.dto';
 import { ValidatePartnerAccessCodeDto } from './dtos/validate-partner-access.dto';
 import { PartnerAccessService } from './partner-access.service';
 
@@ -52,8 +53,11 @@ export class PartnerAccessController {
   })
   @UseGuards(SuperAdminAuthGuard)
   @Get()
-  async getPartnerAccessCodes(): Promise<PartnerAccessEntity[]> {
-    return this.partnerAccessService.getPartnerAccessCodes();
+  @ApiBody({ type: GetPartnerAccessesDto, required: false })
+  async getPartnerAccessCodes(
+    @Body() getPartnerAccessDto: GetPartnerAccessesDto | undefined,
+  ): Promise<PartnerAccessEntity[]> {
+    return this.partnerAccessService.getPartnerAccessCodes(getPartnerAccessDto);
   }
 
   @Post('validate-code')

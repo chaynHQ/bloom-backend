@@ -3,12 +3,18 @@ import { Test, TestingModule } from '@nestjs/testing';
 import * as crispApi from 'src/api/crisp/crisp-api';
 import { PartnerRepository } from 'src/partner/partner.repository';
 import { GetUserDto } from 'src/user/dtos/get-user.dto';
-import { mockPartnerAccessEntity, mockPartnerEntity, mockUserEntity } from 'test/utils/mockData';
+import {
+  mockPartnerAccessEntity,
+  mockPartnerEntity,
+  mockUserEntity,
+  partnerAccessArray,
+} from 'test/utils/mockData';
 import { mockPartnerRepositoryMethods } from 'test/utils/mockedServices';
 import { Repository } from 'typeorm';
 import { createQueryBuilderMock } from '../../test/utils/mockUtils';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
 import { CreatePartnerAccessDto } from './dtos/create-partner-access.dto';
+import { GetPartnerAccessesDto } from './dtos/get-partner-access.dto';
 import { PartnerAccessRepository } from './partner-access.repository';
 import { PartnerAccessService } from './partner-access.service';
 
@@ -73,6 +79,7 @@ describe('PartnerAccessService', () => {
                 ...dto,
               };
             },
+            find: jest.fn(() => partnerAccessArray),
             save: jest.fn((arg) => arg),
           })),
         },
@@ -203,6 +210,24 @@ describe('PartnerAccessService', () => {
       expect(partnerAccess.userId).toBe(mockGetUserDto.user.id);
       expect(partnerAccess.featureLiveChat).toBeTruthy();
       expect(partnerAccess.featureTherapy).toBeFalsy();
+    });
+  });
+  describe('getPartnerAccessCodes', () => {
+    it('when no filter dto is supplied, it should return all partner accesses', async () => {
+      const partnerAccesses = await service.getPartnerAccessCodes(undefined);
+      expect(partnerAccesses.length).toBeGreaterThan(0);
+    });
+    it('when a accessCode filter is supplied, it should return all matching accessCodes', async () => {
+      jest
+        .spyOn(repo, 'find')
+        .mockImplementationOnce(async () => [
+          { ...mockPartnerAccessEntity, accessCode: mockPartnerAccessEntity.accessCode + 0 },
+        ]);
+      const partnerAccesses = await service.getPartnerAccessCodes({
+        accessCode: mockPartnerAccessEntity.accessCode + 0,
+      } as GetPartnerAccessesDto);
+
+      expect(partnerAccesses.length).toBe(1);
     });
   });
 });

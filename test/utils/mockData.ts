@@ -236,3 +236,13 @@ export const mockPartnerFeatureEntity = {
 export const mockUserRecord = {
   uid: 'FirebaseUuid',
 } as UserRecord;
+
+export const partnerAccessArray = Array.from(
+  [
+    mockPartnerAccessEntity,
+    mockPartnerAccessEntity,
+    mockPartnerAccessEntity,
+    mockPartnerAccessEntity,
+  ],
+  (x, index) => ({ ...mockPartnerAccessEntity, accessCode: x.accessCode + index }),
+);
