@@ -10,6 +10,7 @@ import { PartnerAccessEntity } from '../entities/partner-access.entity';
 import { GetUserDto } from '../user/dtos/get-user.dto';
 import { PartnerAccessCodeStatusEnum } from '../utils/constants';
 import { CreatePartnerAccessDto } from './dtos/create-partner-access.dto';
+import { GetPartnerAccessesDto } from './dtos/get-partner-access.dto';
 import { PartnerAccessRepository } from './partner-access.repository';
 
 // TODO storing base service minimum here but this might need to be a config setup eventually
@@ -87,11 +88,13 @@ export class PartnerAccessService {
     return partnerAccess;
   }
 
-  async getPartnerAccessCodes(): Promise<PartnerAccessEntity[]> {
-    return await this.partnerAccessRepository
-      .createQueryBuilder('partnerAccess')
-      .leftJoinAndSelect('partnerAccess.partner', 'partner')
-      .getMany();
+  async getPartnerAccessCodes(
+    partnerAccessDto: GetPartnerAccessesDto | undefined,
+  ): Promise<PartnerAccessEntity[]> {
+    return await this.partnerAccessRepository.find({
+      relations: ['partner'],
+      where: partnerAccessDto ? partnerAccessDto : undefined,
+    });
   }
 
   async assignPartnerAccessOnSignup(
