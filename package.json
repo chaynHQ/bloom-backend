@@ -45,7 +45,7 @@
     "firebase": "^9.4.1",
     "firebase-admin": "^10.0.0",
     "lodash": "^4.17.21",
-    "moment": "^2.29.1",
+    "moment": "^2.29.4",
     "passport": "^0.5.0",
     "passport-firebase-jwt": "^1.2.1",
     "pg": "^8.7.1",

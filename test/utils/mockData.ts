@@ -165,6 +165,7 @@ export const mockSimplybookBodyBase: SimplybookBodyDto = {
   start_date_time: '2022-09-12T07:30:00+0000',
   end_date_time: '2022-09-12T08:30:00+0000',
   client_email: 'testuser@test.com',
+  client_id: '115e272a-5fc3-4991-8ea9-12dacad25bae',
   client_timezone: 'Europe/London',
   booking_code: 'abc',
   service_name: 'bloom therapy',
@@ -236,3 +237,13 @@ export const mockPartnerFeatureEntity = {
 export const mockUserRecord = {
   uid: 'FirebaseUuid',
 } as UserRecord;
+
+export const partnerAccessArray = Array.from(
+  [
+    mockPartnerAccessEntity,
+    mockPartnerAccessEntity,
+    mockPartnerAccessEntity,
+    mockPartnerAccessEntity,
+  ],
+  (x, index) => ({ ...mockPartnerAccessEntity, accessCode: x.accessCode + index }),
+);
