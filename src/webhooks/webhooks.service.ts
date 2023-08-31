@@ -151,19 +151,20 @@ export class WebhooksService {
     const { action, booking_code } = simplyBookDto;
     // this ensures that the client email can be matched against the db which contains lower case emails
     const client_email = simplyBookDto.client_email.toLowerCase();
+    const client_id = simplyBookDto.client_id;
 
     this.logger.log(
-      `UpdatePartnerAccessService method initiated for ${action} - ${client_email} - ${booking_code}`,
+      `UpdatePartnerAccessService method initiated for ${action} - ${client_email} - ${booking_code} - userId ${client_id}`,
     );
 
-    const userDetails = await this.userRepository.findOne({ email: client_email });
+    const userDetails = await this.userRepository.findOne({ id: client_id });
 
     if (!userDetails) {
       await this.slackMessageClient.sendMessageToTherapySlackChannel(
-        `Unknown email address made a therapy booking - ${client_email} 🚨`,
+        `Unknown user made a therapy booking - ${client_email}, id: ${client_id} 🚨`,
       );
       this.logger.error(
-        `UpdatePartnerAccessTherapy, Unable to find user with email ${client_email}`,
+        `UpdatePartnerAccessTherapy, Unable to find user with email ${client_email}, id ${client_id}`,
       );
       throw new HttpException(
         'UpdatePartnerAccessTherapy, Unable to find user',
