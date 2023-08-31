@@ -17,6 +17,12 @@ export class SimplybookBodyDto {
   client_email: string;
 
   @IsString()
+  @IsDefined()
+  @IsNotEmpty()
+  @ApiProperty({ type: String })
+  client_id: string;
+
+  @IsString()
   @IsOptional()
   @ApiProperty({ type: String })
   client_timezone: string;
