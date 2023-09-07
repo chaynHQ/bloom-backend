@@ -12,7 +12,6 @@ import { PartnerAccessCodeStatusEnum } from '../utils/constants';
 import { CreatePartnerAccessDto } from './dtos/create-partner-access.dto';
 import { GetPartnerAccessesDto } from './dtos/get-partner-access.dto';
 import { PartnerAccessRepository } from './partner-access.repository';
-import { error } from 'console';
 
 // TODO storing base service minimum here but this might need to be a config setup eventually
 const basePartnerAccess = {
