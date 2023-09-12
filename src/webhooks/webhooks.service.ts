@@ -1,6 +1,5 @@
 import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import moment from 'moment';
 import { MailchimpClient } from 'src/api/mailchimp/mailchip-api';
 import { getBookingsForDate } from 'src/api/simplybook/simplybook-api';
 import { SlackMessageClient } from 'src/api/slack/slack-api';
@@ -134,8 +133,8 @@ export class WebhooksService {
       ...(action === SIMPLYBOOK_ACTION_ENUM.UPDATED_BOOKING
         ? {
             rescheduledFrom: therapySession.startDateTime,
-            startDateTime: moment(simplyBookDto.start_date_time).toDate(),
-            endDateTime: moment(simplyBookDto.end_date_time).toDate(),
+            startDateTime: new Date(simplyBookDto.start_date_time),
+            endDateTime: new Date(simplyBookDto.end_date_time),
           }
         : {}),
       ...(action === SIMPLYBOOK_ACTION_ENUM.COMPLETED_BOOKING ? { completedAt: new Date() } : {}),

@@ -179,6 +179,21 @@ export const mockPartnerEntity = {
   partnerFeature: [],
 } as PartnerEntity;
 
+export const mockPartnerAccessEntityBase = {
+  id: 'randomId',
+  userId: null,
+  partnerId: '',
+  partnerAdminId: null,
+  user: null,
+  partnerAdmin: null,
+  partner: null,
+  active: false,
+  activatedAt: null,
+  accessCode: null,
+  createdAt: new Date(),
+  therapySession: [],
+  updatedAt: null,
+};
 export const mockPartnerAccessEntity = {
   id: 'pa1',
   therapySessionsRemaining: 5,

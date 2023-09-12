@@ -391,14 +391,16 @@ describe('WebhooksService', () => {
   describe('updatePartnerAccessTherapy', () => {
     it('should update the booking time when action is update and time is different TODO ', async () => {
       const newStartTime = '2022-09-12T09:30:00+0000';
+      const newEndTime = '2022-09-12T10:30:00+0000';
       const therapyRepoFindOneSpy = jest.spyOn(mockedTherapySessionRepository, 'findOne');
       const booking = await service.updatePartnerAccessTherapy({
         ...mockSimplybookBodyBase,
         start_date_time: newStartTime,
-        end_date_time: '2022-09-12T010:30:00+0000',
+        end_date_time: newEndTime,
         action: SIMPLYBOOK_ACTION_ENUM.UPDATED_BOOKING,
       });
       expect(booking).toHaveProperty('startDateTime', new Date(newStartTime));
+      expect(booking).toHaveProperty('endDateTime', new Date(newEndTime));
       expect(therapyRepoFindOneSpy).toBeCalled();
     });
 
