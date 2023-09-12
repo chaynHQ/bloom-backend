@@ -1,4 +1,3 @@
-import moment from 'moment';
 import { PartnerEntity } from 'src/entities/partner.entity';
 import { IPartnerFeature } from 'src/partner-feature/partner-feature.interface';
 import { IPartner } from 'src/partner/partner.interface';
@@ -136,8 +135,8 @@ export const formatTherapySessionObject = (
     serviceName: therapySession.service_name,
     serviceProviderName: therapySession.service_provider_email,
     serviceProviderEmail: therapySession.service_provider_email,
-    startDateTime: moment(therapySession.start_date_time).toDate(),
-    endDateTime: moment(therapySession.end_date_time).toDate(),
+    startDateTime: new Date(therapySession.start_date_time),
+    endDateTime: new Date(therapySession.end_date_time),
     cancelledAt: null,
     rescheduledFrom: null,
     completedAt: null,

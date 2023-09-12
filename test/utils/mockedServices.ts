@@ -29,12 +29,14 @@ import {
   mockEmailCampaignEntity,
   mockFeatureEntity,
   mockPartnerAccessEntity,
+  mockPartnerAccessEntityBase,
   mockPartnerEntity,
   mockPartnerFeatureEntity,
   mockSession,
   mockTherapySessionEntity,
   mockUserEntity,
   mockUserRecord,
+  partnerAccessArray,
 } from './mockData';
 import { createQueryBuilderMock } from './mockUtils';
 
@@ -111,15 +113,18 @@ export const mockPartnerAccessRepositoryMethods: PartialFuncReturn<PartnerAccess
   createQueryBuilder: createQueryBuilderMock(),
   create: (dto) => {
     return {
-      ...mockPartnerAccessEntity,
+      ...mockPartnerAccessEntityBase,
       ...dto,
-    } as PartnerAccessEntity;
+    };
   },
   findOne: async (arg) => {
     return { ...mockPartnerAccessEntity, ...(arg ? { ...arg } : {}) } as PartnerAccessEntity;
   },
   find: async (arg) => {
-    return [{ ...mockPartnerAccessEntity, ...(arg ? { ...arg } : {}) }] as PartnerAccessEntity[];
+    return [
+      ...partnerAccessArray,
+      { ...mockPartnerAccessEntity, ...(arg ? { ...arg } : {}) },
+    ] as PartnerAccessEntity[];
   },
   save: async (arg) => arg as PartnerAccessEntity,
 };
