@@ -18,6 +18,5 @@ export const createQueryBuilderMock = (modifications?: Record<string, jest.Mock<
     set: jest.fn().mockReturnThis(),
     returning: jest.fn().mockReturnThis(),
     getManyAndCount: jest.fn().mockReturnValueOnce({}),
-    getRawMany: jest.fn().mockResolvedValue([{one:'test'}]),
     ...modifications,
   }));
