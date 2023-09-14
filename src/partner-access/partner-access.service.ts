@@ -118,18 +118,20 @@ export class PartnerAccessService {
     therapySessions: number
   ): Promise<string> {
     if (!partnerAccessCode) {
-      this.logger.error(`No access code to update`);
-      return
+      //invalid access code
+      throw new HttpException(PartnerAccessCodeStatusEnum.INVALID_CODE, HttpStatus.BAD_REQUEST);
     }
     try {
       const partnerAccessResponse = await this.partnerAccessRepository.findOne({
-        accessCode: partnerAccessCode,
-        featureTherapy: true
+        where: {
+          accessCode: partnerAccessCode,
+          featureTherapy: true
+        }
       });
 
       if (!partnerAccessResponse) {
-        this.logger.error(`This access does not have therapy enabled`);
-        throw error;
+        //invalie access code - cannot find in the db
+        throw new HttpException(PartnerAccessCodeStatusEnum.INVALID_CODE, HttpStatus.BAD_REQUEST);
       }
 
       await this.partnerAccessRepository
@@ -138,7 +140,7 @@ export class PartnerAccessService {
       .set({ therapySessionsRemaining: therapySessions })
       .where('accessCode = :partnerAccessCode', { partnerAccessCode })
       .execute();
-      return 'Success'
+      return 'Success';
     }
     catch (error) {
       throw error;

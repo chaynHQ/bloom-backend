@@ -248,24 +248,43 @@ describe('PartnerAccessService', () => {
   });
   describe('getUserTherapySessions', () => {
     it('should return user emails with their total therapy sessions available and an associated access code id', async () => {
+      const repoSpyCreateQueryBuilder = jest.spyOn(repo, 'createQueryBuilder');
+      // Mocks the raw results
+      const mockResults = [
+        {
+          useremail: 'test@test.com',
+          partneraccesscode: 'ABCDEF',
+          therapytotal: '2',
+        },
+        {
+          useremail: 'test2@test2.com',
+          partneraccesscode: 'GHIJKL',
+          therapytotal: '5',
+        },
+      ];
+      repoSpyCreateQueryBuilder.mockImplementation(
+        createQueryBuilderMock({ getRawMany: jest.fn().mockResolvedValue(mockResults) }) as never,
+      );
       const userTherapySessions = await service.getUserTherapySessions();
-      console.log('user therapy sessionms');
-      console.log(userTherapySessions);
-      // expect(userTherapySessions.length).toBeGreaterThan(0);
+      expect(userTherapySessions.length).toBeGreaterThan(0);
     });
   });
 
   describe('updatePartnerAccessTherapyCount', () => {
     it('should update the number of therapy sessions remaining on an access code', async () => {
-      const partnerAccessCode = '123435';
-      const therapySessions = 0;
-      const test = await service.updatePartnerAccessTherapyCount(
-        partnerAccessCode,
-        therapySessions,
+      const repoSpyCreateQueryBuilder = jest.spyOn(repo, 'findOne');
+
+      // Mocks finding an access code record
+      const findOneResults = { accessCode: 'ABCSDE', id: '122334' };
+
+      const sessionFindOneRepoSpy = jest.spyOn(repo, 'createQueryBuilder');
+      sessionFindOneRepoSpy.mockImplementation(
+        createQueryBuilderMock({ findOne: jest.fn().mockResolvedValue(findOneResults) }) as never,
       );
-      console.log(' update user therapy sessionms');
-      console.log(test);
-      // expect(userTherapySessions.length).toBeGreaterThan(0);
+
+      const result = await service.updatePartnerAccessTherapyCount('ABCSDE', 3);
+      //if an access code exists then update it.
+      expect(result).toBe('Success');
     });
   });
 });
