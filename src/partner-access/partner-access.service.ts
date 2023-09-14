@@ -12,6 +12,7 @@ import { PartnerAccessCodeStatusEnum } from '../utils/constants';
 import { CreatePartnerAccessDto } from './dtos/create-partner-access.dto';
 import { GetPartnerAccessesDto } from './dtos/get-partner-access.dto';
 import { PartnerAccessRepository } from './partner-access.repository';
+import { error } from 'console';
 
 // TODO storing base service minimum here but this might need to be a config setup eventually
 const basePartnerAccess = {
@@ -96,6 +97,52 @@ export class PartnerAccessService {
       relations: ['partner'],
       where: partnerAccessDto ? partnerAccessDto : undefined,
     });
+  }
+
+  async getUserTherapySessions(): Promise<PartnerAccessEntity[]> {
+    return await this.partnerAccessRepository      
+      .createQueryBuilder('partnerAccess')
+      .leftJoin('partnerAccess.user', 'user') //get user associated with access code
+      .select([
+        'max(user.email) as userEmail', //get first user email. This will also return nulls as there is no way to add a condition to a joined column apparently
+        'sum(partnerAccess.therapySessionsRemaining) as therapyTotal', //get total therapy sessions available
+        'max(partnerAccess.accessCode) as partnerAccessCode', //get any access code - this will be used as an identifier to update. Uuids do not have aggregate functions in postgres so its a bit annoying to get that instead
+      ])
+      .where('partnerAccess.featureTherapy=true') //only get access codes with feature therapy turned on
+      .groupBy('partnerAccess.userId') //group by user as we can have users with multiple access codes
+      .getRawMany(); //use instead of getMany as the columns are derived
+  }
+
+  async updatePartnerAccessTherapyCount(
+    partnerAccessCode: string,
+    therapySessions: number
+  ): Promise<string> {
+    if (!partnerAccessCode) {
+      this.logger.error(`No access code to update`);
+      return
+    }
+    try {
+      const partnerAccessResponse = await this.partnerAccessRepository.findOne({
+        accessCode: partnerAccessCode,
+        featureTherapy: true
+      });
+
+      if (!partnerAccessResponse) {
+        this.logger.error(`This access does not have therapy enabled`);
+        throw error;
+      }
+
+      await this.partnerAccessRepository
+      .createQueryBuilder('partner_access')
+      .update(PartnerAccessEntity)
+      .set({ therapySessionsRemaining: therapySessions })
+      .where('accessCode = :partnerAccessCode', { partnerAccessCode })
+      .execute();
+      return 'Success'
+    }
+    catch (error) {
+      throw error;
+    }
   }
 
   async assignPartnerAccessOnSignup(

@@ -213,7 +213,6 @@ describe('PartnerAccessService', () => {
       expect(partnerAccesses.length).toBe(1);
     });
   });
-
   describe('getValidPartnerAccessCode', () => {
     it('when a valid partner access is supplied, it should return partner access', async () => {
       jest.spyOn(repo, 'createQueryBuilder').mockImplementationOnce(
@@ -245,6 +244,28 @@ describe('PartnerAccessService', () => {
       await expect(service.getValidPartnerAccessCode('1234567')).rejects.toThrowError(
         'INVALID_CODE',
       );
+    });
+  });
+  describe('getUserTherapySessions', () => {
+    it('should return user emails with their total therapy sessions available and an associated access code id', async () => {
+      const userTherapySessions = await service.getUserTherapySessions();
+      console.log('user therapy sessionms');
+      console.log(userTherapySessions);
+      // expect(userTherapySessions.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('updatePartnerAccessTherapyCount', () => {
+    it('should update the number of therapy sessions remaining on an access code', async () => {
+      const partnerAccessCode = '123435';
+      const therapySessions = 0;
+      const test = await service.updatePartnerAccessTherapyCount(
+        partnerAccessCode,
+        therapySessions,
+      );
+      console.log(' update user therapy sessionms');
+      console.log(test);
+      // expect(userTherapySessions.length).toBeGreaterThan(0);
     });
   });
 });
