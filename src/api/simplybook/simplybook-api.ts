@@ -1,9 +1,10 @@
 import { Logger } from '@nestjs/common';
 import axios from 'axios';
+import format from 'date-fns/format';
 
 import { simplybookCompanyName, simplybookCredentials } from 'src/utils/constants';
 
-type BookingReponse = {
+type BookingResponse = {
   client: {
     name: string;
     email: string;
@@ -17,7 +18,6 @@ export type BookingInfo = {
   date: Date;
 };
 
-const DATE_FORMAT_LENGTH = 'YYYY-mm-dd'.length;
 const SIMPLYBOOK_API_BASE_URL = 'https://user-api-v2.simplybook.me/admin';
 const LOGGER = new Logger('SimplybookAPI');
 
@@ -38,10 +38,10 @@ const getAuthToken: () => Promise<string> = async () => {
   }
 };
 
-const queryBookingsForDate: (date: Date) => Promise<BookingReponse[]> = async (date: Date) => {
+const queryBookingsForDate: (date: Date) => Promise<BookingResponse[]> = async (date: Date) => {
   const token = await getAuthToken();
 
-  const simplybookFilterDateString = date.toISOString().substring(0, DATE_FORMAT_LENGTH);
+  const simplybookFilterDateString = format(date, 'yyyy-MM-dd');
 
   try {
     const bookingsResponse = await axios.get(
@@ -65,7 +65,7 @@ const queryBookingsForDate: (date: Date) => Promise<BookingReponse[]> = async (d
 
 export const getBookingsForDate: (date: Date) => Promise<BookingInfo[]> = async (date: Date) => {
   try {
-    const bookings: BookingReponse[] = await queryBookingsForDate(date);
+    const bookings: BookingResponse[] = await queryBookingsForDate(date);
 
     return bookings.map((booking) => ({
       clientEmail: booking.client.email,
