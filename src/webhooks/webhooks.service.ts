@@ -4,13 +4,13 @@ import { MailchimpClient } from 'src/api/mailchimp/mailchip-api';
 import { getBookingsForDate } from 'src/api/simplybook/simplybook-api';
 import { SlackMessageClient } from 'src/api/slack/slack-api';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
+import { ZapierSimplybookBodyDto } from 'src/partner-access/dtos/zapier-body.dto';
 import { getYesterdaysDate } from 'src/utils/utils';
 import StoryblokClient from 'storyblok-js-client';
 import { getCrispPeopleData, updateCrispProfileData } from '../api/crisp/crisp-api';
 import { CoursePartnerService } from '../course-partner/course-partner.service';
 import { CourseRepository } from '../course/course.repository';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
-import { SimplybookBodyDto } from '../partner-access/dtos/zapier-body.dto';
 import { PartnerAccessRepository } from '../partner-access/partner-access.repository';
 import { SessionRepository } from '../session/session.repository';
 import { UserRepository } from '../user/user.repository';
@@ -115,7 +115,7 @@ export class WebhooksService {
     return 'ok';
   }
   private async createTherapySession(
-    simplyBookDto: SimplybookBodyDto,
+    simplyBookDto: ZapierSimplybookBodyDto,
     partnerAccess: PartnerAccessEntity,
   ) {
     const therapySession = formatTherapySessionObject(simplyBookDto, partnerAccess.id);
@@ -124,7 +124,7 @@ export class WebhooksService {
 
   private async updateTherapySession(
     action,
-    simplyBookDto: SimplybookBodyDto,
+    simplyBookDto: ZapierSimplybookBodyDto,
     therapySession: TherapySessionEntity,
   ): Promise<TherapySessionEntity> {
     const updatedTherapySession = {
@@ -145,25 +145,25 @@ export class WebhooksService {
   }
 
   async updatePartnerAccessTherapy(
-    simplyBookDto: SimplybookBodyDto,
+    simplyBookDto: ZapierSimplybookBodyDto,
   ): Promise<TherapySessionEntity> {
     const { action, booking_code } = simplyBookDto;
     // this ensures that the client email can be matched against the db which contains lower case emails
     const client_email = simplyBookDto.client_email.toLowerCase();
-    const client_id = simplyBookDto.client_id;
+    const userId = simplyBookDto.client_id;
 
     this.logger.log(
-      `UpdatePartnerAccessService method initiated for ${action} - ${client_email} - ${booking_code} - userId ${client_id}`,
+      `UpdatePartnerAccessService method initiated for ${action} - ${client_email} - ${booking_code} - userId ${userId}`,
     );
 
-    const userDetails = await this.userRepository.findOne({ id: client_id });
+    const userDetails = await this.userRepository.findOne({ id: userId });
 
     if (!userDetails) {
       await this.slackMessageClient.sendMessageToTherapySlackChannel(
-        `Unknown user made a therapy booking - ${client_email}, id: ${client_id} 🚨`,
+        `Unknown user made a therapy booking - ${client_email}, id: ${userId} 🚨`,
       );
       this.logger.error(
-        `UpdatePartnerAccessTherapy, Unable to find user with email ${client_email}, id ${client_id}`,
+        `UpdatePartnerAccessTherapy, Unable to find user with email ${client_email}, id ${userId}`,
       );
       throw new HttpException(
         'UpdatePartnerAccessTherapy, Unable to find user',
@@ -252,7 +252,7 @@ export class WebhooksService {
 
   private async newPartnerAccessTherapy(
     partnerAccesses: PartnerAccessEntity[],
-    simplyBookDto: SimplybookBodyDto,
+    simplyBookDto: ZapierSimplybookBodyDto,
   ) {
     const therapyPartnerAccess = partnerAccesses.filter(
       (tpa) => tpa.therapySessionsRemaining > 0,

@@ -2,6 +2,7 @@ import { Column, Entity, JoinTable, ManyToOne, PrimaryGeneratedColumn } from 'ty
 import { SIMPLYBOOK_ACTION_ENUM } from '../utils/constants';
 import { BaseBloomEntity } from './base.entity';
 import { PartnerAccessEntity } from './partner-access.entity';
+import { UserEntity } from './user.entity';
 
 @Entity({ name: 'therapy_session' })
 export class TherapySessionEntity extends BaseBloomEntity {
@@ -49,4 +50,13 @@ export class TherapySessionEntity extends BaseBloomEntity {
   @ManyToOne(() => PartnerAccessEntity, (partnerAccess) => partnerAccess.therapySession)
   @JoinTable({ name: 'partner_access', joinColumn: { name: 'partnerAccessId' } })
   partnerAccess: PartnerAccessEntity;
+
+  @Column({ nullable: true })
+  userId: string;
+
+  @ManyToOne(() => UserEntity, (user) => user.therapySession, {
+    onDelete: 'CASCADE',
+  })
+  @JoinTable({ name: 'user', joinColumn: { name: 'userId' } })
+  user: UserEntity;
 }

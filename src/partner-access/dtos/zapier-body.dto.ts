@@ -2,7 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { IsDefined, IsEmail, IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 import { SIMPLYBOOK_ACTION_ENUM } from '../../utils/constants';
 
-export class SimplybookBodyDto {
+export class ZapierSimplybookBodyDto {
   @IsNotEmpty()
   @IsString()
   @IsDefined()
@@ -20,7 +20,7 @@ export class SimplybookBodyDto {
   @IsDefined()
   @IsNotEmpty()
   @ApiProperty({ type: String })
-  client_id: string;
+  client_id: string; // This is userId - not to be confused with the simplybook.client_id
 
   @IsString()
   @IsOptional()
