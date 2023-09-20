@@ -4,6 +4,7 @@ import { PartnerAdminEntity } from '../entities/partner-admin.entity';
 import { BaseBloomEntity } from './base.entity';
 import { CourseUserEntity } from './course-user.entity';
 import { SubscriptionUserEntity } from './subscription-user.entity';
+import { TherapySessionEntity } from './therapy-session.entity';
 
 @Entity({ name: 'user' })
 export class UserEntity extends BaseBloomEntity {
@@ -42,6 +43,9 @@ export class UserEntity extends BaseBloomEntity {
 
   @OneToMany(() => SubscriptionUserEntity, (subscriptionUser) => subscriptionUser.user)
   subscriptionUser: SubscriptionUserEntity[];
+
+  @OneToMany(() => TherapySessionEntity, (therapySession) => therapySession.user)
+  therapySession: TherapySessionEntity[];
 
   @Column({ unique: true })
   @Generated('uuid')

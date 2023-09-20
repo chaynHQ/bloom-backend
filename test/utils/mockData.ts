@@ -10,7 +10,7 @@ import { SessionEntity } from 'src/entities/session.entity';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
 import { UserEntity } from 'src/entities/user.entity';
 import { IFirebaseUser } from 'src/firebase/firebase-user.interface';
-import { SimplybookBodyDto } from 'src/partner-access/dtos/zapier-body.dto';
+import { ZapierSimplybookBodyDto } from 'src/partner-access/dtos/zapier-body.dto';
 import {
   CAMPAIGN_TYPE,
   SIMPLYBOOK_ACTION_ENUM,
@@ -137,6 +137,7 @@ export const mockUserEntity: UserEntity = {
   name: 'name',
   signUpLanguage: 'en',
   subscriptionUser: [],
+  therapySession: [],
 };
 
 export const mockTherapySessionEntity = {
@@ -158,9 +159,11 @@ export const mockTherapySessionEntity = {
   rescheduledFrom: null,
   completedAt: null,
   id: 'ts1',
+  userId: 'userId',
+  user: { signUpLanguage: 'en' } as UserEntity,
 } as TherapySessionEntity;
 
-export const mockSimplybookBodyBase: SimplybookBodyDto = {
+export const mockSimplybookBodyBase: ZapierSimplybookBodyDto = {
   action: SIMPLYBOOK_ACTION_ENUM.UPDATED_BOOKING,
   start_date_time: '2022-09-12T07:30:00+0000',
   end_date_time: '2022-09-12T08:30:00+0000',

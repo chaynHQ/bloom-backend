@@ -6,7 +6,7 @@ import { PartnerAccessEntity } from '../entities/partner-access.entity';
 import { SubscriptionUserEntity } from '../entities/subscription-user.entity';
 import { TherapySessionEntity } from '../entities/therapy-session.entity';
 import { UserEntity } from '../entities/user.entity';
-import { SimplybookBodyDto } from '../partner-access/dtos/zapier-body.dto';
+import { ZapierSimplybookBodyDto } from '../partner-access/dtos/zapier-body.dto';
 import { ISubscriptionUser } from '../subscription-user/subscription-user.interface';
 import { GetUserDto } from '../user/dtos/get-user.dto';
 
@@ -124,7 +124,7 @@ export const formatPartnerObject = (partnerObject: PartnerEntity): IPartner => {
 };
 
 export const formatTherapySessionObject = (
-  therapySession: SimplybookBodyDto,
+  therapySession: ZapierSimplybookBodyDto,
   partnerAccessId: string,
 ): Partial<TherapySessionEntity> => {
   return {
@@ -141,6 +141,7 @@ export const formatTherapySessionObject = (
     rescheduledFrom: null,
     completedAt: null,
     partnerAccessId,
+    userId: therapySession.client_id,
   };
 };
 

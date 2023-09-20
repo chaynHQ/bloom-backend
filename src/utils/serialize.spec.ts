@@ -19,6 +19,7 @@ describe('Serialize', () => {
         serviceProviderEmail: 'therapist@test.com',
         serviceProviderName: 'therapist@test.com',
         startDateTime: new Date('2022-09-12T07:30:00+0000'),
+        userId: mockSimplybookBodyBase.client_id,
       });
     });
   });
