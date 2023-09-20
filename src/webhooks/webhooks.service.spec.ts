@@ -7,6 +7,7 @@ import { CoursePartnerService } from 'src/course-partner/course-partner.service'
 import { CourseRepository } from 'src/course/course.repository';
 import { CourseEntity } from 'src/entities/course.entity';
 import { SessionEntity } from 'src/entities/session.entity';
+import { UserEntity } from 'src/entities/user.entity';
 import { PartnerAccessRepository } from 'src/partner-access/partner-access.repository';
 import { PartnerAdminRepository } from 'src/partner-admin/partner-admin.repository';
 import { PartnerRepository } from 'src/partner/partner.repository';
@@ -540,6 +541,20 @@ describe('WebhooksService', () => {
       const sentEmails = await service.sendFirstTherapySessionFeedbackEmail();
       expect(sentEmails).toBe(
         `First therapy session feedback emails sent to 1 client(s) for date: ${getYesterdaysDate().toLocaleDateString()}`,
+      );
+    });
+    it('should only send bookings to those who have signed up in english', async () => {
+      jest.spyOn(mockedEmailCampaignRepository, 'find').mockImplementationOnce(async () => {
+        return [];
+      });
+      jest
+        .spyOn(mockedTherapySessionRepository, 'findOneOrFail')
+        .mockImplementationOnce(async () => {
+          return { ...mockTherapySessionEntity, user: { signUpLanguage: 'fr' } as UserEntity };
+        });
+      const sentEmails = await service.sendFirstTherapySessionFeedbackEmail();
+      expect(sentEmails).toBe(
+        `First therapy session feedback emails sent to 0 client(s) for date: ${getYesterdaysDate().toLocaleDateString()}`,
       );
     });
   });

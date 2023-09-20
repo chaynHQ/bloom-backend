@@ -46,8 +46,35 @@ export class WebhooksService {
 
     let feedbackEmailsSent = 0;
     for (const booking of bookings) {
-      if (await this.isFirstBooking(booking.clientEmail)) {
-        this.mailchimpClient.sendTherapyFeedbackEmail(booking.clientEmail);
+      if (this.isFirstTherapySessionEmail(booking.clientEmail)) {
+        try {
+          const therapySession = await this.therapySessionRepository.findOneOrFail(
+            {
+              bookingCode: booking.bookingCode,
+            },
+            { relations: ['user'] },
+          );
+
+          if (therapySession.user && therapySession.user.signUpLanguage !== 'en') {
+            const emailLog = `Therapy session feedback email not sent as user was not english [email: ${
+              booking.clientEmail
+            }, session date: ${yesterday.toLocaleDateString()}]`;
+            this.logger.log(emailLog);
+            this.slackMessageClient.sendMessageToTherapySlackChannel(emailLog);
+            continue;
+          }
+        } catch (err) {
+          this.logger.error(
+            `sendFirstTherapySessionFeedbackEmail: failed to check therapySession due to error - ${err}`,
+          );
+          const emailLog = `Failed to send therapy feedback email due to internal error [email: ${
+            booking.clientEmail
+          }, session date: ${yesterday.toLocaleDateString()}]`;
+          this.slackMessageClient.sendMessageToTherapySlackChannel(emailLog);
+          continue;
+        }
+
+        await this.mailchimpClient.sendTherapyFeedbackEmail(booking.clientEmail);
         const emailLog = `First therapy session feedback email sent [email: ${
           booking.clientEmail
         }, session date: ${yesterday.toLocaleDateString()}]`;
@@ -71,8 +98,10 @@ export class WebhooksService {
     return `First therapy session feedback emails sent to ${feedbackEmailsSent} client(s) for date: ${yesterday.toLocaleDateString()}`;
   }
 
-  private async isFirstBooking(email: string) {
-    const matchingEntries = await this.emailCampaignRepository.find({ email });
+  private async isFirstTherapySessionEmail(email: string) {
+    const matchingEntries = await this.emailCampaignRepository.find({
+      email,
+    });
     return matchingEntries.length === 0;
   }
 
