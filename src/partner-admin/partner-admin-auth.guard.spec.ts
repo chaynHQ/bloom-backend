@@ -24,6 +24,7 @@ const userEntity: UserEntity = {
   courseUser: [],
   signUpLanguage: 'en',
   subscriptionUser: [],
+  therapySession: [],
 };
 describe('PartnerAdminAuthGuard', () => {
   let guard: PartnerAdminAuthGuard;

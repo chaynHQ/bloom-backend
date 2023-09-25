@@ -1,15 +1,19 @@
 import { createMock, DeepMocked } from '@golevelup/ts-jest';
 import { Test, TestingModule } from '@nestjs/testing';
+import { sub } from 'date-fns';
 import * as crispApi from 'src/api/crisp/crisp-api';
 import { PartnerRepository } from 'src/partner/partner.repository';
 import { GetUserDto } from 'src/user/dtos/get-user.dto';
 import {
   mockPartnerAccessEntity,
+  mockPartnerAccessEntityBase,
   mockPartnerEntity,
   mockUserEntity,
-  partnerAccessArray,
 } from 'test/utils/mockData';
-import { mockPartnerRepositoryMethods } from 'test/utils/mockedServices';
+import {
+  mockPartnerAccessRepositoryMethods,
+  mockPartnerRepositoryMethods,
+} from 'test/utils/mockedServices';
 import { Repository } from 'typeorm';
 import { createQueryBuilderMock } from '../../test/utils/mockUtils';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
@@ -28,21 +32,6 @@ const createPartnerAccessDto: CreatePartnerAccessDto = {
   therapySessionsRemaining: 5,
 };
 
-const partnerAccessEntityBase = {
-  id: 'randomId',
-  userId: null,
-  partnerId: '',
-  partnerAdminId: null,
-  user: null,
-  partnerAdmin: null,
-  partner: null,
-  active: false,
-  activatedAt: null,
-  accessCode: null,
-  createdAt: new Date(),
-  therapySession: [],
-  updatedAt: null,
-};
 const mockGetUserDto = {
   user: mockUserEntity,
   partnerAccesses: [],
@@ -62,26 +51,20 @@ describe('PartnerAccessService', () => {
   let service: PartnerAccessService;
   let repo: PartnerAccessRepository;
   let mockPartnerRepository: DeepMocked<PartnerRepository>;
+  let mockPartnerAccessRepository: DeepMocked<PartnerAccessRepository>;
 
   beforeEach(async () => {
     mockPartnerRepository = createMock<PartnerRepository>(mockPartnerRepositoryMethods);
+    mockPartnerAccessRepository = createMock<PartnerAccessRepository>(
+      mockPartnerAccessRepositoryMethods,
+    );
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PartnerAccessService,
         {
           provide: PartnerAccessRepository,
-          useFactory: jest.fn(() => ({
-            createQueryBuilder: createQueryBuilderMock(),
-            create: (dto: CreatePartnerAccessDto): PartnerAccessEntity | Error => {
-              return {
-                ...partnerAccessEntityBase,
-                ...dto,
-              };
-            },
-            find: jest.fn(() => partnerAccessArray),
-            save: jest.fn((arg) => arg),
-          })),
+          useValue: mockPartnerAccessRepository,
         },
         {
           provide: PartnerRepository,
@@ -107,7 +90,7 @@ describe('PartnerAccessService', () => {
         partnerId,
         partnerAdminId,
       );
-      const { accessCode, ...partnerEntityWithoutCode } = partnerAccessEntityBase;
+      const { accessCode, ...partnerEntityWithoutCode } = mockPartnerAccessEntityBase;
       expect(generatedCode).toStrictEqual({
         ...partnerEntityWithoutCode,
         ...createPartnerAccessDto,
@@ -228,6 +211,40 @@ describe('PartnerAccessService', () => {
       } as GetPartnerAccessesDto);
 
       expect(partnerAccesses.length).toBe(1);
+    });
+  });
+
+  describe('getValidPartnerAccessCode', () => {
+    it('when a valid partner access is supplied, it should return partner access', async () => {
+      jest.spyOn(repo, 'createQueryBuilder').mockImplementationOnce(
+        createQueryBuilderMock({
+          leftJoinAndSelect: jest.fn().mockReturnThis(),
+          getOne: jest.fn().mockResolvedValue(mockPartnerAccessEntity),
+        }) as never,
+      );
+      const partnerAccess = await service.getValidPartnerAccessCode('123456');
+      expect(partnerAccess).toHaveProperty('accessCode', '123456');
+    });
+
+    it('when a valid partner access is supplied, but it was created over a year ago, it should throw error', async () => {
+      jest.spyOn(repo, 'createQueryBuilder').mockImplementationOnce(
+        createQueryBuilderMock({
+          leftJoinAndSelect: jest.fn().mockReturnThis(),
+
+          getOne: jest.fn().mockResolvedValue({
+            ...mockPartnerAccessEntity,
+            createdAt: sub(new Date(), { years: 1, days: 1 }),
+          }),
+        }) as never,
+      );
+      await expect(service.getValidPartnerAccessCode('123456')).rejects.toThrowError(
+        'CODE_EXPIRED',
+      );
+    });
+    it('when an partner access with too many letters is supplied, it should throw error', async () => {
+      await expect(service.getValidPartnerAccessCode('1234567')).rejects.toThrowError(
+        'INVALID_CODE',
+      );
     });
   });
 });

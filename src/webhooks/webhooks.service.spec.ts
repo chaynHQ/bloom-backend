@@ -7,6 +7,7 @@ import { CoursePartnerService } from 'src/course-partner/course-partner.service'
 import { CourseRepository } from 'src/course/course.repository';
 import { CourseEntity } from 'src/entities/course.entity';
 import { SessionEntity } from 'src/entities/session.entity';
+import { UserEntity } from 'src/entities/user.entity';
 import { PartnerAccessRepository } from 'src/partner-access/partner-access.repository';
 import { PartnerAdminRepository } from 'src/partner-admin/partner-admin.repository';
 import { PartnerRepository } from 'src/partner/partner.repository';
@@ -391,14 +392,16 @@ describe('WebhooksService', () => {
   describe('updatePartnerAccessTherapy', () => {
     it('should update the booking time when action is update and time is different TODO ', async () => {
       const newStartTime = '2022-09-12T09:30:00+0000';
+      const newEndTime = '2022-09-12T10:30:00+0000';
       const therapyRepoFindOneSpy = jest.spyOn(mockedTherapySessionRepository, 'findOne');
       const booking = await service.updatePartnerAccessTherapy({
         ...mockSimplybookBodyBase,
         start_date_time: newStartTime,
-        end_date_time: '2022-09-12T010:30:00+0000',
+        end_date_time: newEndTime,
         action: SIMPLYBOOK_ACTION_ENUM.UPDATED_BOOKING,
       });
       expect(booking).toHaveProperty('startDateTime', new Date(newStartTime));
+      expect(booking).toHaveProperty('endDateTime', new Date(newEndTime));
       expect(therapyRepoFindOneSpy).toBeCalled();
     });
 
@@ -538,6 +541,20 @@ describe('WebhooksService', () => {
       const sentEmails = await service.sendFirstTherapySessionFeedbackEmail();
       expect(sentEmails).toBe(
         `First therapy session feedback emails sent to 1 client(s) for date: ${getYesterdaysDate().toLocaleDateString()}`,
+      );
+    });
+    it('should only send bookings to those who have signed up in english', async () => {
+      jest.spyOn(mockedEmailCampaignRepository, 'find').mockImplementationOnce(async () => {
+        return [];
+      });
+      jest
+        .spyOn(mockedTherapySessionRepository, 'findOneOrFail')
+        .mockImplementationOnce(async () => {
+          return { ...mockTherapySessionEntity, user: { signUpLanguage: 'fr' } as UserEntity };
+        });
+      const sentEmails = await service.sendFirstTherapySessionFeedbackEmail();
+      expect(sentEmails).toBe(
+        `First therapy session feedback emails sent to 0 client(s) for date: ${getYesterdaysDate().toLocaleDateString()}`,
       );
     });
   });

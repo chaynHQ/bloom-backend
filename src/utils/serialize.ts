@@ -1,4 +1,3 @@
-import moment from 'moment';
 import { PartnerEntity } from 'src/entities/partner.entity';
 import { IPartnerFeature } from 'src/partner-feature/partner-feature.interface';
 import { IPartner } from 'src/partner/partner.interface';
@@ -7,7 +6,7 @@ import { PartnerAccessEntity } from '../entities/partner-access.entity';
 import { SubscriptionUserEntity } from '../entities/subscription-user.entity';
 import { TherapySessionEntity } from '../entities/therapy-session.entity';
 import { UserEntity } from '../entities/user.entity';
-import { SimplybookBodyDto } from '../partner-access/dtos/zapier-body.dto';
+import { ZapierSimplybookBodyDto } from '../partner-access/dtos/zapier-body.dto';
 import { ISubscriptionUser } from '../subscription-user/subscription-user.interface';
 import { GetUserDto } from '../user/dtos/get-user.dto';
 
@@ -125,7 +124,7 @@ export const formatPartnerObject = (partnerObject: PartnerEntity): IPartner => {
 };
 
 export const formatTherapySessionObject = (
-  therapySession: SimplybookBodyDto,
+  therapySession: ZapierSimplybookBodyDto,
   partnerAccessId: string,
 ): Partial<TherapySessionEntity> => {
   return {
@@ -136,12 +135,13 @@ export const formatTherapySessionObject = (
     serviceName: therapySession.service_name,
     serviceProviderName: therapySession.service_provider_email,
     serviceProviderEmail: therapySession.service_provider_email,
-    startDateTime: moment(therapySession.start_date_time).toDate(),
-    endDateTime: moment(therapySession.end_date_time).toDate(),
+    startDateTime: new Date(therapySession.start_date_time),
+    endDateTime: new Date(therapySession.end_date_time),
     cancelledAt: null,
     rescheduledFrom: null,
     completedAt: null,
     partnerAccessId,
+    userId: therapySession.client_id,
   };
 };
 

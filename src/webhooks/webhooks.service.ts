@@ -1,17 +1,16 @@
 import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import moment from 'moment';
 import { MailchimpClient } from 'src/api/mailchimp/mailchip-api';
 import { getBookingsForDate } from 'src/api/simplybook/simplybook-api';
 import { SlackMessageClient } from 'src/api/slack/slack-api';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
+import { ZapierSimplybookBodyDto } from 'src/partner-access/dtos/zapier-body.dto';
 import { getYesterdaysDate } from 'src/utils/utils';
 import StoryblokClient from 'storyblok-js-client';
 import { getCrispPeopleData, updateCrispProfileData } from '../api/crisp/crisp-api';
 import { CoursePartnerService } from '../course-partner/course-partner.service';
 import { CourseRepository } from '../course/course.repository';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
-import { SimplybookBodyDto } from '../partner-access/dtos/zapier-body.dto';
 import { PartnerAccessRepository } from '../partner-access/partner-access.repository';
 import { SessionRepository } from '../session/session.repository';
 import { UserRepository } from '../user/user.repository';
@@ -47,8 +46,35 @@ export class WebhooksService {
 
     let feedbackEmailsSent = 0;
     for (const booking of bookings) {
-      if (await this.isFirstBooking(booking.clientEmail)) {
-        this.mailchimpClient.sendTherapyFeedbackEmail(booking.clientEmail);
+      if (this.isFirstTherapySessionEmail(booking.clientEmail)) {
+        try {
+          const therapySession = await this.therapySessionRepository.findOneOrFail(
+            {
+              bookingCode: booking.bookingCode,
+            },
+            { relations: ['user'] },
+          );
+
+          if (therapySession.user && therapySession.user.signUpLanguage !== 'en') {
+            const emailLog = `Therapy session feedback email not sent as user was not english [email: ${
+              booking.clientEmail
+            }, session date: ${yesterday.toLocaleDateString()}]`;
+            this.logger.log(emailLog);
+            this.slackMessageClient.sendMessageToTherapySlackChannel(emailLog);
+            continue;
+          }
+        } catch (err) {
+          this.logger.error(
+            `sendFirstTherapySessionFeedbackEmail: failed to check therapySession due to error - ${err}`,
+          );
+          const emailLog = `Failed to send therapy feedback email due to internal error [email: ${
+            booking.clientEmail
+          }, session date: ${yesterday.toLocaleDateString()}]`;
+          this.slackMessageClient.sendMessageToTherapySlackChannel(emailLog);
+          continue;
+        }
+
+        await this.mailchimpClient.sendTherapyFeedbackEmail(booking.clientEmail);
         const emailLog = `First therapy session feedback email sent [email: ${
           booking.clientEmail
         }, session date: ${yesterday.toLocaleDateString()}]`;
@@ -72,8 +98,10 @@ export class WebhooksService {
     return `First therapy session feedback emails sent to ${feedbackEmailsSent} client(s) for date: ${yesterday.toLocaleDateString()}`;
   }
 
-  private async isFirstBooking(email: string) {
-    const matchingEntries = await this.emailCampaignRepository.find({ email });
+  private async isFirstTherapySessionEmail(email: string) {
+    const matchingEntries = await this.emailCampaignRepository.find({
+      email,
+    });
     return matchingEntries.length === 0;
   }
 
@@ -116,7 +144,7 @@ export class WebhooksService {
     return 'ok';
   }
   private async createTherapySession(
-    simplyBookDto: SimplybookBodyDto,
+    simplyBookDto: ZapierSimplybookBodyDto,
     partnerAccess: PartnerAccessEntity,
   ) {
     const therapySession = formatTherapySessionObject(simplyBookDto, partnerAccess.id);
@@ -125,7 +153,7 @@ export class WebhooksService {
 
   private async updateTherapySession(
     action,
-    simplyBookDto: SimplybookBodyDto,
+    simplyBookDto: ZapierSimplybookBodyDto,
     therapySession: TherapySessionEntity,
   ): Promise<TherapySessionEntity> {
     const updatedTherapySession = {
@@ -134,8 +162,8 @@ export class WebhooksService {
       ...(action === SIMPLYBOOK_ACTION_ENUM.UPDATED_BOOKING
         ? {
             rescheduledFrom: therapySession.startDateTime,
-            startDateTime: moment(simplyBookDto.start_date_time).toDate(),
-            endDateTime: moment(simplyBookDto.end_date_time).toDate(),
+            startDateTime: new Date(simplyBookDto.start_date_time),
+            endDateTime: new Date(simplyBookDto.end_date_time),
           }
         : {}),
       ...(action === SIMPLYBOOK_ACTION_ENUM.COMPLETED_BOOKING ? { completedAt: new Date() } : {}),
@@ -146,25 +174,25 @@ export class WebhooksService {
   }
 
   async updatePartnerAccessTherapy(
-    simplyBookDto: SimplybookBodyDto,
+    simplyBookDto: ZapierSimplybookBodyDto,
   ): Promise<TherapySessionEntity> {
     const { action, booking_code } = simplyBookDto;
     // this ensures that the client email can be matched against the db which contains lower case emails
     const client_email = simplyBookDto.client_email.toLowerCase();
-    const client_id = simplyBookDto.client_id;
+    const userId = simplyBookDto.client_id;
 
     this.logger.log(
-      `UpdatePartnerAccessService method initiated for ${action} - ${client_email} - ${booking_code} - userId ${client_id}`,
+      `UpdatePartnerAccessService method initiated for ${action} - ${client_email} - ${booking_code} - userId ${userId}`,
     );
 
-    const userDetails = await this.userRepository.findOne({ id: client_id });
+    const userDetails = await this.userRepository.findOne({ id: userId });
 
     if (!userDetails) {
       await this.slackMessageClient.sendMessageToTherapySlackChannel(
-        `Unknown user made a therapy booking - ${client_email}, id: ${client_id} 🚨`,
+        `Unknown user made a therapy booking - ${client_email}, id: ${userId} 🚨`,
       );
       this.logger.error(
-        `UpdatePartnerAccessTherapy, Unable to find user with email ${client_email}, id ${client_id}`,
+        `UpdatePartnerAccessTherapy, Unable to find user with email ${client_email}, id ${userId}`,
       );
       throw new HttpException(
         'UpdatePartnerAccessTherapy, Unable to find user',
@@ -253,7 +281,7 @@ export class WebhooksService {
 
   private async newPartnerAccessTherapy(
     partnerAccesses: PartnerAccessEntity[],
-    simplyBookDto: SimplybookBodyDto,
+    simplyBookDto: ZapierSimplybookBodyDto,
   ) {
     const therapyPartnerAccess = partnerAccesses.filter(
       (tpa) => tpa.therapySessionsRemaining > 0,

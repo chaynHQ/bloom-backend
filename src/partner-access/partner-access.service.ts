@@ -1,7 +1,7 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { isBefore, sub } from 'date-fns';
 import _ from 'lodash';
-import moment from 'moment';
 import { PartnerEntity } from 'src/entities/partner.entity';
 import { Logger } from 'src/logger/logger';
 import { PartnerRepository } from 'src/partner/partner.repository';
@@ -81,7 +81,8 @@ export class PartnerAccessService {
       throw new HttpException(PartnerAccessCodeStatusEnum.ALREADY_IN_USE, HttpStatus.CONFLICT);
     }
 
-    if (moment(partnerAccess.createdAt).add(1, 'year').isSameOrBefore(Date.now())) {
+    // ensure the partner access code has been created no more than a year ago
+    if (isBefore(new Date(partnerAccess.createdAt), sub(new Date(), { years: 1 }))) {
       throw new HttpException(PartnerAccessCodeStatusEnum.CODE_EXPIRED, HttpStatus.BAD_REQUEST);
     }
 
