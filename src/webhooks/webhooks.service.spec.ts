@@ -1,5 +1,6 @@
 import { createMock } from '@golevelup/ts-jest';
 import { Test, TestingModule } from '@nestjs/testing';
+import { format, sub } from 'date-fns';
 import { MailchimpClient } from 'src/api/mailchimp/mailchip-api';
 import { SlackMessageClient } from 'src/api/slack/slack-api';
 import { CoursePartnerRepository } from 'src/course-partner/course-partner.repository';
@@ -15,7 +16,6 @@ import { PartnerService } from 'src/partner/partner.service';
 import { SessionRepository } from 'src/session/session.repository';
 import { UserRepository } from 'src/user/user.repository';
 import { SIMPLYBOOK_ACTION_ENUM, STORYBLOK_STORY_STATUS_ENUM } from 'src/utils/constants';
-import { getYesterdaysDate } from 'src/utils/utils';
 import StoryblokClient from 'storyblok-js-client';
 import {
   mockCourse,
@@ -540,7 +540,10 @@ describe('WebhooksService', () => {
       });
       const sentEmails = await service.sendFirstTherapySessionFeedbackEmail();
       expect(sentEmails).toBe(
-        `First therapy session feedback emails sent to 1 client(s) for date: ${getYesterdaysDate().toLocaleDateString()}`,
+        `First therapy session feedback emails sent to 1 client(s) for date: ${format(
+          sub(new Date(), { days: 1 }),
+          'dd/MM/yyyy',
+        )}`,
       );
     });
     it('should only send bookings to those who have signed up in english', async () => {
@@ -554,7 +557,10 @@ describe('WebhooksService', () => {
         });
       const sentEmails = await service.sendFirstTherapySessionFeedbackEmail();
       expect(sentEmails).toBe(
-        `First therapy session feedback emails sent to 0 client(s) for date: ${getYesterdaysDate().toLocaleDateString()}`,
+        `First therapy session feedback emails sent to 0 client(s) for date: ${format(
+          sub(new Date(), { days: 1 }),
+          'dd/MM/yyyy',
+        )}`,
       );
     });
   });
