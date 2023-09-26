@@ -1,5 +1,6 @@
 import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { format, sub } from 'date-fns';
 import { MailchimpClient } from 'src/api/mailchimp/mailchip-api';
 import { getBookingsForDate } from 'src/api/simplybook/simplybook-api';
 import { SlackMessageClient } from 'src/api/slack/slack-api';
@@ -58,7 +59,7 @@ export class WebhooksService {
           if (therapySession.user && therapySession.user.signUpLanguage !== 'en') {
             const emailLog = `Therapy session feedback email not sent as user was not english [email: ${
               booking.clientEmail
-            }, session date: ${yesterday.toLocaleDateString()}]`;
+            }, session date: ${format(sub(new Date(), { days: 1 }), 'dd/MM/yyyy')}]`;
             this.logger.log(emailLog);
             this.slackMessageClient.sendMessageToTherapySlackChannel(emailLog);
             continue;
@@ -69,7 +70,7 @@ export class WebhooksService {
           );
           const emailLog = `Failed to send therapy feedback email due to internal error [email: ${
             booking.clientEmail
-          }, session date: ${yesterday.toLocaleDateString()}]`;
+          }, session date: ${format(yesterday, 'dd/MM/yyy')}]`;
           this.slackMessageClient.sendMessageToTherapySlackChannel(emailLog);
           continue;
         }
@@ -77,7 +78,7 @@ export class WebhooksService {
         await this.mailchimpClient.sendTherapyFeedbackEmail(booking.clientEmail);
         const emailLog = `First therapy session feedback email sent [email: ${
           booking.clientEmail
-        }, session date: ${yesterday.toLocaleDateString()}]`;
+        }, session date: ${format(yesterday, 'dd/MM/yyy')}]`;
         this.logger.log(emailLog);
         this.slackMessageClient.sendMessageToTherapySlackChannel(emailLog);
 
@@ -90,12 +91,15 @@ export class WebhooksService {
         this.logger.log(
           `First therapy session feedback email saved in db [email: ${
             booking.clientEmail
-          }, session date: ${yesterday.toLocaleDateString()}]`,
+          }, session date: ${format(yesterday, 'dd/MM/yyy')}]`,
         );
         feedbackEmailsSent++;
       }
     }
-    return `First therapy session feedback emails sent to ${feedbackEmailsSent} client(s) for date: ${yesterday.toLocaleDateString()}`;
+    return `First therapy session feedback emails sent to ${feedbackEmailsSent} client(s) for date: ${format(
+      sub(new Date(), { days: 1 }),
+      'dd/MM/yyyy',
+    )}`;
   }
 
   private async isFirstTherapySessionEmail(email: string) {

@@ -1,5 +1,5 @@
 import { webcrypto } from 'crypto';
-import { add } from 'date-fns';
+import { sub } from 'date-fns';
 const crypto = webcrypto as unknown as Crypto;
 
 export const generateRandomString = (length: number) => {
@@ -15,4 +15,4 @@ export const generateRandomString = (length: number) => {
     .join('');
 };
 
-export const getYesterdaysDate = () => add(new Date(), { days: 1 });
+export const getYesterdaysDate = () => sub(new Date(), { days: 1 });
