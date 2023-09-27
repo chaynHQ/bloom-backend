@@ -1,6 +1,7 @@
 import mailchimpClient from '@mailchimp/mailchimp_transactional';
 import { Injectable, Logger } from '@nestjs/common';
 import {
+  mailchimpImpactMeasurementTemplateId,
   mailchimpMandrillApiKey,
   mailchimpTherapyFromEmail,
   mailchimpTherapyTemplateId,
@@ -63,6 +64,25 @@ export class MailchimpClient {
       const response = await this.sendTemplateEmail(mailchimpTherapyTemplateId, {
         from_email: mailchimpTherapyFromEmail,
         subject: 'Bloom Therapy - How did it go?',
+        to: [
+          {
+            email: toEmail,
+            type: 'to',
+          },
+        ],
+      });
+      return response;
+    } catch (error) {
+      this.logger.error(`Error sending therapy template email`);
+      throw new Error(`Error sending therapy template email`);
+    }
+  }
+
+  public async sendImpactMeasurementEmail(toEmail: string): Promise<MailchimpEmailResponse | null> {
+    try {
+      const response = await this.sendTemplateEmail(mailchimpImpactMeasurementTemplateId, {
+        from_email: mailchimpTherapyFromEmail,
+        subject: 'Have you felt supported by Bloom?',
         to: [
           {
             email: toEmail,

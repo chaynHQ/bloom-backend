@@ -89,6 +89,9 @@ export const mockUserRepositoryMethods: PartialFuncReturn<UserRepository> = {
   findOne: async ({ email: client_email }) => {
     return { ...mockUserEntity, ...(client_email ? { email: client_email } : {}) } as UserEntity;
   },
+  find: async () => {
+    return [mockUserEntity, mockUserEntity];
+  },
   save: async (arg) => arg as UserEntity,
 };
 
@@ -162,6 +165,9 @@ export const mockWebhooksServiceMethods: PartialFuncReturn<WebhooksService> = {
 
 export const mockMailchimpClientMethods: PartialFuncReturn<MailchimpClient> = {
   sendTherapyFeedbackEmail: async () => {
+    return [];
+  },
+  sendImpactMeasurementEmail: async () => {
     return [];
   },
 };

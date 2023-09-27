@@ -20,6 +20,7 @@ export enum SIMPLYBOOK_ACTION_ENUM {
 
 export enum CAMPAIGN_TYPE {
   THERAPY_FEEDBACK = 'THERAPY_FEEDBACK',
+  IMPACT_MEASUREMENT = 'IMPACT_MEASUREMENT',
 }
 
 export enum STORYBLOK_STORY_STATUS_ENUM {
@@ -111,6 +112,12 @@ export const mailchimpTherapyTemplateId = getEnv(
   process.env.MAILCHIMP_THERAPY_TEMPLATE_ID,
   'MAILCHIMP_THERAPY_TEMPLATE_ID',
 );
+
+export const mailchimpImpactMeasurementTemplateId = getEnv(
+  process.env.MAILCHIMP_IMPACT_MEASUREMENT_TEMPLATE_ID,
+  'MAILCHIMP_IMPACT_MEASUREMENT_TEMPLATE_ID',
+);
+
 export const mailchimpTherapyFromEmail = getEnv(
   process.env.MAILCHIMP_THERAPY_FROM_EMAIL,
   'MAILCHIMP_THERAPY_FROM_EMAIL',
