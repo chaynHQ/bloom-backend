@@ -70,13 +70,13 @@ export class PartnerAccessController {
     return (await this.partnerAccessService.getUserTherapySessions());
   }
 
-  // @ApiBearerAuth('access-token')
+  @ApiBearerAuth('access-token')
   @ApiOperation({
     description: 'Updates number of therapy sessions available to an access code',
   })
   @Patch(':id')
   @ApiParam({ name: 'id', description: 'Updates partner access by id' })
-  // @UseGuards(SuperAdminAuthGuard)
+  @UseGuards(SuperAdminAuthGuard)
     async updatePartnerAccess(@Param() { id }, @Body() @Req() req: Request) {
       return await this.partnerAccessService.updatePartnerAccessTherapyCount(id, req['therapySessions']);
     }

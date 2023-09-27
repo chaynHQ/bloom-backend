@@ -122,7 +122,7 @@ export class PartnerAccessService {
   async updatePartnerAccessTherapyCount(
     partnerAccessCode: string,
     therapySessions: number
-  ): Promise<object> {
+  ): Promise<string> {
     if (!partnerAccessCode) {
       //invalid access code
       throw new HttpException(PartnerAccessCodeStatusEnum.INVALID_CODE, HttpStatus.BAD_REQUEST);
@@ -152,9 +152,7 @@ export class PartnerAccessService {
       .set({ therapySessionsRemaining: therapySessions })
       .where('accessCode = :partnerAccessCode', { partnerAccessCode })
       .execute();
-      return {
-        status: 'Success'
-      };
+      return 'Success';
     }
     catch (error) {
       throw error;
