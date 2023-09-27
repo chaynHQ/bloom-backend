@@ -272,7 +272,6 @@ describe('PartnerAccessService', () => {
 
   describe('updatePartnerAccessTherapyCount', () => {
     it('should update the number of therapy sessions remaining on an access code', async () => {
-      const repoSpyCreateQueryBuilder = jest.spyOn(repo, 'findOne');
 
       // Mocks finding an access code record
       const findOneResults = { accessCode: 'ABCSDE', id: '122334' };
