@@ -1,5 +1,5 @@
-import { Body, Controller, Delete, Get, Post, Req, UseGuards, Put } from '@nestjs/common';
-import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { Request } from 'express';
 import { isProduction } from 'src/utils/constants';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
@@ -70,15 +70,17 @@ export class PartnerAccessController {
     return (await this.partnerAccessService.getUserTherapySessions());
   }
 
-  @ApiBearerAuth('access-token')
+  // @ApiBearerAuth('access-token')
   @ApiOperation({
     description: 'Updates number of therapy sessions available to an access code',
   })
-  @Put('users')
- @UseGuards(SuperAdminAuthGuard)
-  async updatePartnerAccess(@Body() @Req() req: Request) {
-    return await this.partnerAccessService.updatePartnerAccessTherapyCount(req['partnerAccessCode'], req['therapySessions']);
-  }
+  @Patch(':id')
+  @ApiParam({ name: 'id', description: 'Updates partner access by id' })
+  // @UseGuards(SuperAdminAuthGuard)
+    async updatePartnerAccess(@Param() { id }, @Body() @Req() req: Request) {
+      return await this.partnerAccessService.updatePartnerAccessTherapyCount(id, req['therapySessions']);
+    }
+
 
   @Post('validate-code')
   @ApiOperation({

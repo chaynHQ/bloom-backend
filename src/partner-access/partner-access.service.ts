@@ -99,23 +99,30 @@ export class PartnerAccessService {
   }
 
   async getUserTherapySessions(): Promise<PartnerAccessEntity[]> {
-    return await this.partnerAccessRepository      
+
+    try {
+      return await this.partnerAccessRepository      
       .createQueryBuilder('partnerAccess')
       .leftJoin('partnerAccess.user', 'user') //get user associated with access code
       .select([
         'max(user.email) as userEmail', //get first user email. This will also return nulls as there is no way to add a condition to a joined column apparently
         'sum(partnerAccess.therapySessionsRemaining) as therapyTotal', //get total therapy sessions available
+        'sum(partnerAccess.therapySessionsRedeemed) as therapyRedeemed', //get total therapy sessions available
         'max(partnerAccess.accessCode) as partnerAccessCode', //get any access code - this will be used as an identifier to update. Uuids do not have aggregate functions in postgres so its a bit annoying to get that instead
       ])
       .where('partnerAccess.featureTherapy=true') //only get access codes with feature therapy turned on
+      .andWhere('partnerAccess.userId is not null') //only get access codes with a user id
       .groupBy('partnerAccess.userId') //group by user as we can have users with multiple access codes
       .getRawMany(); //use instead of getMany as the columns are derived
+    } catch (error) {
+      throw new HttpException(`Unable to get users with access codes! Error: ${error}`, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
   }
 
   async updatePartnerAccessTherapyCount(
     partnerAccessCode: string,
     therapySessions: number
-  ): Promise<string> {
+  ): Promise<object> {
     if (!partnerAccessCode) {
       //invalid access code
       throw new HttpException(PartnerAccessCodeStatusEnum.INVALID_CODE, HttpStatus.BAD_REQUEST);
@@ -133,13 +140,21 @@ export class PartnerAccessService {
         throw new HttpException(PartnerAccessCodeStatusEnum.INVALID_CODE, HttpStatus.BAD_REQUEST);
       }
 
+      if (!therapySessions) {
+        //no therapy sessions to update
+        throw new HttpException('No therapy sessions sent', HttpStatus.BAD_REQUEST);
+      }
+
+      //update therapy seesions count on the access code
       await this.partnerAccessRepository
       .createQueryBuilder('partner_access')
       .update(PartnerAccessEntity)
       .set({ therapySessionsRemaining: therapySessions })
       .where('accessCode = :partnerAccessCode', { partnerAccessCode })
       .execute();
-      return 'Success';
+      return {
+        status: 'Success'
+      };
     }
     catch (error) {
       throw error;
