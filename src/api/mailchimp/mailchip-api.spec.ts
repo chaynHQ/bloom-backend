@@ -65,4 +65,9 @@ describe('MailchimpClient', () => {
       }),
     ).rejects.toThrow();
   });
+  it('sends impact email successfully', async () => {
+    const response = await mailchimpClient.sendImpactMeasurementEmail('test@test.com');
+    expect(response[0]).toHaveProperty('status', MAILCHIMP_EMAIL_STATUS.SENT);
+    expect(response[0]).toHaveProperty('email', 'test@test.com');
+  });
 });
