@@ -559,7 +559,12 @@ describe('WebhooksService', () => {
       const mailChimpSpy = jest.spyOn(mockedMailchimpClient, 'sendTherapyFeedbackEmail');
       const sentEmails = await service.sendFirstTherapySessionFeedbackEmail();
       expect(sentEmails).toBe(
-        `First therapy session feedback emails sent to 0 client(s) for date: ${getYesterdaysDate().toLocaleDateString()}`,
+        `First therapy session feedback emails sent to 0 client(s) for date: ${format(
+          sub(new Date(), {
+            days: 1,
+          }),
+          'dd/MM/yyyy',
+        )}`,
       );
       await expect(mailChimpSpy).toBeCalledTimes(0);
       await expect(saveSpy).toBeCalledTimes(0);
