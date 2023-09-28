@@ -358,7 +358,7 @@ export class UserService {
       const queryResult = await this.userRepository
         .createQueryBuilder('user')
         .select()
-        .where('user.name ILIKE :searchTerm', { searchTerm: `Cypress test` })
+        .where('user.name LIKE :searchTerm', { searchTerm: `%Cypress test user%` })
         .getMany();
 
       const deletedUsers = await Promise.all(
