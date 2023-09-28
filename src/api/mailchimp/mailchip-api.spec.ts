@@ -18,6 +18,11 @@ jest.mock('@mailchimp/mailchimp_transactional', () =>
             email: message.to[0].email,
             reject_reason: null,
             status: 'sent',
+            response: {
+              data: {
+                status: 'sent',
+              },
+            },
           },
         ];
       },

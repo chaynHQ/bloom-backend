@@ -54,7 +54,7 @@ export class MailchimpClient {
         message,
       });
       // Mailchimp api doesn't throw so we capture the error in the response
-      if (response.response.data.status === 'error') {
+      if (response.status !== 'sent' && response?.response?.data?.status === 'error') {
         throw new Error(
           `sendTemplateEmail - ${response.response.data.name} - ${response.response.data.message}`,
         );
