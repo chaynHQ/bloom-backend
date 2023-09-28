@@ -548,6 +548,22 @@ describe('WebhooksService', () => {
         )}`,
       );
     });
+
+    it('should send email to only those who have not recieved an email already', async () => {
+      // Mocking that email campaign entry already exists
+      jest.spyOn(mockedEmailCampaignRepository, 'find').mockImplementationOnce(async () => {
+        return [{} as EmailCampaignEntity];
+      });
+      const saveSpy = jest.spyOn(mockedEmailCampaignRepository, 'save');
+
+      const mailChimpSpy = jest.spyOn(mockedMailchimpClient, 'sendTherapyFeedbackEmail');
+      const sentEmails = await service.sendFirstTherapySessionFeedbackEmail();
+      expect(sentEmails).toBe(
+        `First therapy session feedback emails sent to 0 client(s) for date: ${getYesterdaysDate().toLocaleDateString()}`,
+      );
+      await expect(mailChimpSpy).toBeCalledTimes(0);
+      await expect(saveSpy).toBeCalledTimes(0);
+    });
     it('should only send bookings to those who have signed up in english', async () => {
       jest.spyOn(mockedEmailCampaignRepository, 'find').mockImplementationOnce(async () => {
         return [];
