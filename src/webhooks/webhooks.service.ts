@@ -49,7 +49,7 @@ export class WebhooksService {
 
     let feedbackEmailsSent = 0;
     for (const booking of bookings) {
-      if (this.isFirstCampaignEmail(booking.clientEmail, CAMPAIGN_TYPE.THERAPY_FEEDBACK)) {
+      if (await this.isFirstCampaignEmail(booking.clientEmail, CAMPAIGN_TYPE.THERAPY_FEEDBACK)) {
         try {
           const therapySession = await this.therapySessionRepository.findOneOrFail(
             {

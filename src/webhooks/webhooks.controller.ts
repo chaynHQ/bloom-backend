@@ -29,13 +29,13 @@ export class WebhooksController {
     return 'Successful';
   }
 
-  // @UseGuards(ZapierAuthGuard)
+  @UseGuards(ZapierAuthGuard)
   @Post('therapy-feedback')
   async sendTherapyFeedbackEmail(): Promise<string> {
     return this.webhooksService.sendFirstTherapySessionFeedbackEmail();
   }
 
-  // @UseGuards(ZapierAuthGuard)
+  @UseGuards(ZapierAuthGuard)
   @Post('impact-measurement')
   async sendImpactMeasurementEmail(): Promise<string> {
     return this.webhooksService.sendImpactMeasurementEmail();
