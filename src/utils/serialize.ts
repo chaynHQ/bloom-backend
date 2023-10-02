@@ -54,7 +54,7 @@ export const formatPartnerAccessObjects = (partnerAccessObjects: PartnerAccessEn
       active: partnerAccess.active,
       therapySessionsRemaining: partnerAccess.therapySessionsRemaining,
       therapySessionsRedeemed: partnerAccess.therapySessionsRedeemed,
-      partner: formatPartnerObject(partnerAccess.partner),
+      partner: partnerAccess.partner ? formatPartnerObject(partnerAccess.partner) : null,
       therapySessions: partnerAccess.therapySession?.map((ts) => {
         return {
           id: ts.id,
@@ -103,6 +103,30 @@ export const formatUserObject = (userObject: UserEntity): GetUserDto => {
       userObject.subscriptionUser && userObject.subscriptionUser.length > 0
         ? formatSubscriptionObjects(userObject.subscriptionUser)
         : [],
+  };
+};
+
+// Use if you don't want loads of null keys on the object and have only what you want to
+export const formatGetUsersObject = (userObject: UserEntity): GetUserDto => {
+  return {
+    user: {
+      id: userObject.id,
+      createdAt: userObject.createdAt,
+      updatedAt: userObject.updatedAt,
+      name: userObject.name,
+      email: userObject.email,
+      firebaseUid: userObject.firebaseUid,
+      isActive: userObject.isActive,
+      crispTokenId: userObject.crispTokenId,
+      isSuperAdmin: userObject.isSuperAdmin,
+    },
+    ...(userObject.partnerAccess
+      ? {
+          partnerAccesses: userObject.partnerAccess
+            ? formatPartnerAccessObjects(userObject.partnerAccess)
+            : null,
+        }
+      : {}),
   };
 };
 
