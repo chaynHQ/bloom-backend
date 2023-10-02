@@ -32,7 +32,7 @@ export class UserController {
   })
   @Post('/me')
   @UseGuards(FirebaseAuthGuard)
-  async getUser(@Req() req: Request): Promise<GetUserDto> {
+  async getUserByFirebaseId(@Req() req: Request): Promise<GetUserDto> {
     return req['user'];
   }
 

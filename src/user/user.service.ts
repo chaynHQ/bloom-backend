@@ -254,7 +254,7 @@ export class UserService {
     }
   }
 
-  public async getUser({ uid }: IFirebaseUser): Promise<GetUserDto | undefined> {
+  public async getUserByFirebaseId({ uid }: IFirebaseUser): Promise<GetUserDto | undefined> {
     const queryResult = await this.userRepository
       .createQueryBuilder('user')
       .leftJoinAndSelect('user.partnerAccess', 'partnerAccess')

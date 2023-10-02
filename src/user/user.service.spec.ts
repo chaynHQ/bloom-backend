@@ -225,7 +225,7 @@ describe('UserService', () => {
           }) as never,
         );
 
-      const user = await service.getUser(mockIFirebaseUser);
+      const user = await service.getUserByFirebaseId(mockIFirebaseUser);
       expect(user.user.email).toBe('user@email.com');
       expect(user.partnerAdmin).toBeNull();
       expect(user.partnerAccesses).toEqual([]);
