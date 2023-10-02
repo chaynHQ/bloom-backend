@@ -1,4 +1,15 @@
-import { Body, Controller, Delete, Param, Post, Put, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  Put,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { Request } from 'express';
 import { UserEntity } from 'src/entities/user.entity';
@@ -71,5 +82,15 @@ export class UserController {
   @UseGuards(FirebaseAuthGuard)
   async updateUser(@Body() updateUserDto: UpdateUserDto, @Req() req: Request) {
     return await this.userService.updateUser(updateUserDto, req['user'] as GetUserDto);
+  }
+
+  @ApiBearerAuth()
+  @Get()
+  @UseGuards(SuperAdminAuthGuard)
+  async getUsers(@Query() query) {
+    const { include, fields, limit, ...userQuery } = query.searchCriteria
+      ? JSON.parse(query.searchCriteria)
+      : { include: [], fields: [], limit: undefined };
+    return await this.userService.getUsers(userQuery, include, fields, limit);
   }
 }
