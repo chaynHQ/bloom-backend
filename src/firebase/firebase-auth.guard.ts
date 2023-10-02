@@ -39,7 +39,7 @@ export class FirebaseAuthGuard implements CanActivate {
     }
 
     try {
-      request['user'] = await this.userService.getUser(user as IFirebaseUser);
+      request['user'] = await this.userService.getUserByFirebaseId(user as IFirebaseUser);
     } catch (error) {
       if (error.message === 'USER NOT FOUND') {
         throw new HttpException(
