@@ -373,6 +373,9 @@ export class WebhooksService {
     )[0];
     // if it is new booking, therapy sessions must be available
     if (typeof therapyPartnerAccess === 'undefined') {
+      await this.slackMessageClient.sendMessageToTherapySlackChannel(
+        `User booked therapy with no therapy sessions remaining, please email user ${simplyBookDto.client_email} to confirm the booking has not been made`,
+      );
       throw new HttpException('No therapy sessions remaining', HttpStatus.FORBIDDEN);
     }
 
