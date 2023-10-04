@@ -206,7 +206,7 @@ export class PartnerAccessService {
       const partnerAccessRecords = await this.partnerAccessRepository //get partner access instances where user is a cypress user
         .createQueryBuilder('partnerAccess')
         .leftJoinAndSelect('partnerAccess.user', 'user')
-        .where('user.name = :name', { name: 'Cypress test user' })
+        .where('user.name LIKE :searchTerm', { searchTerm: `%Cypress test user%` })
         .getMany();
       await Promise.all(
         partnerAccessRecords.map(async (access) => {
@@ -219,8 +219,8 @@ export class PartnerAccessService {
         }),
       );
     } catch (error) {
-      this.logger.error(`Unable to delete access code`, error);
-      throw error;
+      // If this fails we don't want to break cypress tests but we want to be alerted
+      this.logger.error(`deleteCypressTestAccessCodes - Unable to delete access code`, error);
     }
   }
 }
