@@ -35,6 +35,12 @@ export class WebhooksController {
     return this.webhooksService.sendFirstTherapySessionFeedbackEmail();
   }
 
+  @UseGuards(ZapierAuthGuard)
+  @Post('impact-measurement')
+  async sendImpactMeasurementEmail(): Promise<string> {
+    return this.webhooksService.sendImpactMeasurementEmail();
+  }
+
   @Post('storyblok')
   @ApiBody({ type: StoryDto })
   async updateStory(@Body() storyDto: StoryDto) {

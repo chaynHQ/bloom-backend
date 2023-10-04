@@ -1,6 +1,7 @@
 import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { format, sub } from 'date-fns';
+import startOfDay from 'date-fns/startOfDay';
 import { MailchimpClient } from 'src/api/mailchimp/mailchip-api';
 import { getBookingsForDate } from 'src/api/simplybook/simplybook-api';
 import { SlackMessageClient } from 'src/api/slack/slack-api';
@@ -8,6 +9,7 @@ import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
 import { ZapierSimplybookBodyDto } from 'src/partner-access/dtos/zapier-body.dto';
 import { getYesterdaysDate } from 'src/utils/utils';
 import StoryblokClient from 'storyblok-js-client';
+import { Between } from 'typeorm';
 import { getCrispPeopleData, updateCrispProfileData } from '../api/crisp/crisp-api';
 import { CoursePartnerService } from '../course-partner/course-partner.service';
 import { CourseRepository } from '../course/course.repository';
@@ -47,7 +49,7 @@ export class WebhooksService {
 
     let feedbackEmailsSent = 0;
     for (const booking of bookings) {
-      if (this.isFirstTherapySessionEmail(booking.clientEmail)) {
+      if (await this.isFirstCampaignEmail(booking.clientEmail, CAMPAIGN_TYPE.THERAPY_FEEDBACK)) {
         try {
           const therapySession = await this.therapySessionRepository.findOneOrFail(
             {
@@ -102,11 +104,90 @@ export class WebhooksService {
     )}`;
   }
 
-  private async isFirstTherapySessionEmail(email: string) {
+  private async isFirstCampaignEmail(email: string, campaign: CAMPAIGN_TYPE) {
     const matchingEntries = await this.emailCampaignRepository.find({
       email,
+      campaignType: campaign,
     });
     return matchingEntries.length === 0;
+  }
+
+  async sendImpactMeasurementEmail() {
+    // Get all users created between 180 and 174 days
+    const startDate = sub(startOfDay(new Date()), { days: 180 });
+    const endDate = sub(startOfDay(new Date()), { days: 173 });
+    let users = null;
+    try {
+      // Get user from database who made an account between 180 and 173 days ago
+      users = await this.userRepository.find({
+        where: {
+          createdAt: Between(startDate, endDate),
+        },
+      });
+      this.logger.log(
+        `SendImpactMeasurementEmail - Successfully fetched ${users.length} from the database`,
+      );
+    } catch (err) {
+      this.logger.error('SendImpactMeasurementEmail - Unable to fetch users due to error', err);
+      throw new HttpException(
+        'SendImpactMeasurementEmail - Unable to fetch users',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+
+    // For each user, send an email asking them about impact
+    let feedbackEmailsSent = 0;
+    for (const user of users) {
+      try {
+        // Check if this is the first email send of this type
+        const isFirstEmail = await this.isFirstCampaignEmail(
+          user.email,
+          CAMPAIGN_TYPE.IMPACT_MEASUREMENT,
+        );
+        if (!isFirstEmail) {
+          // Send a warning as we shouldn't be getting into this situations
+          this.logger.warn(
+            `sendImpactMeasurementEmail: Skipping sending user Impact Measurement Email [email: ${user.email}]`,
+          );
+          continue;
+        }
+      } catch (err) {
+        this.logger.error(
+          `sendImpactMeasurementEmail: Failed to find user in emailCampaignRepository [email: ${user.email}]`,
+        );
+        continue;
+      }
+
+      try {
+        await this.mailchimpClient.sendImpactMeasurementEmail(user.email);
+        this.logger.log(`Impact measurement feedback email sent to [email: ${user.email}]`);
+        feedbackEmailsSent++;
+      } catch (err) {
+        this.logger.error(
+          `Failed to send Impact measurement feedback email to [email: ${user.email}]`,
+        );
+        continue;
+      }
+      try {
+        await this.emailCampaignRepository.save({
+          campaignType: CAMPAIGN_TYPE.IMPACT_MEASUREMENT,
+          email: user.email,
+          emailSentDateTime: new Date(),
+        });
+        this.logger.log(`Impact measurement feedback email saved in db [email: ${user.email}]`);
+      } catch (err) {
+        this.logger.error(
+          `Failed to save Impact measurement feedback email in Email Campaign Repository to [email: ${user.email}]: ${err}`,
+        );
+      }
+    }
+
+    const emailLog = `Impact feedback email sent to ${feedbackEmailsSent} users who created their account between ${format(
+      startDate,
+      'dd/MM/yyyy',
+    )} - ${format(endDate, 'dd/MM/yyyy')}`;
+    this.logger.log(emailLog);
+    return emailLog;
   }
 
   renameKeys = (obj: { [x: string]: any }) => {
@@ -292,6 +373,9 @@ export class WebhooksService {
     )[0];
     // if it is new booking, therapy sessions must be available
     if (typeof therapyPartnerAccess === 'undefined') {
+      await this.slackMessageClient.sendMessageToTherapySlackChannel(
+        `User booked therapy with no therapy sessions remaining, please email user ${simplyBookDto.client_email} to confirm the booking has not been made`,
+      );
       throw new HttpException('No therapy sessions remaining', HttpStatus.FORBIDDEN);
     }
 

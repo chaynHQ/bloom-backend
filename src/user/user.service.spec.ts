@@ -225,7 +225,7 @@ describe('UserService', () => {
           }) as never,
         );
 
-      const user = await service.getUser(mockIFirebaseUser);
+      const user = await service.getUserByFirebaseId(mockIFirebaseUser);
       expect(user.user.email).toBe('user@email.com');
       expect(user.partnerAdmin).toBeNull();
       expect(user.partnerAccesses).toEqual([]);
@@ -266,6 +266,30 @@ describe('UserService', () => {
       expect(user.email).not.toBe(mockUserEntity.email);
 
       expect(repoSpySave).toBeCalled();
+    });
+  });
+
+  // TODO - Extend getUser tests. At the moment, this is only used by super admins
+  describe('getUsers', () => {
+    it('getUsers', async () => {
+      // Destructuring to get rid of certain props
+      const {
+        subscriptionUser,
+        therapySession,
+        partnerAdmin,
+        partnerAccess,
+        signUpLanguage,
+        contactPermission,
+        courseUser,
+        ...userBase
+      } = mockUserEntity;
+      jest.spyOn(repo, 'createQueryBuilder').mockImplementationOnce(
+        createQueryBuilderMock({
+          getMany: jest.fn().mockResolvedValue([{ ...mockUserEntity, email: 'a@b.com' }]),
+        }) as never,
+      );
+      const users = await service.getUsers({ email: 'a@b.com' }, [], [], 10);
+      expect(users).toEqual([{ user: { ...userBase, email: 'a@b.com' }, partnerAccesses: [] }]);
     });
   });
 });

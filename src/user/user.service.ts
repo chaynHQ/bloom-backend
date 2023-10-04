@@ -18,7 +18,7 @@ import {
 } from '../api/crisp/crisp-api';
 import { AuthService } from '../auth/auth.service';
 import { PartnerAccessService } from '../partner-access/partner-access.service';
-import { formatUserObject } from '../utils/serialize';
+import { formatGetUsersObject, formatUserObject } from '../utils/serialize';
 import { generateRandomString } from '../utils/utils';
 import { CreateUserDto } from './dtos/create-user.dto';
 import { GetUserDto } from './dtos/get-user.dto';
@@ -254,7 +254,7 @@ export class UserService {
     }
   }
 
-  public async getUser({ uid }: IFirebaseUser): Promise<GetUserDto | undefined> {
+  public async getUserByFirebaseId({ uid }: IFirebaseUser): Promise<GetUserDto | undefined> {
     const queryResult = await this.userRepository
       .createQueryBuilder('user')
       .leftJoinAndSelect('user.partnerAccess', 'partnerAccess')
@@ -358,7 +358,7 @@ export class UserService {
       const queryResult = await this.userRepository
         .createQueryBuilder('user')
         .select()
-        .where('user.name ILIKE :searchTerm', { searchTerm: `Cypress test` })
+        .where('user.name LIKE :searchTerm', { searchTerm: `%Cypress test user%` })
         .getMany();
 
       const deletedUsers = await Promise.all(
@@ -381,5 +381,34 @@ export class UserService {
       this.logger.error(`Unable to delete all cypress users`, error);
       throw error;
     }
+  }
+  public async getUsers(
+    filters: { email?: string; partnerAccess?: { userId: string } },
+    relations: Array<string>,
+    fields: Array<string>,
+    limit: number,
+  ): Promise<GetUserDto[] | undefined> {
+    const query = this.userRepository.createQueryBuilder('user');
+
+    if (relations.indexOf('partnerAccess') >= 0) {
+      query.leftJoinAndSelect('user.partnerAccess', 'partnerAccess');
+    }
+
+    if (filters.partnerAccess?.userId === 'IS NOT NULL') {
+      query.andWhere('partnerAccess.userId IS NOT NULL');
+    }
+
+    if (filters.email) {
+      query.andWhere('user.email ILike :email', { email: `%${filters.email}%` });
+    }
+
+    if (limit) {
+      query.limit(limit);
+    }
+
+    const queryResult = await query.getMany();
+    const formattedUsers = queryResult.map((user) => formatGetUsersObject(user));
+
+    return formattedUsers;
   }
 }

@@ -1,5 +1,5 @@
-import { Body, Controller, Delete, Get, Post, Req, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { Request } from 'express';
 import { isProduction } from 'src/utils/constants';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
@@ -10,6 +10,7 @@ import { GetUserDto } from '../user/dtos/get-user.dto';
 import { ControllerDecorator } from '../utils/controller.decorator';
 import { CreatePartnerAccessDto } from './dtos/create-partner-access.dto';
 import { GetPartnerAccessesDto } from './dtos/get-partner-access.dto';
+import { UpdatePartnerAccessDto } from './dtos/update-partner-access.dto';
 import { ValidatePartnerAccessCodeDto } from './dtos/validate-partner-access.dto';
 import { PartnerAccessService } from './partner-access.service';
 
@@ -58,6 +59,29 @@ export class PartnerAccessController {
     @Body() getPartnerAccessDto: GetPartnerAccessesDto | undefined,
   ): Promise<PartnerAccessEntity[]> {
     return this.partnerAccessService.getPartnerAccessCodes(getPartnerAccessDto);
+  }
+
+  // TODO - Not in use - leaving as the bones might be reused
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    description:
+      'Returns a list of users with an access code and the number of therapy sessions available to them',
+  })
+  @UseGuards(SuperAdminAuthGuard)
+  @Get('users')
+  async getPartnerAccessCodesWithUsers(): Promise<PartnerAccessEntity[]> {
+    return await this.partnerAccessService.getUserTherapySessions();
+  }
+
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    description: 'Updates number of therapy sessions available to an access code',
+  })
+  @Patch(':id')
+  @ApiParam({ name: 'id', description: 'Updates partner access by id' })
+  @UseGuards(SuperAdminAuthGuard)
+  async updatePartnerAccess(@Param() { id }, @Body() updates: UpdatePartnerAccessDto) {
+    return await this.partnerAccessService.updatePartnerAccess(id, updates);
   }
 
   @Post('validate-code')

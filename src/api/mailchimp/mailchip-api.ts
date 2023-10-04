@@ -1,6 +1,7 @@
 import mailchimpClient from '@mailchimp/mailchimp_transactional';
 import { Injectable, Logger } from '@nestjs/common';
 import {
+  mailchimpImpactMeasurementTemplateId,
   mailchimpMandrillApiKey,
   mailchimpTherapyFromEmail,
   mailchimpTherapyTemplateId,
@@ -52,10 +53,16 @@ export class MailchimpClient {
         template_content: [{}],
         message,
       });
+      // Mailchimp api doesn't throw so we capture the error in the response
+      if (response.status !== 'sent' && response?.response?.data?.status === 'error') {
+        throw new Error(
+          `sendTemplateEmail - ${response.response.data.name} - ${response.response.data.message}`,
+        );
+      }
       return response;
     } catch (error) {
       this.logger.error(`Failed to send template email: ${error}`);
-      throw new Error(`Failed to send template email: ${error}`);
+      throw new Error(error);
     }
   }
   public async sendTherapyFeedbackEmail(toEmail: string): Promise<MailchimpEmailResponse | null> {
@@ -74,6 +81,25 @@ export class MailchimpClient {
     } catch (error) {
       this.logger.error(`Error sending therapy template email`);
       throw new Error(`Error sending therapy template email`);
+    }
+  }
+
+  public async sendImpactMeasurementEmail(toEmail: string): Promise<MailchimpEmailResponse | null> {
+    try {
+      const response = await this.sendTemplateEmail(mailchimpImpactMeasurementTemplateId, {
+        from_email: mailchimpTherapyFromEmail,
+        subject: 'Have you felt supported by Bloom?',
+        to: [
+          {
+            email: toEmail,
+            type: 'to',
+          },
+        ],
+      });
+      return response;
+    } catch (error) {
+      this.logger.error(`Error sending therapy template email ${error}`);
+      throw new Error(`Error sending therapy template email ${error}`);
     }
   }
 }

@@ -18,6 +18,11 @@ jest.mock('@mailchimp/mailchimp_transactional', () =>
             email: message.to[0].email,
             reject_reason: null,
             status: 'sent',
+            response: {
+              data: {
+                status: 'sent',
+              },
+            },
           },
         ];
       },
@@ -64,5 +69,10 @@ describe('MailchimpClient', () => {
         ],
       }),
     ).rejects.toThrow();
+  });
+  it('sends impact email successfully', async () => {
+    const response = await mailchimpClient.sendImpactMeasurementEmail('test@test.com');
+    expect(response[0]).toHaveProperty('status', MAILCHIMP_EMAIL_STATUS.SENT);
+    expect(response[0]).toHaveProperty('email', 'test@test.com');
   });
 });
