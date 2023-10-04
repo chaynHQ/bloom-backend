@@ -369,17 +369,16 @@ export class UserService {
             return user;
           } catch (error) {
             this.logger.error(`Unable to delete cypress user: ${user.email} ${error}`);
-            throw new HttpException(
-              `Unable to delete cypress user: ${user.email} ${error}`,
-              HttpStatus.INTERNAL_SERVER_ERROR,
+            this.logger.error(
+              `deleteCypressTestAccessCodes - Unable to delete cypress user: ${user.email} ${error}`,
             );
           }
         }),
       );
       return deletedUsers;
     } catch (error) {
-      this.logger.error(`Unable to delete all cypress users`, error);
-      throw error;
+      // If this fails we don't want to break cypress tests
+      this.logger.error(`deleteCypressTestAccessCodes - Unable to delete all cypress users`, error);
     }
   }
   public async getUsers(
