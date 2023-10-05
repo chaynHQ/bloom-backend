@@ -26,7 +26,7 @@ LinkedIn - [@chayn](https://www.linkedin.com/company/chayn)
 
 ## Contribution
 
-"To make a contribution, please read our Contributing Guidelines in [CONTRIBUTING.md](./CONTRIBUTING.md)!"
+To make a contribution, please read our Contributing Guidelines in [CONTRIBUTING.md](https://github.com/chaynHQ/bloom-backend/blob/develop/CONTRIBUTING.md)
 
 ## Technologies Used:
 
