@@ -24,6 +24,10 @@ LinkedIn - [@chayn](https://www.linkedin.com/company/chayn)
 
 **Currently in active development**
 
+## Contribution
+
+To make a contribution, please read our Contributing Guidelines in [CONTRIBUTING.md](https://github.com/chaynHQ/bloom-backend/blob/develop/CONTRIBUTING.md)
+
 ## Technologies Used:
 
 - [NestJS](https://nestjs.com/) - NodeJs framework for building scalable and reliable server-side applications
