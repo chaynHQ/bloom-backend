@@ -62,7 +62,7 @@ yarn
 
 Include the following environment variables in a `.env` file. 
 
-You will need to gather the following tokens from [Firebase](https://firebase.google.com/docs/projects/api-keys). All other environment variables from Rollbar, Zapier, Slack, Crisp, Simplybook, and Mailchimp are optional. If you're a volunteer loading up the back-end, please get in touch with the team for access to the environment variables.
+You will need to gather the following tokens from [Firebase](https://firebase.google.com/docs/projects/api-keys), these are required for the app to function. However, the [Simplybook](https://simplybook.me/en/) variables are required to pass all tests.  All other environment variables from Rollbar, Zapier, Slack, Crisp, and Mailchimp are optional. If you're a volunteer loading up the back-end, please get in touch with the team for access to the environment variables.
 
 ```
 ROLLBAR_ENV=development
@@ -91,14 +91,15 @@ FIREBASE_MESSAGING_SENDER_ID=
 FIREBASE_API_ID=
 FIREBASE_MEASUREMENT_ID=
 
+SIMPLYBOOK_CREDENTIALS=
+SIMPLYBOOK_COMPANY_NAME=
+
 # VARIABLES BELOW ARE ALL OPTIONAL
-ROLLBAR_TOKEN= # OPTIONAL
+ROLLBAR_TOKEN= 
 ZAPIER_TOKEN= 
 SLACK_WEBHOOK_URL=
 CRISP_TOKEN=
 CRISP_WEBSITE_TOKEN=
-SIMPLYBOOK_CREDENTIALS=
-SIMPLYBOOK_COMPANY_NAME=
 MAILCHIMP_MANDRILL_API_KEY=
 MAILCHIMP_THERAPY_TEMPLATE_ID=
 MAILCHIMP_THERAPY_FROM_EMAIL=
