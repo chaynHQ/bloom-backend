@@ -62,8 +62,6 @@ yarn
 
 Environment variables must be added to a local `.env` file. Create this file using `.env.example` for reference, and adding values for local development.
 
-If this is your first time running the system as a volunteer, please get in touch with the team to get access required variables.
-
 ### Run locally (with Docker) - RECOMMENDED
 
 The project is containerized and can be run solely in docker - both the PostgreSQL database and NestJS app. To run the backend locally, make sure your system has Docker installed - you may need Docker Desktop if using a Mac.
