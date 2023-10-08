@@ -60,7 +60,51 @@ yarn
 
 ### Create `.env` file
 
-Environment variables must be added to a local `.env` file. Create this file using `.env.example` for reference, and adding values for local development.
+Include the following environment variables in a `.env` file. 
+
+You will need to gather the following tokens from [Firebase](https://firebase.google.com/docs/projects/api-keys). All other environment variables from Rollbar, Zapier, Slack, Crisp, Simplybook, and Mailchimp are optional. If you're a volunteer loading up the back-end, please get in touch with the team for access to the environment variables.
+
+```
+ROLLBAR_ENV=development
+PORT=35001
+
+DATABASE_URL=postgres://<username>:<password>@<host>:<port>/<db>
+
+NODE_ENV=development
+
+FIREBASE_TYPE=service_account
+FIREBASE_PROJECT_ID=
+FIREBASE_PRIVATE_KEY_ID=
+FIREBASE_PRIVATE_KEY=
+FIREBASE_CLIENT_EMAIL=
+FIREBASE_CLIENT_ID=
+FIREBASE_AUTH_URI=https://accounts.google.com/o/oauth2/auth
+FIREBASE_TOKEN_URI=https://oauth2.googleapis.com/token
+FIREBASE_CERT_URL=https://www.googleapis.com/oauth2/v1/certs
+FIREBASE_CLIENT_CERT=
+
+FIREBASE_API_KEY=
+FIREBASE_AUTH_DOMAIN=
+FIREBASE_PROJECT_ID=
+FIREBASE_STORAGE_BUCKET=
+FIREBASE_MESSAGING_SENDER_ID=
+FIREBASE_API_ID=
+FIREBASE_MEASUREMENT_ID=
+
+# VARIABLES BELOW ARE ALL OPTIONAL
+ROLLBAR_TOKEN= # OPTIONAL
+ZAPIER_TOKEN= 
+SLACK_WEBHOOK_URL=
+CRISP_TOKEN=
+CRISP_WEBSITE_TOKEN=
+SIMPLYBOOK_CREDENTIALS=
+SIMPLYBOOK_COMPANY_NAME=
+MAILCHIMP_MANDRILL_API_KEY=
+MAILCHIMP_THERAPY_TEMPLATE_ID=
+MAILCHIMP_THERAPY_FROM_EMAIL=
+RESPOND_IO_CREATE_CONTACT_WEBHOOK=
+RESPOND_IO_DELETE_CONTACT_WEBHOOK=
+```
 
 ### Run locally (with Docker) - RECOMMENDED
 
