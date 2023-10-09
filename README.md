@@ -4,7 +4,7 @@ Bloom is a remote trauma support service from Chayn, a global charity supporting
 
 ## Get involved
 
-If you would like to help Bloom and receive special access to our organization and volunteer opportunities, please get in touch with us to express your interest in volunteering via [this form](https://forms.gle/qXfDdPgJxYwvMmVP7). We'll get back to you to schedule an onboarding call. Other ways to get involved and support us are [donating](https://www.paypal.me/chaynhq), making an open-source contribution here on GitHub, and supporting us on social media! 
+If you would like to help Bloom and receive special access to our organization and volunteer opportunities, please get in touch with us to express your interest in volunteering via [this form](https://forms.gle/qXfDdPgJxYwvMmVP7). We'll get back to you to schedule an onboarding call. Other ways to get involved and support us are [donating](https://www.paypal.me/chaynhq), starring this repo and making an open-source contribution here on GitHub, and supporting us on social media! 
 
 Our social medias:
 
@@ -23,6 +23,10 @@ LinkedIn - [@chayn](https://www.linkedin.com/company/chayn)
 [![Bloom Backend CI Pipeline](https://github.com/chaynHQ/bloom-backend/actions/workflows/.ci.yml/badge.svg)](https://github.com/chaynHQ/bloom-backend/actions/workflows/.ci.yml)
 
 **Currently in active development**
+
+## Contribution
+
+To make a contribution, please read our Contributing Guidelines in [CONTRIBUTING.md](https://github.com/chaynHQ/bloom-backend/blob/develop/CONTRIBUTING.md)
 
 ## Technologies Used:
 
@@ -56,9 +60,52 @@ yarn
 
 ### Create `.env` file
 
-Environment variables must be added to a local `.env` file. Create this file using `.env.example` for reference, and adding values for local development.
+Include the following environment variables in a `.env` file. 
 
-If this is your first time running the system as a volunteer, please get in touch with the team to get access required variables.
+You will need to gather the following tokens from [Firebase](https://firebase.google.com/docs/projects/api-keys), these are required for the app to function. However, the [Simplybook](https://simplybook.me/en/) variables are required to pass all tests.  All other environment variables from Rollbar, Zapier, Slack, Crisp, and Mailchimp are optional. If you're a volunteer loading up the back-end, please get in touch with the team for access to the environment variables.
+
+```
+ROLLBAR_ENV=development
+PORT=35001
+
+DATABASE_URL=postgres://<username>:<password>@<host>:<port>/<db>
+
+NODE_ENV=development
+
+FIREBASE_TYPE=service_account
+FIREBASE_PROJECT_ID=
+FIREBASE_PRIVATE_KEY_ID=
+FIREBASE_PRIVATE_KEY=
+FIREBASE_CLIENT_EMAIL=
+FIREBASE_CLIENT_ID=
+FIREBASE_AUTH_URI=https://accounts.google.com/o/oauth2/auth
+FIREBASE_TOKEN_URI=https://oauth2.googleapis.com/token
+FIREBASE_CERT_URL=https://www.googleapis.com/oauth2/v1/certs
+FIREBASE_CLIENT_CERT=
+
+FIREBASE_API_KEY=
+FIREBASE_AUTH_DOMAIN=
+FIREBASE_PROJECT_ID=
+FIREBASE_STORAGE_BUCKET=
+FIREBASE_MESSAGING_SENDER_ID=
+FIREBASE_API_ID=
+FIREBASE_MEASUREMENT_ID=
+
+SIMPLYBOOK_CREDENTIALS=
+SIMPLYBOOK_COMPANY_NAME=
+
+# VARIABLES BELOW ARE ALL OPTIONAL
+ROLLBAR_TOKEN= 
+ZAPIER_TOKEN= 
+SLACK_WEBHOOK_URL=
+CRISP_TOKEN=
+CRISP_WEBSITE_TOKEN=
+MAILCHIMP_MANDRILL_API_KEY=
+MAILCHIMP_THERAPY_TEMPLATE_ID=
+MAILCHIMP_THERAPY_FROM_EMAIL=
+RESPOND_IO_CREATE_CONTACT_WEBHOOK=
+RESPOND_IO_DELETE_CONTACT_WEBHOOK=
+```
 
 ### Run locally (with Docker) - RECOMMENDED
 
@@ -123,13 +170,13 @@ yarn migration:revert
 To run all unit tests
 
 ```bash
-yarn test:unit
+yarn test
 ```
 
 To have your unit tests running in the background as you change code:
 
 ```bash
-yarn test:unit:watch
+yarn test:watch
 ```
 
 ### Formatting and linting
