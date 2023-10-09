@@ -4,7 +4,7 @@ Bloom is a remote trauma support service from Chayn, a global charity supporting
 
 ## Get involved
 
-If you would like to help Bloom and receive special access to our organization and volunteer opportunities, please get in touch with us to express your interest in volunteering via [this form](https://forms.gle/qXfDdPgJxYwvMmVP7). We'll get back to you to schedule an onboarding call. Other ways to get involved and support us are [donating](https://www.paypal.me/chaynhq), making an open-source contribution here on GitHub, and supporting us on social media! 
+If you would like to help Bloom and receive special access to our organization and volunteer opportunities, please get in touch with us to express your interest in volunteering via [this form](https://forms.gle/qXfDdPgJxYwvMmVP7). We'll get back to you to schedule an onboarding call. Other ways to get involved and support us are [donating](https://www.paypal.me/chaynhq), starring this repo and making an open-source contribution here on GitHub, and supporting us on social media! 
 
 Our social medias:
 
@@ -170,13 +170,13 @@ yarn migration:revert
 To run all unit tests
 
 ```bash
-yarn test:unit
+yarn test
 ```
 
 To have your unit tests running in the background as you change code:
 
 ```bash
-yarn test:unit:watch
+yarn test:watch
 ```
 
 ### Formatting and linting
