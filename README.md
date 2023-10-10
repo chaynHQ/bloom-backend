@@ -4,7 +4,7 @@ Bloom is a remote trauma support service from Chayn, a global charity supporting
 
 ## Get involved
 
-If you would like to help Bloom and receive special access to our organization and volunteer opportunities, please get in touch with us to express your interest in volunteering via [this form](https://forms.gle/qXfDdPgJxYwvMmVP7). We'll get back to you to schedule an onboarding call. Other ways to get involved and support us are [donating](https://www.paypal.me/chaynhq), starring this repo and making an open-source contribution here on GitHub, and supporting us on social media! 
+If you would like to help Chayn and receive special access to our organization and volunteer opportunities, please [visit our Getting Involved guide](https://chayn.notion.site/Get-involved-423c067536f3426a88005de68f0cab19). We'll get back to you to schedule an onboarding call. Other ways to get involved and support us are [donating](https://www.paypal.me/chaynhq), starring this repo and making an open-source contribution here on GitHub, and supporting us on social media! 
 
 Our social medias:
 
@@ -62,7 +62,7 @@ yarn
 
 Include the following environment variables in a `.env` file. 
 
-You will need to gather the following tokens from [Firebase](https://firebase.google.com/docs/projects/api-keys), these are required for the app to function. However, the [Simplybook](https://simplybook.me/en/) variables are required to pass all tests.  All other environment variables from Rollbar, Zapier, Slack, Crisp, and Mailchimp are optional. If you're a volunteer loading up the back-end, please get in touch with the team for access to the environment variables.
+You will need to gather the following tokens from [Firebase](https://firebase.google.com/docs/projects/api-keys), these are required for the app to function. However, the [Simplybook](https://simplybook.me/en/) variables are required to pass all tests. But since these tests use mocked data, **you do not need to use real Simplybook variables, simply copy paste the values given below.** If you require real Simplybook environment variables, use the same format given below. All other environment variables from Rollbar, Zapier, Slack, Crisp, and Mailchimp are optional. If you're a volunteer loading up the back-end, please get in touch with the team for access to the environment variables.
 
 ```
 ROLLBAR_ENV=development
@@ -91,8 +91,9 @@ FIREBASE_MESSAGING_SENDER_ID=
 FIREBASE_API_ID=
 FIREBASE_MEASUREMENT_ID=
 
-SIMPLYBOOK_CREDENTIALS=
-SIMPLYBOOK_COMPANY_NAME=
+# VARIABLES REQUIRED FOR TESTING, REPLACE WITH REAL VALUES IF NEEDED
+SIMPLYBOOK_CREDENTIALS='{"login":"testlogin","password":"testpassword","company":"testcompany"}'
+SIMPLYBOOK_COMPANY_NAME=testcompany
 
 # VARIABLES BELOW ARE ALL OPTIONAL
 ROLLBAR_TOKEN= 
