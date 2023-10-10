@@ -42,6 +42,5 @@ lerna-debug.log*
 install_nvm.sh
 
 # Yarn
-.yarn/*
-!.yarn/releases
+.yarn/releases
 .yarnrc
