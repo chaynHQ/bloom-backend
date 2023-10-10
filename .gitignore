@@ -1,6 +1,7 @@
 # compiled output
 /dist
 /node_modules
+/src
 
 # Logs
 logs
@@ -40,7 +41,3 @@ lerna-debug.log*
 *.dump
 
 install_nvm.sh
-
-# Yarn
-.yarn/releases
-.yarnrc
