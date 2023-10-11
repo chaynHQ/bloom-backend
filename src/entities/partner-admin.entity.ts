@@ -35,4 +35,7 @@ export class PartnerAdminEntity extends BaseBloomEntity {
 
   @OneToMany(() => PartnerAccessEntity, (partnerAccess) => partnerAccess.partnerAdmin)
   partnerAccess: PartnerAccessEntity[];
+
+  @Column({type: Boolean, nullable: false, default: true})
+  active: boolean;
 }
