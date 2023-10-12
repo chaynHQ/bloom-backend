@@ -232,6 +232,7 @@ export const mockPartnerAdminEntity: PartnerAdminEntity = {
   partnerAccess: [mockPartnerAccessEntity],
   createdAt: new Date(),
   updatedAt: new Date(),
+  active: true,
 };
 
 export const mockFeatureEntity = {
