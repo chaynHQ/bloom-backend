@@ -369,33 +369,47 @@ export class UserService {
             return user;
           } catch (error) {
             this.logger.error(`Unable to delete cypress user: ${user.email} ${error}`);
-            throw new HttpException(
-              `Unable to delete cypress user: ${user.email} ${error}`,
-              HttpStatus.INTERNAL_SERVER_ERROR,
+            this.logger.error(
+              `deleteCypressTestAccessCodes - Unable to delete cypress user: ${user.email} ${error}`,
             );
           }
         }),
       );
       return deletedUsers;
     } catch (error) {
-      this.logger.error(`Unable to delete all cypress users`, error);
-      throw error;
+      // If this fails we don't want to break cypress tests
+      this.logger.error(`deleteCypressTestAccessCodes - Unable to delete all cypress users`, error);
     }
   }
   public async getUsers(
-    filters: { email?: string; partnerAccess?: { userId: string } },
+    filters: {
+      email?: string;
+      partnerAccess?: { userId: string; featureTherapy: boolean; active: boolean };
+    },
     relations: Array<string>,
     fields: Array<string>,
     limit: number,
   ): Promise<GetUserDto[] | undefined> {
     const query = this.userRepository.createQueryBuilder('user');
-
+    // TODO this needs some refactoring but deprioritised for now
     if (relations.indexOf('partnerAccess') >= 0) {
       query.leftJoinAndSelect('user.partnerAccess', 'partnerAccess');
     }
 
     if (filters.partnerAccess?.userId === 'IS NOT NULL') {
       query.andWhere('partnerAccess.userId IS NOT NULL');
+    }
+
+    if (filters.partnerAccess?.featureTherapy) {
+      query.andWhere('partnerAccess.featureTherapy = :featureTherapy', {
+        featureTherapy: filters.partnerAccess.featureTherapy,
+      });
+    }
+
+    if (filters.partnerAccess?.active) {
+      query.andWhere('partnerAccess.active = :active', {
+        active: filters.partnerAccess.active,
+      });
     }
 
     if (filters.email) {
@@ -408,7 +422,6 @@ export class UserService {
 
     const queryResult = await query.getMany();
     const formattedUsers = queryResult.map((user) => formatGetUsersObject(user));
-
     return formattedUsers;
   }
 }

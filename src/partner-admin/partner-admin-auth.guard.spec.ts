@@ -19,7 +19,7 @@ const userEntity: UserEntity = {
   isSuperAdmin: false,
   crispTokenId: '123',
   partnerAccess: [],
-  partnerAdmin: { id: 'partnerAdminId', partner: {} } as PartnerAdminEntity,
+  partnerAdmin: { id: 'partnerAdminId', active: true, partner: {} } as PartnerAdminEntity,
   isActive: true,
   courseUser: [],
   signUpLanguage: 'en',
@@ -78,6 +78,38 @@ describe('PartnerAdminAuthGuard', () => {
     const canActivate = await guard.canActivate(context);
 
     expect(canActivate).toBe(false);
+  });
+
+  it('should return true when the partner admin is active', async () => {
+    jest.spyOn(mockAuthService, 'parseAuth').mockImplementation(() =>
+      Promise.resolve({
+        uid: 'uuid',
+      } as DecodedIdToken),
+    );
+    jest.spyOn(mockUserRepository, 'createQueryBuilder').mockImplementationOnce(
+      createQueryBuilderMock({
+        getOne: jest.fn().mockResolvedValue(userEntity),
+      }) as never, // TODO resolve this typescript issue
+    );
+
+    const canActivate = await guard.canActivate(context);
+
+    expect(canActivate).toBe(true);
+  });
+
+  it('should return error when the partner admin is inactive', async () => {
+    jest.spyOn(mockAuthService, 'parseAuth').mockImplementation(() =>
+      Promise.resolve({
+        uid: 'uuid',
+      } as DecodedIdToken),
+    );
+    jest.spyOn(mockUserRepository, 'createQueryBuilder').mockImplementationOnce(
+      createQueryBuilderMock({
+        getOne: jest.fn().mockResolvedValue({ ...userEntity, partnerAdmin: { id: 'partnerAdminId', active: false, partner: {} } }),
+      }) as never, // TODO resolve this typescript issue
+    );
+
+    await expect(guard.canActivate(context)).rejects.toThrowError();
   });
 
   it('should return false when the authtoken cannot be resolved', async () => {
