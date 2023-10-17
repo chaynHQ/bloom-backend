@@ -382,7 +382,7 @@ export class UserService {
     }
   }
   public async getUsers(
-    filters: { email?: string; partnerAccess?: { userId: string } },
+    filters: { email?: string; partnerAccess?: { userId: string; featureTherapy: boolean } },
     relations: Array<string>,
     fields: Array<string>,
     limit: number,
@@ -397,6 +397,12 @@ export class UserService {
       query.andWhere('partnerAccess.userId IS NOT NULL');
     }
 
+    if (filters.partnerAccess?.featureTherapy) {
+      query.andWhere('partnerAccess.featureTherapy = :featureTherapy', {
+        featureTherapy: filters.partnerAccess.featureTherapy,
+      });
+    }
+
     if (filters.email) {
       query.andWhere('user.email ILike :email', { email: `%${filters.email}%` });
     }
@@ -407,7 +413,6 @@ export class UserService {
 
     const queryResult = await query.getMany();
     const formattedUsers = queryResult.map((user) => formatGetUsersObject(user));
-
     return formattedUsers;
   }
 }
