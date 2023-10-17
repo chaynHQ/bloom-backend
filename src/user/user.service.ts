@@ -382,13 +382,16 @@ export class UserService {
     }
   }
   public async getUsers(
-    filters: { email?: string; partnerAccess?: { userId: string; featureTherapy: boolean } },
+    filters: {
+      email?: string;
+      partnerAccess?: { userId: string; featureTherapy: boolean; active: boolean };
+    },
     relations: Array<string>,
     fields: Array<string>,
     limit: number,
   ): Promise<GetUserDto[] | undefined> {
     const query = this.userRepository.createQueryBuilder('user');
-
+    // TODO this needs some refactoring but deprioritised for now
     if (relations.indexOf('partnerAccess') >= 0) {
       query.leftJoinAndSelect('user.partnerAccess', 'partnerAccess');
     }
@@ -400,6 +403,12 @@ export class UserService {
     if (filters.partnerAccess?.featureTherapy) {
       query.andWhere('partnerAccess.featureTherapy = :featureTherapy', {
         featureTherapy: filters.partnerAccess.featureTherapy,
+      });
+    }
+
+    if (filters.partnerAccess?.active) {
+      query.andWhere('partnerAccess.active = :active', {
+        active: filters.partnerAccess.active,
       });
     }
 
