@@ -8,6 +8,7 @@ import { UserRepository } from '../user/user.repository';
 import { generateRandomString } from '../utils/utils';
 import { CreatePartnerAdminUserDto } from './dtos/create-partner-admin-user.dto';
 import { CreatePartnerAdminDto } from './dtos/create-partner-admin.dto';
+import { UpdatePartnerAdminDto } from './dtos/update-partner-admin.dto';
 import { PartnerAdminRepository } from './partner-admin.repository';
 
 @Injectable()
@@ -66,6 +67,31 @@ export class PartnerAdminService {
       if (error.code === 'auth/email-already-in-use') {
         throw new HttpException('This email address is already in use', HttpStatus.BAD_REQUEST);
       }
+      throw error;
+    }
+  }
+
+  async updatePartnerAdminById(
+    partnerAdminId: string,
+    updatePartnerAdminDto: UpdatePartnerAdminDto,
+  ): Promise<boolean> {
+    try {
+      const partnerAdminResponse = await this.partnerAdminRepository.findOne({
+        where: { partnerAdminId },
+      });
+
+      if (!partnerAdminResponse) {
+        throw new HttpException('Partner admin does not exist', HttpStatus.BAD_REQUEST);
+      }
+      await this.partnerAdminRepository
+        .createQueryBuilder('partner_admin')
+        .update(PartnerAdminEntity)
+        .set({ active: updatePartnerAdminDto?.active })
+        .where('partnerAdminId = :partnerAdminId', { partnerAdminId })
+        .returning('*')
+        .execute();
+      return true;
+    } catch (error) {
       throw error;
     }
   }
