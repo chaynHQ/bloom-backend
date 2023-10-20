@@ -10,6 +10,8 @@ export class SubscriptionEntity extends BaseBloomEntity {
   @Column({ unique: true })
   name: string;
 
-  @OneToMany(() => SubscriptionUserEntity, (subscriptionUser) => subscriptionUser.subscription)
+  @OneToMany(() => SubscriptionUserEntity, (subscriptionUser) => subscriptionUser.subscription, {
+    cascade: true,
+  })
   subscriptionUser: SubscriptionUserEntity[];
 }

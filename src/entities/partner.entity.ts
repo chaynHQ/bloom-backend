@@ -17,18 +17,22 @@ export class PartnerEntity extends BaseBloomEntity {
   isActive: boolean;
 
   @OneToMany(() => PartnerAdminEntity, (partnerAdminEntity) => partnerAdminEntity.partner, {
-    onDelete: 'CASCADE',
+    cascade: true,
   })
   partnerAdmin: PartnerAdminEntity[];
 
   @OneToMany(() => PartnerAccessEntity, (partnerAccessEntity) => partnerAccessEntity.partner, {
-    onDelete: 'CASCADE',
+    cascade: true,
   })
   partnerAccess: PartnerAccessEntity[];
 
-  @OneToMany(() => CoursePartnerEntity, (coursePartnerEntity) => coursePartnerEntity.partner)
+  @OneToMany(() => CoursePartnerEntity, (coursePartnerEntity) => coursePartnerEntity.partner, {
+    cascade: true,
+  })
   partner: PartnerEntity[];
 
-  @OneToMany(() => PartnerFeatureEntity, (partnerFeatureEntity) => partnerFeatureEntity.partner)
+  @OneToMany(() => PartnerFeatureEntity, (partnerFeatureEntity) => partnerFeatureEntity.partner, {
+    cascade: true,
+  })
   partnerFeature: PartnerFeatureEntity[];
 }
