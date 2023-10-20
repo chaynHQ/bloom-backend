@@ -385,7 +385,7 @@ export class UserService {
     filters: {
       email?: string;
       partnerAccess?: { userId: string; featureTherapy: boolean; active: boolean };
-      partnerAdmin?: { partnerAdminId: string }
+      partnerAdmin?: { partnerAdminId: string };
     },
     relations: Array<string>,
     fields: Array<string>,
