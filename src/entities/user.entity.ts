@@ -32,19 +32,21 @@ export class UserEntity extends BaseBloomEntity {
   @Column({ type: Boolean, default: true })
   isActive: boolean;
 
-  @OneToMany(() => PartnerAccessEntity, (partnerAccess) => partnerAccess.user)
+  @OneToMany(() => PartnerAccessEntity, (partnerAccess) => partnerAccess.user, { cascade: true })
   partnerAccess: PartnerAccessEntity[];
 
-  @OneToOne(() => PartnerAdminEntity, (partnerAdmin) => partnerAdmin.user)
+  @OneToOne(() => PartnerAdminEntity, (partnerAdmin) => partnerAdmin.user, { cascade: true })
   partnerAdmin: PartnerAdminEntity;
 
-  @OneToMany(() => CourseUserEntity, (courseUser) => courseUser.user)
+  @OneToMany(() => CourseUserEntity, (courseUser) => courseUser.user, { cascade: true })
   courseUser: CourseUserEntity[];
 
-  @OneToMany(() => SubscriptionUserEntity, (subscriptionUser) => subscriptionUser.user)
+  @OneToMany(() => SubscriptionUserEntity, (subscriptionUser) => subscriptionUser.user, {
+    cascade: true,
+  })
   subscriptionUser: SubscriptionUserEntity[];
 
-  @OneToMany(() => TherapySessionEntity, (therapySession) => therapySession.user)
+  @OneToMany(() => TherapySessionEntity, (therapySession) => therapySession.user, { cascade: true })
   therapySession: TherapySessionEntity[];
 
   @Column({ unique: true })

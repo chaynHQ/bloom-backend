@@ -13,13 +13,17 @@ export class SubscriptionUserEntity extends BaseBloomEntity {
 
   @Column()
   subscriptionId: string;
-  @ManyToOne(() => SubscriptionEntity, (subscriptionEntity) => subscriptionEntity.subscriptionUser)
+  @ManyToOne(
+    () => SubscriptionEntity,
+    (subscriptionEntity) => subscriptionEntity.subscriptionUser,
+    { onDelete: 'CASCADE' },
+  )
   @JoinTable({ name: 'subscription', joinColumn: { name: 'subscriptionId' } })
   subscription;
 
   @Column()
   userId: string;
-  @ManyToOne(() => UserEntity, (userEntity) => userEntity.subscriptionUser)
+  @ManyToOne(() => UserEntity, (userEntity) => userEntity.subscriptionUser, { onDelete: 'CASCADE' })
   @JoinTable({ name: 'user', joinColumn: { name: 'userId' } })
   user;
 
