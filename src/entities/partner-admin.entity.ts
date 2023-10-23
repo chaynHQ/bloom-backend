@@ -23,17 +23,22 @@ export class PartnerAdminEntity extends BaseBloomEntity {
   @OneToOne(() => UserEntity, (userEntity) => userEntity.partnerAdmin, {
     primary: true,
     eager: true,
+    onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'userId' })
   user: UserEntity;
 
   @Column()
   partnerId: string;
-  @ManyToOne(() => PartnerEntity, (partnerEntity) => partnerEntity.partnerAdmin)
+  @ManyToOne(() => PartnerEntity, (partnerEntity) => partnerEntity.partnerAdmin, {
+    onDelete: 'CASCADE',
+  })
   @JoinTable({ name: 'partner', joinColumn: { name: 'partnerId' } })
   partner: PartnerEntity;
 
-  @OneToMany(() => PartnerAccessEntity, (partnerAccess) => partnerAccess.partnerAdmin)
+  @OneToMany(() => PartnerAccessEntity, (partnerAccess) => partnerAccess.partnerAdmin, {
+    cascade: true,
+  })
   partnerAccess: PartnerAccessEntity[];
 
   @Column({ type: Boolean, nullable: false, default: true })

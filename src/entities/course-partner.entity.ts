@@ -11,13 +11,13 @@ export class CoursePartnerEntity extends BaseBloomEntity {
 
   @Column({ nullable: true })
   partnerId: string;
-  @ManyToOne(() => PartnerEntity, (partnerEntity) => partnerEntity.partner)
+  @ManyToOne(() => PartnerEntity, (partnerEntity) => partnerEntity.partner, { onDelete: 'CASCADE' })
   @JoinTable({ name: 'partner', joinColumn: { name: 'partnerId' } })
   partner: PartnerEntity;
 
   @Column()
   courseId: string;
-  @ManyToOne(() => CourseEntity, (courseEntity) => courseEntity.courseUser)
+  @ManyToOne(() => CourseEntity, (courseEntity) => courseEntity.courseUser, { onDelete: 'CASCADE' })
   @JoinTable({ name: 'course', joinColumn: { name: 'courseId' } })
   course: CourseEntity;
 

@@ -34,10 +34,12 @@ export class SessionEntity extends BaseBloomEntity {
 
   @Column()
   courseId: string;
-  @ManyToOne(() => CourseEntity, (courseEntity) => courseEntity.session)
+  @ManyToOne(() => CourseEntity, (courseEntity) => courseEntity.session, { onDelete: 'CASCADE' })
   @JoinTable({ name: 'course', joinColumn: { name: 'courseId' } })
   course: CourseEntity;
 
-  @OneToMany(() => SessionUserEntity, (sessionUserEntity) => sessionUserEntity.session)
+  @OneToMany(() => SessionUserEntity, (sessionUserEntity) => sessionUserEntity.session, {
+    cascade: true,
+  })
   sessionUser: SessionUserEntity[];
 }
