@@ -11,6 +11,9 @@ import { CourseEntity } from 'src/entities/course.entity';
 import { EmailCampaignEntity } from 'src/entities/email-campaign.entity';
 import { SessionEntity } from 'src/entities/session.entity';
 import { UserEntity } from 'src/entities/user.entity';
+import { EVENT_NAME } from 'src/event-logger/event-logger.interface';
+import { EventLoggerRepository } from 'src/event-logger/event-logger.repository';
+import { EventLoggerService } from 'src/event-logger/event-logger.service';
 import { PartnerAccessRepository } from 'src/partner-access/partner-access.repository';
 import { PartnerAdminRepository } from 'src/partner-admin/partner-admin.repository';
 import { PartnerRepository } from 'src/partner/partner.repository';
@@ -32,6 +35,7 @@ import {
   mockCoursePartnerRepositoryMethods,
   mockCourseRepositoryMethods,
   mockEmailCampaignRepositoryMethods,
+  mockEventLoggerServiceMethods,
   mockMailchimpClientMethods,
   mockPartnerAccessRepositoryMethods,
   mockSessionRepositoryMethods,
@@ -39,6 +43,7 @@ import {
   mockTherapySessionRepositoryMethods,
   mockUserRepositoryMethods,
 } from 'test/utils/mockedServices';
+import { WebhookCreateEventLogDto } from './dto/webhook-create-event-log.dto';
 import { EmailCampaignRepository } from './email-campaign/email-campaign.repository';
 import { TherapySessionRepository } from './therapy-session.repository';
 import { WebhooksService } from './webhooks.service';
@@ -107,6 +112,7 @@ describe('WebhooksService', () => {
   const mockedEmailCampaignRepository = createMock<EmailCampaignRepository>(
     mockEmailCampaignRepositoryMethods,
   );
+  const mockedEventLoggerService = createMock<EventLoggerService>(mockEventLoggerServiceMethods);
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -138,6 +144,8 @@ describe('WebhooksService', () => {
           provide: MailchimpClient,
           useValue: mockedMailchimpClient,
         },
+        { provide: EventLoggerService, useValue: mockedEventLoggerService },
+        EventLoggerRepository,
         CoursePartnerRepository,
         PartnerService,
         PartnerRepository,
@@ -702,6 +710,51 @@ describe('WebhooksService', () => {
       });
       await expect(service.sendImpactMeasurementEmail()).rejects.toThrowError(
         'SendImpactMeasurementEmail - Unable to fetch user',
+      );
+    });
+  });
+  describe('createEventLog', () => {
+    it('should create an eventLog if DTO is correct', async () => {
+      const eventDto: WebhookCreateEventLogDto = {
+        event: EVENT_NAME.CHAT_MESSAGE_SENT,
+        date: new Date(2000, 1, 1),
+        email: 'a@b.com',
+      };
+      const log = await service.createEventLog(eventDto);
+
+      expect(log).toEqual({
+        date: new Date(2000, 1, 1),
+        event: 'CHAT_MESSAGE_SENT',
+        id: 'eventLogId1ß',
+        userId: '1',
+      });
+    });
+    it('should throw 404 if email is not related to a user is incorrect', async () => {
+      const eventDto: WebhookCreateEventLogDto = {
+        event: EVENT_NAME.CHAT_MESSAGE_SENT,
+        date: new Date(2000, 1, 1),
+        email: 'a@b.com',
+      };
+      jest.spyOn(mockedUserRepository, 'findOne').mockImplementationOnce(async () => {
+        return null;
+      });
+
+      await expect(service.createEventLog(eventDto)).rejects.toThrowError(
+        `webhooksService.createEventLog error, no user attached to email ${eventDto.email}`,
+      );
+    });
+    it('should throw 500 if failed to create user', async () => {
+      const eventDto: WebhookCreateEventLogDto = {
+        event: EVENT_NAME.CHAT_MESSAGE_SENT,
+        date: new Date(2000, 1, 1),
+        email: 'a@b.com',
+      };
+      jest.spyOn(mockedEventLoggerService, 'createEventLog').mockImplementationOnce(async () => {
+        throw new Error('Unable to create event log error');
+      });
+
+      await expect(service.createEventLog(eventDto)).rejects.toThrowError(
+        `Unable to create event log error`,
       );
     });
   });

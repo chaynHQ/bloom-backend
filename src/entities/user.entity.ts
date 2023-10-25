@@ -3,6 +3,7 @@ import { PartnerAccessEntity } from '../entities/partner-access.entity';
 import { PartnerAdminEntity } from '../entities/partner-admin.entity';
 import { BaseBloomEntity } from './base.entity';
 import { CourseUserEntity } from './course-user.entity';
+import { EventLogEntity } from './event-log.entity';
 import { SubscriptionUserEntity } from './subscription-user.entity';
 import { TherapySessionEntity } from './therapy-session.entity';
 
@@ -48,6 +49,9 @@ export class UserEntity extends BaseBloomEntity {
 
   @OneToMany(() => TherapySessionEntity, (therapySession) => therapySession.user, { cascade: true })
   therapySession: TherapySessionEntity[];
+
+  @OneToMany(() => EventLogEntity, (eventLog) => eventLog.user, { cascade: true })
+  eventLog: EventLogEntity[];
 
   @Column({ unique: true })
   @Generated('uuid')
