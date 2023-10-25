@@ -5,9 +5,12 @@ import startOfDay from 'date-fns/startOfDay';
 import { MailchimpClient } from 'src/api/mailchimp/mailchip-api';
 import { getBookingsForDate } from 'src/api/simplybook/simplybook-api';
 import { SlackMessageClient } from 'src/api/slack/slack-api';
+import { EventLogEntity } from 'src/entities/event-log.entity';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
+import { EventLoggerService } from 'src/event-logger/event-logger.service';
 import { ZapierSimplybookBodyDto } from 'src/partner-access/dtos/zapier-body.dto';
 import { getYesterdaysDate } from 'src/utils/utils';
+import { WebhookCreateEventLogDto } from 'src/webhooks/dto/webhook-create-event-log.dto';
 import StoryblokClient from 'storyblok-js-client';
 import { Between } from 'typeorm';
 import { getCrispPeopleData, updateCrispProfileData } from '../api/crisp/crisp-api';
@@ -39,6 +42,7 @@ export class WebhooksService {
     private therapySessionRepository: TherapySessionRepository,
     @InjectRepository(EmailCampaignRepository)
     private emailCampaignRepository: EmailCampaignRepository,
+    private eventLoggerService: EventLoggerService,
     private mailchimpClient: MailchimpClient,
     private slackMessageClient: SlackMessageClient,
   ) {}
@@ -483,6 +487,35 @@ export class WebhooksService {
       }
     } catch (error) {
       throw error;
+    }
+  }
+
+  async createEventLog(createEventDto: WebhookCreateEventLogDto): Promise<EventLogEntity> {
+    if (!createEventDto.email && !createEventDto.userId) {
+      throw new Error('Blah eror');
+    }
+
+    try {
+      // Only fetch user object if strictly necessary
+      const user = createEventDto.userId
+        ? undefined
+        : await this.userRepository.findOne({ email: createEventDto.email });
+
+      if (user || createEventDto.userId) {
+        const event = await this.eventLoggerService.createEventLog({
+          userId: createEventDto.userId || user.id,
+          event: createEventDto.event,
+          date: createEventDto.date,
+        });
+        return event;
+      } else {
+        throw new HttpException(
+          `webhooksService.createEventLog error, no user attached to email ${createEventDto.email}`,
+          HttpStatus.NOT_FOUND,
+        );
+      }
+    } catch (err) {
+      throw err;
     }
   }
 }

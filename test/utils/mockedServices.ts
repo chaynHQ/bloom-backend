@@ -6,6 +6,7 @@ import { CoursePartnerService } from 'src/course-partner/course-partner.service'
 import { CourseRepository } from 'src/course/course.repository';
 import { CourseEntity } from 'src/entities/course.entity';
 import { EmailCampaignEntity } from 'src/entities/email-campaign.entity';
+import { EventLogEntity } from 'src/entities/event-log.entity';
 import { FeatureEntity } from 'src/entities/feature.entity';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { PartnerFeatureEntity } from 'src/entities/partner-feature.entity';
@@ -13,6 +14,7 @@ import { PartnerEntity } from 'src/entities/partner.entity';
 import { SessionEntity } from 'src/entities/session.entity';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
 import { UserEntity } from 'src/entities/user.entity';
+import { EventLoggerService } from 'src/event-logger/event-logger.service';
 import { FeatureRepository } from 'src/feature/feature.repository';
 import { PartnerAccessRepository } from 'src/partner-access/partner-access.repository';
 import { PartnerFeatureRepository } from 'src/partner-feature/partner-feature.repository';
@@ -240,4 +242,10 @@ export const mockFeatureRepositoryMethods: PartialFuncReturn<FeatureRepository> 
     return [{ ...mockFeatureEntity, ...(arg ? { ...arg } : {}) }] as FeatureEntity[];
   },
   save: async (arg) => arg as FeatureEntity,
+};
+
+export const mockEventLoggerServiceMethods: PartialFuncReturn<EventLoggerService> = {
+  createEventLog: async ({ userId, event, date }) => {
+    return { userId, event, date, id: 'eventLogId1ß' } as EventLogEntity;
+  },
 };
