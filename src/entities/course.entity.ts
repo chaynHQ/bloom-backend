@@ -33,12 +33,12 @@ export class CourseEntity extends BaseBloomEntity {
   })
   storyblokUuid: string;
 
-  @OneToMany(() => SessionEntity, (sessionEntity) => sessionEntity.course)
+  @OneToMany(() => SessionEntity, (sessionEntity) => sessionEntity.course, { cascade: true })
   session: SessionEntity[];
 
-  @OneToMany(() => CourseUserEntity, (courseUser) => courseUser.course)
+  @OneToMany(() => CourseUserEntity, (courseUser) => courseUser.course, { cascade: true })
   courseUser: CourseUserEntity[];
 
-  @OneToMany(() => CoursePartnerEntity, (coursePartner) => coursePartner.course)
+  @OneToMany(() => CoursePartnerEntity, (coursePartner) => coursePartner.course, { cascade: true })
   coursePartner: CoursePartnerEntity[];
 }

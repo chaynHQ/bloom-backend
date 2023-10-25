@@ -47,7 +47,9 @@ export class TherapySessionEntity extends BaseBloomEntity {
 
   @Column()
   partnerAccessId: string;
-  @ManyToOne(() => PartnerAccessEntity, (partnerAccess) => partnerAccess.therapySession)
+  @ManyToOne(() => PartnerAccessEntity, (partnerAccess) => partnerAccess.therapySession, {
+    onDelete: 'CASCADE',
+  })
   @JoinTable({ name: 'partner_access', joinColumn: { name: 'partnerAccessId' } })
   partnerAccess: PartnerAccessEntity;
 
