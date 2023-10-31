@@ -492,7 +492,10 @@ export class WebhooksService {
 
   async createEventLog(createEventDto: WebhookCreateEventLogDto): Promise<EventLogEntity> {
     if (!createEventDto.email && !createEventDto.userId) {
-      throw new Error('Blah eror');
+      throw new HttpException(
+        'webhooks.createEventLog - Neither User email or userId was provided',
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
     try {
