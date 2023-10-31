@@ -14,6 +14,7 @@ import { PartnerEntity } from 'src/entities/partner.entity';
 import { SessionEntity } from 'src/entities/session.entity';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
 import { UserEntity } from 'src/entities/user.entity';
+import { EventLoggerRepository } from 'src/event-logger/event-logger.repository';
 import { EventLoggerService } from 'src/event-logger/event-logger.service';
 import { FeatureRepository } from 'src/feature/feature.repository';
 import { PartnerAccessRepository } from 'src/partner-access/partner-access.repository';
@@ -29,6 +30,7 @@ import { WebhooksService } from 'src/webhooks/webhooks.service';
 import {
   mockCourse,
   mockEmailCampaignEntity,
+  mockEventLog,
   mockFeatureEntity,
   mockPartnerAccessEntity,
   mockPartnerAccessEntityBase,
@@ -248,4 +250,22 @@ export const mockEventLoggerServiceMethods: PartialFuncReturn<EventLoggerService
   createEventLog: async ({ userId, event, date }) => {
     return { userId, event, date, id: 'eventLogId1ß' } as EventLogEntity;
   },
+};
+
+export const mockEventLoggerRepositoryMethods: PartialFuncReturn<EventLoggerRepository> = {
+  createQueryBuilder: createQueryBuilderMock(),
+  create: (dto) => {
+    return {
+      ...mockEventLog,
+      ...dto,
+      id: 'newId',
+    } as EventLogEntity;
+  },
+  findOne: async (arg) => {
+    return { ...mockEventLog, ...(arg ? { ...arg } : {}) } as EventLogEntity;
+  },
+  find: async (arg) => {
+    return [{ ...mockEventLog, ...(arg ? { ...arg } : {}) }] as EventLogEntity[];
+  },
+  save: async (arg) => arg as EventLogEntity,
 };
