@@ -25,6 +25,7 @@ const userEntity: UserEntity = {
   signUpLanguage: 'en',
   subscriptionUser: [],
   therapySession: [],
+  eventLog: [],
 };
 describe('PartnerAdminAuthGuard', () => {
   let guard: PartnerAdminAuthGuard;
@@ -105,7 +106,10 @@ describe('PartnerAdminAuthGuard', () => {
     );
     jest.spyOn(mockUserRepository, 'createQueryBuilder').mockImplementationOnce(
       createQueryBuilderMock({
-        getOne: jest.fn().mockResolvedValue({ ...userEntity, partnerAdmin: { id: 'partnerAdminId', active: false, partner: {} } }),
+        getOne: jest.fn().mockResolvedValue({
+          ...userEntity,
+          partnerAdmin: { id: 'partnerAdminId', active: false, partner: {} },
+        }),
       }) as never, // TODO resolve this typescript issue
     );
 

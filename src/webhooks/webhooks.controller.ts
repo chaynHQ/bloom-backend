@@ -1,6 +1,8 @@
 import { Body, Controller, Logger, Post, UseGuards } from '@nestjs/common';
 import { ApiBody, ApiTags } from '@nestjs/swagger';
+import { EventLogEntity } from 'src/entities/event-log.entity';
 import { ControllerDecorator } from 'src/utils/controller.decorator';
+import { WebhookCreateEventLogDto } from 'src/webhooks/dto/webhook-create-event-log.dto';
 import { ZapierSimplybookBodyDto } from '../partner-access/dtos/zapier-body.dto';
 import { ZapierAuthGuard } from '../partner-access/zapier-auth.guard';
 import { StoryDto } from './dto/story.dto';
@@ -39,6 +41,13 @@ export class WebhooksController {
   @Post('impact-measurement')
   async sendImpactMeasurementEmail(): Promise<string> {
     return this.webhooksService.sendImpactMeasurementEmail();
+  }
+
+  @UseGuards(ZapierAuthGuard)
+  @Post('event-log')
+  @ApiBody({ type: WebhookCreateEventLogDto })
+  async createEventLog(@Body() createEventLogDto): Promise<EventLogEntity> {
+    return this.webhooksService.createEventLog(createEventLogDto);
   }
 
   @Post('storyblok')
