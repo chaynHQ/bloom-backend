@@ -51,7 +51,7 @@ export class PartnerAdminController {
   async updatePartnerAdminById(
     @Param('id') partnerAdminId: string,
     @Body() updatePartnerAdminDto: UpdatePartnerAdminDto,
-  ): Promise<boolean> {
+  ): Promise<PartnerAdminEntity | unknown> {
     return this.partnerAdminService.updatePartnerAdminById(partnerAdminId, updatePartnerAdminDto);
   }
 }

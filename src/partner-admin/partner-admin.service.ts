@@ -74,7 +74,7 @@ export class PartnerAdminService {
   async updatePartnerAdminById(
     partnerAdminId: string,
     updatePartnerAdminDto: UpdatePartnerAdminDto,
-  ): Promise<boolean> {
+  ): Promise<PartnerAdminEntity | unknown> {
     try {
       const partnerAdminResponse = await this.partnerAdminRepository.findOne({
         where: { partnerAdminId },
@@ -83,14 +83,12 @@ export class PartnerAdminService {
       if (!partnerAdminResponse) {
         throw new HttpException('Partner admin does not exist', HttpStatus.BAD_REQUEST);
       }
-      await this.partnerAdminRepository
+      return this.partnerAdminRepository
         .createQueryBuilder('partner_admin')
         .update(PartnerAdminEntity)
-        .set({ active: updatePartnerAdminDto?.active })
+        .set({ active: updatePartnerAdminDto.active })
         .where('partnerAdminId = :partnerAdminId', { partnerAdminId })
         .returning('*')
-        .execute();
-      return true;
     } catch (error) {
       throw error;
     }
