@@ -281,6 +281,7 @@ describe('UserService', () => {
         signUpLanguage,
         contactPermission,
         courseUser,
+        eventLog,
         ...userBase
       } = mockUserEntity;
       jest.spyOn(repo, 'createQueryBuilder').mockImplementationOnce(

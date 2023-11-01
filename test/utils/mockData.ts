@@ -1,6 +1,7 @@
 import { UserRecord } from 'firebase-admin/lib/auth/user-record';
 import { CourseEntity } from 'src/entities/course.entity';
 import { EmailCampaignEntity } from 'src/entities/email-campaign.entity';
+import { EventLogEntity } from 'src/entities/event-log.entity';
 import { FeatureEntity } from 'src/entities/feature.entity';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { PartnerAdminEntity } from 'src/entities/partner-admin.entity';
@@ -9,6 +10,7 @@ import { PartnerEntity } from 'src/entities/partner.entity';
 import { SessionEntity } from 'src/entities/session.entity';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
 import { UserEntity } from 'src/entities/user.entity';
+import { EVENT_NAME } from 'src/event-logger/event-logger.interface';
 import { IFirebaseUser } from 'src/firebase/firebase-user.interface';
 import { ZapierSimplybookBodyDto } from 'src/partner-access/dtos/zapier-body.dto';
 import {
@@ -138,6 +140,7 @@ export const mockUserEntity: UserEntity = {
   signUpLanguage: 'en',
   subscriptionUser: [],
   therapySession: [],
+  eventLog: [],
 };
 
 export const mockTherapySessionEntity = {
@@ -266,3 +269,9 @@ export const partnerAccessArray = Array.from(
   ],
   (x, index) => ({ ...mockPartnerAccessEntity, accessCode: x.accessCode + index }),
 );
+
+export const mockEventLog: EventLogEntity = {
+  event: EVENT_NAME.CHAT_MESSAGE_SENT,
+  date: new Date(2000, 1, 1),
+  userId: '123',
+} as EventLogEntity;
