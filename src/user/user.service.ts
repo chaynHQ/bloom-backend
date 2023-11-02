@@ -385,6 +385,7 @@ export class UserService {
     filters: {
       email?: string;
       partnerAccess?: { userId: string; featureTherapy: boolean; active: boolean };
+      partnerAdmin?: { partnerAdminId: string };
     },
     relations: Array<string>,
     fields: Array<string>,
@@ -394,6 +395,14 @@ export class UserService {
     // TODO this needs some refactoring but deprioritised for now
     if (relations.indexOf('partnerAccess') >= 0) {
       query.leftJoinAndSelect('user.partnerAccess', 'partnerAccess');
+    }
+
+    if (relations?.indexOf('partner-admin') >= 0) {
+      query.leftJoinAndSelect('user.partnerAdmin', 'partnerAdmin');
+    }
+
+    if (filters?.partnerAdmin?.partnerAdminId === 'IS NOT NULL') {
+      query.andWhere('partnerAdmin.partnerAdminId IS NOT NULL');
     }
 
     if (filters.partnerAccess?.userId === 'IS NOT NULL') {
