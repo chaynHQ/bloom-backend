@@ -5,6 +5,8 @@ import { SlackMessageClient } from 'src/api/slack/slack-api';
 import { CoursePartnerRepository } from 'src/course-partner/course-partner.repository';
 import { CoursePartnerService } from 'src/course-partner/course-partner.service';
 import { CourseRepository } from 'src/course/course.repository';
+import { EventLoggerRepository } from 'src/event-logger/event-logger.repository';
+import { EventLoggerService } from 'src/event-logger/event-logger.service';
 import { PartnerAdminRepository } from 'src/partner-admin/partner-admin.repository';
 import { PartnerRepository } from 'src/partner/partner.repository';
 import { PartnerService } from 'src/partner/partner.service';
@@ -28,6 +30,7 @@ import { WebhooksService } from './webhooks.service';
       TherapySessionRepository,
       PartnerAdminRepository,
       EmailCampaignRepository,
+      EventLoggerRepository,
     ]),
   ],
   providers: [
@@ -36,6 +39,7 @@ import { WebhooksService } from './webhooks.service';
     PartnerService,
     MailchimpClient,
     SlackMessageClient,
+    EventLoggerService,
   ],
   controllers: [WebhooksController],
 })

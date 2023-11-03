@@ -28,7 +28,9 @@ export class PartnerAccessEntity extends BaseBloomEntity {
 
   @Column()
   partnerId: string;
-  @ManyToOne(() => PartnerEntity, (partnerEntity) => partnerEntity.partnerAccess)
+  @ManyToOne(() => PartnerEntity, (partnerEntity) => partnerEntity.partnerAccess, {
+    onDelete: 'CASCADE',
+  })
   @JoinTable({ name: 'partner', joinColumn: { name: 'partnerId' } })
   partner: PartnerEntity;
 
@@ -36,11 +38,14 @@ export class PartnerAccessEntity extends BaseBloomEntity {
   partnerAdminId: string;
   @ManyToOne(() => PartnerAdminEntity, (partnerAdminEntity) => partnerAdminEntity.partnerAccess, {
     eager: true,
+    onDelete: 'SET NULL',
   })
   @JoinTable({ name: 'partner_admin', joinColumn: { name: 'partnerAdminId' } })
   partnerAdmin: PartnerAdminEntity;
 
-  @OneToMany(() => TherapySessionEntity, (therapySession) => therapySession.partnerAccess)
+  @OneToMany(() => TherapySessionEntity, (therapySession) => therapySession.partnerAccess, {
+    cascade: true,
+  })
   therapySession: TherapySessionEntity[];
 
   @Column({ default: true })

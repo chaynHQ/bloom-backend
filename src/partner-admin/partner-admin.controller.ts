@@ -1,9 +1,10 @@
-import { Body, Controller, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { PartnerAdminEntity } from '../entities/partner-admin.entity';
 import { ControllerDecorator } from '../utils/controller.decorator';
 import { CreatePartnerAdminUserDto } from './dtos/create-partner-admin-user.dto';
 import { CreatePartnerAdminDto } from './dtos/create-partner-admin.dto';
+import { UpdatePartnerAdminDto } from './dtos/update-partner-admin.dto';
 import { PartnerAdminService } from './partner-admin.service';
 import { SuperAdminAuthGuard } from './super-admin-auth.guard';
 
@@ -40,5 +41,17 @@ export class PartnerAdminController {
     @Body() createPartnerAdminUserDto: CreatePartnerAdminUserDto,
   ): Promise<PartnerAdminEntity | unknown> {
     return this.partnerAdminService.createPartnerAdminUser(createPartnerAdminUserDto);
+  }
+
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ description: 'Update partner admin by id' })
+  @UseGuards(SuperAdminAuthGuard)
+  @Patch(':id')
+  @ApiBody({ type: UpdatePartnerAdminDto })
+  async updatePartnerAdminById(
+    @Param('id') partnerAdminId: string,
+    @Body() updatePartnerAdminDto: UpdatePartnerAdminDto,
+  ): Promise<PartnerAdminEntity | unknown> {
+    return this.partnerAdminService.updatePartnerAdminById(partnerAdminId, updatePartnerAdminDto);
   }
 }
