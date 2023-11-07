@@ -1,7 +1,7 @@
 import { createMock } from '@golevelup/ts-jest';
 import { HttpException, HttpStatus } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { mockSimplybookBodyBase } from 'test/utils/mockData';
+import { mockSimplybookBodyBase, mockTherapySessionEntity } from 'test/utils/mockData';
 import { mockWebhooksServiceMethods } from 'test/utils/mockedServices';
 import { WebhooksController } from './webhooks.controller';
 import { WebhooksService } from './webhooks.service';
@@ -23,7 +23,7 @@ describe('AppController', () => {
     it('updatePartnerAccessTherapy should return successful if service returns successful', async () => {
       await expect(
         webhooksController.updatePartnerAccessTherapy(mockSimplybookBodyBase),
-      ).resolves.toBe('Successful');
+      ).resolves.toBe(mockTherapySessionEntity);
     });
     it('updatePartnerAccessTherapy should error  if service returns errors', async () => {
       jest

@@ -147,9 +147,9 @@ export const formatPartnerObject = (partnerObject: PartnerEntity): IPartner => {
   };
 };
 
-export const formatTherapySessionObject = (
+export const serializeZapierSimplyBookDtoToTherapySessionEntity = (
   therapySession: ZapierSimplybookBodyDto,
-  partnerAccessId: string,
+  partnerAccess: PartnerAccessEntity,
 ): Partial<TherapySessionEntity> => {
   return {
     action: therapySession.action,
@@ -157,15 +157,15 @@ export const formatTherapySessionObject = (
     clientEmail: therapySession.client_email,
     clientTimezone: therapySession.client_timezone,
     serviceName: therapySession.service_name,
-    serviceProviderName: therapySession.service_provider_email,
+    serviceProviderName: therapySession.service_provider_name,
     serviceProviderEmail: therapySession.service_provider_email,
     startDateTime: new Date(therapySession.start_date_time),
     endDateTime: new Date(therapySession.end_date_time),
     cancelledAt: null,
     rescheduledFrom: null,
     completedAt: null,
-    partnerAccessId,
-    userId: therapySession.client_id,
+    partnerAccessId: partnerAccess.id,
+    userId: partnerAccess.userId,
   };
 };
 

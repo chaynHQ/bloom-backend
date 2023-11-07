@@ -9,6 +9,7 @@ import { EventLogEntity } from 'src/entities/event-log.entity';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
 import { EventLoggerService } from 'src/event-logger/event-logger.service';
 import { ZapierSimplybookBodyDto } from 'src/partner-access/dtos/zapier-body.dto';
+import { serializeZapierSimplyBookDtoToTherapySessionEntity } from 'src/utils/serialize';
 import { getYesterdaysDate } from 'src/utils/utils';
 import { WebhookCreateEventLogDto } from 'src/webhooks/dto/webhook-create-event-log.dto';
 import StoryblokClient from 'storyblok-js-client';
@@ -21,7 +22,6 @@ import { PartnerAccessRepository } from '../partner-access/partner-access.reposi
 import { SessionRepository } from '../session/session.repository';
 import { UserRepository } from '../user/user.repository';
 import { CAMPAIGN_TYPE, SIMPLYBOOK_ACTION_ENUM, storyblokToken } from '../utils/constants';
-import { formatTherapySessionObject } from '../utils/serialize';
 import { StoryDto } from './dto/story.dto';
 import { EmailCampaignRepository } from './email-campaign/email-campaign.repository';
 import { TherapySessionRepository } from './therapy-session.repository';
@@ -236,7 +236,10 @@ export class WebhooksService {
     simplyBookDto: ZapierSimplybookBodyDto,
     partnerAccess: PartnerAccessEntity,
   ) {
-    const therapySession = formatTherapySessionObject(simplyBookDto, partnerAccess.id);
+    const therapySession = serializeZapierSimplyBookDtoToTherapySessionEntity(
+      simplyBookDto,
+      partnerAccess,
+    );
     return await this.therapySessionRepository.save(therapySession);
   }
 
@@ -265,17 +268,51 @@ export class WebhooksService {
   async updatePartnerAccessTherapy(
     simplyBookDto: ZapierSimplybookBodyDto,
   ): Promise<TherapySessionEntity> {
-    const { action, booking_code } = simplyBookDto;
+    const { action, booking_code, client_id } = simplyBookDto;
+
     // this ensures that the client email can be matched against the db which contains lower case emails
     const client_email = simplyBookDto.client_email.toLowerCase();
-    const userId = simplyBookDto.client_id;
 
     this.logger.log(
-      `UpdatePartnerAccessService method initiated for ${action} - ${client_email} - ${booking_code} - userId ${userId}`,
+      `UpdatePartnerAccessService method initiated for ${action} - ${client_email} - ${booking_code} - userId ${simplyBookDto.client_id}`,
     );
 
-    const userDetails = await this.userRepository.findOne({ id: userId });
+    const inferIdFromPreviousTherapySessionOrUser = async () => {
+      try {
+        const previousTherapySession = await this.therapySessionRepository.findOne({
+          clientEmail: client_email,
+        });
 
+        // If there are no previous therapy sessions, try matching email with user
+        if (!previousTherapySession) {
+          const user = await this.userRepository.findOne({ email: client_email });
+
+          return user?.id;
+        }
+
+        return previousTherapySession?.userId;
+      } catch (err) {
+        throw new HttpException(
+          `inferIdFromPreviousTherapySessionOrUser - error finding userId from therapyRepository or userRepository ${err}`,
+          HttpStatus.INTERNAL_SERVER_ERROR,
+        );
+      }
+    };
+
+    // Retrieve therapy session
+    const therapySession: TherapySessionEntity | undefined =
+      action === SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING
+        ? undefined
+        : await this.therapySessionRepository.findOne({
+            bookingCode: booking_code,
+            clientEmail: client_email,
+          });
+
+    const userId: string | undefined =
+      client_id || therapySession?.userId || (await inferIdFromPreviousTherapySessionOrUser());
+
+    // ensure user exists and throw error if not
+    const userDetails = await this.userRepository.findOne({ id: userId });
     if (!userDetails) {
       await this.slackMessageClient.sendMessageToTherapySlackChannel(
         `Unknown user made a therapy booking - ${client_email}, id: ${userId} 🚨`,
@@ -284,11 +321,12 @@ export class WebhooksService {
         `UpdatePartnerAccessTherapy, Unable to find user with email ${client_email}, id ${userId}`,
       );
       throw new HttpException(
-        'UpdatePartnerAccessTherapy, Unable to find user',
+        `UpdatePartnerAccessTherapy, Unable to find user with email ${client_email}, id ${userId}`,
         HttpStatus.BAD_REQUEST,
       );
     }
 
+    // Handle partner access changes
     const usersPartnerAccesses = await this.partnerAccessRepository.find({
       userId: userDetails.id,
       active: true,
@@ -318,18 +356,8 @@ export class WebhooksService {
     }
 
     if (action === SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING) {
-      return this.newPartnerAccessTherapy(therapyPartnerAccesses, simplyBookDto);
+      return await this.newPartnerAccessTherapy(therapyPartnerAccesses, simplyBookDto);
     }
-
-    // We allow users to have multiple access codes, so we need to allow find therapy sessions to do with all the access codes
-    const therapySession = await this.therapySessionRepository.findOne({
-      where: [
-        ...therapyPartnerAccesses.map((pa) => ({
-          partnerAccessId: pa.id,
-          bookingCode: simplyBookDto.booking_code,
-        })),
-      ],
-    });
 
     if (!therapySession) {
       throw new HttpException('Therapy session not found', HttpStatus.FORBIDDEN);
