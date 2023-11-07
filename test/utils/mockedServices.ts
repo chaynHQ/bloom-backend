@@ -27,6 +27,7 @@ import { UserRepository } from 'src/user/user.repository';
 import { EmailCampaignRepository } from 'src/webhooks/email-campaign/email-campaign.repository';
 import { TherapySessionRepository } from 'src/webhooks/therapy-session.repository';
 import { WebhooksService } from 'src/webhooks/webhooks.service';
+import { DeepPartial } from 'typeorm';
 import {
   mockCourse,
   mockEmailCampaignEntity,
@@ -80,7 +81,12 @@ export const mockTherapySessionRepositoryMethods: PartialFuncReturn<TherapySessi
   findOneOrFail: async (arg) => {
     return { ...mockTherapySessionEntity, ...(arg ? arg : {}) } as TherapySessionEntity;
   },
-  save: async (arg) => arg as TherapySessionEntity,
+  save: async (arg) => {
+    return { ...mockTherapySessionEntity, ...arg } as TherapySessionEntity;
+  },
+  create: (arg: DeepPartial<TherapySessionEntity>) => {
+    return { ...arg, id: 'newTherapySessionId' } as TherapySessionEntity;
+  },
 };
 
 export const mockUserRepositoryMethods: PartialFuncReturn<UserRepository> = {

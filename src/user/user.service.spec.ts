@@ -144,7 +144,7 @@ describe('UserService', () => {
       expect(user.user.email).toBe('user@email.com');
       expect(user.partnerAdmin).toBeNull();
 
-      const { therapySession, partnerAdmin, partnerAdminId, ...partnerAccessData } =
+      const { therapySession, partnerAdmin, partnerAdminId, userId, ...partnerAccessData } =
         mockPartnerAccessEntity;
       expect(user.partnerAccesses).toEqual([
         { ...partnerAccessData, therapySessions: therapySession },
@@ -203,7 +203,7 @@ describe('UserService', () => {
         ...createUserDto,
         partnerId: mockPartnerEntity.id,
       });
-      const { therapySession, partnerAdmin, partnerAdminId, ...partnerAccessData } =
+      const { therapySession, partnerAdmin, partnerAdminId, userId, ...partnerAccessData } =
         mockPartnerAccessEntity;
       // Note different format for the DTO
       expect(user.partnerAccesses).toEqual([

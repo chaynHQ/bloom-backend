@@ -425,6 +425,83 @@ describe('WebhooksService', () => {
       expect(userFindOneRepoSpy).toBeCalled();
     });
 
+    it('when creating a new therapy session and the client_id/ userId is not provided, it should get userId from previous entry', async () => {
+      const findTherapySessionSpy = jest
+        .spyOn(mockedTherapySessionRepository, 'findOne')
+        .mockImplementationOnce(async () => {
+          return { ...mockTherapySessionEntity, clientEmail: mockSimplybookBodyBase.client_email };
+        });
+      const findPartnerAccessSpy = jest
+        .spyOn(mockedPartnerAccessRepository, 'find')
+        .mockImplementationOnce(async () => {
+          return [{ ...mockPartnerAccessEntity, userId: 'userId1' }];
+        });
+      const newTherapySession = await service.updatePartnerAccessTherapy({
+        ...mockSimplybookBodyBase,
+        client_id: undefined,
+        action: SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING,
+      });
+
+      expect(newTherapySession).toEqual({
+        ...mockTherapySessionEntity,
+        clientEmail: mockSimplybookBodyBase.client_email,
+        bookingCode: mockSimplybookBodyBase.booking_code,
+        action: SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING,
+        startDateTime: new Date(mockSimplybookBodyBase.start_date_time),
+        endDateTime: new Date(mockSimplybookBodyBase.end_date_time),
+      });
+
+      expect(findTherapySessionSpy).toBeCalledWith({
+        clientEmail: mockSimplybookBodyBase.client_email,
+      });
+
+      expect(findPartnerAccessSpy).toBeCalledWith({
+        userId: 'userId1',
+        active: true,
+      });
+    });
+
+    it('when creating a new therapy session and the client_id/ userId is not provided and no previousTherapySession exists, it should get userId from the userDatabase', async () => {
+      const findTherapySessionSpy = jest
+        .spyOn(mockedTherapySessionRepository, 'findOne')
+        .mockImplementationOnce(async () => {
+          return null;
+        });
+      const findUserSpy = jest.spyOn(mockedUserRepository, 'findOne');
+
+      const findPartnerAccessSpy = jest
+        .spyOn(mockedPartnerAccessRepository, 'find')
+        .mockImplementationOnce(async () => {
+          return [{ ...mockPartnerAccessEntity, userId: 'userId1' }];
+        });
+      const newTherapySession = await service.updatePartnerAccessTherapy({
+        ...mockSimplybookBodyBase,
+        client_id: undefined,
+        action: SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING,
+      });
+
+      expect(newTherapySession).toEqual({
+        ...mockTherapySessionEntity,
+        clientEmail: mockSimplybookBodyBase.client_email,
+        bookingCode: mockSimplybookBodyBase.booking_code,
+        action: SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING,
+        startDateTime: new Date(mockSimplybookBodyBase.start_date_time),
+        endDateTime: new Date(mockSimplybookBodyBase.end_date_time),
+      });
+
+      expect(findTherapySessionSpy).toBeCalledWith({
+        clientEmail: mockSimplybookBodyBase.client_email,
+      });
+      expect(findUserSpy).toBeCalledWith({
+        email: mockSimplybookBodyBase.client_email,
+      });
+
+      expect(findPartnerAccessSpy).toBeCalledWith({
+        userId: 'userId1',
+        active: true,
+      });
+    });
+
     it('should set a booking as cancelled when action is cancel', async () => {
       await expect(
         service.updatePartnerAccessTherapy({
@@ -526,12 +603,7 @@ describe('WebhooksService', () => {
       const therapySessionFindOneSpy = jest
         .spyOn(mockedTherapySessionRepository, 'findOne')
         .mockImplementationOnce(async (args: any) => {
-          // if statement to ensure the two partner access Ids are passed
-          if (args.where?.filter((el) => el.partnerAccessId).length === 2) {
-            return { ...mockTherapySessionEntity, partnerAccessId: 'partnerAccessId2' };
-          } else {
-            throw new Error('Unable to find therapy session');
-          }
+          return { ...mockTherapySessionEntity, ...args };
         });
 
       await expect(
@@ -726,7 +798,7 @@ describe('WebhooksService', () => {
         date: new Date(2000, 1, 1),
         event: 'CHAT_MESSAGE_SENT',
         id: 'eventLogId1ß',
-        userId: '1',
+        userId: 'userId1',
       });
     });
     it('should throw 404 if email is not related to a user is incorrect', async () => {
