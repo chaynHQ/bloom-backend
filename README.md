@@ -1,34 +1,37 @@
-# Bloom
-
-Bloom is a remote trauma support service from Chayn, a global charity supporting survivors of abuse across borders. Bloom is our flagship product; a free, web-based support service designed for anyone who has experienced or is currently experiencing domestic or sexual abuse. Through a combination of online video-based courses, anonymous interaction and 1:1 chat, Bloom aims to provide tailored information, guidance, everyday tools, and comforting words to cope with traumatic events. 💖
-
-## Get involved
-
-If you would like to help Chayn and receive special access to our organization and volunteer opportunities, please [visit our Getting Involved guide](https://chayn.notion.site/Get-involved-423c067536f3426a88005de68f0cab19). We'll get back to you to schedule an onboarding call. Other ways to get involved and support us are [donating](https://www.paypal.me/chaynhq), starring this repo and making an open-source contribution here on GitHub, and supporting us on social media! 
-
-Our social medias:
-
-Website - [Chayn](https://www.chayn.co/)
-
-Twitter - [@ChaynHQ](https://twitter.com/ChaynHQ)
-
-Instagram - [@chaynhq](https://www.instagram.com/chaynhq/)
-
-Youtube - [Chayn Team](https://www.youtube.com/channel/UC5_1Ci2SWVjmbeH8_USm-Bg)
-
-LinkedIn - [@chayn](https://www.linkedin.com/company/chayn)
-
-# Bloom Backend
+# Welcome to Bloom
 
 [![Bloom Backend CI Pipeline](https://github.com/chaynHQ/bloom-backend/actions/workflows/.ci.yml/badge.svg)](https://github.com/chaynHQ/bloom-backend/actions/workflows/.ci.yml)
 
-**Currently in active development**
+**Currently in active development.**
 
-## Contribution
+Bloom is a remote trauma support service from Chayn, a global charity supporting survivors of abuse across borders. Bloom is our flagship product; a free, web-based support service designed for anyone who has experienced or is currently experiencing domestic or sexual abuse. Through a combination of online video-based courses, anonymous interaction and 1:1 chat, Bloom aims to provide tailored information, guidance, everyday tools, and comforting words to cope with traumatic events. 💖
 
-To make a contribution, please read our Contributing Guidelines in [CONTRIBUTING.md](https://github.com/chaynHQ/bloom-backend/blob/develop/CONTRIBUTING.md)
+## Get Involved
+
+Do you want to make an impact with Chayn and receive special access to our organization and volunteer opportunities? Please visit our [Getting Involved Guide](https://chayn.notion.site/Get-involved-423c067536f3426a88005de68f0cab19) to get started!
+
+Other ways you can support Chayn are [donating](https://www.paypal.me/chaynhq), starring this repository ⭐ (so we can find more contributors like you!), making an open-source contribution, and supporting us on social media!
+
+Find us online:
+
+- Website: [https://www.chayn.co/](https://www.chayn.co/)
+- Linktree: [https://linktr.ee/chayn](https://linktr.ee/chayn)
+- Twitter: [@ChaynHQ](https://twitter.com/ChaynHQ)
+- Instagram: [@chaynhq](https://www.instagram.com/chaynhq/)
+- Youtube: [Chayn Team](www.youtube.com/@chaynhq)
+- LinkedIn: [@chayn](https://www.linkedin.com/company/chayn)
+
+# Contributing to Bloom Backend
+
+Before making a contribution, please read our Contributing Guidelines in the [CONTRIBUTING.md](/CONTRIBUTING.md) file.
+
+We ask all contributors to follow our [Contributing Guidelines](/CONTRIBUTING.md) to help Chayn developers maintain open-source best practices.
+
+Happy coding! ⭐
 
 ## Technologies Used:
+
+For a more detailed explanation of this project's key concepts and architecture, please visit the [/docs directory](https://github.com/chaynHQ/bloom-backend/tree/develop/docs).
 
 - [NestJS](https://nestjs.com/) - NodeJs framework for building scalable and reliable server-side applications
 - [PostgreSQL](https://www.postgresql.org/about/) - Object-relational SQL database system
@@ -58,11 +61,23 @@ To make a contribution, please read our Contributing Guidelines in [CONTRIBUTING
 yarn
 ```
 
-### Create `.env` file
+### Configure Environment Variables
 
-Include the following environment variables in a `.env` file. 
+- If you are an official Chayn volunteer: please get in touch with the team for access to our environment variables.
 
-You will need to gather the following tokens from [Firebase](https://firebase.google.com/docs/projects/api-keys), these are required for the app to function. However, the [Simplybook](https://simplybook.me/en/) variables are required to pass all tests. But since these tests use mocked data, **you do not need to use real Simplybook variables, simply copy paste the values given below.** If you require real Simplybook environment variables, use the same format given below. All other environment variables from Rollbar, Zapier, Slack, Crisp, and Mailchimp are optional. If you're a volunteer loading up the back-end, please get in touch with the team for access to the environment variables.
+- If you are an open-source contributor: create a new `.env` file and populate it with the following variables.
+
+**The Firebase tokens are required for running locally, the Simplybook tokens are required for testing, and all other variables are optional.**
+
+You will need to gather your own Firebase tokens. Here are resources to get started:
+
+- [Firebase Docs: Auth](https://firebase.google.com/docs/auth)
+- [Firebase Docs: API Keys](https://firebase.google.com/docs/projects/api-keys)
+- [Firebase Docs: Projects](https://firebase.google.com/docs/projects/learn-more#project-identifiers)
+- [Firebase Docs: Get Started with Fundamentals](https://firebase.google.com/docs/guides)
+
+The Simplybook variables can be mocked data, meaning **you do not need to use real Simplybook variables, simply copy paste the values given below.**
+If you acquire real Simplybook environment variables, use the same format given below.
 
 ```
 ROLLBAR_ENV=development
@@ -96,8 +111,8 @@ SIMPLYBOOK_CREDENTIALS='{"login":"testlogin","password":"testpassword","company"
 SIMPLYBOOK_COMPANY_NAME=testcompany
 
 # VARIABLES BELOW ARE ALL OPTIONAL
-ROLLBAR_TOKEN= 
-ZAPIER_TOKEN= 
+ROLLBAR_TOKEN=
+ZAPIER_TOKEN=
 SLACK_WEBHOOK_URL=
 CRISP_TOKEN=
 CRISP_WEBSITE_TOKEN=
@@ -214,15 +229,16 @@ After the above has been confirmed, run
 ```bash
 bash seed-local-db.sh
 ```
-For a more detailed explanation of this project's key concepts and architecture, please visit the [/docs directory](https://github.com/chaynHQ/bloom-backend/tree/develop/docs).
 
-## Git flow and deployment
+## Git Flow and Deployment
+
+**The develop branch is our source of truth, not main.**
 
 Create new branches from the `develop` base branch. There is no need to run the build command before pushing changes to GitHub, simply push and create a pull request for the new branch. GitHub Actions will run build and linting tasks automatically. Rebase and merge feature/bug branches into `develop`.
 
 This will trigger an automatic deployment to the staging app by Heroku.
 
-When changes have been tested in staging, merge `staging` into `main`. This will trigger an automatic deployment to the production app by Heroku.
+When changes have been tested in staging, merge `develop` into `main`. This will trigger an automatic deployment to the production app by Heroku.
 
 ## Swagger
 
