@@ -18,7 +18,7 @@ import {
 } from '../api/crisp/crisp-api';
 import { AuthService } from '../auth/auth.service';
 import { PartnerAccessService } from '../partner-access/partner-access.service';
-import { formatUserObject } from '../utils/serialize';
+import { formatGetUsersObject, formatUserObject } from '../utils/serialize';
 import { generateRandomString } from '../utils/utils';
 import { CreateUserDto } from './dtos/create-user.dto';
 import { GetUserDto } from './dtos/get-user.dto';
@@ -254,7 +254,7 @@ export class UserService {
     }
   }
 
-  public async getUser({ uid }: IFirebaseUser): Promise<GetUserDto | undefined> {
+  public async getUserByFirebaseId({ uid }: IFirebaseUser): Promise<GetUserDto | undefined> {
     const queryResult = await this.userRepository
       .createQueryBuilder('user')
       .leftJoinAndSelect('user.partnerAccess', 'partnerAccess')
@@ -369,17 +369,68 @@ export class UserService {
             return user;
           } catch (error) {
             this.logger.error(`Unable to delete cypress user: ${user.email} ${error}`);
-            throw new HttpException(
-              `Unable to delete cypress user: ${user.email} ${error}`,
-              HttpStatus.INTERNAL_SERVER_ERROR,
+            this.logger.error(
+              `deleteCypressTestAccessCodes - Unable to delete cypress user: ${user.email} ${error}`,
             );
           }
         }),
       );
       return deletedUsers;
     } catch (error) {
-      this.logger.error(`Unable to delete all cypress users`, error);
-      throw error;
+      // If this fails we don't want to break cypress tests
+      this.logger.error(`deleteCypressTestAccessCodes - Unable to delete all cypress users`, error);
     }
+  }
+  public async getUsers(
+    filters: {
+      email?: string;
+      partnerAccess?: { userId: string; featureTherapy: boolean; active: boolean };
+      partnerAdmin?: { partnerAdminId: string };
+    },
+    relations: Array<string>,
+    fields: Array<string>,
+    limit: number,
+  ): Promise<GetUserDto[] | undefined> {
+    const query = this.userRepository.createQueryBuilder('user');
+    // TODO this needs some refactoring but deprioritised for now
+    if (relations.indexOf('partnerAccess') >= 0) {
+      query.leftJoinAndSelect('user.partnerAccess', 'partnerAccess');
+    }
+
+    if (relations?.indexOf('partner-admin') >= 0) {
+      query.leftJoinAndSelect('user.partnerAdmin', 'partnerAdmin');
+    }
+
+    if (filters?.partnerAdmin?.partnerAdminId === 'IS NOT NULL') {
+      query.andWhere('partnerAdmin.partnerAdminId IS NOT NULL');
+    }
+
+    if (filters.partnerAccess?.userId === 'IS NOT NULL') {
+      query.andWhere('partnerAccess.userId IS NOT NULL');
+    }
+
+    if (filters.partnerAccess?.featureTherapy) {
+      query.andWhere('partnerAccess.featureTherapy = :featureTherapy', {
+        featureTherapy: filters.partnerAccess.featureTherapy,
+      });
+    }
+
+    if (filters.partnerAccess?.active) {
+      query.andWhere('partnerAccess.active = :active', {
+        active: filters.partnerAccess.active,
+      });
+    }
+
+    if (filters.email) {
+      query.andWhere('user.email ILike :email', { email: `%${filters.email}%` });
+    }
+
+    if (limit) {
+      query.limit(limit);
+    }
+
+    const queryResult = await query.getMany();
+    const formattedUsers = queryResult.map((user) => formatGetUsersObject(user));
+    return formattedUsers;
   }
 }

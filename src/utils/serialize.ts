@@ -54,7 +54,7 @@ export const formatPartnerAccessObjects = (partnerAccessObjects: PartnerAccessEn
       active: partnerAccess.active,
       therapySessionsRemaining: partnerAccess.therapySessionsRemaining,
       therapySessionsRedeemed: partnerAccess.therapySessionsRedeemed,
-      partner: formatPartnerObject(partnerAccess.partner),
+      partner: partnerAccess.partner ? formatPartnerObject(partnerAccess.partner) : null,
       therapySessions: partnerAccess.therapySession?.map((ts) => {
         return {
           id: ts.id,
@@ -106,6 +106,30 @@ export const formatUserObject = (userObject: UserEntity): GetUserDto => {
   };
 };
 
+// Use if you don't want loads of null keys on the object and have only what you want to
+export const formatGetUsersObject = (userObject: UserEntity): GetUserDto => {
+  return {
+    user: {
+      id: userObject.id,
+      createdAt: userObject.createdAt,
+      updatedAt: userObject.updatedAt,
+      name: userObject.name,
+      email: userObject.email,
+      firebaseUid: userObject.firebaseUid,
+      isActive: userObject.isActive,
+      crispTokenId: userObject.crispTokenId,
+      isSuperAdmin: userObject.isSuperAdmin,
+    },
+    ...(userObject.partnerAccess
+      ? {
+          partnerAccesses: userObject.partnerAccess
+            ? formatPartnerAccessObjects(userObject.partnerAccess)
+            : null,
+        }
+      : {}),
+  };
+};
+
 export const formatPartnerObject = (partnerObject: PartnerEntity): IPartner => {
   return {
     name: partnerObject.name,
@@ -123,9 +147,9 @@ export const formatPartnerObject = (partnerObject: PartnerEntity): IPartner => {
   };
 };
 
-export const formatTherapySessionObject = (
+export const serializeZapierSimplyBookDtoToTherapySessionEntity = (
   therapySession: ZapierSimplybookBodyDto,
-  partnerAccessId: string,
+  partnerAccess: PartnerAccessEntity,
 ): Partial<TherapySessionEntity> => {
   return {
     action: therapySession.action,
@@ -133,15 +157,15 @@ export const formatTherapySessionObject = (
     clientEmail: therapySession.client_email,
     clientTimezone: therapySession.client_timezone,
     serviceName: therapySession.service_name,
-    serviceProviderName: therapySession.service_provider_email,
+    serviceProviderName: therapySession.service_provider_name,
     serviceProviderEmail: therapySession.service_provider_email,
     startDateTime: new Date(therapySession.start_date_time),
     endDateTime: new Date(therapySession.end_date_time),
     cancelledAt: null,
     rescheduledFrom: null,
     completedAt: null,
-    partnerAccessId,
-    userId: therapySession.client_id,
+    partnerAccessId: partnerAccess.id,
+    userId: partnerAccess.userId,
   };
 };
 

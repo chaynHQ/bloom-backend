@@ -1,28 +1,37 @@
-# Bloom
-
-Bloom is a remote trauma support service from Chayn, a global charity supporting survivors of abuse across borders. Bloom is our flagship product; a free, web-based support service designed for anyone who has experienced or is currently experiencing domestic or sexual abuse. Through a combination of online video-based courses, anonymous interaction and 1:1 chat, Bloom aims to provide tailored information, guidance, everyday tools, and comforting words to cope with traumatic events.
-
-## Get involved
-
-Bloom is created by Chayn, global nonprofit, run by survivors and allies from around the world, creating resources to support the healing of survivors of gender-based violence. There are lots of ways to get involved, from joining our volunteer team to [donating](https://www.paypal.me/chaynhq) or supporting us on social media.
-
-Website - [Chayn](https://www.chayn.co/)
-
-Twitter - [@ChaynHQ](https://twitter.com/ChaynHQ)
-
-Instagram - [@chaynhq](https://www.instagram.com/chaynhq/)
-
-Youtube - [Chayn Team](https://www.youtube.com/channel/UC5_1Ci2SWVjmbeH8_USm-Bg)
-
-If you'd like to help Bloom by tackling any of our open Github issues, please get in touch with us to express your interest in volunteering via [this form](https://forms.gle/qXfDdPgJxYwvMmVP7). We'll get back to you to schedule an onboarding call.
-
-# Bloom Backend
+# Welcome to Bloom
 
 [![Bloom Backend CI Pipeline](https://github.com/chaynHQ/bloom-backend/actions/workflows/.ci.yml/badge.svg)](https://github.com/chaynHQ/bloom-backend/actions/workflows/.ci.yml)
 
-**Currently in active development**
+**Currently in active development.**
+
+Bloom is a remote trauma support service from Chayn, a global charity supporting survivors of abuse across borders. Bloom is our flagship product; a free, web-based support service designed for anyone who has experienced or is currently experiencing domestic or sexual abuse. Through a combination of online video-based courses, anonymous interaction and 1:1 chat, Bloom aims to provide tailored information, guidance, everyday tools, and comforting words to cope with traumatic events. 💖
+
+## Get Involved
+
+Do you want to make an impact with Chayn and receive special access to our organization and volunteer opportunities? Please visit our [Getting Involved Guide](https://chayn.notion.site/Get-involved-423c067536f3426a88005de68f0cab19) to get started!
+
+Other ways you can support Chayn are [donating](https://www.paypal.me/chaynhq), starring this repository ⭐ (so we can find more contributors like you!), making an open-source contribution, and supporting us on social media!
+
+Find us online:
+
+- Website: [https://www.chayn.co/](https://www.chayn.co/)
+- Linktree: [https://linktr.ee/chayn](https://linktr.ee/chayn)
+- Twitter: [@ChaynHQ](https://twitter.com/ChaynHQ)
+- Instagram: [@chaynhq](https://www.instagram.com/chaynhq/)
+- Youtube: [Chayn Team](www.youtube.com/@chaynhq)
+- LinkedIn: [@chayn](https://www.linkedin.com/company/chayn)
+
+# Contributing to Bloom Backend
+
+Before making a contribution, please read our Contributing Guidelines in the [CONTRIBUTING.md](/CONTRIBUTING.md) file.
+
+We ask all contributors to follow our [Contributing Guidelines](/CONTRIBUTING.md) to help Chayn developers maintain open-source best practices.
+
+Happy coding! ⭐
 
 ## Technologies Used:
+
+For a more detailed explanation of this project's key concepts and architecture, please visit the [/docs directory](https://github.com/chaynHQ/bloom-backend/tree/develop/docs).
 
 - [NestJS](https://nestjs.com/) - NodeJs framework for building scalable and reliable server-side applications
 - [PostgreSQL](https://www.postgresql.org/about/) - Object-relational SQL database system
@@ -52,11 +61,67 @@ If you'd like to help Bloom by tackling any of our open Github issues, please ge
 yarn
 ```
 
-### Create `.env` file
+### Configure Environment Variables
 
-Environment variables must be added to a local `.env` file. Create this file using `.env.example` for reference, and adding values for local development.
+- If you are an official Chayn volunteer: please get in touch with the team for access to our environment variables.
 
-If this is your first time running the system as a volunteer, please get in touch with the team to get access required variables.
+- If you are an open-source contributor: create a new `.env` file and populate it with the following variables.
+
+**The Firebase tokens are required for running locally, the Simplybook tokens are required for testing, and all other variables are optional.**
+
+You will need to gather your own Firebase tokens. Here are resources to get started:
+
+- [Firebase Docs: Auth](https://firebase.google.com/docs/auth)
+- [Firebase Docs: API Keys](https://firebase.google.com/docs/projects/api-keys)
+- [Firebase Docs: Projects](https://firebase.google.com/docs/projects/learn-more#project-identifiers)
+- [Firebase Docs: Get Started with Fundamentals](https://firebase.google.com/docs/guides)
+
+The Simplybook variables can be mocked data, meaning **you do not need to use real Simplybook variables, simply copy paste the values given below.**
+If you acquire real Simplybook environment variables, use the same format given below.
+
+```
+ROLLBAR_ENV=development
+PORT=35001
+
+DATABASE_URL=postgres://<username>:<password>@<host>:<port>/<db>
+
+NODE_ENV=development
+
+FIREBASE_TYPE=service_account
+FIREBASE_PROJECT_ID=
+FIREBASE_PRIVATE_KEY_ID=
+FIREBASE_PRIVATE_KEY=
+FIREBASE_CLIENT_EMAIL=
+FIREBASE_CLIENT_ID=
+FIREBASE_AUTH_URI=https://accounts.google.com/o/oauth2/auth
+FIREBASE_TOKEN_URI=https://oauth2.googleapis.com/token
+FIREBASE_CERT_URL=https://www.googleapis.com/oauth2/v1/certs
+FIREBASE_CLIENT_CERT=
+
+FIREBASE_API_KEY=
+FIREBASE_AUTH_DOMAIN=
+FIREBASE_PROJECT_ID=
+FIREBASE_STORAGE_BUCKET=
+FIREBASE_MESSAGING_SENDER_ID=
+FIREBASE_API_ID=
+FIREBASE_MEASUREMENT_ID=
+
+# VARIABLES REQUIRED FOR TESTING, REPLACE WITH REAL VALUES IF NEEDED
+SIMPLYBOOK_CREDENTIALS='{"login":"testlogin","password":"testpassword","company":"testcompany"}'
+SIMPLYBOOK_COMPANY_NAME=testcompany
+
+# VARIABLES BELOW ARE ALL OPTIONAL
+ROLLBAR_TOKEN=
+ZAPIER_TOKEN=
+SLACK_WEBHOOK_URL=
+CRISP_TOKEN=
+CRISP_WEBSITE_TOKEN=
+MAILCHIMP_MANDRILL_API_KEY=
+MAILCHIMP_THERAPY_TEMPLATE_ID=
+MAILCHIMP_THERAPY_FROM_EMAIL=
+RESPOND_IO_CREATE_CONTACT_WEBHOOK=
+RESPOND_IO_DELETE_CONTACT_WEBHOOK=
+```
 
 ### Run locally (with Docker) - RECOMMENDED
 
@@ -121,13 +186,13 @@ yarn migration:revert
 To run all unit tests
 
 ```bash
-yarn test:unit
+yarn test
 ```
 
 To have your unit tests running in the background as you change code:
 
 ```bash
-yarn test:unit:watch
+yarn test:watch
 ```
 
 ### Formatting and linting
@@ -165,79 +230,21 @@ After the above has been confirmed, run
 bash seed-local-db.sh
 ```
 
-## Git flow and deployment
+## Git Flow and Deployment
+
+**The develop branch is our source of truth, not main.**
 
 Create new branches from the `develop` base branch. There is no need to run the build command before pushing changes to GitHub, simply push and create a pull request for the new branch. GitHub Actions will run build and linting tasks automatically. Rebase and merge feature/bug branches into `develop`.
 
 This will trigger an automatic deployment to the staging app by Heroku.
 
-When changes have been tested in staging, merge `staging` into `main`. This will trigger an automatic deployment to the production app by Heroku.
+When changes have been tested in staging, merge `develop` into `main`. This will trigger an automatic deployment to the production app by Heroku.
 
 ## Swagger
 
 Swagger automatically reflects all of the endpoints in the app, showing their urls and example request and response objects.
 
 To access Swagger simply run the project and visit http://localhost:35001/swagger
-
-## Database models
-
-![Database models](database_models.jpg 'Database models')
-
-**User**
-Stores basic profile data for a user and relationships.
-
-**Partner**
-Stores basic profile data for a partner and relationships.
-
-**Partner Admin**
-Stores relationship between a partner and a user, and the partner access records created by the partner admin.
-
-**Partner Access**
-Stores the features assigned for a user by a partner. When a partner access record is created by a partner admin user, it is initially unassigned but the unique code generated will be shared with the user. When the user registers using this code, the partner access will be assigned/related to the user, granting them access to extra features. See `assignPartnerAccess`. Currently there are "tiers" of access determined by the frontend, however if future partners want different features for their users, settings for their features/tiers should be added to the `Partner` model.
-
-**Therapy Session**
-Stores data related to therapy sessions booked via Simplybook, copying the session time and details about the therapist etc. The duplication of data here (vs leaving it in Simplybook) was made to allow therapy reporting to be included in Data Studio. This model also allows for displaying therapy session data on the frontend. Populated by Simplybook -> Zapier webhooks.
-
-**Course**
-Stores data related to courses in Storyblok, copying the story id's. The `Course` records allow us to relate users to courses (via `CourseUser`) and a `Course` to `Session` records, which is required e.g. to check if a user completed a course. The slug and name etc are also stored for convenience, e.g. to be used in reporting. Populated and updated by Storyblok webhooks when course stories are published.
-
-**Session**
-Stores data related to courses in Storyblok, copying the story id's. The `Session` records allow us to relate users to sessions (via `SessionUser`). The slug and name etc are also stored for convenience, e.g. to be used in reporting. Populated and updated by Storyblok webhooks when course stories are published.
-
-**CourseUser**
-Stores relationship between a `User` and `Course` records, once a user has started a course. A users progress (`completed`) for the course is updated (`true`) when all related `SessionUser` records are `completed` for the related `Course`.
-
-**SessionUser**
-Stores relationship between a `User` and `Session` records, once a user has started a session. A users session progress (`completed`) for the session is updated (true) when the `/complete` endpoint is called.
-
-## Key concepts
-
-### User types
-
-There are several user types with different features enabled.
-
-**Public user** - joins Bloom without a partner, with access to self guided and live courses.
-
-**Partner user** - joins Bloom via a partner (and access code) with access to extra features and courses enabled by the partner(s).
-
-**Partner admin user** - a partner team member who uses the app to complete Bloom admin tasks such as creating new partner access codes.
-
-### Authentication
-
-User authentication is handled by [Firebase Auth](https://firebase.google.com/docs/auth). Bearer tokens are sent in api request headers and verified in [auth.service.ts](src/auth/auth.service.ts). The user record is fetched using the retrieved user email of the token.
-
-### Crisp profiles
-
-Crisp is the messaging platform used to message the Chayn team in relation to bloom course content or other queries and support. For public users, this 1-1 chat feature is available on _live_ courses only. For partner users, This 1-1 chat feature is available to users with a `PartnerAccess` that has 1-1 chat enabled.
-
-Users who have access to 1-1 chat also have a profile on Crisp that reflects data from our database regarding their partners, access and course progress. See [crisp-api.ts](src/api/crisp/crisp-api.ts)
-
-### Reporting
-
-Google Data Studio is an online tool for converting data into customizable informative reports and dashboards.
-
-The reports are generated by writing custom sql queries that return actionable data to Data Studio. Filters are applied in Data Studio allowing
-data to be segregated into different time periods based on the data createdAt date
 
 ## License
 

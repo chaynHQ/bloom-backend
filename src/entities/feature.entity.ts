@@ -10,6 +10,8 @@ export class FeatureEntity extends BaseBloomEntity {
   @Column({ unique: true })
   name: string;
 
-  @OneToMany(() => PartnerFeatureEntity, (partnerFeature) => partnerFeature.feature)
+  @OneToMany(() => PartnerFeatureEntity, (partnerFeature) => partnerFeature.feature, {
+    cascade: true,
+  })
   partnerFeature: PartnerFeatureEntity[];
 }

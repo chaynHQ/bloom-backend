@@ -1,6 +1,7 @@
 import { UserRecord } from 'firebase-admin/lib/auth/user-record';
 import { CourseEntity } from 'src/entities/course.entity';
 import { EmailCampaignEntity } from 'src/entities/email-campaign.entity';
+import { EventLogEntity } from 'src/entities/event-log.entity';
 import { FeatureEntity } from 'src/entities/feature.entity';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { PartnerAdminEntity } from 'src/entities/partner-admin.entity';
@@ -9,6 +10,7 @@ import { PartnerEntity } from 'src/entities/partner.entity';
 import { SessionEntity } from 'src/entities/session.entity';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
 import { UserEntity } from 'src/entities/user.entity';
+import { EVENT_NAME } from 'src/event-logger/event-logger.interface';
 import { IFirebaseUser } from 'src/firebase/firebase-user.interface';
 import { ZapierSimplybookBodyDto } from 'src/partner-access/dtos/zapier-body.dto';
 import {
@@ -122,7 +124,7 @@ export const mockIFirebaseUser: IFirebaseUser = {
 };
 
 export const mockUserEntity: UserEntity = {
-  id: '1',
+  id: 'userId1',
   isSuperAdmin: false,
   isActive: true,
   createdAt: new Date(),
@@ -138,6 +140,7 @@ export const mockUserEntity: UserEntity = {
   signUpLanguage: 'en',
   subscriptionUser: [],
   therapySession: [],
+  eventLog: [],
 };
 
 export const mockTherapySessionEntity = {
@@ -146,20 +149,19 @@ export const mockTherapySessionEntity = {
   partnerAccessId: 'pa1',
   partnerAccess: { id: 'pa1' } as PartnerAccessEntity,
   updatedAt: new Date(),
-  serviceName: 'bloomtherapy',
+  serviceName: 'bloom therapy',
   serviceProviderEmail: 'therapist@test.com',
   serviceProviderName: 'Therapist name',
   bookingCode: '123',
   clientTimezone: 'Europe/London',
   clientEmail: 'client@test.com',
-  name: 'client name',
   startDateTime: new Date('2022-09-12T07:30:00+0100'),
   endDateTime: new Date('2022-09-12T08:30:00+0100'),
   cancelledAt: null,
   rescheduledFrom: null,
   completedAt: null,
   id: 'ts1',
-  userId: 'userId',
+  userId: 'userId1',
   user: { signUpLanguage: 'en' } as UserEntity,
 } as TherapySessionEntity;
 
@@ -173,7 +175,7 @@ export const mockSimplybookBodyBase: ZapierSimplybookBodyDto = {
   booking_code: 'abc',
   service_name: 'bloom therapy',
   service_provider_email: 'therapist@test.com',
-  service_provider_name: 'therapist@test.com',
+  service_provider_name: 'Therapist name',
 };
 
 export const mockPartnerEntity = {
@@ -212,6 +214,7 @@ export const mockPartnerAccessEntity = {
   therapySession: [],
   updatedAt: new Date(),
   active: true,
+  userId: null,
 } as PartnerAccessEntity;
 
 export const mockEmailCampaignEntity: EmailCampaignEntity = {
@@ -232,6 +235,7 @@ export const mockPartnerAdminEntity: PartnerAdminEntity = {
   partnerAccess: [mockPartnerAccessEntity],
   createdAt: new Date(),
   updatedAt: new Date(),
+  active: true,
 };
 
 export const mockFeatureEntity = {
@@ -265,3 +269,9 @@ export const partnerAccessArray = Array.from(
   ],
   (x, index) => ({ ...mockPartnerAccessEntity, accessCode: x.accessCode + index }),
 );
+
+export const mockEventLog: EventLogEntity = {
+  event: EVENT_NAME.CHAT_MESSAGE_SENT,
+  date: new Date(2000, 1, 1),
+  userId: '123',
+} as EventLogEntity;

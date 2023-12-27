@@ -19,6 +19,7 @@ import { createQueryBuilderMock } from '../../test/utils/mockUtils';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
 import { CreatePartnerAccessDto } from './dtos/create-partner-access.dto';
 import { GetPartnerAccessesDto } from './dtos/get-partner-access.dto';
+import { UpdatePartnerAccessDto } from './dtos/update-partner-access.dto';
 import { PartnerAccessRepository } from './partner-access.repository';
 import { PartnerAccessService } from './partner-access.service';
 
@@ -245,6 +246,47 @@ describe('PartnerAccessService', () => {
       await expect(service.getValidPartnerAccessCode('1234567')).rejects.toThrowError(
         'INVALID_CODE',
       );
+    });
+  });
+  describe('getUserTherapySessions', () => {
+    it('should return user emails with their total therapy sessions available and an associated access code id', async () => {
+      const repoSpyCreateQueryBuilder = jest.spyOn(repo, 'createQueryBuilder');
+      // Mocks the raw results
+      const mockResults = [
+        {
+          useremail: 'test@test.com',
+          partneraccesscode: 'ABCDEF',
+          therapytotal: '2',
+        },
+        {
+          useremail: 'test2@test2.com',
+          partneraccesscode: 'GHIJKL',
+          therapytotal: '5',
+        },
+      ];
+      repoSpyCreateQueryBuilder.mockImplementation(
+        createQueryBuilderMock({ getRawMany: jest.fn().mockResolvedValue(mockResults) }) as never,
+      );
+      const userTherapySessions = await service.getUserTherapySessions();
+      expect(userTherapySessions.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('updatePartnerAccess', () => {
+    it('should update the number of therapy sessions remaining on an access code', async () => {
+      // Mocks updating an access record
+      const partnerAccessRepositorySpy = jest
+        .spyOn(mockPartnerAccessRepository, 'save')
+        .mockImplementationOnce(
+          jest.fn().mockResolvedValue({ ...mockPartnerAccessEntity, therapySessionsRemaining: 10 }),
+        ) as never;
+
+      const result = await service.updatePartnerAccess('123456', {
+        therapySessionsRemaining: 10,
+      } as UpdatePartnerAccessDto);
+      //if an access code exists then update it.
+      expect(result).toEqual({ ...mockPartnerAccessEntity, therapySessionsRemaining: 10 });
+      expect(partnerAccessRepositorySpy).toBeCalledTimes(1);
     });
   });
 });

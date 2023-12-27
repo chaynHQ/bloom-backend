@@ -53,10 +53,16 @@ export class MailchimpClient {
         template_content: [{}],
         message,
       });
+      // Mailchimp api doesn't throw so we capture the error in the response
+      if (response.status !== 'sent' && response?.response?.data?.status === 'error') {
+        throw new Error(
+          `sendTemplateEmail - ${response.response.data.name} - ${response.response.data.message}`,
+        );
+      }
       return response;
     } catch (error) {
       this.logger.error(`Failed to send template email: ${error}`);
-      throw new Error(`Failed to send template email: ${error}`);
+      throw new Error(error);
     }
   }
   public async sendTherapyFeedbackEmail(toEmail: string): Promise<MailchimpEmailResponse | null> {
@@ -92,8 +98,8 @@ export class MailchimpClient {
       });
       return response;
     } catch (error) {
-      this.logger.error(`Error sending therapy template email`);
-      throw new Error(`Error sending therapy template email`);
+      this.logger.error(`Error sending therapy template email ${error}`);
+      throw new Error(`Error sending therapy template email ${error}`);
     }
   }
 }

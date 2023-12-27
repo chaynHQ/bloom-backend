@@ -26,7 +26,7 @@ export class CourseUserEntity extends BaseBloomEntity {
 
   @Column()
   userId: string;
-  @ManyToOne(() => UserEntity, (userEntity) => userEntity.courseUser)
+  @ManyToOne(() => UserEntity, (userEntity) => userEntity.courseUser, { onDelete: 'CASCADE' })
   @JoinTable({ name: 'user', joinColumn: { name: 'userId' } })
   user: UserEntity;
 
@@ -37,6 +37,8 @@ export class CourseUserEntity extends BaseBloomEntity {
   @JoinTable({ name: 'course', joinColumn: { name: 'courseId' } })
   course: CourseEntity;
 
-  @OneToMany(() => SessionUserEntity, (sessionUserEntity) => sessionUserEntity.courseUser)
+  @OneToMany(() => SessionUserEntity, (sessionUserEntity) => sessionUserEntity.courseUser, {
+    cascade: true,
+  })
   sessionUser: SessionUserEntity[];
 }

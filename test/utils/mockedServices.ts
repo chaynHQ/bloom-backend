@@ -6,6 +6,7 @@ import { CoursePartnerService } from 'src/course-partner/course-partner.service'
 import { CourseRepository } from 'src/course/course.repository';
 import { CourseEntity } from 'src/entities/course.entity';
 import { EmailCampaignEntity } from 'src/entities/email-campaign.entity';
+import { EventLogEntity } from 'src/entities/event-log.entity';
 import { FeatureEntity } from 'src/entities/feature.entity';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { PartnerFeatureEntity } from 'src/entities/partner-feature.entity';
@@ -13,6 +14,8 @@ import { PartnerEntity } from 'src/entities/partner.entity';
 import { SessionEntity } from 'src/entities/session.entity';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
 import { UserEntity } from 'src/entities/user.entity';
+import { EventLoggerRepository } from 'src/event-logger/event-logger.repository';
+import { EventLoggerService } from 'src/event-logger/event-logger.service';
 import { FeatureRepository } from 'src/feature/feature.repository';
 import { PartnerAccessRepository } from 'src/partner-access/partner-access.repository';
 import { PartnerFeatureRepository } from 'src/partner-feature/partner-feature.repository';
@@ -24,9 +27,11 @@ import { UserRepository } from 'src/user/user.repository';
 import { EmailCampaignRepository } from 'src/webhooks/email-campaign/email-campaign.repository';
 import { TherapySessionRepository } from 'src/webhooks/therapy-session.repository';
 import { WebhooksService } from 'src/webhooks/webhooks.service';
+import { DeepPartial } from 'typeorm';
 import {
   mockCourse,
   mockEmailCampaignEntity,
+  mockEventLog,
   mockFeatureEntity,
   mockPartnerAccessEntity,
   mockPartnerAccessEntityBase,
@@ -76,7 +81,12 @@ export const mockTherapySessionRepositoryMethods: PartialFuncReturn<TherapySessi
   findOneOrFail: async (arg) => {
     return { ...mockTherapySessionEntity, ...(arg ? arg : {}) } as TherapySessionEntity;
   },
-  save: async (arg) => arg as TherapySessionEntity,
+  save: async (arg) => {
+    return { ...mockTherapySessionEntity, ...arg } as TherapySessionEntity;
+  },
+  create: (arg: DeepPartial<TherapySessionEntity>) => {
+    return { ...arg, id: 'newTherapySessionId' } as TherapySessionEntity;
+  },
 };
 
 export const mockUserRepositoryMethods: PartialFuncReturn<UserRepository> = {
@@ -240,4 +250,28 @@ export const mockFeatureRepositoryMethods: PartialFuncReturn<FeatureRepository> 
     return [{ ...mockFeatureEntity, ...(arg ? { ...arg } : {}) }] as FeatureEntity[];
   },
   save: async (arg) => arg as FeatureEntity,
+};
+
+export const mockEventLoggerServiceMethods: PartialFuncReturn<EventLoggerService> = {
+  createEventLog: async ({ userId, event, date }) => {
+    return { userId, event, date, id: 'eventLogId1ß' } as EventLogEntity;
+  },
+};
+
+export const mockEventLoggerRepositoryMethods: PartialFuncReturn<EventLoggerRepository> = {
+  createQueryBuilder: createQueryBuilderMock(),
+  create: (dto) => {
+    return {
+      ...mockEventLog,
+      ...dto,
+      id: 'newId',
+    } as EventLogEntity;
+  },
+  findOne: async (arg) => {
+    return { ...mockEventLog, ...(arg ? { ...arg } : {}) } as EventLogEntity;
+  },
+  find: async (arg) => {
+    return [{ ...mockEventLog, ...(arg ? { ...arg } : {}) }] as EventLogEntity[];
+  },
+  save: async (arg) => arg as EventLogEntity,
 };
