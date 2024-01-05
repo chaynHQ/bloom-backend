@@ -1,5 +1,6 @@
 import { createMock } from '@golevelup/ts-jest';
 import { Test, TestingModule } from '@nestjs/testing';
+import { createHmac } from 'crypto';
 import { format, sub } from 'date-fns';
 import startOfDay from 'date-fns/startOfDay';
 import { MailchimpClient } from 'src/api/mailchimp/mailchip-api';
@@ -48,6 +49,12 @@ import { EmailCampaignRepository } from './email-campaign/email-campaign.reposit
 import { TherapySessionRepository } from './therapy-session.repository';
 import { WebhooksService } from './webhooks.service';
 
+const webhookSecret = process.env.STORYBLOK_WEBHOOK_SECRET;
+
+const getWebhookSignature = (body) => {
+  return createHmac('sha1', webhookSecret).update(JSON.stringify(body)).digest('hex');
+};
+
 // Difficult to mock classes as well as node modules.
 // This seemed the best approach
 jest.mock('storyblok-js-client', () => {
@@ -57,6 +64,7 @@ jest.mock('storyblok-js-client', () => {
     };
   });
 });
+
 jest.mock('src/api/simplybook/simplybook-api', () => {
   return {
     getBookingsForDate: async () => [
@@ -181,30 +189,44 @@ describe('WebhooksService', () => {
       });
       expect.assertions(1);
 
-      return expect(
-        service.updateStory({
-          action: STORYBLOK_STORY_STATUS_ENUM.DELETED,
-          story_id: mockSession.storyblokId,
-          text: '',
-        }),
-      ).rejects.toThrowError('STORYBLOK STORY NOT FOUND');
-    });
-
-    it('when action is deleted, story should be set as deleted in database', async () => {
-      const deletedStory = (await service.updateStory({
+      const body = {
         action: STORYBLOK_STORY_STATUS_ENUM.DELETED,
         story_id: mockSession.storyblokId,
         text: '',
-      })) as SessionEntity;
+      };
+
+      return expect(service.updateStory(body, getWebhookSignature(body))).rejects.toThrowError(
+        'STORYBLOK STORY NOT FOUND',
+      );
+    });
+
+    it('when action is deleted, story should be set as deleted in database', async () => {
+      const body = {
+        action: STORYBLOK_STORY_STATUS_ENUM.DELETED,
+        story_id: mockSession.storyblokId,
+        text: '',
+      };
+
+      const deletedStory = (await service.updateStory(
+        body,
+        getWebhookSignature(body),
+      )) as SessionEntity;
+
       expect(deletedStory.status).toBe(STORYBLOK_STORY_STATUS_ENUM.DELETED);
     });
 
     it('when action is unpublished, story should be set as unpublished in database', async () => {
-      const unpublished = (await service.updateStory({
+      const body = {
         action: STORYBLOK_STORY_STATUS_ENUM.UNPUBLISHED,
         story_id: mockSession.storyblokId,
         text: '',
-      })) as SessionEntity;
+      };
+
+      const unpublished = (await service.updateStory(
+        body,
+        getWebhookSignature(body),
+      )) as SessionEntity;
+
       expect(unpublished.status).toBe(STORYBLOK_STORY_STATUS_ENUM.UNPUBLISHED);
     });
 
@@ -245,11 +267,13 @@ describe('WebhooksService', () => {
           return course2;
         });
 
-      const session = (await service.updateStory({
+      const body = {
         action: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
         story_id: mockCourse.storyblokId,
         text: '',
-      })) as SessionEntity;
+      };
+
+      const session = (await service.updateStory(body, getWebhookSignature(body))) as SessionEntity;
 
       expect(courseFindOneSpy).toBeCalledWith({
         storyblokUuid: 'anotherCourseUuId',
@@ -286,11 +310,13 @@ describe('WebhooksService', () => {
 
       const courseFindOneSpy = jest.spyOn(mockedCourseRepository, 'findOne');
 
-      const session = (await service.updateStory({
+      const body = {
         action: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
         story_id: mockSession.storyblokId,
         text: '',
-      })) as SessionEntity;
+      };
+
+      const session = (await service.updateStory(body, getWebhookSignature(body))) as SessionEntity;
 
       expect(session).toEqual(mockSession);
       expect(courseFindOneSpy).toBeCalledWith({
@@ -342,11 +368,14 @@ describe('WebhooksService', () => {
           },
         };
       });
-      const session = (await service.updateStory({
+
+      const body = {
         action: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
         story_id: mockSession.storyblokId,
         text: '',
-      })) as SessionEntity;
+      };
+
+      const session = (await service.updateStory(body, getWebhookSignature(body))) as SessionEntity;
 
       expect(session).toEqual(mockSession);
       expect(sessionSaveRepoSpy).toBeCalledWith({
@@ -373,11 +402,14 @@ describe('WebhooksService', () => {
           get: async () => mockCourseStoryblokResult,
         };
       });
-      const course = (await service.updateStory({
+
+      const body = {
         action: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
         story_id: 5678,
         text: '',
-      })) as CourseEntity;
+      };
+
+      const course = (await service.updateStory(body, getWebhookSignature(body))) as CourseEntity;
 
       expect(course).toEqual(mockCourse);
       expect(courseFindOneRepoSpy).toBeCalledWith({
