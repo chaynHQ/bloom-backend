@@ -1,5 +1,6 @@
 import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { createHmac } from 'crypto';
 import { format, sub } from 'date-fns';
 import startOfDay from 'date-fns/startOfDay';
 import { MailchimpClient } from 'src/api/mailchimp/mailchip-api';
@@ -435,8 +436,29 @@ export class WebhooksService {
     }
   }
 
-  async updateStory({ action, story_id }: StoryDto) {
+  async updateStory(data: StoryDto, signature: string | undefined) {
+    // Verify storyblok signature uses storyblok webhook secret - see https://www.storyblok.com/docs/guide/in-depth/webhooks#securing-a-webhook
+    if (!signature) {
+      throw new HttpException(
+        'Storyblok webhook failed: no signature provided',
+        HttpStatus.UNAUTHORIZED,
+      );
+    }
+    const webhookSecret = process.env.STORYBLOK_WEBHOOK_SECRET;
+    const bodyHmac = createHmac('sha1', webhookSecret).update(JSON.stringify(data)).digest('hex');
+
+    if (bodyHmac !== signature) {
+      throw new HttpException(
+        'Storyblok webhook failed: signature mismatch',
+        HttpStatus.UNAUTHORIZED,
+      );
+    }
+
+    const action = data.action;
+    const story_id = data.story_id;
+
     let story;
+
     const Storyblok = new StoryblokClient({
       accessToken: storyblokToken,
       cache: {

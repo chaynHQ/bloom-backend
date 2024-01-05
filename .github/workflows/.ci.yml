@@ -11,6 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       SIMPLYBOOK_CREDENTIALS: '{"login": "login"}'
+      STORYBLOK_WEBHOOK_SECRET: ${{ secrets.STORYBLOK_WEBHOOK_SECRET }}
     steps:
       - uses: actions/checkout@v2
       - name: Get yarn cache directory path
