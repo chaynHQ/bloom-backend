@@ -55,6 +55,16 @@ const getWebhookSignature = (body) => {
   return createHmac('sha1', webhookSecret).update(JSON.stringify(body)).digest('hex');
 };
 
+// Difficult to mock classes as well as node modules.
+// This seemed the best approach
+jest.mock('storyblok-js-client', () => {
+  return jest.fn().mockImplementation(() => {
+    return {
+      get: async () => mockSessionStoryblokResult,
+    };
+  });
+});
+
 jest.mock('src/api/simplybook/simplybook-api', () => {
   return {
     getBookingsForDate: async () => [
