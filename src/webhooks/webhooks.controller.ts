@@ -1,4 +1,4 @@
-import { Body, Controller, Logger, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Headers, Logger, Post, UseGuards } from '@nestjs/common';
 import { ApiBody, ApiTags } from '@nestjs/swagger';
 import { EventLogEntity } from 'src/entities/event-log.entity';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
@@ -53,7 +53,8 @@ export class WebhooksController {
 
   @Post('storyblok')
   @ApiBody({ type: StoryDto })
-  async updateStory(@Body() storyDto: StoryDto) {
-    return this.webhooksService.updateStory(storyDto);
+  async updateStory(@Body() data: StoryDto, @Headers() headers) {
+    const signature: string | undefined = headers['webhook-signature'];
+    return this.webhooksService.updateStory(data, signature);
   }
 }
