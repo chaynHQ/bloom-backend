@@ -22,7 +22,12 @@ import { PartnerAccessEntity } from '../entities/partner-access.entity';
 import { PartnerAccessRepository } from '../partner-access/partner-access.repository';
 import { SessionRepository } from '../session/session.repository';
 import { UserRepository } from '../user/user.repository';
-import { CAMPAIGN_TYPE, SIMPLYBOOK_ACTION_ENUM, storyblokToken } from '../utils/constants';
+import {
+  CAMPAIGN_TYPE,
+  SIMPLYBOOK_ACTION_ENUM,
+  STORYBLOK_STORY_STATUS_ENUM,
+  storyblokToken,
+} from '../utils/constants';
 import { StoryDto } from './dto/story.dto';
 import { EmailCampaignRepository } from './email-campaign/email-campaign.repository';
 import { TherapySessionRepository } from './therapy-session.repository';
@@ -457,86 +462,112 @@ export class WebhooksService {
     const action = data.action;
     const story_id = data.story_id;
 
-    let story;
+    if (action === STORYBLOK_STORY_STATUS_ENUM.PUBLISHED) {
+      let story;
 
-    const Storyblok = new StoryblokClient({
-      accessToken: storyblokToken,
-      cache: {
-        clear: 'auto',
-        type: 'memory',
-      },
-    });
+      const Storyblok = new StoryblokClient({
+        accessToken: storyblokToken,
+        cache: {
+          clear: 'auto',
+          type: 'memory',
+        },
+      });
 
-    try {
-      const {
-        data: { story: storyblokData },
-      } = await Storyblok.get(`cdn/stories/${story_id}`);
-      story = storyblokData;
-    } catch (error) {
-      throw new HttpException(error, HttpStatus.NOT_FOUND);
-    }
-
-    if (!story) {
-      throw new HttpException('STORY NOT FOUND', HttpStatus.NOT_FOUND);
-    }
-
-    const storyData = {
-      name: story.name,
-      slug: story.full_slug,
-      status: action,
-      storyblokId: Number(story.id),
-      storyblokUuid: story.uuid,
-    };
-    try {
-      if (story.content?.component === 'Course') {
-        let course = await this.courseRepository.findOne({
-          storyblokId: story.id,
-        });
-
-        if (!!course) {
-          course.status = action;
-          course.slug = story.full_slug;
-        } else {
-          course = this.courseRepository.create(storyData);
-        }
-        course.name = story.content?.name;
-        course = await this.courseRepository.save(course);
-
-        await this.coursePartnerService.updateCoursePartners(
-          story.content?.included_for_partners,
-          course.id,
-        );
-        return course;
-      } else if (
-        story.content?.component === 'Session' ||
-        story.content?.component === 'session_iba'
-      ) {
-        const course = await this.courseRepository.findOne({
-          storyblokUuid: story.content.course,
-        });
-
-        if (!course.id) {
-          throw new HttpException('COURSE NOT FOUND', HttpStatus.NOT_FOUND);
-        }
-
-        const session = await this.sessionRepository.findOne({
-          storyblokId: story.id,
-        });
-
-        const newSession = !!session
-          ? {
-              ...session,
-              status: action,
-              slug: story.full_slug,
-              name: story.name,
-              course: course,
-              courseId: course.id,
-            }
-          : this.sessionRepository.create({ ...storyData, ...{ courseId: course.id } });
-        return await this.sessionRepository.save(newSession);
+      try {
+        const {
+          data: { story: storyblokData },
+        } = await Storyblok.get(`cdn/stories/${story_id}`);
+        story = storyblokData;
+      } catch (error) {
+        throw new HttpException(error, HttpStatus.NOT_FOUND);
       }
-    } catch (error) {
-      throw error;
+
+      if (!story) {
+        throw new HttpException('STORY NOT FOUND', HttpStatus.NOT_FOUND);
+      }
+
+      const storyData = {
+        name: story.name,
+        slug: story.full_slug,
+        status: action,
+        storyblokId: story_id,
+        storyblokUuid: story.uuid,
+      };
+      try {
+        if (story.content?.component === 'Course') {
+          let course = await this.courseRepository.findOne({
+            storyblokId: story_id,
+          });
+
+          if (!!course) {
+            course.status = action;
+            course.slug = story.full_slug;
+          } else {
+            course = this.courseRepository.create(storyData);
+          }
+          course.name = story.content?.name;
+          course = await this.courseRepository.save(course);
+
+          await this.coursePartnerService.updateCoursePartners(
+            story.content?.included_for_partners,
+            course.id,
+          );
+          return course;
+        } else if (
+          story.content?.component === 'Session' ||
+          story.content?.component === 'session_iba'
+        ) {
+          const course = await this.courseRepository.findOne({
+            storyblokUuid: story.content.course,
+          });
+
+          if (!course.id) {
+            throw new HttpException('COURSE NOT FOUND', HttpStatus.NOT_FOUND);
+          }
+
+          const session = await this.sessionRepository.findOne({
+            storyblokId: story_id,
+          });
+
+          const newSession = !!session
+            ? {
+                ...session,
+                status: action,
+                slug: story.full_slug,
+                name: story.name,
+                course: course,
+                courseId: course.id,
+              }
+            : this.sessionRepository.create({ ...storyData, ...{ courseId: course.id } });
+          return await this.sessionRepository.save(newSession);
+        }
+      } catch (error) {
+        throw error;
+      }
+    } else if (
+      action === STORYBLOK_STORY_STATUS_ENUM.UNPUBLISHED ||
+      action === STORYBLOK_STORY_STATUS_ENUM.DELETED
+    ) {
+      // Story was unpublished or deleted so cant be fetched to check story type (Course or Session)
+      // Try to find course with matching story_id first
+      const course = await this.courseRepository.findOne({
+        storyblokId: story_id,
+      });
+
+      if (!!course) {
+        course.status = action;
+        return await this.courseRepository.save(course);
+      } else if (!course) {
+        // No course found, try finding session instead
+        const session = await this.sessionRepository.findOne({
+          storyblokId: story_id,
+        });
+
+        if (!!session) {
+          session.status = action;
+          return await this.sessionRepository.save(session);
+        }
+      }
     }
   }
 
