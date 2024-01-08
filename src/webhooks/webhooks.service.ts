@@ -462,6 +462,8 @@ export class WebhooksService {
     const action = data.action;
     const story_id = data.story_id;
 
+    this.logger.log('Storyblok action', action);
+
     if (action === STORYBLOK_STORY_STATUS_ENUM.PUBLISHED) {
       let story;
 
