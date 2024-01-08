@@ -190,7 +190,7 @@ describe('WebhooksService', () => {
       expect.assertions(1);
 
       const body = {
-        action: STORYBLOK_STORY_STATUS_ENUM.DELETED,
+        action: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
         story_id: mockSession.storyblokId,
         text: '',
       };

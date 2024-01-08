@@ -22,4 +22,8 @@ export class StoryDto {
   @IsOptional()
   @IsNumber()
   space_id?: number;
+
+  @IsOptional()
+  @IsNumber()
+  full_slug?: string;
 }
