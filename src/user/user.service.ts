@@ -358,23 +358,24 @@ export class UserService {
       const queryResult = await this.userRepository
         .createQueryBuilder('user')
         .select()
-        .where('user.name LIKE :searchTerm', { searchTerm: `%Cypress test user%` })
+        .where('user.name LIKE :searchTerm', { searchTerm: `%Cypress test%` })
         .getMany();
 
       const deletedUsers = await Promise.all(
         queryResult.map(async (user) => {
           try {
             await this.authService.deleteFirebaseUser(user.firebaseUid);
-            await this.userRepository.delete(user.id);
+            await this.userRepository.delete(user);
             return user;
           } catch (error) {
-            this.logger.error(`Unable to delete cypress user: ${user.email} ${error}`);
-            this.logger.error(
-              `deleteCypressTestAccessCodes - Unable to delete cypress user: ${user.email} ${error}`,
-            );
+            await this.userRepository.delete(user);
           }
         }),
       );
+
+      // Delete all remaining cypress firebase users (e.g. from failed user creations)
+      this.authService.deleteCypressFirebaseUsers();
+
       return deletedUsers;
     } catch (error) {
       // If this fails we don't want to break cypress tests
