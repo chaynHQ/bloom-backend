@@ -17,7 +17,7 @@ jobs:
         uses: newrelic/deployment-marker-action@v2.2.0
         with:
           apiKey: ${{ secrets.NEW_RELIC_API_KEY }}
-          region: 'EU'
+          region: 'US'
           guid: ${{ secrets.NEW_RELIC_DEPLOYMENT_ENTITY_GUID }}
           version: '${{ env.COMMIT_REF }}'
           user: '${{ github.actor }}'
