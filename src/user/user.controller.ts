@@ -69,6 +69,13 @@ export class UserController {
     return await this.userService.deleteCypressTestUsers();
   }
 
+  @ApiBearerAuth('access-token')
+  @Delete('/cypress-clean')
+  @UseGuards(SuperAdminAuthGuard)
+  async cleanCypressUsers(): Promise<UserEntity[]> {
+    return await this.userService.deleteCypressTestUsers(true);
+  }
+
   @ApiBearerAuth()
   @Delete(':id')
   @ApiParam({ name: 'id', description: 'User id to delete' })
