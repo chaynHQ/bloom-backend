@@ -355,7 +355,7 @@ export class UserService {
     return user;
   }
 
-  public async deleteCypressTestUsers(): Promise<UserEntity[]> {
+  public async deleteCypressTestUsers(clean = false): Promise<UserEntity[]> {
     try {
       const queryResult = await this.userRepository
         .createQueryBuilder('user')
@@ -366,6 +366,7 @@ export class UserService {
       const deletedUsers = await Promise.all(
         queryResult.map(async (user) => {
           try {
+            await deleteCrispProfile(user.email);
             await this.authService.deleteFirebaseUser(user.firebaseUid);
             await this.userRepository.delete(user);
             return user;
@@ -375,18 +376,28 @@ export class UserService {
         }),
       );
 
-      // Delete all remaining cypress firebase users (e.g. from failed user creations)
-      await this.authService.deleteCypressFirebaseUsers();
-
-      // Delete all remaining crisp accounts
-      await deleteCypressCrispProfiles();
-
       return deletedUsers;
     } catch (error) {
-      // If this fails we don't want to break cypress tests
-      this.logger.error(`deleteCypressTestAccessCodes - Unable to delete all cypress users`, error);
+      // If this fails we don't want to break cypress tests but we want to be alerted
+      this.logger.error(`deleteCypressTestUsers - Unable to delete all cypress users`, error);
+    }
+
+    try {
+      // Clean remaining user accounts in firebase and crisp that do not have a user record in the db
+      // These rogue accounts may be left over from incomplete signups or errors
+      if (clean) {
+        // Delete all remaining cypress firebase users (e.g. from failed user creations)
+        await this.authService.deleteCypressFirebaseUsers();
+
+        // Delete all remaining crisp accounts
+        await deleteCypressCrispProfiles();
+      }
+    } catch (error) {
+      // If this fails we don't want to break cypress tests but we want to be alerted
+      this.logger.error(`deleteCypressTestUsers - Unable to clean all cypress users`, error);
     }
   }
+
   public async getUsers(
     filters: {
       email?: string;
