@@ -206,7 +206,7 @@ export class PartnerAccessService {
       const partnerAccessRecords = await this.partnerAccessRepository //get partner access instances where user is a cypress user
         .createQueryBuilder('partnerAccess')
         .leftJoinAndSelect('partnerAccess.user', 'user')
-        .where('user.name LIKE :searchTerm', { searchTerm: `%Cypress test user%` })
+        .where('user.name LIKE :searchTerm', { searchTerm: `%Cypress test%` })
         .getMany();
       await Promise.all(
         partnerAccessRecords.map(async (access) => {

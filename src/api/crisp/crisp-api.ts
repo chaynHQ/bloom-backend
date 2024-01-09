@@ -210,3 +210,25 @@ export const deleteCrispProfile = async (email: string) => {
     throw error;
   }
 };
+
+export const deleteCypressCrispProfiles = async () => {
+  try {
+    const profiles = await apiCall({
+      url: `${baseUrl}/people/profiles/1?search_text=cypresstestemail+`,
+      type: 'get',
+      headers,
+    });
+
+    profiles.data.data.forEach(async (profile) => {
+      await apiCall({
+        url: `${baseUrl}/people/profile/${profile.email}`,
+        type: 'delete',
+        headers,
+      });
+    });
+
+    return 'ok';
+  } catch (error) {
+    throw error;
+  }
+};
