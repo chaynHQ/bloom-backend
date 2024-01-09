@@ -462,7 +462,7 @@ export class WebhooksService {
     const action = data.action;
     const story_id = data.story_id;
 
-    this.logger.log('Storyblok action', action);
+    this.logger.log(`Storyblok story ${action} request - ${story_id}`);
 
     if (action === STORYBLOK_STORY_STATUS_ENUM.PUBLISHED) {
       let story;
@@ -514,6 +514,8 @@ export class WebhooksService {
             story.content?.included_for_partners,
             course.id,
           );
+
+          this.logger.log(`Storyblok course ${action} success - ${course.name}`);
           return course;
         } else if (
           story.content?.component === 'Session' ||
@@ -527,7 +529,7 @@ export class WebhooksService {
             throw new HttpException('COURSE NOT FOUND', HttpStatus.NOT_FOUND);
           }
 
-          const session = await this.sessionRepository.findOne({
+          let session = await this.sessionRepository.findOne({
             storyblokId: story_id,
           });
 
@@ -541,7 +543,10 @@ export class WebhooksService {
                 courseId: course.id,
               }
             : this.sessionRepository.create({ ...storyData, ...{ courseId: course.id } });
-          return await this.sessionRepository.save(newSession);
+
+          session = await this.sessionRepository.save(newSession);
+          this.logger.log(`Storyblok session ${action} success - ${session.name}`);
+          return session;
         }
       } catch (error) {
         throw error;
@@ -552,22 +557,26 @@ export class WebhooksService {
     ) {
       // Story was unpublished or deleted so cant be fetched to check story type (Course or Session)
       // Try to find course with matching story_id first
-      const course = await this.courseRepository.findOne({
+      let course = await this.courseRepository.findOne({
         storyblokId: story_id,
       });
 
       if (!!course) {
         course.status = action;
-        return await this.courseRepository.save(course);
+        course = await this.courseRepository.save(course);
+        this.logger.log(`Storyblok course ${action} success - ${course.name}`);
+        return course;
       } else if (!course) {
         // No course found, try finding session instead
-        const session = await this.sessionRepository.findOne({
+        let session = await this.sessionRepository.findOne({
           storyblokId: story_id,
         });
 
         if (!!session) {
           session.status = action;
-          return await this.sessionRepository.save(session);
+          session = await this.sessionRepository.save(session);
+          this.logger.log(`Storyblok session ${action} success - ${session.name}`);
+          return session;
         }
       }
     }
