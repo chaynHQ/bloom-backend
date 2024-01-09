@@ -14,6 +14,7 @@ import {
 import {
   addCrispProfile,
   deleteCrispProfile,
+  deleteCypressCrispProfiles,
   updateCrispProfileData,
 } from '../api/crisp/crisp-api';
 import { AuthService } from '../auth/auth.service';
@@ -353,6 +354,7 @@ export class UserService {
 
     return user;
   }
+
   public async deleteCypressTestUsers(): Promise<UserEntity[]> {
     try {
       const queryResult = await this.userRepository
@@ -374,7 +376,10 @@ export class UserService {
       );
 
       // Delete all remaining cypress firebase users (e.g. from failed user creations)
-      this.authService.deleteCypressFirebaseUsers();
+      await this.authService.deleteCypressFirebaseUsers();
+
+      // Delete all remaining crisp accounts
+      await deleteCypressCrispProfiles();
 
       return deletedUsers;
     } catch (error) {
