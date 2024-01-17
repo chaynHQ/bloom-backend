@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { AxiosResponse } from 'axios';
+import { isProduction } from 'src/utils/constants';
 import apiCall from '../apiCalls';
 
 @Injectable()
@@ -9,6 +10,8 @@ export class SlackMessageClient {
   public async sendMessageToTherapySlackChannel(
     text: string,
   ): Promise<AxiosResponse<any, any> | string> {
+    if (!isProduction) return; // only send messages in production environment
+
     try {
       const response = await apiCall({
         url: process.env.SLACK_WEBHOOK_URL,
