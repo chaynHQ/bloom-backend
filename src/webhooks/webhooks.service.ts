@@ -61,29 +61,31 @@ export class WebhooksService {
     let feedbackEmailsSent = 0;
     for (const booking of bookings) {
       if (await this.isFirstCampaignEmail(booking.clientEmail, CAMPAIGN_TYPE.THERAPY_FEEDBACK)) {
+        let therapySession: TherapySessionEntity;
+
         try {
-          const therapySession = await this.therapySessionRepository.findOneOrFail(
+          therapySession = await this.therapySessionRepository.findOneOrFail(
             {
               bookingCode: booking.bookingCode,
             },
             { relations: ['user'] },
           );
-
-          if (therapySession.user && therapySession.user.signUpLanguage !== 'en') {
-            const emailLog = `Therapy session feedback email not sent as user was not english [email: ${
-              booking.clientEmail
-            }, session date: ${format(sub(new Date(), { days: 1 }), 'dd/MM/yyyy')}]`;
-            this.logger.log(emailLog);
-            this.slackMessageClient.sendMessageToTherapySlackChannel(emailLog);
-            continue;
-          }
         } catch (err) {
           this.logger.error(
             `sendFirstTherapySessionFeedbackEmail: failed to check therapySession due to error - ${err}`,
           );
-          const emailLog = `Failed to send therapy feedback email due to internal error [email: ${
+          const emailLog = `Failed to send therapy feedback email due to no associated booking in the database. This user may have used a different email to make the booking or may not have therapy access. [email: ${
             booking.clientEmail
           }, session date: ${format(yesterday, 'dd/MM/yyy')}]`;
+          this.slackMessageClient.sendMessageToTherapySlackChannel(emailLog);
+          continue;
+        }
+
+        if (therapySession.user && therapySession.user.signUpLanguage !== 'en') {
+          const emailLog = `Therapy session feedback email not sent as user was not english [email: ${
+            booking.clientEmail
+          }, session date: ${format(sub(new Date(), { days: 1 }), 'dd/MM/yyyy')}]`;
+          this.logger.log(emailLog);
           this.slackMessageClient.sendMessageToTherapySlackChannel(emailLog);
           continue;
         }
