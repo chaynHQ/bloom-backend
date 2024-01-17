@@ -555,6 +555,21 @@ describe('WebhooksService', () => {
       ).resolves.toHaveProperty('action', SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING);
     });
 
+    it('should add therapyRemaining to original partner access when action is cancel', async () => {
+      const partnerAccessSaveSpy = jest.spyOn(mockedPartnerAccessRepository, 'save');
+      await expect(
+        service.updatePartnerAccessTherapy({
+          ...mockSimplybookBodyBase,
+          ...{ action: SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING },
+        }),
+      ).resolves.toHaveProperty('action', SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING);
+      expect(partnerAccessSaveSpy).toBeCalledWith({
+        ...mockPartnerAccessEntity,
+        therapySessionsRemaining: mockPartnerAccessEntity.therapySessionsRemaining + 1,
+        therapySessionsRedeemed: mockPartnerAccessEntity.therapySessionsRedeemed - 1,
+      });
+    });
+
     it('should set a booking as cancelled when action is cancel and there are no therapy sessions remaining TODO', async () => {
       // mock that there is no therapy sessions remaining on partner access
       const partnerAccessFindSpy = jest

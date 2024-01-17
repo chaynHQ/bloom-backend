@@ -288,8 +288,8 @@ export class WebhooksService {
           id: existingTherapySession.partnerAccessId,
         });
 
-        partnerAccess.therapySessionsRemaining + 1;
-        partnerAccess.therapySessionsRedeemed - 1;
+        partnerAccess.therapySessionsRemaining += 1;
+        partnerAccess.therapySessionsRedeemed -= 1;
 
         await this.partnerAccessRepository.save(partnerAccess);
 
