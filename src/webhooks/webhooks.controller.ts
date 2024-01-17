@@ -22,14 +22,7 @@ export class WebhooksController {
   async updatePartnerAccessTherapy(
     @Body() simplybookBodyDto: ZapierSimplybookBodyDto,
   ): Promise<TherapySessionEntity> {
-    const updatedPartnerAccessTherapy = await this.webhooksService.updatePartnerAccessTherapy(
-      simplybookBodyDto,
-    );
-    this.logger.log(
-      `Updated partner access therapy: ${updatedPartnerAccessTherapy.clientEmail} - ${updatedPartnerAccessTherapy.bookingCode}`,
-    );
-
-    return updatedPartnerAccessTherapy;
+    return this.webhooksService.updatePartnerAccessTherapy(simplybookBodyDto);
   }
 
   @UseGuards(ZapierAuthGuard)

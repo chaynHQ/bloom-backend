@@ -19,7 +19,7 @@ export class ZapierSimplybookBodyDto {
   @IsString()
   @IsOptional()
   @ApiProperty({ type: String })
-  client_id?: string; // This is userId - not to be confused with the simplybook.client_id
+  user_id?: string;
 
   @IsString()
   @IsOptional()
