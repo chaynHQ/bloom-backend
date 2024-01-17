@@ -431,6 +431,7 @@ describe('WebhooksService', () => {
       courseSaveRepoSpy.mockClear();
     });
   });
+
   describe('updatePartnerAccessTherapy', () => {
     it('should update the booking time when action is update and time is different TODO ', async () => {
       const newStartTime = '2022-09-12T09:30:00+0000';
@@ -447,17 +448,17 @@ describe('WebhooksService', () => {
       expect(therapyRepoFindOneSpy).toBeCalled();
     });
 
-    it('should throw when action is on a user that doesnt  exist', async () => {
+    it('should throw an error when action is on a user that doesnt exist', async () => {
       const userFindOneRepoSpy = jest
         .spyOn(mockedUserRepository, 'findOne')
         .mockImplementationOnce(() => undefined);
       await expect(service.updatePartnerAccessTherapy(mockSimplybookBodyBase)).rejects.toThrowError(
-        'Unable to find user',
+        'UpdatePartnerAccessTherapy - error finding user with userID 115e272a-5fc3-4991-8ea9-12dacad25bae and origin client_email testuser@test.com',
       );
       expect(userFindOneRepoSpy).toBeCalled();
     });
 
-    it('when creating a new therapy session and the client_id/ userId is not provided, it should get userId from previous entry', async () => {
+    it('when creating a new therapy session and the userId is not provided, it should get userId from previous entry', async () => {
       const findTherapySessionSpy = jest
         .spyOn(mockedTherapySessionRepository, 'findOne')
         .mockImplementationOnce(async () => {
@@ -470,7 +471,7 @@ describe('WebhooksService', () => {
         });
       const newTherapySession = await service.updatePartnerAccessTherapy({
         ...mockSimplybookBodyBase,
-        client_id: undefined,
+        user_id: undefined,
         action: SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING,
       });
 
@@ -484,16 +485,17 @@ describe('WebhooksService', () => {
       });
 
       expect(findTherapySessionSpy).toBeCalledWith({
-        clientEmail: mockSimplybookBodyBase.client_email,
+        where: `"clientEmail" ILIKE 'testuser@test.com' AND "bookingCode" LIKE 'abc'`,
       });
 
       expect(findPartnerAccessSpy).toBeCalledWith({
         userId: 'userId1',
+        featureTherapy: true,
         active: true,
       });
     });
 
-    it('when creating a new therapy session and the client_id/ userId is not provided and no previousTherapySession exists, it should get userId from the userDatabase', async () => {
+    it('when creating a new therapy session and the user_id/ userId is not provided and no previousTherapySession exists, it should get userId from the userDatabase', async () => {
       const findTherapySessionSpy = jest
         .spyOn(mockedTherapySessionRepository, 'findOne')
         .mockImplementationOnce(async () => {
@@ -508,7 +510,7 @@ describe('WebhooksService', () => {
         });
       const newTherapySession = await service.updatePartnerAccessTherapy({
         ...mockSimplybookBodyBase,
-        client_id: undefined,
+        user_id: undefined,
         action: SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING,
       });
 
@@ -522,16 +524,26 @@ describe('WebhooksService', () => {
       });
 
       expect(findTherapySessionSpy).toBeCalledWith({
-        clientEmail: mockSimplybookBodyBase.client_email,
+        where: `"clientEmail" ILIKE 'testuser@test.com' AND "bookingCode" LIKE 'abc'`,
       });
       expect(findUserSpy).toBeCalledWith({
-        email: mockSimplybookBodyBase.client_email,
+        id: 'userId1',
       });
 
       expect(findPartnerAccessSpy).toBeCalledWith({
         userId: 'userId1',
+        featureTherapy: true,
         active: true,
       });
+    });
+
+    it('should not error when client email is different case to user record email', async () => {
+      await expect(
+        service.updatePartnerAccessTherapy({
+          ...mockSimplybookBodyBase,
+          client_email: 'Testuser@test.com',
+        }),
+      ).resolves.toHaveProperty('action', SIMPLYBOOK_ACTION_ENUM.UPDATED_BOOKING);
     });
 
     it('should set a booking as cancelled when action is cancel', async () => {
@@ -542,12 +554,13 @@ describe('WebhooksService', () => {
         }),
       ).resolves.toHaveProperty('action', SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING);
     });
+
     it('should set a booking as cancelled when action is cancel and there are no therapy sessions remaining TODO', async () => {
       // mock that there is no therapy sessions remaining on partner access
       const partnerAccessFindSpy = jest
-        .spyOn(mockedPartnerAccessRepository, 'find')
+        .spyOn(mockedPartnerAccessRepository, 'findOne')
         .mockImplementationOnce(async () => {
-          return [{ ...mockPartnerAccessEntity, therapySessionsRemaining: 0 }];
+          return { ...mockPartnerAccessEntity, therapySessionsRemaining: 0 };
         });
       await expect(
         service.updatePartnerAccessTherapy({
@@ -567,7 +580,9 @@ describe('WebhooksService', () => {
           ...mockSimplybookBodyBase,
           ...{ action: SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING },
         }),
-      ).rejects.toThrow('Unable to find partner access');
+      ).rejects.toThrow(
+        'newPartnerAccessTherapy - no partner therapy access - email user@email.com userId userId1',
+      );
     });
     it('should deduct therapyRemaining when user creates a new booking', async () => {
       jest.spyOn(mockedPartnerAccessRepository, 'find').mockImplementationOnce(async () => {
@@ -611,7 +626,9 @@ describe('WebhooksService', () => {
           ...mockSimplybookBodyBase,
           ...{ action: SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING },
         }),
-      ).rejects.toThrowError('No therapy sessions remaining');
+      ).rejects.toThrowError(
+        'newPartnerAccessTherapy - user has partner therapy access but has 0 therapy sessions remaining - email user@email.com userId userId1',
+      );
     });
     it('if user has 2 partner access codes and booking is tied to second code, user should be able to update booking', async () => {
       jest.spyOn(mockedPartnerAccessRepository, 'find').mockImplementationOnce(async () => {
@@ -844,7 +861,7 @@ describe('WebhooksService', () => {
       });
 
       await expect(service.createEventLog(eventDto)).rejects.toThrowError(
-        `webhooksService.createEventLog error, no user attached to email ${eventDto.email}`,
+        `createEventLog webhook failed - no user attached to email a@b.com`,
       );
     });
     it('should throw 500 if failed to create user', async () => {
