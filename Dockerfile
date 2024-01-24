@@ -1,4 +1,5 @@
 FROM node:16-alpine
+RUN apk add --no-cache git
 
 ENV NODE_ENV=development
 
