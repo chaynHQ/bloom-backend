@@ -35,12 +35,15 @@ const createUserDto: CreateUserDto = {
   password: 'password',
   name: 'name',
   contactPermission: false,
+  serviceEmailsPermission: true,
   signUpLanguage: 'en',
 };
+
 const createUserRepositoryDto = {
   email: 'user@email.com',
   name: 'name',
   contactPermission: false,
+  serviceEmailsPermission: true,
   signUpLanguage: 'en',
   firebaseUid: mockUserRecord.uid,
 };
@@ -48,6 +51,7 @@ const createUserRepositoryDto = {
 const updateUserDto: UpdateUserDto = {
   name: 'new name',
   contactPermission: true,
+  serviceEmailsPermission: false,
 };
 
 const mockPartnerWithAutomaticAccessCodeFeature = {
@@ -240,6 +244,7 @@ describe('UserService', () => {
       expect(user.name).toBe('new name');
       expect(user.email).toBe('user@email.com');
       expect(user.contactPermission).toBe(true);
+      expect(user.serviceEmailsPermission).toBe(false);
 
       expect(repoSpySave).toBeCalledWith({ ...mockUserEntity, ...updateUserDto });
       expect(repoSpySave).toBeCalled();
@@ -280,6 +285,7 @@ describe('UserService', () => {
         partnerAccess,
         signUpLanguage,
         contactPermission,
+        serviceEmailsPermission,
         courseUser,
         eventLog,
         ...userBase

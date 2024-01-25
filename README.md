@@ -179,6 +179,8 @@ To revert a migration
 yarn migration:revert
 ```
 
+Note that when running the app in Docker, you may need to run migration commands from the docker terminal/Exec
+
 **New environment variables must be added to Heroku before release.**
 
 ### Run unit tests
