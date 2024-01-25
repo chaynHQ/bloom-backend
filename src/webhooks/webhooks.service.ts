@@ -90,6 +90,15 @@ export class WebhooksService {
           continue;
         }
 
+        if (therapySession.user && therapySession.user.serviceEmailsPermission === false) {
+          const emailLog = `Therapy session feedback email not sent as user has disabled service emails [email: ${
+            booking.clientEmail
+          }, session date: ${format(sub(new Date(), { days: 1 }), 'dd/MM/yyyy')}]`;
+          this.logger.log(emailLog);
+          this.slackMessageClient.sendMessageToTherapySlackChannel(emailLog);
+          continue;
+        }
+
         await this.mailchimpClient.sendTherapyFeedbackEmail(booking.clientEmail);
         const emailLog = `First therapy session feedback email sent [email: ${
           booking.clientEmail
@@ -161,6 +170,12 @@ export class WebhooksService {
           // Send a warning as we shouldn't be getting into this situations
           this.logger.warn(
             `sendImpactMeasurementEmail: Skipping sending user Impact Measurement Email [email: ${user.email}]`,
+          );
+          continue;
+        }
+        if (user.serviceEmailsPermission === false) {
+          this.logger.log(
+            `sendImpactMeasurementEmail: Skipped sending user Impact Measurement Email - user has disabled service emails  [email: ${user.email}]`,
           );
           continue;
         }

@@ -31,6 +31,7 @@ import {
   mockSessionStoryblokResult,
   mockSimplybookBodyBase,
   mockTherapySessionEntity,
+  mockUserEntity,
 } from 'test/utils/mockData';
 import {
   mockCoursePartnerRepositoryMethods,
@@ -680,7 +681,7 @@ describe('WebhooksService', () => {
     });
   });
   describe('sendFirstTherapySessionFeedbackEmail', () => {
-    it('should send email to those with bookings yesterday', async () => {
+    it('should send emails to users with bookings yesterday', async () => {
       jest.spyOn(mockedEmailCampaignRepository, 'find').mockImplementationOnce(async () => {
         return [];
       });
@@ -693,7 +694,7 @@ describe('WebhooksService', () => {
       );
     });
 
-    it('should send email to only those who have not recieved an email already', async () => {
+    it('should send emails to only users who have not received an email already', async () => {
       // Mocking that email campaign entry already exists
       jest.spyOn(mockedEmailCampaignRepository, 'find').mockImplementationOnce(async () => {
         return [{} as EmailCampaignEntity];
@@ -713,7 +714,8 @@ describe('WebhooksService', () => {
       await expect(mailChimpSpy).toBeCalledTimes(0);
       await expect(saveSpy).toBeCalledTimes(0);
     });
-    it('should only send bookings to those who have signed up in english', async () => {
+
+    it('should only send emails to users who have signed up in english', async () => {
       jest.spyOn(mockedEmailCampaignRepository, 'find').mockImplementationOnce(async () => {
         return [];
       });
@@ -730,9 +732,31 @@ describe('WebhooksService', () => {
         )}`,
       );
     });
+
+    it('should not send emails to users who have disabled service emails', async () => {
+      jest.spyOn(mockedEmailCampaignRepository, 'find').mockImplementationOnce(async () => {
+        return [];
+      });
+      jest
+        .spyOn(mockedTherapySessionRepository, 'findOneOrFail')
+        .mockImplementationOnce(async () => {
+          return {
+            ...mockTherapySessionEntity,
+            user: { serviceEmailsPermission: false } as UserEntity,
+          };
+        });
+      const sentEmails = await service.sendFirstTherapySessionFeedbackEmail();
+      expect(sentEmails).toBe(
+        `First therapy session feedback emails sent to 0 client(s) for date: ${format(
+          sub(new Date(), { days: 1 }),
+          'dd/MM/yyyy',
+        )}`,
+      );
+    });
   });
+
   describe('sendImpactMeasurementEmail', () => {
-    it('should send email to those with bookings yesterday', async () => {
+    it('should send email to users with bookings yesterday', async () => {
       const startDate = sub(startOfDay(new Date()), { days: 180 });
       const endDate = sub(startOfDay(new Date()), { days: 173 });
       const mailChimpSpy = jest.spyOn(mockedMailchimpClient, 'sendImpactMeasurementEmail');
@@ -815,6 +839,7 @@ describe('WebhooksService', () => {
       expect(emailCampaignRepositorySpy).toBeCalledTimes(1);
       expect(emailCampaignRepositoryFindSpy).toBeCalledTimes(2);
     });
+
     it('if a user has already been sent an email, no second email is sent', async () => {
       const startDate = sub(startOfDay(new Date()), { days: 180 });
       const endDate = sub(startOfDay(new Date()), { days: 173 });
@@ -840,6 +865,30 @@ describe('WebhooksService', () => {
       expect(emailCampaignRepositoryFindSpy).toBeCalledTimes(2);
     });
 
+    it('if a user disabled service emails, no email is sent', async () => {
+      const startDate = sub(startOfDay(new Date()), { days: 180 });
+      const endDate = sub(startOfDay(new Date()), { days: 173 });
+      const emailCampaignRepositorySpy = jest.spyOn(mockedEmailCampaignRepository, 'save');
+
+      jest.spyOn(mockedUserRepository, 'find').mockImplementationOnce(async () => {
+        return [
+          {
+            ...mockUserEntity,
+            serviceEmailsPermission: false,
+          },
+        ];
+      });
+      const sentEmails = await service.sendImpactMeasurementEmail();
+
+      expect(sentEmails).toBe(
+        `Impact feedback email sent to ${0} users who created their account between ${format(
+          startDate,
+          'dd/MM/yyyy',
+        )} - ${format(endDate, 'dd/MM/yyyy')}`,
+      );
+      expect(emailCampaignRepositorySpy).toBeCalledTimes(0);
+    });
+
     it('if error occurs fetching users, error is thrown', async () => {
       jest.spyOn(mockedUserRepository, 'find').mockImplementationOnce(async () => {
         throw new Error('Failed to save');
@@ -849,6 +898,7 @@ describe('WebhooksService', () => {
       );
     });
   });
+
   describe('createEventLog', () => {
     it('should create an eventLog if DTO is correct', async () => {
       const eventDto: WebhookCreateEventLogDto = {
