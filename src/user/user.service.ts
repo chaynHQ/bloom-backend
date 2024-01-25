@@ -364,14 +364,12 @@ export class UserService {
       throw new HttpException('USER NOT FOUND', HttpStatus.NOT_FOUND);
     }
 
-    user.name = updateUserDto?.name ?? user.name;
-    user.contactPermission = updateUserDto?.contactPermission ?? user.contactPermission;
-    user.serviceEmailsPermission =
-      updateUserDto?.serviceEmailsPermission ?? user.serviceEmailsPermission;
+    const updatedUser: UserEntity = {
+      ...user,
+      ...updateUserDto,
+    };
 
-    await this.userRepository.save(user);
-
-    return user;
+    return await this.userRepository.save(updatedUser);
   }
 
   public async deleteCypressTestUsers(clean = false): Promise<UserEntity[]> {
