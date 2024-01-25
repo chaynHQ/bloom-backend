@@ -11,4 +11,9 @@ export class UpdateUserDto {
   @IsOptional()
   @ApiProperty({ type: Boolean })
   contactPermission: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  @ApiProperty({ type: Boolean })
+  serviceEmailsPermission: boolean;
 }

@@ -135,6 +135,7 @@ export const mockUserEntity: UserEntity = {
   crispTokenId: '123',
   firebaseUid: '123',
   contactPermission: true,
+  serviceEmailsPermission: true,
   email: 'user@email.com',
   name: 'name',
   signUpLanguage: 'en',

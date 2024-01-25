@@ -160,7 +160,7 @@ export class UserService {
   }
 
   public async createPublicUser(
-    { name, email, contactPermission, signUpLanguage }: CreateUserDto,
+    { name, email, contactPermission, serviceEmailsPermission, signUpLanguage }: CreateUserDto,
     firebaseUid: string,
   ) {
     try {
@@ -169,6 +169,7 @@ export class UserService {
         email,
         firebaseUid,
         contactPermission,
+        serviceEmailsPermission,
         signUpLanguage,
       });
       const createUserResponse = await this.userRepository.save(createUserObject);
@@ -180,7 +181,14 @@ export class UserService {
   }
 
   public async createPartnerUserWithoutCode(
-    { name, email, contactPermission, signUpLanguage, partnerId }: CreateUserDto,
+    {
+      name,
+      email,
+      contactPermission,
+      serviceEmailsPermission,
+      signUpLanguage,
+      partnerId,
+    }: CreateUserDto,
     firebaseUid: string,
   ) {
     try {
@@ -204,6 +212,7 @@ export class UserService {
         email,
         firebaseUid,
         contactPermission,
+        serviceEmailsPermission,
         signUpLanguage,
       });
 
@@ -223,7 +232,14 @@ export class UserService {
   }
 
   public async createPartnerUserWithCode(
-    { name, email, contactPermission, signUpLanguage, partnerAccessCode }: CreateUserDto,
+    {
+      name,
+      email,
+      contactPermission,
+      serviceEmailsPermission,
+      signUpLanguage,
+      partnerAccessCode,
+    }: CreateUserDto,
     firebaseUid: string,
   ) {
     try {
@@ -236,6 +252,7 @@ export class UserService {
         email,
         firebaseUid,
         contactPermission,
+        serviceEmailsPermission,
         signUpLanguage,
       });
 
@@ -349,6 +366,8 @@ export class UserService {
 
     user.name = updateUserDto?.name ?? user.name;
     user.contactPermission = updateUserDto?.contactPermission ?? user.contactPermission;
+    user.serviceEmailsPermission =
+      updateUserDto?.serviceEmailsPermission ?? user.serviceEmailsPermission;
 
     await this.userRepository.save(user);
 
