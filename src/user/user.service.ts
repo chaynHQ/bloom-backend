@@ -160,7 +160,7 @@ export class UserService {
   }
 
   public async createPublicUser(
-    { name, email, contactPermission, signUpLanguage }: CreateUserDto,
+    { name, email, contactPermission, serviceEmailsPermission, signUpLanguage }: CreateUserDto,
     firebaseUid: string,
   ) {
     try {
@@ -169,6 +169,7 @@ export class UserService {
         email,
         firebaseUid,
         contactPermission,
+        serviceEmailsPermission,
         signUpLanguage,
       });
       const createUserResponse = await this.userRepository.save(createUserObject);
@@ -180,7 +181,14 @@ export class UserService {
   }
 
   public async createPartnerUserWithoutCode(
-    { name, email, contactPermission, signUpLanguage, partnerId }: CreateUserDto,
+    {
+      name,
+      email,
+      contactPermission,
+      serviceEmailsPermission,
+      signUpLanguage,
+      partnerId,
+    }: CreateUserDto,
     firebaseUid: string,
   ) {
     try {
@@ -204,6 +212,7 @@ export class UserService {
         email,
         firebaseUid,
         contactPermission,
+        serviceEmailsPermission,
         signUpLanguage,
       });
 
@@ -223,7 +232,14 @@ export class UserService {
   }
 
   public async createPartnerUserWithCode(
-    { name, email, contactPermission, signUpLanguage, partnerAccessCode }: CreateUserDto,
+    {
+      name,
+      email,
+      contactPermission,
+      serviceEmailsPermission,
+      signUpLanguage,
+      partnerAccessCode,
+    }: CreateUserDto,
     firebaseUid: string,
   ) {
     try {
@@ -236,6 +252,7 @@ export class UserService {
         email,
         firebaseUid,
         contactPermission,
+        serviceEmailsPermission,
         signUpLanguage,
       });
 
@@ -347,15 +364,16 @@ export class UserService {
       throw new HttpException('USER NOT FOUND', HttpStatus.NOT_FOUND);
     }
 
-    user.name = updateUserDto?.name ?? user.name;
-    user.contactPermission = updateUserDto?.contactPermission ?? user.contactPermission;
+    const updatedUser: UserEntity = {
+      ...user,
+      ...updateUserDto,
+    };
 
-    await this.userRepository.save(user);
-
-    return user;
+    return await this.userRepository.save(updatedUser);
   }
 
   public async deleteCypressTestUsers(clean = false): Promise<UserEntity[]> {
+    let deletedUsers: UserEntity[] = [];
     try {
       const queryResult = await this.userRepository
         .createQueryBuilder('user')
@@ -363,10 +381,12 @@ export class UserService {
         .where('user.name LIKE :searchTerm', { searchTerm: `%Cypress test%` })
         .getMany();
 
-      const deletedUsers = await Promise.all(
+      deletedUsers = await Promise.all(
         queryResult.map(async (user) => {
           try {
-            await deleteCrispProfile(user.email);
+            // TODO: replace me - temporarily disabled due to too many tests accounts to delete, causing 429 errors on crisp API
+            // once crisp test users have been cleared using the clean function, and there are <50 test users in crisp, this can be replaced
+            // await deleteCrispProfile(user.email);
             await this.authService.deleteFirebaseUser(user.firebaseUid);
             await this.userRepository.delete(user);
             return user;
@@ -375,8 +395,6 @@ export class UserService {
           }
         }),
       );
-
-      return deletedUsers;
     } catch (error) {
       // If this fails we don't want to break cypress tests but we want to be alerted
       this.logger.error(`deleteCypressTestUsers - Unable to delete all cypress users`, error);
@@ -396,6 +414,9 @@ export class UserService {
       // If this fails we don't want to break cypress tests but we want to be alerted
       this.logger.error(`deleteCypressTestUsers - Unable to clean all cypress users`, error);
     }
+
+    this.logger.log(`deleteCypressTestUsers - Successfully deleted ${deletedUsers.length} users`);
+    return deletedUsers;
   }
 
   public async getUsers(

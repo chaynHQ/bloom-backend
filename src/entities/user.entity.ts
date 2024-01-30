@@ -24,8 +24,11 @@ export class UserEntity extends BaseBloomEntity {
   @Column({ nullable: true })
   signUpLanguage: string;
 
-  @Column()
-  contactPermission!: boolean;
+  @Column({ default: false })
+  contactPermission: boolean; // marketing consent
+
+  @Column({ default: true })
+  serviceEmailsPermission: boolean; // service emails consent
 
   @Column({ type: Boolean, default: false })
   isSuperAdmin: boolean;

@@ -5,6 +5,7 @@ const userDto = {
   name: 'name',
   firebaseUid: 'iiiiod',
   contactPermission: false,
+  serviceEmailsPermission: true,
   id: 'string',
   createdAt: new Date(),
   updatedAt: new Date(),

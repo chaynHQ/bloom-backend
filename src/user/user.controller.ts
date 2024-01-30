@@ -4,8 +4,8 @@ import {
   Delete,
   Get,
   Param,
+  Patch,
   Post,
-  Put,
   Query,
   Req,
   UseGuards,
@@ -85,7 +85,7 @@ export class UserController {
   }
 
   @ApiBearerAuth()
-  @Put()
+  @Patch()
   @UseGuards(FirebaseAuthGuard)
   async updateUser(@Body() updateUserDto: UpdateUserDto, @Req() req: Request) {
     return await this.userService.updateUser(updateUserDto, req['user'] as GetUserDto);
