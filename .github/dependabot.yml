@@ -4,6 +4,9 @@
 # https://docs.github.com/github/administering-a-repository/configuration-options-for-dependency-updates
 # https://containers.dev/guide/dependabot
 
+# Run dependabot weekly to check for updates to the devcontainers package ecosystem.
+# Might need to combine this with future dependabot configurations later.
+
 version: 2
 updates:
  - package-ecosystem: "devcontainers"

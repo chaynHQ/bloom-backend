@@ -55,6 +55,21 @@ For a more detailed explanation of this project's key concepts and architecture,
 - Yarn v1.x
 - Docker
 
+### Run in Dev Container - OPTIONAL
+
+**Recommended for Visual Studio & Visual Studio Code users.**
+
+This method will automatically install all dependencies and IDE settings in a Dev Container (Docker container) within Visual Studio Code. Simply clone this repo to your computer, open in Visual Studio Code, and select "Re-open in Container" when notified.
+
+After re-opening VS Code in a dev container, develop as you normally would and use the container terminal within VS Code. Next, [configure your environment variables](#configure-environment-variables).
+
+The dev Container is configured in the `.devcontainer` directory:
+
+- `docker-compose.yml` file in this directory extends the `docker-compose.yml` in the root directory.
+- `devcontainer.json` configures the integrations with Visual Studio Code, such as the IDE extensions and settings in the `vscode` directory.
+
+Read for more detailed instructions: [Visual Studio Code Docs: Developing Inside a Dev Container](https://code.visualstudio.com/docs/devcontainers/containers).
+
 ### Install dependencies
 
 ```bash
@@ -123,7 +138,9 @@ RESPOND_IO_CREATE_CONTACT_WEBHOOK=
 RESPOND_IO_DELETE_CONTACT_WEBHOOK=
 ```
 
-### Run locally (with Docker) - RECOMMENDED
+### Run the App Locally
+
+#### Using Docker - RECOMMENDED
 
 The project is containerized and can be run solely in docker - both the PostgreSQL database and NestJS app. To run the backend locally, make sure your system has Docker installed - you may need Docker Desktop if using a Mac.
 
@@ -141,7 +158,9 @@ Listening on localhost:35001, CTRL+C to stop
 
 _Note: you can use an application like Postman to test the apis locally_
 
-**Run the app**
+#### Without Docker
+
+First install [postgres](https://www.postgresql.org/). Next follow directions to [seed the database](#seed-local-database), then run:
 
 ```bash
 yarn start:dev
@@ -217,7 +236,7 @@ Workspace settings for VSCode are included for consistent linting and formatting
 
 ### Seed Local Database
 
-If you're a volunteer, the way to add data to your local database is to seed it using a backup file. Please get in touch with the team to get access to the backup file.
+If you're a volunteer, the way to add data to your local database is to seed it using a backup file. Please [read our Tech Volunteer Guide](https://www.notion.so/chayn/Tech-volunteer-wiki-5356c7118c134863a2e092e9df6cbc34?pvs=4#0fb25ffde84f4854b2d9730200eee283) for directions on seeding the local database.
 
 If you're staff and have access to Heroku, you also have the option to seed the database via the following script. Before you start, make sure:
 

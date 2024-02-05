@@ -1,3 +1,4 @@
+# Comments generated through the "Create a Dev Container" wizard in Visual Studio Code
 version: '3.9'
 services:
   # Update this to the name of the service you want to work with in your docker-compose.yml file
