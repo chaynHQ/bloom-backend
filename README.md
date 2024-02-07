@@ -217,7 +217,7 @@ Workspace settings for VSCode are included for consistent linting and formatting
 
 ### Seed Local Database
 
-If you're a volunteer, the way to add data to your local database is to seed it using a backup file. Please get in touch with the team to get access to the backup file.
+Visit our [Tech Volunteer Guide](https://chayn.notion.site/Tech-volunteer-wiki-5356c7118c134863a2e092e9df6cbc34#84635bd9b82543ccaab4fb932ca35ebf) for directions on how to seed your local database with data.
 
 If you're staff and have access to Heroku, you also have the option to seed the database via the following script. Before you start, make sure:
 
