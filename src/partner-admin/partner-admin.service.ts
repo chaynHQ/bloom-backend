@@ -57,6 +57,7 @@ export class PartnerAdminService {
         email,
         firebaseUid: firebaseUser.user.uid,
         contactPermission: true,
+        serviceEmailsPermission: true,
       });
 
       return await this.partnerAdminRepository.save({
@@ -88,7 +89,7 @@ export class PartnerAdminService {
         .update(PartnerAdminEntity)
         .set({ active: updatePartnerAdminDto.active })
         .where('partnerAdminId = :partnerAdminId', { partnerAdminId })
-        .returning('*')
+        .returning('*');
     } catch (error) {
       throw error;
     }

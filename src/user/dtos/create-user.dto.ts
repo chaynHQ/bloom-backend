@@ -36,6 +36,11 @@ export class CreateUserDto {
   contactPermission: boolean;
 
   @IsOptional()
+  @IsBoolean()
+  @ApiProperty({ type: Boolean })
+  serviceEmailsPermission: boolean;
+
+  @IsOptional()
   @IsString()
   @ApiProperty({ type: String })
   signUpLanguage: string;

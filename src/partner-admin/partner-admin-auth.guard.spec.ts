@@ -16,6 +16,7 @@ const userEntity: UserEntity = {
   email: 'usermail',
   name: 'name',
   contactPermission: false,
+  serviceEmailsPermission: true,
   isSuperAdmin: false,
   crispTokenId: '123',
   partnerAccess: [],

@@ -23,10 +23,10 @@
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "typeorm": "node --require ts-node/register ./node_modules/typeorm/cli.js",
     "seed": "bash ./staging_backup.sh -c",
-    "migration:generate": "yarn build && yarn typeorm migration:generate -- -n bloom-backend",
+    "migration:generate": "yarn build && yarn typeorm -- migration:generate -n bloom-backend",
     "migration:run": "yarn build && yarn typeorm -- migration:run",
     "migration:revert": "yarn typeorm -- migration:revert",
-    "prepare": "husky install"
+    "migration:show": "yarn build && yarn typeorm -- migration:show"
   },
   "dependencies": {
     "@mailchimp/mailchimp_transactional": "^1.0.47",
@@ -73,7 +73,6 @@
     "eslint": "^7.30.0",
     "eslint-config-prettier": "^8.3.0",
     "eslint-plugin-prettier": "^3.4.0",
-    "husky": "^7.0.4",
     "jest": "^27.0.6",
     "prettier": "^2.3.2",
     "supertest": "^6.1.3",
