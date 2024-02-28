@@ -128,8 +128,7 @@ export class WebhooksService {
 
   private async isFirstCampaignEmail(email: string, campaign: CAMPAIGN_TYPE) {
     const matchingEntries = await this.emailCampaignRepository.find({
-      email,
-      campaignType: campaign,
+      where: `"email" ILIKE '${email}' AND "campaignType" LIKE '${campaign}'`,
     });
     return matchingEntries.length === 0;
   }
