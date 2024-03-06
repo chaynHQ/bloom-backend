@@ -77,9 +77,10 @@ export class UserService {
         this.logger.error(`Create user: Error creating firebase user - ${email}: ${err}`);
         throw err;
       } else {
-        this.logger.warn(
+        this.logger.error(
           `Create user: Unable to create firebase user as user already exists: ${email}`,
         );
+        throw new HttpException(CREATE_USER_EMAIL_ALREADY_EXISTS, HttpStatus.BAD_REQUEST);
       }
     }
 
@@ -141,19 +142,6 @@ export class UserService {
 
       return formattedUserObject;
     } catch (error) {
-      const userAlreadyExists = (err) =>
-        err.message.includes('already exists') ||
-        err.message.includes('UQ_e12875dfb3b1d92d7d7c5377e22') ||
-        err.message.includes(
-          'duplicate key value violates unique constraint "UQ_905432b2c46bdcfe1a0dd3cdeff"',
-        );
-      if (userAlreadyExists(error)) {
-        this.logger.warn(`Create user: User already exists ${email}`);
-        throw new HttpException(CREATE_USER_EMAIL_ALREADY_EXISTS, HttpStatus.CONFLICT);
-      }
-      if (error.code === '23505') {
-        throw new HttpException(error.detail, HttpStatus.CONFLICT);
-      }
       this.logger.error(`Create user: Error creating user ${email}: ${error}`);
       throw error;
     }

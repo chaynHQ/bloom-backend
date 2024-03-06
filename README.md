@@ -235,8 +235,7 @@ Formatting and linting is provided by ESLint and Prettier (see the relevant conf
 Workspace settings for VSCode are included for consistent linting and formatting.
 
 ### Seed Local Database
-
-If you're a volunteer, the way to add data to your local database is to seed it using a backup file. Please [read our Tech Volunteer Guide](https://www.notion.so/chayn/Tech-volunteer-wiki-5356c7118c134863a2e092e9df6cbc34?pvs=4#0fb25ffde84f4854b2d9730200eee283) for directions on seeding the local database.
+If you're a volunteer, add data to your local database by seeding it with a backup file. Please [read our Tech Volunteer Guide](https://www.notion.so/chayn/Tech-volunteer-wiki-5356c7118c134863a2e092e9df6cbc34?pvs=4#0fb25ffde84f4854b2d9730200eee283) for directions on seeding the local database.
 
 If you're staff and have access to Heroku, you also have the option to seed the database via the following script. Before you start, make sure:
 
