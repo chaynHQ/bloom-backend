@@ -57,7 +57,7 @@
     "rxjs": "^7.2.0",
     "storyblok-js-client": "^4.2.0",
     "swagger-ui-express": "^4.1.6",
-    "typeorm": "^0.2.38"
+    "typeorm": "^0.3.0"
   },
   "devDependencies": {
     "@golevelup/ts-jest": "^0.3.2",
