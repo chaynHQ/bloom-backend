@@ -1,7 +1,6 @@
 import { UserRecord } from 'firebase-admin/lib/auth/user-record';
 import { CoursePartnerEntity } from 'src/entities/course-partner.entity';
 import { CourseEntity } from 'src/entities/course.entity';
-import { EmailCampaignEntity } from 'src/entities/email-campaign.entity';
 import { EventLogEntity } from 'src/entities/event-log.entity';
 import { FeatureEntity } from 'src/entities/feature.entity';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
@@ -16,11 +15,7 @@ import { UserEntity } from 'src/entities/user.entity';
 import { EVENT_NAME } from 'src/event-logger/event-logger.interface';
 import { IFirebaseUser } from 'src/firebase/firebase-user.interface';
 import { ZapierSimplybookBodyDto } from 'src/partner-access/dtos/zapier-body.dto';
-import {
-  CAMPAIGN_TYPE,
-  SIMPLYBOOK_ACTION_ENUM,
-  STORYBLOK_STORY_STATUS_ENUM,
-} from 'src/utils/constants';
+import { SIMPLYBOOK_ACTION_ENUM, STORYBLOK_STORY_STATUS_ENUM } from 'src/utils/constants';
 import { ISbResult } from 'storyblok-js-client';
 
 export const mockSessionStoryblokResult = {
@@ -231,15 +226,6 @@ export const mockCoursePartnerEntity: CoursePartnerEntity = {
   active: true,
   createdAt: new Date(),
   updatedAt: new Date(),
-};
-
-export const mockEmailCampaignEntity: EmailCampaignEntity = {
-  email: 'test@test.com',
-  emailSentDateTime: new Date(),
-  id: 'id',
-  createdAt: new Date(),
-  updatedAt: new Date(),
-  campaignType: CAMPAIGN_TYPE.THERAPY_FEEDBACK,
 };
 
 export const mockPartnerAdminEntity: PartnerAdminEntity = {

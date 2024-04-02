@@ -18,11 +18,6 @@ export enum SIMPLYBOOK_ACTION_ENUM {
   COMPLETED_BOOKING = 'COMPLETED_BOOKING',
 }
 
-export enum CAMPAIGN_TYPE {
-  THERAPY_FEEDBACK = 'THERAPY_FEEDBACK',
-  IMPACT_MEASUREMENT = 'IMPACT_MEASUREMENT',
-}
-
 export enum STORYBLOK_STORY_STATUS_ENUM {
   PUBLISHED = 'published',
   UNPUBLISHED = 'unpublished',
@@ -104,25 +99,6 @@ export const crispWebsiteId = getEnv(process.env.CRISP_WEBSITE_ID, 'CRISP_WEBSIT
 export const slackWebhookUrl = getEnv(process.env.SLACK_WEBHOOK_URL, 'SLACK_WEBHOOK_URL');
 
 export const storyblokToken = getEnv(process.env.STORYBLOK_PUBLIC_TOKEN, 'STORYBLOK_PUBLIC_TOKEN');
-
-export const mailchimpMandrillApiKey = getEnv(
-  process.env.MAILCHIMP_MANDRILL_API_KEY,
-  'MAILCHIMP_MANDRILL_API_KEY',
-);
-export const mailchimpTherapyTemplateId = getEnv(
-  process.env.MAILCHIMP_THERAPY_TEMPLATE_ID,
-  'MAILCHIMP_THERAPY_TEMPLATE_ID',
-);
-
-export const mailchimpImpactMeasurementTemplateId = getEnv(
-  process.env.MAILCHIMP_IMPACT_MEASUREMENT_TEMPLATE_ID,
-  'MAILCHIMP_IMPACT_MEASUREMENT_TEMPLATE_ID',
-);
-
-export const mailchimpTherapyFromEmail = getEnv(
-  process.env.MAILCHIMP_THERAPY_FROM_EMAIL,
-  'MAILCHIMP_THERAPY_FROM_EMAIL',
-);
 
 export const simplybookCredentials = getEnv(
   process.env.SIMPLYBOOK_CREDENTIALS,
