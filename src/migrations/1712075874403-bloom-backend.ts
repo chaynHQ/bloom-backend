@@ -1,6 +1,8 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
 export class bloomBackend1712075874403 implements MigrationInterface {
+  name = 'bloomBackend1712075874403';
+
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`DROP TABLE "email_campaign"`);
   }

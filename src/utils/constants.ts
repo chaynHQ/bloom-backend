@@ -118,3 +118,9 @@ export const respondIoDeleteContactWebhook = getEnv(
   process.env.RESPOND_IO_DELETE_CONTACT_WEBHOOK,
   'RESPOND_IO_DELETE_CONTACT_WEBHOOK',
 );
+
+export const mailchimpApiKey = getEnv(process.env.MAILCHIMP_API_KEY, 'MAILCHIMP_API_KEY');
+export const mailchimpServerPrefix = getEnv(
+  process.env.MAILCHIMP_SERVER_PREFIX,
+  'MAILCHIMP_SERVER_PREFIX',
+);
