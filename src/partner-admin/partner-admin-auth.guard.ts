@@ -49,7 +49,10 @@ export class PartnerAdminAuthGuard implements CanActivate {
     }
 
     if (!user.partnerAdmin?.active) {
-      throw new HttpException(`PartnerAdminAuthGuard - Partner admin is no longer active`, HttpStatus.FORBIDDEN);
+      throw new HttpException(
+        `PartnerAdminAuthGuard - Partner admin is no longer active`,
+        HttpStatus.FORBIDDEN,
+      );
     }
 
     request['partnerId'] = user.partnerAdmin.partner.id; // TODO is this the best way to be handling user details

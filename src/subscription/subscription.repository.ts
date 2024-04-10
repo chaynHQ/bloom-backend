@@ -1,5 +1,6 @@
-import { EntityRepository, Repository } from 'typeorm';
+import { Injectable } from '@nestjs/common';
+import { Repository } from 'typeorm';
 import { SubscriptionEntity } from '../entities/subscription.entity';
 
-@EntityRepository(SubscriptionEntity)
+@Injectable()
 export class SubscriptionRepository extends Repository<SubscriptionEntity> {}

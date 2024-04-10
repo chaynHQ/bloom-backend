@@ -8,7 +8,7 @@ export class SessionService {
   constructor(@InjectRepository(SessionRepository) private sessionRepository: SessionRepository) {}
 
   async getSession(id: string): Promise<SessionEntity> {
-    return await this.sessionRepository.findOne({ id });
+    return await this.sessionRepository.findOneBy({ id });
   }
 
   async getSessionByStoryblokId(storyblokId: number): Promise<SessionEntity> {

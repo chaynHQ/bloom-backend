@@ -180,9 +180,8 @@ export class UserService {
     firebaseUid: string,
   ) {
     try {
-      const partnerResponse = await this.partnerService.getPartnerWithPartnerFeaturesById(
-        partnerId,
-      );
+      const partnerResponse =
+        await this.partnerService.getPartnerWithPartnerFeaturesById(partnerId);
       if (!partnerResponse) {
         throw new HttpException('Invalid partnerId supplied', HttpStatus.BAD_REQUEST);
       }
@@ -231,9 +230,8 @@ export class UserService {
     firebaseUid: string,
   ) {
     try {
-      const partnerAccess = await this.partnerAccessService.getValidPartnerAccessCode(
-        partnerAccessCode,
-      );
+      const partnerAccess =
+        await this.partnerAccessService.getValidPartnerAccessCode(partnerAccessCode);
 
       const createUserObject = this.userRepository.create({
         name,
@@ -346,7 +344,7 @@ export class UserService {
   }
 
   public async updateUser(updateUserDto: UpdateUserDto, { user: { id } }: GetUserDto) {
-    const user = await this.userRepository.findOne({ where: { id } });
+    const user = await this.userRepository.findOneBy({ id });
 
     if (!user) {
       throw new HttpException('USER NOT FOUND', HttpStatus.NOT_FOUND);
@@ -413,17 +411,25 @@ export class UserService {
       partnerAccess?: { userId: string; featureTherapy: boolean; active: boolean };
       partnerAdmin?: { partnerAdminId: string };
     },
-    relations: Array<string>,
+    relations: {
+      partner?: boolean;
+      partnerAccess?: boolean;
+      partnerAdmin?: boolean;
+      courseUser?: boolean;
+      subscriptionUser?: boolean;
+      therapySession?: boolean;
+      eventLog?: boolean;
+    },
     fields: Array<string>,
     limit: number,
   ): Promise<GetUserDto[] | undefined> {
     const query = this.userRepository.createQueryBuilder('user');
     // TODO this needs some refactoring but deprioritised for now
-    if (relations.indexOf('partnerAccess') >= 0) {
+    if (!!relations.partnerAccess) {
       query.leftJoinAndSelect('user.partnerAccess', 'partnerAccess');
     }
 
-    if (relations?.indexOf('partner-admin') >= 0) {
+    if (!!relations.partnerAdmin) {
       query.leftJoinAndSelect('user.partnerAdmin', 'partnerAdmin');
     }
 

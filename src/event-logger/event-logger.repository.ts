@@ -1,5 +1,6 @@
+import { Injectable } from '@nestjs/common';
 import { EventLogEntity } from 'src/entities/event-log.entity';
-import { EntityRepository, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 
-@EntityRepository(EventLogEntity)
+@Injectable()
 export class EventLoggerRepository extends Repository<EventLogEntity> {}

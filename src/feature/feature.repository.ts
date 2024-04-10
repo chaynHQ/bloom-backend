@@ -1,5 +1,6 @@
+import { Injectable } from '@nestjs/common';
 import { FeatureEntity } from 'src/entities/feature.entity';
-import { EntityRepository, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 
-@EntityRepository(FeatureEntity)
+@Injectable()
 export class FeatureRepository extends Repository<FeatureEntity> {}

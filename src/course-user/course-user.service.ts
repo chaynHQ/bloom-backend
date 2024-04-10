@@ -43,7 +43,7 @@ export class CourseUserService {
     { userId, courseId }: CourseUserDto,
     completed: boolean,
   ): Promise<CourseUserEntity> {
-    const courseUser = await this.courseUserRepository.findOne({ where: { userId, courseId } });
+    const courseUser = await this.courseUserRepository.findOneBy({ userId, courseId });
     courseUser.completed = completed;
     courseUser.completedAt = completed ? new Date() : null;
 

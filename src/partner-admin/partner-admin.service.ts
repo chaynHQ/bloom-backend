@@ -77,8 +77,8 @@ export class PartnerAdminService {
     updatePartnerAdminDto: UpdatePartnerAdminDto,
   ): Promise<PartnerAdminEntity | unknown> {
     try {
-      const partnerAdminResponse = await this.partnerAdminRepository.findOne({
-        where: { partnerAdminId },
+      const partnerAdminResponse = await this.partnerAdminRepository.findOneBy({
+        id: partnerAdminId,
       });
 
       if (!partnerAdminResponse) {

@@ -15,7 +15,7 @@ import { serializeZapierSimplyBookDtoToTherapySessionEntity } from 'src/utils/se
 import { getYesterdaysDate } from 'src/utils/utils';
 import { WebhookCreateEventLogDto } from 'src/webhooks/dto/webhook-create-event-log.dto';
 import StoryblokClient from 'storyblok-js-client';
-import { Between } from 'typeorm';
+import { Between, ILike } from 'typeorm';
 import { getCrispPeopleData, updateCrispProfileData } from '../api/crisp/crisp-api';
 import { CoursePartnerService } from '../course-partner/course-partner.service';
 import { CourseRepository } from '../course/course.repository';
@@ -64,12 +64,12 @@ export class WebhooksService {
         let therapySession: TherapySessionEntity;
 
         try {
-          therapySession = await this.therapySessionRepository.findOneOrFail(
-            {
+          therapySession = await this.therapySessionRepository.findOneOrFail({
+            where: {
               bookingCode: booking.bookingCode,
             },
-            { relations: ['user'] },
-          );
+            relations: { user: true },
+          });
         } catch (err) {
           this.logger.error(
             `sendFirstTherapySessionFeedbackEmail: failed to check therapySession due to error - ${err}`,
@@ -127,8 +127,9 @@ export class WebhooksService {
   }
 
   private async isFirstCampaignEmail(email: string, campaign: CAMPAIGN_TYPE) {
-    const matchingEntries = await this.emailCampaignRepository.find({
-      where: `"email" ILIKE '${email}' AND "campaignType" LIKE '${campaign}'`,
+    const matchingEntries = await this.emailCampaignRepository.findBy({
+      email: ILike(email),
+      campaignType: ILike(campaign),
     });
     return matchingEntries.length === 0;
   }
@@ -140,10 +141,8 @@ export class WebhooksService {
     let users = null;
     try {
       // Get user from database who made an account between 180 and 173 days ago
-      users = await this.userRepository.find({
-        where: {
-          createdAt: Between(startDate, endDate),
-        },
+      users = await this.userRepository.findBy({
+        createdAt: Between(startDate, endDate),
       });
       this.logger.log(
         `SendImpactMeasurementEmail - Successfully fetched ${users.length} from the database`,
@@ -264,8 +263,9 @@ export class WebhooksService {
     );
 
     // Retrieve existing therapy session record for this booking
-    const existingTherapySession = await this.therapySessionRepository.findOne({
-      where: `"clientEmail" ILIKE '${client_email}' AND "bookingCode" LIKE '${booking_code}'`,
+    const existingTherapySession = await this.therapySessionRepository.findOneBy({
+      clientEmail: ILike(client_email),
+      bookingCode: ILike(booking_code),
     });
 
     if (action !== SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING && !existingTherapySession) {
@@ -300,7 +300,7 @@ export class WebhooksService {
     // If the booking is cancelled, increment the therapy sessions remaining on related partner access
     if (action === SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING) {
       try {
-        const partnerAccess = await this.partnerAccessRepository.findOne({
+        const partnerAccess = await this.partnerAccessRepository.findOneBy({
           id: existingTherapySession.partnerAccessId,
         });
 
@@ -346,16 +346,16 @@ export class WebhooksService {
       // Try to find a user associated to this email
       try {
         // Check for previous therapy sessions associated to the email
-        const previousTherapySession = await this.therapySessionRepository.findOne({
-          where: `"clientEmail" ILIKE '${client_email}'`,
+        const previousTherapySession = await this.therapySessionRepository.findOneBy({
+          clientEmail: ILike(client_email),
         });
 
         if (previousTherapySession?.userId) {
           userId = previousTherapySession.userId;
         } else {
           // No previous therapy sessions, try matching email with user
-          const user = await this.userRepository.findOne({
-            where: `"email" ILIKE '${client_email}'`,
+          const user = await this.userRepository.findOneBy({
+            email: ILike(client_email),
           });
           if (user?.id) {
             userId = user.id;
@@ -376,7 +376,7 @@ export class WebhooksService {
 
     try {
       // userId available, find and return user record
-      const user = await this.userRepository.findOne({ id: userId });
+      const user = await this.userRepository.findOneBy({ id: userId });
       if (user) return user;
 
       // No user record found for userId, throw error
@@ -394,7 +394,7 @@ export class WebhooksService {
   }
 
   private async newPartnerAccessTherapy(user: IUser, simplyBookDto: ZapierSimplybookBodyDto) {
-    const partnerAccesses = await this.partnerAccessRepository.find({
+    const partnerAccesses = await this.partnerAccessRepository.findBy({
       userId: user.id,
       active: true,
       featureTherapy: true,
@@ -474,7 +474,7 @@ export class WebhooksService {
     };
     try {
       if (story.content?.component === 'Course') {
-        let course = await this.courseRepository.findOne({
+        let course = await this.courseRepository.findOneBy({
           storyblokId: story_id,
         });
 
@@ -498,7 +498,7 @@ export class WebhooksService {
         story.content?.component === 'Session' ||
         story.content?.component === 'session_iba'
       ) {
-        const course = await this.courseRepository.findOne({
+        const course = await this.courseRepository.findOneBy({
           storyblokUuid: story.content.course,
         });
 
@@ -508,7 +508,7 @@ export class WebhooksService {
           throw new HttpException(error, HttpStatus.NOT_FOUND);
         }
 
-        let session = await this.sessionRepository.findOne({
+        let session = await this.sessionRepository.findOneBy({
           storyblokId: story_id,
         });
 
@@ -563,7 +563,7 @@ export class WebhooksService {
 
     // Story was unpublished or deleted so cant be fetched from storyblok to get story type (Course or Session)
     // Try to find course with matching story_id first
-    let course = await this.courseRepository.findOne({
+    let course = await this.courseRepository.findOneBy({
       storyblokId: story_id,
     });
 
@@ -574,7 +574,7 @@ export class WebhooksService {
       return course;
     } else if (!course) {
       // No course found, try finding session instead
-      let session = await this.sessionRepository.findOne({
+      let session = await this.sessionRepository.findOneBy({
         storyblokId: story_id,
       });
 
@@ -598,7 +598,7 @@ export class WebhooksService {
       // Only fetch user object if the userId is not provided
       const user = createEventDto.userId
         ? undefined
-        : await this.userRepository.findOne({ where: `"email" ILIKE '${createEventDto.email}'` });
+        : await this.userRepository.findOneBy({ email: ILike(createEventDto.email) });
 
       if (user || createEventDto.userId) {
         const event = await this.eventLoggerService.createEventLog({

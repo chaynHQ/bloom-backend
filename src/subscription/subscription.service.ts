@@ -11,6 +11,6 @@ export class SubscriptionService {
   ) {}
 
   async getSubscription(name: string): Promise<SubscriptionEntity> {
-    return await this.subscriptionRepository.findOne({ name });
+    return await this.subscriptionRepository.findOneBy({ name });
   }
 }

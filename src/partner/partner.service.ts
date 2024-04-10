@@ -70,7 +70,7 @@ export class PartnerService {
 
   async deletePartner({ partnerId }: DeletePartnerDto): Promise<string> {
     try {
-      const partner = await this.partnerRepository.findOne({ where: { id: partnerId } });
+      const partner = await this.partnerRepository.findOneBy({ id: partnerId });
       if (!partner) {
         throw new HttpException('Partner does not exist', HttpStatus.BAD_REQUEST);
       }
@@ -83,7 +83,7 @@ export class PartnerService {
         .execute();
 
       // //Partner Admins
-      const partnerAdmins = await this.partnerAdminRepository.find({ where: { partnerId } });
+      const partnerAdmins = await this.partnerAdminRepository.findBy({ partnerId });
       const partnerAdminUserIds = partnerAdmins.map((pa) => {
         return pa.userId;
       });

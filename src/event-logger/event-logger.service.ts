@@ -11,7 +11,7 @@ export class EventLoggerService {
   ) {}
 
   async getEventLog(id: string): Promise<EventLogEntity> {
-    return await this.eventLoggerRepository.findOne({ id });
+    return await this.eventLoggerRepository.findOneBy({ id });
   }
 
   async createEventLog({ userId, event, date }: ICreateEventLog) {

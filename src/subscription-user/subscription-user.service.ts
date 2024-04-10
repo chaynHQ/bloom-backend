@@ -1,5 +1,6 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { IsNull } from 'typeorm';
 import { ZapierWebhookClient } from '../api/zapier/zapier-webhook-client';
 import { Logger } from '../logger/logger';
 import { SubscriptionService } from '../subscription/subscription.service';
@@ -29,12 +30,10 @@ export class SubscriptionUserService {
     const whatsapp = await this.subscriptionService.getSubscription('whatsapp');
     // Note that only one active whatsapp subscription is allowed per user.
     // A user with an existing active subscription cannot subscribe for example with a different number.
-    const activeWhatsappSubscription = await this.subscriptionUserRepository.find({
-      where: {
-        subscriptionId: whatsapp.id,
-        userId: user.id,
-        cancelledAt: null,
-      },
+    const activeWhatsappSubscription = await this.subscriptionUserRepository.findBy({
+      subscriptionId: whatsapp.id,
+      userId: user.id,
+      cancelledAt: IsNull(),
     });
 
     this.logger.log(

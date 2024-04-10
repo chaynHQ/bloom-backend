@@ -18,6 +18,6 @@ export class CourseService {
   }
 
   async getCourse(id: string): Promise<CourseEntity> {
-    return await this.courseRepository.findOne({ id });
+    return await this.courseRepository.findOneBy({ id });
   }
 }

@@ -94,8 +94,8 @@ export class PartnerAccessService {
     partnerAccessDto: GetPartnerAccessesDto | undefined,
   ): Promise<PartnerAccessEntity[]> {
     return await this.partnerAccessRepository.find({
-      relations: ['partner'],
-      where: partnerAccessDto ? partnerAccessDto : undefined,
+      where: partnerAccessDto || undefined,
+      relations: { partner: true },
     });
   }
 
@@ -130,8 +130,8 @@ export class PartnerAccessService {
     updates: UpdatePartnerAccessDto,
   ): Promise<PartnerAccessEntity> {
     try {
-      const property = await this.partnerAccessRepository.findOne({
-        where: { id },
+      const property = await this.partnerAccessRepository.findOneBy({
+        id,
       });
 
       return await this.partnerAccessRepository.save({
@@ -150,7 +150,7 @@ export class PartnerAccessService {
     partnerAccess: PartnerAccessEntity,
     userId: string,
   ): Promise<PartnerAccessEntity> {
-    const partnerResponse: PartnerEntity | undefined = await this.partnerRepository.findOne({
+    const partnerResponse: PartnerEntity | undefined = await this.partnerRepository.findOneBy({
       id: partnerAccess.partnerId,
     });
 

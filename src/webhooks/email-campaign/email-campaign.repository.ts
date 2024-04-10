@@ -1,5 +1,6 @@
+import { Injectable } from '@nestjs/common';
 import { EmailCampaignEntity } from 'src/entities/email-campaign.entity';
-import { EntityRepository, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 
-@EntityRepository(EmailCampaignEntity)
+@Injectable()
 export class EmailCampaignRepository extends Repository<EmailCampaignEntity> {}
