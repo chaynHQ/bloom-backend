@@ -1,8 +1,7 @@
 import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { createHmac } from 'crypto';
-import { format, sub } from 'date-fns';
-import startOfDay from 'date-fns/startOfDay';
+import { format, startOfDay, sub } from 'date-fns';
 import { MailchimpClient } from 'src/api/mailchimp/mailchip-api';
 import { getBookingsForDate } from 'src/api/simplybook/simplybook-api';
 import { SlackMessageClient } from 'src/api/slack/slack-api';
