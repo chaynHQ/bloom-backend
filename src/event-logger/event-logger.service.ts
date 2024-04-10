@@ -1,13 +1,14 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EventLogEntity } from 'src/entities/event-log.entity';
+import { Repository } from 'typeorm';
 import { ICreateEventLog } from './event-logger.interface';
-import { EventLoggerRepository } from './event-logger.repository';
 
 @Injectable()
 export class EventLoggerService {
   constructor(
-    @InjectRepository(EventLoggerRepository) private eventLoggerRepository: EventLoggerRepository,
+    @InjectRepository(EventLogEntity)
+    private eventLoggerRepository: Repository<EventLogEntity>,
   ) {}
 
   async getEventLog(id: string): Promise<EventLogEntity> {

@@ -13,7 +13,6 @@ import { PartnerEntity } from 'src/entities/partner.entity';
 import { SessionEntity } from 'src/entities/session.entity';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
 import { UserEntity } from 'src/entities/user.entity';
-import { EventLoggerRepository } from 'src/event-logger/event-logger.repository';
 import { EventLoggerService } from 'src/event-logger/event-logger.service';
 import { CreateUserDto } from 'src/user/dtos/create-user.dto';
 import { UpdateUserDto } from 'src/user/dtos/update-user.dto';
@@ -258,7 +257,7 @@ export const mockEventLoggerServiceMethods: PartialFuncReturn<EventLoggerService
   },
 };
 
-export const mockEventLoggerRepositoryMethods: PartialFuncReturn<EventLoggerRepository> = {
+export const mockEventLoggerRepositoryMethods: PartialFuncReturn<Repository<EventLogEntity>> = {
   createQueryBuilder: createQueryBuilderMock(),
   create: (dto) => {
     return {

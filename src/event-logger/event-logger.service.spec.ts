@@ -1,22 +1,25 @@
 import { createMock, DeepMocked } from '@golevelup/ts-jest';
 import { Test, TestingModule } from '@nestjs/testing';
+import { EventLogEntity } from 'src/entities/event-log.entity';
 import { mockEventLoggerRepositoryMethods } from 'test/utils/mockedServices';
+import { Repository } from 'typeorm';
 import { EVENT_NAME } from './event-logger.interface';
-import { EventLoggerRepository } from './event-logger.repository';
 import { EventLoggerService } from './event-logger.service';
 
 describe('EventLoggerService', () => {
   let service: EventLoggerService;
-  let mockEventLoggerRepository: DeepMocked<EventLoggerRepository>;
+  let mockEventLoggerRepository: DeepMocked<Repository<EventLogEntity>>;
 
   beforeEach(async () => {
-    mockEventLoggerRepository = createMock<EventLoggerRepository>(mockEventLoggerRepositoryMethods);
+    mockEventLoggerRepository = createMock<Repository<EventLogEntity>>(
+      mockEventLoggerRepositoryMethods,
+    );
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         EventLoggerService,
         {
-          provide: EventLoggerRepository,
+          provide: EventLogEntity,
           useValue: mockEventLoggerRepository,
         },
       ],
