@@ -39,6 +39,59 @@ import {
 } from './mockData';
 import { createQueryBuilderMock } from './mockUtils';
 
+export const mockSlackMessageClientMethods: PartialFuncReturn<SlackMessageClient> = {
+  sendMessageToTherapySlackChannel: async () => {
+    return 'successful test message';
+  },
+};
+
+export const mockWebhooksServiceMethods: PartialFuncReturn<WebhooksService> = {
+  updatePartnerAccessTherapy: async () => {
+    return mockTherapySessionEntity;
+  },
+};
+
+export const mockMailchimpClientMethods: PartialFuncReturn<MailchimpClient> = {
+  sendTherapyFeedbackEmail: async () => {
+    return [];
+  },
+  sendImpactMeasurementEmail: async () => {
+    return [];
+  },
+};
+export const mockPartnerServiceMethods = {
+  getPartnerById: async (arg): Promise<PartnerEntity> => {
+    return { ...mockPartnerEntity, id: arg };
+  },
+  getPartnerWithPartnerFeaturesById: async (arg): Promise<PartnerEntity> => {
+    return { ...mockPartnerEntity, id: arg };
+  },
+  getPartnerWithPartnerFeaturesByName: async (arg): Promise<PartnerEntity> => {
+    return { ...mockPartnerEntity, name: arg };
+  },
+};
+
+export const mockPartnerFeatureServiceMethods = {
+  createPartnerFeature: async (arg): Promise<PartnerFeatureEntity> => {
+    return { ...mockPartnerFeatureEntity, ...arg };
+  },
+};
+
+export const mockFeatureServiceMethods = {
+  createFeature: async (arg): Promise<PartnerFeatureEntity> => {
+    return { ...mockPartnerFeatureEntity, ...arg };
+  },
+};
+
+export const mockAuthServiceMethods = {
+  createFirebaseUser: async (): Promise<UserRecord> => {
+    return mockUserRecord;
+  },
+  getFirebaseUser: async (): Promise<UserRecord> => {
+    return mockUserRecord;
+  },
+};
+
 export const mockSessionRepositoryMethods: PartialFuncReturn<Repository<SessionEntity>> = {
   findOneBy: async () => {
     return mockSession;
@@ -123,6 +176,9 @@ export const mockUserRepositoryMethods: PartialFuncReturn<Repository<UserEntity>
   find: async () => {
     return [mockUserEntity, mockUserEntity];
   },
+  findBy: async () => {
+    return [mockUserEntity, mockUserEntity];
+  },
   save: async (arg) => arg as UserEntity,
 };
 
@@ -159,6 +215,9 @@ export const mockPartnerAccessRepositoryMethods: PartialFuncReturn<
   findOneBy: async (arg) => {
     return { ...mockPartnerAccessEntity, ...(arg ? { ...arg } : {}) } as PartnerAccessEntity;
   },
+  findBy: async (arg) => {
+    return [{ ...mockPartnerAccessEntity, ...(arg ? { ...arg } : {}) }] as PartnerAccessEntity[];
+  },
   find: async (arg) => {
     return [
       ...partnerAccessArray,
@@ -181,28 +240,10 @@ export const mockPartnerRepositoryMethods: PartialFuncReturn<Repository<PartnerE
   find: async (arg) => {
     return [{ ...mockPartnerEntity, ...(arg ? { ...arg } : {}) }] as PartnerEntity[];
   },
+  findBy: async (arg) => {
+    return [{ ...mockPartnerEntity, ...(arg ? { ...arg } : {}) }] as PartnerEntity[];
+  },
   save: async (arg) => arg as PartnerEntity,
-};
-
-export const mockSlackMessageClientMethods: PartialFuncReturn<SlackMessageClient> = {
-  sendMessageToTherapySlackChannel: async () => {
-    return 'successful test message';
-  },
-};
-
-export const mockWebhooksServiceMethods: PartialFuncReturn<WebhooksService> = {
-  updatePartnerAccessTherapy: async () => {
-    return mockTherapySessionEntity;
-  },
-};
-
-export const mockMailchimpClientMethods: PartialFuncReturn<MailchimpClient> = {
-  sendTherapyFeedbackEmail: async () => {
-    return [];
-  },
-  sendImpactMeasurementEmail: async () => {
-    return [];
-  },
 };
 
 export const mockEmailCampaignRepositoryMethods: PartialFuncReturn<
@@ -211,37 +252,10 @@ export const mockEmailCampaignRepositoryMethods: PartialFuncReturn<
   find: async (arg) => {
     return [{ ...mockEmailCampaignEntity, ...(arg ? arg : {}) }] as EmailCampaignEntity[];
   },
+  findBy: async (arg) => {
+    return [{ ...mockEmailCampaignEntity, ...(arg ? arg : {}) }] as EmailCampaignEntity[];
+  },
   save: async (arg) => arg as EmailCampaignEntity,
-};
-
-export const mockPartnerServiceMethods = {
-  getPartnerById: async (arg): Promise<PartnerEntity> => {
-    return { ...mockPartnerEntity, id: arg };
-  },
-  getPartnerWithPartnerFeaturesById: async (arg): Promise<PartnerEntity> => {
-    return { ...mockPartnerEntity, id: arg };
-  },
-  getPartnerWithPartnerFeaturesByName: async (arg): Promise<PartnerEntity> => {
-    return { ...mockPartnerEntity, name: arg };
-  },
-};
-export const mockPartnerFeatureServiceMethods = {
-  createPartnerFeature: async (arg): Promise<PartnerFeatureEntity> => {
-    return { ...mockPartnerFeatureEntity, ...arg };
-  },
-};
-export const mockFeatureServiceMethods = {
-  createFeature: async (arg): Promise<PartnerFeatureEntity> => {
-    return { ...mockPartnerFeatureEntity, ...arg };
-  },
-};
-export const mockAuthServiceMethods = {
-  createFirebaseUser: async (): Promise<UserRecord> => {
-    return mockUserRecord;
-  },
-  getFirebaseUser: async (): Promise<UserRecord> => {
-    return mockUserRecord;
-  },
 };
 
 export const mockPartnerFeatureRepositoryMethods: PartialFuncReturn<
@@ -257,7 +271,7 @@ export const mockPartnerFeatureRepositoryMethods: PartialFuncReturn<
   findOneBy: async (arg) => {
     return { ...mockPartnerFeatureEntity, ...(arg ? { ...arg } : {}) } as PartnerFeatureEntity;
   },
-  find: async (arg) => {
+  findBy: async (arg) => {
     return [{ ...mockPartnerFeatureEntity, ...(arg ? { ...arg } : {}) }] as PartnerFeatureEntity[];
   },
   save: async (arg) => arg as PartnerFeatureEntity,
@@ -275,6 +289,9 @@ export const mockFeatureRepositoryMethods: PartialFuncReturn<Repository<FeatureE
     return { ...mockFeatureEntity, ...(arg ? { ...arg } : {}) } as FeatureEntity;
   },
   find: async (arg) => {
+    return [{ ...mockFeatureEntity, ...(arg ? { ...arg } : {}) }] as FeatureEntity[];
+  },
+  findBy: async (arg) => {
     return [{ ...mockFeatureEntity, ...(arg ? { ...arg } : {}) }] as FeatureEntity[];
   },
   save: async (arg) => arg as FeatureEntity,
@@ -299,6 +316,9 @@ export const mockEventLoggerRepositoryMethods: PartialFuncReturn<Repository<Even
     return { ...mockEventLog, ...(arg ? { ...arg } : {}) } as EventLogEntity;
   },
   find: async (arg) => {
+    return [{ ...mockEventLog, ...(arg ? { ...arg } : {}) }] as EventLogEntity[];
+  },
+  findBy: async (arg) => {
     return [{ ...mockEventLog, ...(arg ? { ...arg } : {}) }] as EventLogEntity[];
   },
   save: async (arg) => arg as EventLogEntity,

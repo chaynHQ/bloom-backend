@@ -172,7 +172,7 @@ export const mockSimplybookBodyBase: ZapierSimplybookBodyDto = {
   start_date_time: '2022-09-12T07:30:00+0000',
   end_date_time: '2022-09-12T08:30:00+0000',
   client_email: 'testuser@test.com',
-  user_id: '115e272a-5fc3-4991-8ea9-12dacad25bae',
+  user_id: 'userId2',
   client_timezone: 'Europe/London',
   booking_code: 'abc',
   service_name: 'bloom therapy',
