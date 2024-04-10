@@ -89,8 +89,8 @@ export const mockUserRepositoryMethods: PartialFuncReturn<Repository<UserEntity>
       ...dto,
     } as UserEntity;
   },
-  findOneBy: async ({ email: client_email }) => {
-    return { ...mockUserEntity, ...(client_email ? { email: client_email } : {}) } as UserEntity;
+  findOneBy: async (arg) => {
+    return { ...mockUserEntity, ...(arg ? { ...arg } : {}) } as UserEntity;
   },
   find: async () => {
     return [mockUserEntity, mockUserEntity];

@@ -6,7 +6,6 @@ import {
   ManyToOne,
   OneToMany,
   OneToOne,
-  PrimaryColumn,
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { PartnerEntity } from '../entities/partner.entity';
@@ -19,14 +18,16 @@ export class PartnerAdminEntity extends BaseBloomEntity {
   @PrimaryGeneratedColumn('uuid', { name: 'partnerAdminId' })
   id: string;
 
-  @PrimaryColumn()
+  @Column({ nullable: true })
   userId: string;
-
   @OneToOne(() => UserEntity, (userEntity) => userEntity.partnerAdmin, {
     eager: true,
     onDelete: 'CASCADE',
+    nullable: true,
   })
-  @JoinColumn({ name: 'userId' })
+  @JoinColumn({
+    name: 'userId',
+  })
   user: UserEntity;
 
   @Column()
