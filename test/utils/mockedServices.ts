@@ -112,7 +112,7 @@ export const mockUserRepositoryMethodsFactory = {
       ...dto,
     };
   },
-  findOne: ({ email: client_email }) => {
+  findOneBy: ({ email: client_email }) => {
     return { ...mockUserEntity, ...(client_email ? { email: client_email } : {}) };
   },
   save: (arg) => arg,
@@ -128,7 +128,7 @@ export const mockPartnerAccessRepositoryMethods: PartialFuncReturn<
       ...dto,
     };
   },
-  findOne: async (arg) => {
+  findOneBy: async (arg) => {
     return { ...mockPartnerAccessEntity, ...(arg ? { ...arg } : {}) } as PartnerAccessEntity;
   },
   find: async (arg) => {
@@ -147,7 +147,7 @@ export const mockPartnerRepositoryMethods: PartialFuncReturn<Repository<PartnerE
       ...dto,
     } as PartnerEntity;
   },
-  findOne: async (arg) => {
+  findOneBy: async (arg) => {
     return { ...mockPartnerEntity, ...(arg ? { ...arg } : {}) } as PartnerEntity;
   },
   find: async (arg) => {
@@ -226,7 +226,7 @@ export const mockPartnerFeatureRepositoryMethods: PartialFuncReturn<
       ...dto,
     } as PartnerFeatureEntity;
   },
-  findOne: async (arg) => {
+  findOneBy: async (arg) => {
     return { ...mockPartnerFeatureEntity, ...(arg ? { ...arg } : {}) } as PartnerFeatureEntity;
   },
   find: async (arg) => {
@@ -243,7 +243,7 @@ export const mockFeatureRepositoryMethods: PartialFuncReturn<Repository<FeatureE
       ...dto,
     } as FeatureEntity;
   },
-  findOne: async (arg) => {
+  findOneBy: async (arg) => {
     return { ...mockFeatureEntity, ...(arg ? { ...arg } : {}) } as FeatureEntity;
   },
   find: async (arg) => {
@@ -267,7 +267,7 @@ export const mockEventLoggerRepositoryMethods: PartialFuncReturn<EventLoggerRepo
       id: 'newId',
     } as EventLogEntity;
   },
-  findOne: async (arg) => {
+  findOneBy: async (arg) => {
     return { ...mockEventLog, ...(arg ? { ...arg } : {}) } as EventLogEntity;
   },
   find: async (arg) => {

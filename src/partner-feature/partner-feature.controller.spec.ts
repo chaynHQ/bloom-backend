@@ -1,10 +1,11 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { createMock, DeepMocked } from '@golevelup/ts-jest';
 import { Test, TestingModule } from '@nestjs/testing';
+import { UserEntity } from 'src/entities/user.entity';
 import { SuperAdminAuthGuard } from 'src/partner-admin/super-admin-auth.guard';
-import { UserRepository } from 'src/user/user.repository';
 import { mockPartnerFeatureEntity } from 'test/utils/mockData';
 import { mockPartnerFeatureServiceMethods } from 'test/utils/mockedServices';
+import { Repository } from 'typeorm';
 import { AuthService } from '../auth/auth.service';
 import { PartnerAdminAuthGuard } from '../partner-admin/partner-admin-auth.guard';
 import { UserService } from '../user/user.service';
@@ -17,7 +18,7 @@ describe('PartnerFeatureController', () => {
   let mockPartnerFeatureService: Partial<PartnerFeatureService>;
   let mockAuthService: DeepMocked<AuthService>;
   let mockUserService: DeepMocked<UserService>;
-  let mockUserRepository: DeepMocked<UserRepository>;
+  let mockUserRepository: DeepMocked<Repository<UserEntity>>;
 
   let authGuard: DeepMocked<PartnerAdminAuthGuard>;
 
@@ -25,7 +26,7 @@ describe('PartnerFeatureController', () => {
     authGuard = createMock<PartnerAdminAuthGuard>();
     mockAuthService = createMock<AuthService>();
     mockUserService = createMock<UserService>();
-    mockUserRepository = createMock<UserRepository>();
+    mockUserRepository = createMock<Repository<UserEntity>>();
     mockPartnerFeatureService = createMock<PartnerFeatureService>(mockPartnerFeatureServiceMethods);
 
     const module: TestingModule = await Test.createTestingModule({
@@ -34,7 +35,7 @@ describe('PartnerFeatureController', () => {
         { provide: PartnerFeatureService, useValue: mockPartnerFeatureService },
         { provide: AuthService, useValue: mockAuthService },
         { provide: UserService, useValue: mockUserService },
-        { provide: UserRepository, useValue: mockUserRepository },
+        { provide: UserEntity, useValue: mockUserRepository },
       ],
     })
       .overrideGuard(SuperAdminAuthGuard)

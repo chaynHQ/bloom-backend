@@ -3,6 +3,7 @@ import { HttpException, HttpStatus } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { addCrispProfile } from 'src/api/crisp/crisp-api';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
+import { PartnerEntity } from 'src/entities/partner.entity';
 import { FEATURES, PartnerAccessCodeStatusEnum } from 'src/utils/constants';
 import {
   mockFeatureEntity,
@@ -23,11 +24,9 @@ import { createQueryBuilderMock } from '../../test/utils/mockUtils';
 import { AuthService } from '../auth/auth.service';
 import { UserEntity } from '../entities/user.entity';
 import { PartnerAccessService } from '../partner-access/partner-access.service';
-import { PartnerRepository } from '../partner/partner.repository';
 import { PartnerService } from '../partner/partner.service';
 import { CreateUserDto } from './dtos/create-user.dto';
 import { UpdateUserDto } from './dtos/update-user.dto';
-import { UserRepository } from './user.repository';
 import { UserService } from './user.service';
 
 const createUserDto: CreateUserDto = {
@@ -68,9 +67,9 @@ jest.mock('src/api/crisp/crisp-api');
 
 describe('UserService', () => {
   let service: UserService;
-  let repo: UserRepository;
+  let repo: Repository<UserEntity>;
   let mockPartnerService: DeepMocked<PartnerService>;
-  let mockPartnerRepository: DeepMocked<PartnerRepository>;
+  let mockPartnerRepository: DeepMocked<Repository<PartnerEntity>>;
   let mockAuthService: DeepMocked<AuthService>;
   let mockPartnerAccessService: DeepMocked<PartnerAccessService>;
 
@@ -79,13 +78,13 @@ describe('UserService', () => {
     mockAuthService = createMock<AuthService>(mockAuthServiceMethods);
     mockPartnerService = createMock<PartnerService>(mockPartnerServiceMethods);
     mockPartnerAccessService = createMock<PartnerAccessService>();
-    mockPartnerRepository = createMock<PartnerRepository>();
+    mockPartnerRepository = createMock<Repository<PartnerEntity>>();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         UserService,
         {
-          provide: UserRepository,
+          provide: UserEntity,
           useFactory: jest.fn(() => mockUserRepositoryMethodsFactory),
         },
         {
@@ -93,7 +92,7 @@ describe('UserService', () => {
           useValue: mockPartnerService,
         },
         {
-          provide: PartnerRepository,
+          provide: PartnerEntity,
           useValue: mockPartnerRepository,
         },
         {
@@ -108,7 +107,7 @@ describe('UserService', () => {
     }).compile();
 
     service = module.get<UserService>(UserService);
-    repo = module.get<Repository<UserEntity>>(UserRepository);
+    repo = module.get<Repository<UserEntity>>(UserEntity);
   });
 
   it('should be defined', () => {
@@ -295,7 +294,7 @@ describe('UserService', () => {
           getMany: jest.fn().mockResolvedValue([{ ...mockUserEntity, email: 'a@b.com' }]),
         }) as never,
       );
-      const users = await service.getUsers({ email: 'a@b.com' }, [], [], 10);
+      const users = await service.getUsers({ email: 'a@b.com' }, {}, [], 10);
       expect(users).toEqual([{ user: { ...userBase, email: 'a@b.com' }, partnerAccesses: [] }]);
     });
   });

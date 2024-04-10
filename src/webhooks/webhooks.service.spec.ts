@@ -5,22 +5,20 @@ import { format, sub } from 'date-fns';
 import startOfDay from 'date-fns/startOfDay';
 import { MailchimpClient } from 'src/api/mailchimp/mailchip-api';
 import { SlackMessageClient } from 'src/api/slack/slack-api';
-import { CoursePartnerRepository } from 'src/course-partner/course-partner.repository';
 import { CoursePartnerService } from 'src/course-partner/course-partner.service';
-import { CourseRepository } from 'src/course/course.repository';
+import { CoursePartnerEntity } from 'src/entities/course-partner.entity';
 import { CourseEntity } from 'src/entities/course.entity';
 import { EmailCampaignEntity } from 'src/entities/email-campaign.entity';
+import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
+import { PartnerAdminEntity } from 'src/entities/partner-admin.entity';
+import { PartnerEntity } from 'src/entities/partner.entity';
 import { SessionEntity } from 'src/entities/session.entity';
+import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
 import { UserEntity } from 'src/entities/user.entity';
 import { EVENT_NAME } from 'src/event-logger/event-logger.interface';
 import { EventLoggerRepository } from 'src/event-logger/event-logger.repository';
 import { EventLoggerService } from 'src/event-logger/event-logger.service';
-import { PartnerAccessRepository } from 'src/partner-access/partner-access.repository';
-import { PartnerAdminRepository } from 'src/partner-admin/partner-admin.repository';
-import { PartnerRepository } from 'src/partner/partner.repository';
 import { PartnerService } from 'src/partner/partner.service';
-import { SessionRepository } from 'src/session/session.repository';
-import { UserRepository } from 'src/user/user.repository';
 import { SIMPLYBOOK_ACTION_ENUM, STORYBLOK_STORY_STATUS_ENUM } from 'src/utils/constants';
 import StoryblokClient from 'storyblok-js-client';
 import {
@@ -45,9 +43,8 @@ import {
   mockTherapySessionRepositoryMethods,
   mockUserRepositoryMethods,
 } from 'test/utils/mockedServices';
+import { Repository } from 'typeorm';
 import { WebhookCreateEventLogDto } from './dto/webhook-create-event-log.dto';
-import { EmailCampaignRepository } from './email-campaign/email-campaign.repository';
-import { TherapySessionRepository } from './therapy-session.repository';
 import { WebhooksService } from './webhooks.service';
 
 const webhookSecret = process.env.STORYBLOK_WEBHOOK_SECRET;
@@ -105,20 +102,22 @@ jest.mock('../api/crisp/crisp-api', () => {
 describe('WebhooksService', () => {
   let service: WebhooksService;
   const mockedMailchimpClient = createMock<MailchimpClient>(mockMailchimpClientMethods);
-  const mockedSessionRepository = createMock<SessionRepository>(mockSessionRepositoryMethods);
-  const mockedCourseRepository = createMock<CourseRepository>(mockCourseRepositoryMethods);
+  const mockedSessionRepository = createMock<Repository<SessionEntity>>(
+    mockSessionRepositoryMethods,
+  );
+  const mockedCourseRepository = createMock<Repository<CourseEntity>>(mockCourseRepositoryMethods);
   const mockedCoursePartnerService = createMock<CoursePartnerService>(
     mockCoursePartnerRepositoryMethods,
   );
-  const mockedUserRepository = createMock<UserRepository>(mockUserRepositoryMethods);
-  const mockedTherapySessionRepository = createMock<TherapySessionRepository>(
+  const mockedUserRepository = createMock<Repository<UserEntity>>(mockUserRepositoryMethods);
+  const mockedTherapySessionRepository = createMock<Repository<TherapySessionEntity>>(
     mockTherapySessionRepositoryMethods,
   );
   const mockedSlackMessageClient = createMock<SlackMessageClient>(mockSlackMessageClientMethods);
-  const mockedPartnerAccessRepository = createMock<PartnerAccessRepository>(
+  const mockedPartnerAccessRepository = createMock<Repository<PartnerAccessEntity>>(
     mockPartnerAccessRepositoryMethods,
   );
-  const mockedEmailCampaignRepository = createMock<EmailCampaignRepository>(
+  const mockedEmailCampaignRepository = createMock<Repository<EmailCampaignEntity>>(
     mockEmailCampaignRepositoryMethods,
   );
   const mockedEventLoggerService = createMock<EventLoggerService>(mockEventLoggerServiceMethods);
@@ -128,17 +127,17 @@ describe('WebhooksService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         WebhooksService,
-        { provide: PartnerAccessRepository, useValue: mockedPartnerAccessRepository },
+        { provide: PartnerAccessEntity, useValue: mockedPartnerAccessRepository },
         {
-          provide: UserRepository,
+          provide: UserEntity,
           useValue: mockedUserRepository,
         },
         {
-          provide: CourseRepository,
+          provide: CourseEntity,
           useValue: mockedCourseRepository,
         },
         {
-          provide: SessionRepository,
+          provide: SessionEntity,
           useValue: mockedSessionRepository,
         },
         {
@@ -146,7 +145,7 @@ describe('WebhooksService', () => {
           useValue: mockedCoursePartnerService,
         },
         {
-          provide: TherapySessionRepository,
+          provide: TherapySessionEntity,
           useValue: mockedTherapySessionRepository,
         },
         {
@@ -155,16 +154,16 @@ describe('WebhooksService', () => {
         },
         { provide: EventLoggerService, useValue: mockedEventLoggerService },
         EventLoggerRepository,
-        CoursePartnerRepository,
+        CoursePartnerEntity,
         PartnerService,
-        PartnerRepository,
-        PartnerAdminRepository,
-        EmailCampaignRepository,
+        PartnerEntity,
+        PartnerAdminEntity,
+        EmailCampaignEntity,
         {
           provide: SlackMessageClient,
           useValue: mockedSlackMessageClient,
         },
-        { provide: EmailCampaignRepository, useValue: mockedEmailCampaignRepository },
+        { provide: EmailCampaignEntity, useValue: mockedEmailCampaignRepository },
       ],
     }).compile();
 
@@ -260,10 +259,10 @@ describe('WebhooksService', () => {
       });
 
       const sessionSaveRepoSpy = jest.spyOn(mockedSessionRepository, 'save');
-      const sessionFindOneRepoSpy = jest.spyOn(mockedSessionRepository, 'findOne');
+      const sessionFindOneRepoSpy = jest.spyOn(mockedSessionRepository, 'findOneBy');
 
       const courseFindOneSpy = jest
-        .spyOn(mockedCourseRepository, 'findOne')
+        .spyOn(mockedCourseRepository, 'findOneBy')
         .mockImplementationOnce(async () => {
           return course2;
         });
@@ -306,10 +305,10 @@ describe('WebhooksService', () => {
 
       const sessionCreateRepoSpy = jest.spyOn(mockedSessionRepository, 'create');
       const sessionFindOneRepoSpy = jest
-        .spyOn(mockedSessionRepository, 'findOne')
+        .spyOn(mockedSessionRepository, 'findOneBy')
         .mockImplementationOnce(async () => undefined);
 
-      const courseFindOneSpy = jest.spyOn(mockedCourseRepository, 'findOne');
+      const courseFindOneSpy = jest.spyOn(mockedCourseRepository, 'findOneBy');
 
       const body = {
         action: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
@@ -344,10 +343,10 @@ describe('WebhooksService', () => {
 
       const sessionCreateRepoSpy = jest.spyOn(mockedSessionRepository, 'create');
       const sessionFindOneRepoSpy = jest
-        .spyOn(mockedSessionRepository, 'findOne')
+        .spyOn(mockedSessionRepository, 'findOneBy')
         .mockImplementationOnce(async () => undefined);
 
-      const courseFindOneSpy = jest.spyOn(mockedCourseRepository, 'findOne');
+      const courseFindOneSpy = jest.spyOn(mockedCourseRepository, 'findOneBy');
 
       // eslint-disable-next-line
       // @ts-ignore
@@ -391,7 +390,7 @@ describe('WebhooksService', () => {
 
     it('when a course is new, the course should be created', async () => {
       const courseFindOneRepoSpy = jest
-        .spyOn(mockedCourseRepository, 'findOne')
+        .spyOn(mockedCourseRepository, 'findOneBy')
         .mockImplementationOnce(async () => undefined);
       const courseCreateRepoSpy = jest.spyOn(mockedCourseRepository, 'create');
       const courseSaveRepoSpy = jest.spyOn(mockedCourseRepository, 'save');
@@ -437,7 +436,7 @@ describe('WebhooksService', () => {
     it('should update the booking time when action is update and time is different TODO ', async () => {
       const newStartTime = '2022-09-12T09:30:00+0000';
       const newEndTime = '2022-09-12T10:30:00+0000';
-      const therapyRepoFindOneSpy = jest.spyOn(mockedTherapySessionRepository, 'findOne');
+      const therapyRepoFindOneSpy = jest.spyOn(mockedTherapySessionRepository, 'findOneBy');
       const booking = await service.updatePartnerAccessTherapy({
         ...mockSimplybookBodyBase,
         start_date_time: newStartTime,
@@ -451,7 +450,7 @@ describe('WebhooksService', () => {
 
     it('should throw an error when action is on a user that doesnt exist', async () => {
       const userFindOneRepoSpy = jest
-        .spyOn(mockedUserRepository, 'findOne')
+        .spyOn(mockedUserRepository, 'findOneBy')
         .mockImplementationOnce(() => undefined);
       await expect(service.updatePartnerAccessTherapy(mockSimplybookBodyBase)).rejects.toThrowError(
         'UpdatePartnerAccessTherapy - error finding user with userID 115e272a-5fc3-4991-8ea9-12dacad25bae and origin client_email testuser@test.com',
@@ -461,7 +460,7 @@ describe('WebhooksService', () => {
 
     it('when creating a new therapy session and the userId is not provided, it should get userId from previous entry', async () => {
       const findTherapySessionSpy = jest
-        .spyOn(mockedTherapySessionRepository, 'findOne')
+        .spyOn(mockedTherapySessionRepository, 'findOneBy')
         .mockImplementationOnce(async () => {
           return { ...mockTherapySessionEntity, clientEmail: mockSimplybookBodyBase.client_email };
         });
@@ -498,11 +497,11 @@ describe('WebhooksService', () => {
 
     it('when creating a new therapy session and the user_id/ userId is not provided and no previousTherapySession exists, it should get userId from the userDatabase', async () => {
       const findTherapySessionSpy = jest
-        .spyOn(mockedTherapySessionRepository, 'findOne')
+        .spyOn(mockedTherapySessionRepository, 'findOneBy')
         .mockImplementationOnce(async () => {
           return null;
         });
-      const findUserSpy = jest.spyOn(mockedUserRepository, 'findOne');
+      const findUserSpy = jest.spyOn(mockedUserRepository, 'findOneBy');
 
       const findPartnerAccessSpy = jest
         .spyOn(mockedPartnerAccessRepository, 'find')
@@ -574,7 +573,7 @@ describe('WebhooksService', () => {
     it('should set a booking as cancelled when action is cancel and there are no therapy sessions remaining TODO', async () => {
       // mock that there is no therapy sessions remaining on partner access
       const partnerAccessFindSpy = jest
-        .spyOn(mockedPartnerAccessRepository, 'findOne')
+        .spyOn(mockedPartnerAccessRepository, 'findOneBy')
         .mockImplementationOnce(async () => {
           return { ...mockPartnerAccessEntity, therapySessionsRemaining: 0 };
         });
@@ -666,7 +665,7 @@ describe('WebhooksService', () => {
         ];
       });
       const therapySessionFindOneSpy = jest
-        .spyOn(mockedTherapySessionRepository, 'findOne')
+        .spyOn(mockedTherapySessionRepository, 'findOneBy')
         .mockImplementationOnce(async (args: any) => {
           return { ...mockTherapySessionEntity, ...args };
         });
@@ -921,7 +920,7 @@ describe('WebhooksService', () => {
         date: new Date(2000, 1, 1),
         email: 'a@b.com',
       };
-      jest.spyOn(mockedUserRepository, 'findOne').mockImplementationOnce(async () => {
+      jest.spyOn(mockedUserRepository, 'findOneBy').mockImplementationOnce(async () => {
         return null;
       });
 

@@ -2,10 +2,10 @@
 import { createMock, DeepMocked } from '@golevelup/ts-jest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { Request } from 'express';
+import { UserEntity } from 'src/entities/user.entity';
 import { AuthService } from '../auth/auth.service';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
 import { PartnerAdminAuthGuard } from '../partner-admin/partner-admin-auth.guard';
-import { UserRepository } from '../user/user.repository';
 import { UserService } from '../user/user.service';
 import { CreatePartnerAccessDto } from './dtos/create-partner-access.dto';
 import { PartnerAccessController } from './partner-access.controller';
@@ -63,7 +63,7 @@ describe('PartnerAccessController', () => {
         { provide: AuthService, useValue: mockAuthService },
         { provide: UserService, useValue: mockUserService },
         {
-          provide: UserRepository,
+          provide: UserEntity,
           useFactory: mockUserRepository,
         },
       ],

@@ -1,16 +1,15 @@
 import { createMock, DeepMocked } from '@golevelup/ts-jest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PartnerAdminEntity } from 'src/entities/partner-admin.entity';
+import { UserEntity } from 'src/entities/user.entity';
 import { FIREBASE } from 'src/firebase/firebase-factory';
 import { PartnerService } from 'src/partner/partner.service';
-import { UserRepository } from 'src/user/user.repository';
 import { mockPartnerAdminEntity, mockPartnerEntity, mockUserEntity } from 'test/utils/mockData';
 import { mockPartnerServiceMethods } from 'test/utils/mockedServices';
 import { Repository } from 'typeorm';
 import { createQueryBuilderMock } from '../../test/utils/mockUtils';
 import { CreatePartnerAdminUserDto } from './dtos/create-partner-admin-user.dto';
 import { CreatePartnerAdminDto } from './dtos/create-partner-admin.dto';
-import { PartnerAdminRepository } from './partner-admin.repository';
 import { PartnerAdminService } from './partner-admin.service';
 
 const dto: CreatePartnerAdminUserDto = {
@@ -21,17 +20,17 @@ const dto: CreatePartnerAdminUserDto = {
 
 describe('PartnerAdminService', () => {
   let service: PartnerAdminService;
-  let repo: PartnerAdminRepository;
-  let mockUserRepository: DeepMocked<UserRepository>;
+  let repo: Repository<PartnerAdminEntity>;
+  let mockUserRepository: DeepMocked<Repository<UserEntity>>;
 
   beforeEach(async () => {
-    mockUserRepository = createMock<UserRepository>();
+    mockUserRepository = createMock<Repository<UserEntity>>();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PartnerAdminService,
         {
-          provide: PartnerAdminRepository,
+          provide: PartnerAdminEntity,
           useFactory: jest.fn(() => ({
             createQueryBuilder: createQueryBuilderMock(),
             create: (dto: CreatePartnerAdminDto): PartnerAdminEntity | Error => {
@@ -48,7 +47,7 @@ describe('PartnerAdminService', () => {
           useValue: mockPartnerServiceMethods,
         },
         {
-          provide: UserRepository,
+          provide: UserEntity,
           useValue: mockUserRepository,
         },
         {
@@ -67,7 +66,7 @@ describe('PartnerAdminService', () => {
     }).compile();
 
     service = module.get<PartnerAdminService>(PartnerAdminService);
-    repo = module.get<Repository<PartnerAdminEntity>>(PartnerAdminRepository);
+    repo = module.get<Repository<PartnerAdminEntity>>(PartnerAdminEntity);
   });
 
   it('should be defined', () => {
