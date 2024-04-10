@@ -1,7 +1,7 @@
 import { ConfigService } from '@nestjs/config';
 import { config } from 'dotenv';
 import * as PostgressConnectionStringParser from 'pg-connection-string';
-import { DataSource } from 'typeorm';
+import { DataSource, DataSourceOptions } from 'typeorm';
 import { CoursePartnerEntity } from './src/entities/course-partner.entity';
 import { CourseUserEntity } from './src/entities/course-user.entity';
 import { CourseEntity } from './src/entities/course.entity';
@@ -54,22 +54,16 @@ const { host, port, user, password, database } = PostgressConnectionStringParser
   configService.get('DATABASE_URL'),
 );
 
-/**
- * Notes on connection options:
- * synchronize: this setting will update the database automatically without running migrations. Turn on with caution.
- * migrationsRun: this setting ensures migrations are run on the db at startup. Turn off with caution.
- *  */
-
-const dataSource = new DataSource({
+export const dataSourceOptions = {
   type: 'postgres',
   host,
   port: Number(port),
   username: user,
   password,
   database,
-  synchronize: !isProduction,
-  migrationsRun: true,
-  logging: true,
+  synchronize: false, // updates the database automatically without running migrations - turn on with caution
+  migrationsRun: true, // ensures migrations are run on the db at startup - turn off with caution
+  logging: !isProduction,
   entities: [
     UserEntity,
     PartnerEntity,
@@ -122,6 +116,8 @@ const dataSource = new DataSource({
   extra: {
     ssl: isProduction ? { rejectUnauthorized: false } : null,
   },
-});
+};
+
+const dataSource = new DataSource(dataSourceOptions as DataSourceOptions);
 
 export default dataSource;

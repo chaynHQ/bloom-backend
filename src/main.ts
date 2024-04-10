@@ -2,7 +2,6 @@ import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import 'reflect-metadata';
-import dataSource from 'typeorm.config';
 import { AppModule } from './app.module';
 import { Logger } from './logger/logger';
 import { LoggingInterceptor } from './logger/logging.interceptor';
@@ -11,8 +10,6 @@ import { ExceptionsFilter } from './utils/exceptions.filter';
 async function bootstrap() {
   const PORT = process.env.PORT || 35001;
   const app = await NestFactory.create(AppModule, { cors: true });
-
-  if (dataSource.isInitialized === false) await dataSource.initialize();
 
   app.setGlobalPrefix('api');
 

@@ -22,15 +22,11 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "seed": "bash ./staging_backup.sh -c",
+    "typeorm": "typeorm-ts-node-commonjs",
     "migration:generate": "yarn typeorm -- -d ./typeorm.config.ts migration:generate ./migrations/bloom_backend",
     "migration:run": "yarn typeorm migration:run -- -d ./typeorm.config.ts",
     "migration:revert": "yarn typeorm -- -d ./typeorm.config.ts migration:revert",
-    "migration:show": "yarn build && yarn typeorm -- migration:show",
-    "typeorm": "typeorm-ts-node-commonjs",
-    "typeorm:run-migrations": "yarn typeorm migration:run -- -d ./typeorm.config.ts",
-    "typeorm:generate-migration": "yarn typeorm -- -d ./typeorm.config.ts migration:generate ./migrations/$NAME",
-    "typeorm:create-migration": "yarn typeorm -- migration:create ./migrations/$NAME",
-    "typeorm:revert-migration": "yarn typeorm -- -d ./typeorm.config.ts migration:revert"
+    "migration:show": "yarn build && yarn typeorm -- migration:show"
   },
   "dependencies": {
     "@mailchimp/mailchimp_transactional": "^1.0.47",
