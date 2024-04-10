@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { createMock, DeepMocked } from '@golevelup/ts-jest';
 import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
 import { UserEntity } from 'src/entities/user.entity';
 import { SuperAdminAuthGuard } from 'src/partner-admin/super-admin-auth.guard';
 import { mockPartnerFeatureEntity } from 'test/utils/mockData';
@@ -35,7 +36,7 @@ describe('PartnerFeatureController', () => {
         { provide: PartnerFeatureService, useValue: mockPartnerFeatureService },
         { provide: AuthService, useValue: mockAuthService },
         { provide: UserService, useValue: mockUserService },
-        { provide: UserEntity, useValue: mockUserRepository },
+        { provide: getRepositoryToken(UserEntity), useValue: mockUserRepository },
       ],
     })
       .overrideGuard(SuperAdminAuthGuard)

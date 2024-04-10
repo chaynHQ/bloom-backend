@@ -1,5 +1,6 @@
 import { createMock, DeepMocked } from '@golevelup/ts-jest';
 import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
 import { FeatureEntity } from 'src/entities/feature.entity';
 import { PartnerFeatureEntity } from 'src/entities/partner-feature.entity';
 import { PartnerEntity } from 'src/entities/partner.entity';
@@ -42,11 +43,11 @@ describe('FeatureService', () => {
       providers: [
         FeatureService,
         {
-          provide: FeatureEntity,
+          provide: getRepositoryToken(FeatureEntity),
           useValue: mockFeatureRepository,
         },
         {
-          provide: PartnerEntity,
+          provide: getRepositoryToken(PartnerEntity),
           useValue: mockPartnerRepository,
         },
         {
@@ -54,10 +55,12 @@ describe('FeatureService', () => {
           useValue: mockPartnerService,
         },
         { provide: UserService, useValue: mockUserService },
-        { provide: UserEntity, useValue: mockUserRepository },
-        { provide: UserEntity, useValue: mockUserRepository },
+        { provide: getRepositoryToken(UserEntity), useValue: mockUserRepository },
 
-        { provide: PartnerFeatureEntity, useValue: mockPartnerFeatureRepository },
+        {
+          provide: getRepositoryToken(PartnerFeatureEntity),
+          useValue: mockPartnerFeatureRepository,
+        },
       ],
     }).compile();
 

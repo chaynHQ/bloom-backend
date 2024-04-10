@@ -49,7 +49,7 @@ export class PartnerAdminAuthGuard implements CanActivate {
       .leftJoinAndSelect('partnerAdmin.partner', 'partner')
       .where('user.firebaseUid = :uid', { uid: userUid })
       .getOne();
-    if (user.partnerAdmin?.partner == null) {
+    if (user.partnerAdmin?.partner == null || !user.partnerAdmin.active) {
       return false;
     }
 

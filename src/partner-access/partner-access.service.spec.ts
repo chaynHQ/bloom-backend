@@ -1,5 +1,6 @@
 import { createMock, DeepMocked } from '@golevelup/ts-jest';
 import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
 import { sub } from 'date-fns';
 import * as crispApi from 'src/api/crisp/crisp-api';
 import { PartnerEntity } from 'src/entities/partner.entity';
@@ -63,18 +64,18 @@ describe('PartnerAccessService', () => {
       providers: [
         PartnerAccessService,
         {
-          provide: PartnerAccessEntity,
+          provide: getRepositoryToken(PartnerAccessEntity),
           useValue: mockPartnerAccessRepository,
         },
         {
-          provide: PartnerEntity,
+          provide: getRepositoryToken(PartnerEntity),
           useValue: mockPartnerRepository,
         },
       ],
     }).compile();
 
     service = module.get<PartnerAccessService>(PartnerAccessService);
-    repo = module.get<Repository<PartnerAccessEntity>>(PartnerAccessEntity);
+    repo = module.get<Repository<PartnerAccessEntity>>(getRepositoryToken(PartnerAccessEntity));
   });
 
   it('should be defined', () => {

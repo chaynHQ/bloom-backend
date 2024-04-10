@@ -1,5 +1,6 @@
 import { createMock, DeepMocked } from '@golevelup/ts-jest';
 import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
 import { PartnerAdminEntity } from 'src/entities/partner-admin.entity';
 import { UserEntity } from 'src/entities/user.entity';
 import { FIREBASE } from 'src/firebase/firebase-factory';
@@ -30,7 +31,7 @@ describe('PartnerAdminService', () => {
       providers: [
         PartnerAdminService,
         {
-          provide: PartnerAdminEntity,
+          provide: getRepositoryToken(PartnerAdminEntity),
           useFactory: jest.fn(() => ({
             createQueryBuilder: createQueryBuilderMock(),
             create: (dto: CreatePartnerAdminDto): PartnerAdminEntity | Error => {
@@ -47,7 +48,7 @@ describe('PartnerAdminService', () => {
           useValue: mockPartnerServiceMethods,
         },
         {
-          provide: UserEntity,
+          provide: getRepositoryToken(UserEntity),
           useValue: mockUserRepository,
         },
         {
@@ -66,7 +67,7 @@ describe('PartnerAdminService', () => {
     }).compile();
 
     service = module.get<PartnerAdminService>(PartnerAdminService);
-    repo = module.get<Repository<PartnerAdminEntity>>(PartnerAdminEntity);
+    repo = module.get<Repository<PartnerAdminEntity>>(getRepositoryToken(PartnerAdminEntity));
   });
 
   it('should be defined', () => {

@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { createMock, DeepMocked } from '@golevelup/ts-jest';
 import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
 import { Request } from 'express';
 import { UserEntity } from 'src/entities/user.entity';
 import { AuthService } from '../auth/auth.service';
@@ -63,7 +64,7 @@ describe('PartnerAccessController', () => {
         { provide: AuthService, useValue: mockAuthService },
         { provide: UserService, useValue: mockUserService },
         {
-          provide: UserEntity,
+          provide: getRepositoryToken(UserEntity),
           useFactory: mockUserRepository,
         },
       ],

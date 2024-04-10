@@ -1,4 +1,5 @@
 import { UserRecord } from 'firebase-admin/lib/auth/user-record';
+import { CoursePartnerEntity } from 'src/entities/course-partner.entity';
 import { CourseEntity } from 'src/entities/course.entity';
 import { EmailCampaignEntity } from 'src/entities/email-campaign.entity';
 import { EventLogEntity } from 'src/entities/event-log.entity';
@@ -200,6 +201,7 @@ export const mockPartnerAccessEntityBase = {
   therapySession: [],
   updatedAt: null,
 };
+
 export const mockPartnerAccessEntity = {
   id: 'pa1',
   therapySessionsRemaining: 5,
@@ -217,6 +219,17 @@ export const mockPartnerAccessEntity = {
   active: true,
   userId: null,
 } as PartnerAccessEntity;
+
+export const mockCoursePartnerEntity: CoursePartnerEntity = {
+  id: 'coursePartnerId',
+  partnerId: mockPartnerEntity.id,
+  partner: mockPartnerEntity,
+  courseId: mockCourse.id,
+  course: { ...mockCourse },
+  active: true,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+};
 
 export const mockEmailCampaignEntity: EmailCampaignEntity = {
   email: 'test@test.com',

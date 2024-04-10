@@ -3,11 +3,13 @@ import { UserRecord } from 'firebase-admin/lib/auth/user-record';
 import { MailchimpClient } from 'src/api/mailchimp/mailchip-api';
 import { SlackMessageClient } from 'src/api/slack/slack-api';
 import { CoursePartnerService } from 'src/course-partner/course-partner.service';
+import { CoursePartnerEntity } from 'src/entities/course-partner.entity';
 import { CourseEntity } from 'src/entities/course.entity';
 import { EmailCampaignEntity } from 'src/entities/email-campaign.entity';
 import { EventLogEntity } from 'src/entities/event-log.entity';
 import { FeatureEntity } from 'src/entities/feature.entity';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
+import { PartnerAdminEntity } from 'src/entities/partner-admin.entity';
 import { PartnerFeatureEntity } from 'src/entities/partner-feature.entity';
 import { PartnerEntity } from 'src/entities/partner.entity';
 import { SessionEntity } from 'src/entities/session.entity';
@@ -20,11 +22,13 @@ import { WebhooksService } from 'src/webhooks/webhooks.service';
 import { DeepPartial, Repository } from 'typeorm';
 import {
   mockCourse,
+  mockCoursePartnerEntity,
   mockEmailCampaignEntity,
   mockEventLog,
   mockFeatureEntity,
   mockPartnerAccessEntity,
   mockPartnerAccessEntityBase,
+  mockPartnerAdminEntity,
   mockPartnerEntity,
   mockPartnerFeatureEntity,
   mockSession,
@@ -59,11 +63,36 @@ export const mockCourseRepositoryMethods: PartialFuncReturn<Repository<CourseEnt
   },
 };
 
-export const mockCoursePartnerRepositoryMethods: PartialFuncReturn<CoursePartnerService> = {
+export const mockCoursePartnerServiceMethods: PartialFuncReturn<CoursePartnerService> = {
   updateCoursePartners: async () => {
     return [];
   },
 };
+
+export const mockCoursePartnerRepositoryMethods: PartialFuncReturn<
+  Repository<CoursePartnerEntity>
+> = {
+  save: async (arg) => {
+    return { ...mockCoursePartnerEntity, ...arg } as CoursePartnerEntity;
+  },
+};
+
+export const mockPartnerAdminRepositoryMethods: PartialFuncReturn<Repository<PartnerAdminEntity>> =
+  {
+    findOneBy: async (arg) => {
+      return { ...mockPartnerAdminEntity, ...(arg ? arg : {}) } as PartnerAdminEntity;
+    },
+    save: async (arg) => {
+      return { ...mockPartnerAdminEntity, ...arg } as PartnerAdminEntity;
+    },
+    create: (dto) => {
+      return {
+        ...mockPartnerAdminEntity,
+        ...dto,
+      };
+    },
+  };
+
 export const mockTherapySessionRepositoryMethods: PartialFuncReturn<
   Repository<TherapySessionEntity>
 > = {

@@ -1,5 +1,6 @@
 import { createMock } from '@golevelup/ts-jest';
 import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
 import { createHmac } from 'crypto';
 import { format, sub } from 'date-fns';
 import startOfDay from 'date-fns/startOfDay';
@@ -33,11 +34,15 @@ import {
 } from 'test/utils/mockData';
 import {
   mockCoursePartnerRepositoryMethods,
+  mockCoursePartnerServiceMethods,
   mockCourseRepositoryMethods,
   mockEmailCampaignRepositoryMethods,
+  mockEventLoggerRepositoryMethods,
   mockEventLoggerServiceMethods,
   mockMailchimpClientMethods,
   mockPartnerAccessRepositoryMethods,
+  mockPartnerAdminRepositoryMethods,
+  mockPartnerRepositoryMethods,
   mockSessionRepositoryMethods,
   mockSlackMessageClientMethods,
   mockTherapySessionRepositoryMethods,
@@ -99,7 +104,7 @@ jest.mock('../api/crisp/crisp-api', () => {
   };
 });
 
-describe.skip('WebhooksService', () => {
+describe('WebhooksService', () => {
   let service: WebhooksService;
   const mockedMailchimpClient = createMock<MailchimpClient>(mockMailchimpClientMethods);
   const mockedSessionRepository = createMock<Repository<SessionEntity>>(
@@ -107,7 +112,7 @@ describe.skip('WebhooksService', () => {
   );
   const mockedCourseRepository = createMock<Repository<CourseEntity>>(mockCourseRepositoryMethods);
   const mockedCoursePartnerService = createMock<CoursePartnerService>(
-    mockCoursePartnerRepositoryMethods,
+    mockCoursePartnerServiceMethods,
   );
   const mockedUserRepository = createMock<Repository<UserEntity>>(mockUserRepositoryMethods);
   const mockedTherapySessionRepository = createMock<Repository<TherapySessionEntity>>(
@@ -121,49 +126,78 @@ describe.skip('WebhooksService', () => {
     mockEmailCampaignRepositoryMethods,
   );
   const mockedEventLoggerService = createMock<EventLoggerService>(mockEventLoggerServiceMethods);
+  const mockedEventLogRepository = createMock<Repository<EventLogEntity>>(
+    mockEventLoggerRepositoryMethods,
+  );
+  const mockedPartnerRepository = createMock<Repository<PartnerEntity>>(
+    mockPartnerRepositoryMethods,
+  );
+  const mockedCoursePartnerRepository = createMock<Repository<CoursePartnerEntity>>(
+    mockCoursePartnerRepositoryMethods,
+  );
+  const mockedPartnerAdminRepository = createMock<Repository<PartnerAdminEntity>>(
+    mockPartnerAdminRepositoryMethods,
+  );
 
   beforeEach(async () => {
     jest.clearAllMocks();
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         WebhooksService,
-        { provide: PartnerAccessEntity, useValue: mockedPartnerAccessRepository },
         {
-          provide: UserEntity,
+          provide: getRepositoryToken(PartnerAccessEntity),
+          useValue: mockedPartnerAccessRepository,
+        },
+        {
+          provide: getRepositoryToken(UserEntity),
           useValue: mockedUserRepository,
         },
         {
-          provide: CourseEntity,
+          provide: getRepositoryToken(CourseEntity),
           useValue: mockedCourseRepository,
         },
         {
-          provide: SessionEntity,
+          provide: getRepositoryToken(SessionEntity),
           useValue: mockedSessionRepository,
+        },
+        {
+          provide: getRepositoryToken(CoursePartnerEntity),
+          useValue: mockedCoursePartnerRepository,
+        },
+        {
+          provide: getRepositoryToken(PartnerEntity),
+          useValue: mockedPartnerRepository,
+        },
+        {
+          provide: getRepositoryToken(TherapySessionEntity),
+          useValue: mockedTherapySessionRepository,
+        },
+        {
+          provide: getRepositoryToken(PartnerAdminEntity),
+          useValue: mockedPartnerAdminRepository,
+        },
+        {
+          provide: getRepositoryToken(EmailCampaignEntity),
+          useValue: mockedEmailCampaignRepository,
+        },
+        {
+          provide: getRepositoryToken(EventLogEntity),
+          useValue: mockedEventLogRepository,
         },
         {
           provide: CoursePartnerService,
           useValue: mockedCoursePartnerService,
         },
-        {
-          provide: TherapySessionEntity,
-          useValue: mockedTherapySessionRepository,
-        },
+        { provide: EventLoggerService, useValue: mockedEventLoggerService },
         {
           provide: MailchimpClient,
           useValue: mockedMailchimpClient,
         },
-        { provide: EventLoggerService, useValue: mockedEventLoggerService },
-        EventLogEntity,
-        CoursePartnerEntity,
-        PartnerService,
-        PartnerEntity,
-        PartnerAdminEntity,
-        EmailCampaignEntity,
         {
           provide: SlackMessageClient,
           useValue: mockedSlackMessageClient,
         },
-        { provide: EmailCampaignEntity, useValue: mockedEmailCampaignRepository },
+        PartnerService,
       ],
     }).compile();
 

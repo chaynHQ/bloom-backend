@@ -1,6 +1,7 @@
 import { createMock, DeepMocked } from '@golevelup/ts-jest';
 import { HttpException, HttpStatus } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
 import { addCrispProfile } from 'src/api/crisp/crisp-api';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { PartnerEntity } from 'src/entities/partner.entity';
@@ -84,7 +85,7 @@ describe('UserService', () => {
       providers: [
         UserService,
         {
-          provide: UserEntity,
+          provide: getRepositoryToken(UserEntity),
           useFactory: jest.fn(() => mockUserRepositoryMethodsFactory),
         },
         {
@@ -92,7 +93,7 @@ describe('UserService', () => {
           useValue: mockPartnerService,
         },
         {
-          provide: PartnerEntity,
+          provide: getRepositoryToken(PartnerEntity),
           useValue: mockPartnerRepository,
         },
         {
@@ -107,7 +108,7 @@ describe('UserService', () => {
     }).compile();
 
     service = module.get<UserService>(UserService);
-    repo = module.get<Repository<UserEntity>>(UserEntity);
+    repo = module.get<Repository<UserEntity>>(getRepositoryToken(UserEntity));
   });
 
   it('should be defined', () => {

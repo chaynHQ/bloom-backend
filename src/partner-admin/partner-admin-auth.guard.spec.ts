@@ -114,7 +114,9 @@ describe('PartnerAdminAuthGuard', () => {
       }) as never, // TODO resolve this typescript issue
     );
 
-    await expect(guard.canActivate(context)).rejects.toThrowError();
+    const canActivate = await guard.canActivate(context);
+
+    expect(canActivate).toBe(false);
   });
 
   it('should return false when the authtoken cannot be resolved', async () => {

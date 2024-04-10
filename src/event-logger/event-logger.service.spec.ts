@@ -1,5 +1,6 @@
 import { createMock, DeepMocked } from '@golevelup/ts-jest';
 import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
 import { EventLogEntity } from 'src/entities/event-log.entity';
 import { mockEventLoggerRepositoryMethods } from 'test/utils/mockedServices';
 import { Repository } from 'typeorm';
@@ -19,7 +20,7 @@ describe('EventLoggerService', () => {
       providers: [
         EventLoggerService,
         {
-          provide: EventLogEntity,
+          provide: getRepositoryToken(EventLogEntity),
           useValue: mockEventLoggerRepository,
         },
       ],
