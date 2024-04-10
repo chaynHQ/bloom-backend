@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
-import { dataSourceOptions } from 'typeorm.config';
+import { dataSourceOptions } from 'src/typeorm.config';
 import { AuthModule } from './auth/auth.module';
 import { CoursePartnerModule } from './course-partner/course-partner.module';
 import { CourseUserModule } from './course-user/course-user.module';
