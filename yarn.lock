@@ -5564,7 +5564,7 @@ neo-async@^2.6.2:
   resolved "https://registry.yarnpkg.com/neo-async/-/neo-async-2.6.2.tgz#b4aafb93e3aeb2d8174ca53cf163ab7d7308305f"
   integrity sha512-Yd3UES5mWCSqR+qNT93S3UoYUkqAZ9lLg8a7g9rimsWmYGK8cVToA4/sF3RrshdyV3sAGMXVUmpMYOw+dLpOuw==
 
-newrelic@^11.8.0:
+newrelic@^11.15.0:
   version "11.15.0"
   resolved "https://registry.yarnpkg.com/newrelic/-/newrelic-11.15.0.tgz#bc165c43601cd834a47ad736c36d91858c0fa01b"
   integrity sha512-sP5zLP/JgaTivDiLfS/kcYpQK7lZQTk6Qqw/9hdAOgtzx/uZdKzxLmNzXk3uS0eVnwQVgKvVr3pGILJUGhGtPA==
@@ -6383,7 +6383,7 @@ ringbufferjs@^2.0.0:
   resolved "https://registry.yarnpkg.com/ringbufferjs/-/ringbufferjs-2.0.0.tgz#09f40e2675a99cfef430b7ec5815ac1bc2e24120"
   integrity sha512-GCOqTzUsTHF7nrqcgtNGAFotXztLgiePpIDpyWZ7R5I02tmfJWV+/yuJc//Hlsd8G+WzI1t/dc2y/w2imDZdog==
 
-rollbar@^2.24.0:
+rollbar@^2.26.4:
   version "2.26.4"
   resolved "https://registry.yarnpkg.com/rollbar/-/rollbar-2.26.4.tgz#05e47d3b1f52ab6da9f88710ec66371a76cdc3c9"
   integrity sha512-JKmrj6riYm9ZPJisgxljgH4uCsvjMHDHXrinDF7aAFaP+eoF51HomVPtLcDTYLsrJ568aKVNLUhedFajONBwSg==
