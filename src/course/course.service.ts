@@ -1,12 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { CourseEntity } from '../entities/course.entity';
 import { STORYBLOK_STORY_STATUS_ENUM } from '../utils/constants';
-import { CourseRepository } from './course.repository';
 
 @Injectable()
 export class CourseService {
-  constructor(@InjectRepository(CourseRepository) private courseRepository: CourseRepository) {}
+  constructor(@InjectRepository(CourseEntity) private courseRepository: Repository<CourseEntity>) {}
 
   async getCourseWithSessions(id: string): Promise<CourseEntity> {
     return await this.courseRepository

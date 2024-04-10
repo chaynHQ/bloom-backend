@@ -3,7 +3,6 @@ import { UserRecord } from 'firebase-admin/lib/auth/user-record';
 import { MailchimpClient } from 'src/api/mailchimp/mailchip-api';
 import { SlackMessageClient } from 'src/api/slack/slack-api';
 import { CoursePartnerService } from 'src/course-partner/course-partner.service';
-import { CourseRepository } from 'src/course/course.repository';
 import { CourseEntity } from 'src/entities/course.entity';
 import { EmailCampaignEntity } from 'src/entities/email-campaign.entity';
 import { EventLogEntity } from 'src/entities/event-log.entity';
@@ -16,18 +15,10 @@ import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
 import { UserEntity } from 'src/entities/user.entity';
 import { EventLoggerRepository } from 'src/event-logger/event-logger.repository';
 import { EventLoggerService } from 'src/event-logger/event-logger.service';
-import { FeatureRepository } from 'src/feature/feature.repository';
-import { PartnerAccessRepository } from 'src/partner-access/partner-access.repository';
-import { PartnerFeatureRepository } from 'src/partner-feature/partner-feature.repository';
-import { PartnerRepository } from 'src/partner/partner.repository';
-import { SessionRepository } from 'src/session/session.repository';
 import { CreateUserDto } from 'src/user/dtos/create-user.dto';
 import { UpdateUserDto } from 'src/user/dtos/update-user.dto';
-import { UserRepository } from 'src/user/user.repository';
-import { EmailCampaignRepository } from 'src/webhooks/email-campaign/email-campaign.repository';
-import { TherapySessionRepository } from 'src/webhooks/therapy-session.repository';
 import { WebhooksService } from 'src/webhooks/webhooks.service';
-import { DeepPartial } from 'typeorm';
+import { DeepPartial, Repository } from 'typeorm';
 import {
   mockCourse,
   mockEmailCampaignEntity,
@@ -45,8 +36,8 @@ import {
 } from './mockData';
 import { createQueryBuilderMock } from './mockUtils';
 
-export const mockSessionRepositoryMethods: PartialFuncReturn<SessionRepository> = {
-  findOne: async () => {
+export const mockSessionRepositoryMethods: PartialFuncReturn<Repository<SessionEntity>> = {
+  findOneBy: async () => {
     return mockSession;
   },
   save: async (entity) => {
@@ -57,8 +48,8 @@ export const mockSessionRepositoryMethods: PartialFuncReturn<SessionRepository> 
   },
 };
 
-export const mockCourseRepositoryMethods: PartialFuncReturn<CourseRepository> = {
-  findOne: async () => {
+export const mockCourseRepositoryMethods: PartialFuncReturn<Repository<CourseEntity>> = {
+  findOneBy: async () => {
     return mockCourse;
   },
   create: () => {
@@ -74,8 +65,10 @@ export const mockCoursePartnerRepositoryMethods: PartialFuncReturn<CoursePartner
     return [];
   },
 };
-export const mockTherapySessionRepositoryMethods: PartialFuncReturn<TherapySessionRepository> = {
-  findOne: async (arg) => {
+export const mockTherapySessionRepositoryMethods: PartialFuncReturn<
+  Repository<TherapySessionEntity>
+> = {
+  findOneBy: async (arg) => {
     return { ...mockTherapySessionEntity, ...(arg ? arg : {}) } as TherapySessionEntity;
   },
   findOneOrFail: async (arg) => {
@@ -89,14 +82,14 @@ export const mockTherapySessionRepositoryMethods: PartialFuncReturn<TherapySessi
   },
 };
 
-export const mockUserRepositoryMethods: PartialFuncReturn<UserRepository> = {
+export const mockUserRepositoryMethods: PartialFuncReturn<Repository<UserEntity>> = {
   create: (dto: CreateUserDto) => {
     return {
       ...mockUserEntity,
       ...dto,
     } as UserEntity;
   },
-  findOne: async ({ email: client_email }) => {
+  findOneBy: async ({ email: client_email }) => {
     return { ...mockUserEntity, ...(client_email ? { email: client_email } : {}) } as UserEntity;
   },
   find: async () => {
@@ -125,7 +118,9 @@ export const mockUserRepositoryMethodsFactory = {
   save: (arg) => arg,
 };
 
-export const mockPartnerAccessRepositoryMethods: PartialFuncReturn<PartnerAccessRepository> = {
+export const mockPartnerAccessRepositoryMethods: PartialFuncReturn<
+  Repository<PartnerAccessEntity>
+> = {
   createQueryBuilder: createQueryBuilderMock(),
   create: (dto) => {
     return {
@@ -145,7 +140,7 @@ export const mockPartnerAccessRepositoryMethods: PartialFuncReturn<PartnerAccess
   save: async (arg) => arg as PartnerAccessEntity,
 };
 
-export const mockPartnerRepositoryMethods: PartialFuncReturn<PartnerRepository> = {
+export const mockPartnerRepositoryMethods: PartialFuncReturn<Repository<PartnerEntity>> = {
   create: (dto) => {
     return {
       ...mockPartnerEntity,
@@ -182,7 +177,9 @@ export const mockMailchimpClientMethods: PartialFuncReturn<MailchimpClient> = {
   },
 };
 
-export const mockEmailCampaignRepositoryMethods: PartialFuncReturn<EmailCampaignRepository> = {
+export const mockEmailCampaignRepositoryMethods: PartialFuncReturn<
+  Repository<EmailCampaignEntity>
+> = {
   find: async (arg) => {
     return [{ ...mockEmailCampaignEntity, ...(arg ? arg : {}) }] as EmailCampaignEntity[];
   },
@@ -219,7 +216,9 @@ export const mockAuthServiceMethods = {
   },
 };
 
-export const mockPartnerFeatureRepositoryMethods: PartialFuncReturn<PartnerFeatureRepository> = {
+export const mockPartnerFeatureRepositoryMethods: PartialFuncReturn<
+  Repository<PartnerFeatureEntity>
+> = {
   createQueryBuilder: createQueryBuilderMock(),
   create: (dto) => {
     return {
@@ -235,7 +234,8 @@ export const mockPartnerFeatureRepositoryMethods: PartialFuncReturn<PartnerFeatu
   },
   save: async (arg) => arg as PartnerFeatureEntity,
 };
-export const mockFeatureRepositoryMethods: PartialFuncReturn<FeatureRepository> = {
+
+export const mockFeatureRepositoryMethods: PartialFuncReturn<Repository<FeatureEntity>> = {
   createQueryBuilder: createQueryBuilderMock(),
   create: (dto) => {
     return {

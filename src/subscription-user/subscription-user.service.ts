@@ -1,6 +1,7 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { IsNull } from 'typeorm';
+import { SubscriptionUserEntity } from 'src/entities/subscription-user.entity';
+import { IsNull, Repository } from 'typeorm';
 import { ZapierWebhookClient } from '../api/zapier/zapier-webhook-client';
 import { Logger } from '../logger/logger';
 import { SubscriptionService } from '../subscription/subscription.service';
@@ -10,15 +11,14 @@ import { formatSubscriptionObject } from '../utils/serialize';
 import { CreateSubscriptionUserDto } from './dto/create-subscription-user.dto';
 import { UpdateSubscriptionUserDto } from './dto/update-subscription-user.dto';
 import { ISubscriptionUser } from './subscription-user.interface';
-import { SubscriptionUserRepository } from './subscription-user.repository';
 
 @Injectable()
 export class SubscriptionUserService {
   private readonly logger = new Logger('SubscriptionUserService');
 
   constructor(
-    @InjectRepository(SubscriptionUserRepository)
-    private subscriptionUserRepository: SubscriptionUserRepository,
+    @InjectRepository(SubscriptionUserEntity)
+    private subscriptionUserRepository: Repository<SubscriptionUserEntity>,
     private readonly subscriptionService: SubscriptionService,
     private readonly zapierClient: ZapierWebhookClient,
   ) {}

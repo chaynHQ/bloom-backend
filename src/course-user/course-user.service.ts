@@ -1,13 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { CourseUserEntity } from '../entities/course-user.entity';
-import { CourseUserRepository } from './course-user.repository';
 import { CourseUserDto } from './dto/course-user.dto';
 
 @Injectable()
 export class CourseUserService {
   constructor(
-    @InjectRepository(CourseUserRepository) private courseUserRepository: CourseUserRepository,
+    @InjectRepository(CourseUserEntity) private courseUserRepository: Repository<CourseUserEntity>,
   ) {}
 
   async getCourseUser({ courseId, userId }: CourseUserDto): Promise<CourseUserEntity> {

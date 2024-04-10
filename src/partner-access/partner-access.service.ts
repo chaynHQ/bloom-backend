@@ -4,7 +4,7 @@ import { isBefore, sub } from 'date-fns';
 import _ from 'lodash';
 import { PartnerEntity } from 'src/entities/partner.entity';
 import { Logger } from 'src/logger/logger';
-import { PartnerRepository } from 'src/partner/partner.repository';
+import { Repository } from 'typeorm';
 import { updateCrispProfileAccesses } from '../api/crisp/crisp-api';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
 import { GetUserDto } from '../user/dtos/get-user.dto';
@@ -12,7 +12,6 @@ import { PartnerAccessCodeStatusEnum } from '../utils/constants';
 import { CreatePartnerAccessDto } from './dtos/create-partner-access.dto';
 import { GetPartnerAccessesDto } from './dtos/get-partner-access.dto';
 import { UpdatePartnerAccessDto } from './dtos/update-partner-access.dto';
-import { PartnerAccessRepository } from './partner-access.repository';
 
 // TODO storing base service minimum here but this might need to be a config setup eventually
 const basePartnerAccess = {
@@ -26,10 +25,10 @@ export class PartnerAccessService {
   private readonly logger = new Logger('PartnerAccessService');
 
   constructor(
-    @InjectRepository(PartnerAccessRepository)
-    private partnerAccessRepository: PartnerAccessRepository,
-    @InjectRepository(PartnerRepository)
-    private partnerRepository: PartnerRepository,
+    @InjectRepository(PartnerAccessEntity)
+    private partnerAccessRepository: Repository<PartnerAccessEntity>,
+    @InjectRepository(PartnerEntity)
+    private partnerRepository: Repository<PartnerEntity>,
   ) {}
 
   async createPartnerAccess(

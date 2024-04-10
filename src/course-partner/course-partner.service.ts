@@ -1,14 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import _ from 'lodash';
+import { CoursePartnerEntity } from 'src/entities/course-partner.entity';
 import { PartnerService } from 'src/partner/partner.service';
-import { CoursePartnerRepository } from './course-partner.repository';
+import { Repository } from 'typeorm';
 
 @Injectable()
 export class CoursePartnerService {
   constructor(
-    @InjectRepository(CoursePartnerRepository)
-    private coursePartnerRepository: CoursePartnerRepository,
+    @InjectRepository(CoursePartnerEntity)
+    private coursePartnerRepository: Repository<CoursePartnerEntity>,
     private readonly partnerService: PartnerService,
   ) {}
 

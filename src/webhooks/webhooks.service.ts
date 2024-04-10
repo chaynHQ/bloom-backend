@@ -6,8 +6,13 @@ import startOfDay from 'date-fns/startOfDay';
 import { MailchimpClient } from 'src/api/mailchimp/mailchip-api';
 import { getBookingsForDate } from 'src/api/simplybook/simplybook-api';
 import { SlackMessageClient } from 'src/api/slack/slack-api';
+import { CourseEntity } from 'src/entities/course.entity';
+import { EmailCampaignEntity } from 'src/entities/email-campaign.entity';
 import { EventLogEntity } from 'src/entities/event-log.entity';
+import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
+import { SessionEntity } from 'src/entities/session.entity';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
+import { UserEntity } from 'src/entities/user.entity';
 import { EventLoggerService } from 'src/event-logger/event-logger.service';
 import { ZapierSimplybookBodyDto } from 'src/partner-access/dtos/zapier-body.dto';
 import { IUser } from 'src/user/user.interface';
@@ -15,13 +20,9 @@ import { serializeZapierSimplyBookDtoToTherapySessionEntity } from 'src/utils/se
 import { getYesterdaysDate } from 'src/utils/utils';
 import { WebhookCreateEventLogDto } from 'src/webhooks/dto/webhook-create-event-log.dto';
 import StoryblokClient from 'storyblok-js-client';
-import { Between, ILike } from 'typeorm';
+import { Between, ILike, Repository } from 'typeorm';
 import { getCrispPeopleData, updateCrispProfileData } from '../api/crisp/crisp-api';
 import { CoursePartnerService } from '../course-partner/course-partner.service';
-import { CourseRepository } from '../course/course.repository';
-import { PartnerAccessRepository } from '../partner-access/partner-access.repository';
-import { SessionRepository } from '../session/session.repository';
-import { UserRepository } from '../user/user.repository';
 import {
   CAMPAIGN_TYPE,
   SIMPLYBOOK_ACTION_ENUM,
@@ -30,25 +31,22 @@ import {
   storyblokToken,
 } from '../utils/constants';
 import { StoryDto } from './dto/story.dto';
-import { EmailCampaignRepository } from './email-campaign/email-campaign.repository';
-import { TherapySessionRepository } from './therapy-session.repository';
 
 @Injectable()
 export class WebhooksService {
   private readonly logger = new Logger('WebhookService');
 
   constructor(
-    @InjectRepository(PartnerAccessRepository)
-    private partnerAccessRepository: PartnerAccessRepository,
-    @InjectRepository(UserRepository)
-    private userRepository: UserRepository,
-    @InjectRepository(CourseRepository) private courseRepository: CourseRepository,
-    @InjectRepository(SessionRepository) private sessionRepository: SessionRepository,
+    @InjectRepository(PartnerAccessEntity)
+    private partnerAccessRepository: Repository<PartnerAccessEntity>,
+    @InjectRepository(UserEntity) private userRepository: Repository<UserEntity>,
+    @InjectRepository(CourseEntity) private courseRepository: Repository<CourseEntity>,
+    @InjectRepository(SessionEntity) private sessionRepository: Repository<SessionEntity>,
     private readonly coursePartnerService: CoursePartnerService,
-    @InjectRepository(TherapySessionRepository)
-    private therapySessionRepository: TherapySessionRepository,
-    @InjectRepository(EmailCampaignRepository)
-    private emailCampaignRepository: EmailCampaignRepository,
+    @InjectRepository(TherapySessionEntity)
+    private therapySessionRepository: Repository<TherapySessionEntity>,
+    @InjectRepository(EmailCampaignEntity)
+    private emailCampaignRepository: Repository<EmailCampaignEntity>,
     private eventLoggerService: EventLoggerService,
     private mailchimpClient: MailchimpClient,
     private slackMessageClient: SlackMessageClient,

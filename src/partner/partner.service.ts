@@ -1,25 +1,22 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
+import { PartnerAdminEntity } from 'src/entities/partner-admin.entity';
 import { UserEntity } from 'src/entities/user.entity';
-import { PartnerAccessRepository } from 'src/partner-access/partner-access.repository';
-import { PartnerAdminRepository } from 'src/partner-admin/partner-admin.repository';
-import { UserRepository } from 'src/user/user.repository';
-import { In } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { PartnerEntity } from '../entities/partner.entity';
 import { CreatePartnerDto } from './dtos/create-partner.dto';
 import { DeletePartnerDto } from './dtos/delete-partner.dto';
-import { PartnerRepository } from './partner.repository';
 
 @Injectable()
 export class PartnerService {
   constructor(
-    @InjectRepository(PartnerRepository) private partnerRepository: PartnerRepository,
-    @InjectRepository(PartnerAccessRepository)
-    private partnerAccessRepository: PartnerAccessRepository,
-    @InjectRepository(PartnerAdminRepository)
-    private partnerAdminRepository: PartnerAdminRepository,
-    @InjectRepository(UserRepository) private userRepository: UserRepository,
+    @InjectRepository(PartnerEntity) private partnerRepository: Repository<PartnerEntity>,
+    @InjectRepository(PartnerAccessEntity)
+    private partnerAccessRepository: Repository<PartnerAccessEntity>,
+    @InjectRepository(PartnerAdminEntity)
+    private partnerAdminRepository: Repository<PartnerAdminEntity>,
+    @InjectRepository(UserEntity) private userRepository: Repository<UserEntity>,
   ) {}
 
   async createPartner(createPartnerDto: CreatePartnerDto): Promise<PartnerEntity | unknown> {

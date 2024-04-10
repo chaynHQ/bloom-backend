@@ -11,6 +11,7 @@ import {
   CREATE_USER_INVALID_EMAIL,
   CREATE_USER_WEAK_PASSWORD,
 } from 'src/utils/errors';
+import { Repository } from 'typeorm';
 import {
   addCrispProfile,
   deleteCrispProfile,
@@ -24,7 +25,6 @@ import { generateRandomString } from '../utils/utils';
 import { CreateUserDto } from './dtos/create-user.dto';
 import { GetUserDto } from './dtos/get-user.dto';
 import { UpdateUserDto } from './dtos/update-user.dto';
-import { UserRepository } from './user.repository';
 
 enum SIGNUP_TYPE {
   PUBLIC_USER = 'PUBLIC_USER',
@@ -37,8 +37,8 @@ export class UserService {
   private readonly logger = new Logger('UserService');
 
   constructor(
-    @InjectRepository(UserRepository)
-    private userRepository: UserRepository,
+    @InjectRepository(UserEntity)
+    private userRepository: Repository<UserEntity>,
     private readonly partnerAccessService: PartnerAccessService,
     private readonly partnerService: PartnerService,
     private readonly authService: AuthService,

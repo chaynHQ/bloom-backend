@@ -1,24 +1,24 @@
 import { HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { UserEntity } from 'src/entities/user.entity';
+import { Repository } from 'typeorm';
 import { PartnerAdminEntity } from '../entities/partner-admin.entity';
 import { FIREBASE } from '../firebase/firebase-factory';
 import { FirebaseServices } from '../firebase/firebase.types';
 import { PartnerService } from '../partner/partner.service';
-import { UserRepository } from '../user/user.repository';
 import { generateRandomString } from '../utils/utils';
 import { CreatePartnerAdminUserDto } from './dtos/create-partner-admin-user.dto';
 import { CreatePartnerAdminDto } from './dtos/create-partner-admin.dto';
 import { UpdatePartnerAdminDto } from './dtos/update-partner-admin.dto';
-import { PartnerAdminRepository } from './partner-admin.repository';
 
 @Injectable()
 export class PartnerAdminService {
   constructor(
-    @InjectRepository(PartnerAdminRepository)
-    private partnerAdminRepository: PartnerAdminRepository,
+    @InjectRepository(UserEntity) private userRepository: Repository<UserEntity>,
+    @InjectRepository(PartnerAdminEntity)
+    private partnerAdminRepository: Repository<PartnerAdminEntity>,
     private readonly partnerService: PartnerService,
     @Inject(FIREBASE) private firebase: FirebaseServices,
-    @InjectRepository(UserRepository) private userRepository: UserRepository,
   ) {}
 
   async createPartnerAdmin(
