@@ -1,7 +1,6 @@
+import * as admin from 'firebase-admin';
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/auth';
-import { FirebaseServices } from './firebase.types';
-import * as admin from 'firebase-admin';
 import {
   firebaseApiKey,
   firebaseAppId,
@@ -20,6 +19,7 @@ import {
   firebaseTokenUri,
   firebaseType,
 } from '../utils/constants';
+import { FirebaseServices } from './firebase.types';
 
 export const FIREBASE = 'FIREBASE';
 
