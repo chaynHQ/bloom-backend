@@ -174,9 +174,9 @@ export class WebhooksService {
           );
           continue;
         }
-      } catch (err) {
+      } catch (error) {
         this.logger.error(
-          `sendImpactMeasurementEmail: Failed to find user in emailCampaignRepository [email: ${user.email}]`,
+          `sendImpactMeasurementEmail: Failed to find user in emailCampaignRepository [email: ${user.email}] - ${error}`,
         );
         continue;
       }
@@ -185,9 +185,9 @@ export class WebhooksService {
         await this.mailchimpClient.sendImpactMeasurementEmail(user.email);
         this.logger.log(`Impact measurement feedback email sent to [email: ${user.email}]`);
         feedbackEmailsSent++;
-      } catch (err) {
+      } catch (error) {
         this.logger.error(
-          `Failed to send Impact measurement feedback email to [email: ${user.email}]`,
+          `Failed to send Impact measurement feedback email to [email: ${user.email}]- ${error}`,
         );
         continue;
       }
@@ -213,7 +213,7 @@ export class WebhooksService {
     return emailLog;
   }
 
-  renameKeys = (obj: { [x: string]: any }) => {
+  renameKeys = (obj: { [x: string] }) => {
     const keyValues = Object.keys(obj).map((key) => {
       const newKey = this.addUnderscore(key);
       return { [newKey]: obj[key] };
@@ -384,7 +384,7 @@ export class WebhooksService {
       this.logger.error(error);
       throw new HttpException(error, HttpStatus.BAD_REQUEST);
     } catch (err) {
-      const error = `UpdatePartnerAccessTherapy - error finding user with userID ${userId} and origin client_email ${client_email}`;
+      const error = `UpdatePartnerAccessTherapy - error finding user with userID ${userId} and origin client_email ${client_email} - ${err}`;
       this.logger.error(error);
       throw new HttpException(error, HttpStatus.INTERNAL_SERVER_ERROR);
     }
@@ -408,9 +408,10 @@ export class WebhooksService {
 
     const partnerAccess = partnerAccesses
       .filter((tpa) => tpa.therapySessionsRemaining > 0)
-      .sort((a: any, b: any) => {
-        return a.createdAt - b.createdAt;
-      })[0];
+      .sort(
+        (a: PartnerAccessEntity, b: PartnerAccessEntity) =>
+          a.createdAt.getTime() - b.createdAt.getTime(),
+      )[0];
 
     if (!partnerAccess) {
       await this.slackMessageClient.sendMessageToTherapySlackChannel(
@@ -475,7 +476,7 @@ export class WebhooksService {
           storyblokId: story_id,
         });
 
-        if (!!course) {
+        if (course) {
           course.status = action;
           course.slug = story.full_slug;
         } else {
@@ -509,7 +510,7 @@ export class WebhooksService {
           storyblokId: story_id,
         });
 
-        const newSession = !!session
+        const newSession = session
           ? {
               ...session,
               status: action,
@@ -564,7 +565,7 @@ export class WebhooksService {
       storyblokId: story_id,
     });
 
-    if (!!course) {
+    if (course) {
       course.status = action;
       course = await this.courseRepository.save(course);
       this.logger.log(`Storyblok course ${action} success - ${course.name}`);
@@ -575,7 +576,7 @@ export class WebhooksService {
         storyblokId: story_id,
       });
 
-      if (!!session) {
+      if (session) {
         session.status = action;
         session = await this.sessionRepository.save(session);
         this.logger.log(`Storyblok session ${action} success - ${session.name}`);
@@ -591,26 +592,22 @@ export class WebhooksService {
       throw new HttpException(error, HttpStatus.BAD_REQUEST);
     }
 
-    try {
-      // Only fetch user object if the userId is not provided
-      const user = createEventDto.userId
-        ? undefined
-        : await this.userRepository.findOneBy({ email: ILike(createEventDto.email) });
+    // Only fetch user object if the userId is not provided
+    const user = createEventDto.userId
+      ? undefined
+      : await this.userRepository.findOneBy({ email: ILike(createEventDto.email) });
 
-      if (user || createEventDto.userId) {
-        const event = await this.eventLoggerService.createEventLog({
-          userId: createEventDto.userId || user.id,
-          event: createEventDto.event,
-          date: createEventDto.date,
-        });
-        return event;
-      } else {
-        const error = `createEventLog webhook failed - no user attached to email ${createEventDto.email}`;
-        this.logger.error(error);
-        throw new HttpException(error, HttpStatus.NOT_FOUND);
-      }
-    } catch (err) {
-      throw err;
+    if (user || createEventDto.userId) {
+      const event = await this.eventLoggerService.createEventLog({
+        userId: createEventDto.userId || user.id,
+        event: createEventDto.event,
+        date: createEventDto.date,
+      });
+      return event;
+    } else {
+      const error = `createEventLog webhook failed - no user attached to email ${createEventDto.email}`;
+      this.logger.error(error);
+      throw new HttpException(error, HttpStatus.NOT_FOUND);
     }
   }
 }

@@ -76,22 +76,18 @@ export class PartnerAdminService {
     partnerAdminId: string,
     updatePartnerAdminDto: UpdatePartnerAdminDto,
   ): Promise<PartnerAdminEntity | unknown> {
-    try {
-      const partnerAdminResponse = await this.partnerAdminRepository.findOneBy({
-        id: partnerAdminId,
-      });
+    const partnerAdminResponse = await this.partnerAdminRepository.findOneBy({
+      id: partnerAdminId,
+    });
 
-      if (!partnerAdminResponse) {
-        throw new HttpException('Partner admin does not exist', HttpStatus.BAD_REQUEST);
-      }
-      return this.partnerAdminRepository
-        .createQueryBuilder('partner_admin')
-        .update(PartnerAdminEntity)
-        .set({ active: updatePartnerAdminDto.active })
-        .where('partnerAdminId = :partnerAdminId', { partnerAdminId })
-        .returning('*');
-    } catch (error) {
-      throw error;
+    if (!partnerAdminResponse) {
+      throw new HttpException('Partner admin does not exist', HttpStatus.BAD_REQUEST);
     }
+    return this.partnerAdminRepository
+      .createQueryBuilder('partner_admin')
+      .update(PartnerAdminEntity)
+      .set({ active: updatePartnerAdminDto.active })
+      .where('partnerAdminId = :partnerAdminId', { partnerAdminId })
+      .returning('*');
   }
 }

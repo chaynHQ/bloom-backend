@@ -79,8 +79,8 @@ export class MailchimpClient {
       });
       return response;
     } catch (error) {
-      this.logger.error(`Error sending therapy template email`);
-      throw new Error(`Error sending therapy template email`);
+      this.logger.error(`Error sending therapy template email ${error}`);
+      throw new Error(`Error sending therapy template email ${error}`);
     }
   }
 

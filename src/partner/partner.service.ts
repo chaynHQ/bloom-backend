@@ -66,38 +66,34 @@ export class PartnerService {
   }
 
   async deletePartner({ partnerId }: DeletePartnerDto): Promise<string> {
-    try {
-      const partner = await this.partnerRepository.findOneBy({ id: partnerId });
-      if (!partner) {
-        throw new HttpException('Partner does not exist', HttpStatus.BAD_REQUEST);
-      }
-
-      await this.partnerAccessRepository
-        .createQueryBuilder('partner_access')
-        .update(PartnerAccessEntity)
-        .set({ active: false })
-        .where('partnerId = :partnerId', { partnerId })
-        .execute();
-
-      // //Partner Admins
-      const partnerAdmins = await this.partnerAdminRepository.findBy({ partnerId });
-      const partnerAdminUserIds = partnerAdmins.map((pa) => {
-        return pa.userId;
-      });
-
-      await this.userRepository
-        .createQueryBuilder('user')
-        .update(UserEntity)
-        .set({ isActive: false })
-        .where({ id: In(partnerAdminUserIds) })
-        .execute();
-
-      partner.isActive = false;
-      await this.partnerRepository.save(partner);
-
-      return 'Successful';
-    } catch (error) {
-      throw error;
+    const partner = await this.partnerRepository.findOneBy({ id: partnerId });
+    if (!partner) {
+      throw new HttpException('Partner does not exist', HttpStatus.BAD_REQUEST);
     }
+
+    await this.partnerAccessRepository
+      .createQueryBuilder('partner_access')
+      .update(PartnerAccessEntity)
+      .set({ active: false })
+      .where('partnerId = :partnerId', { partnerId })
+      .execute();
+
+    // //Partner Admins
+    const partnerAdmins = await this.partnerAdminRepository.findBy({ partnerId });
+    const partnerAdminUserIds = partnerAdmins.map((pa) => {
+      return pa.userId;
+    });
+
+    await this.userRepository
+      .createQueryBuilder('user')
+      .update(UserEntity)
+      .set({ isActive: false })
+      .where({ id: In(partnerAdminUserIds) })
+      .execute();
+
+    partner.isActive = false;
+    await this.partnerRepository.save(partner);
+
+    return 'Successful';
   }
 }

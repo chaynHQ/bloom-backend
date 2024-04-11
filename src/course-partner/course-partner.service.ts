@@ -44,7 +44,7 @@ export class CoursePartnerService {
 
     return Promise.all(
       partnersObjects.map(async (partner) => {
-        if (!!partner) {
+        if (partner) {
           if (coursePartnersIds.indexOf(partner.id) === -1) {
             return await this.coursePartnerRepository.save({
               partnerId: partner.id,

@@ -702,7 +702,7 @@ describe('WebhooksService', () => {
       });
       const therapySessionFindOneSpy = jest
         .spyOn(mockedTherapySessionRepository, 'findOneBy')
-        .mockImplementationOnce(async (args: any) => {
+        .mockImplementationOnce(async (args: Partial<TherapySessionEntity>) => {
           return { ...mockTherapySessionEntity, ...args };
         });
 

@@ -36,21 +36,20 @@ export class PartnerAccessService {
     partnerId: string,
     partnerAdminId: string | null,
   ): Promise<PartnerAccessEntity> {
-    const partnerAccessBase = this.partnerAccessRepository.create(createPartnerAccessDto);
     const accessCode = await this.generateAccessCode(6);
     const partnerAccess = {
-      ...partnerAccessBase,
+      ...createPartnerAccessDto,
       partnerAdminId,
       partnerId,
       accessCode,
     };
-    return await this.partnerAccessRepository.save(partnerAccess);
+    return await this.partnerAccessRepository.create(partnerAccess);
   }
 
   private async generateAccessCode(length: number): Promise<string> {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUFWXYZ1234567890';
     const accessCode = _.sampleSize(chars, length || 6).join('');
-    if (!!(await this.findPartnerAccessByCode(accessCode))) {
+    if (await this.findPartnerAccessByCode(accessCode)) {
       this.generateAccessCode(6);
     }
     return accessCode;
@@ -65,7 +64,7 @@ export class PartnerAccessService {
   }
 
   async getValidPartnerAccessCode(partnerAccessCode: string): Promise<PartnerAccessEntity> {
-    const format = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/;
+    const format = /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/;
 
     if (format.test(partnerAccessCode) || partnerAccessCode.length !== 6) {
       throw new HttpException(PartnerAccessCodeStatusEnum.INVALID_CODE, HttpStatus.BAD_REQUEST);
@@ -77,7 +76,7 @@ export class PartnerAccessService {
       throw new HttpException(PartnerAccessCodeStatusEnum.DOES_NOT_EXIST, HttpStatus.BAD_REQUEST);
     }
 
-    if (!!partnerAccess.userId) {
+    if (partnerAccess.userId) {
       throw new HttpException(PartnerAccessCodeStatusEnum.ALREADY_IN_USE, HttpStatus.CONFLICT);
     }
 

@@ -200,7 +200,7 @@ export const mockPartnerAccessEntityBase = {
   createdAt: new Date(),
   therapySession: [],
   updatedAt: null,
-};
+} as PartnerAccessEntity;
 
 export const mockPartnerAccessEntity = {
   id: 'pa1',

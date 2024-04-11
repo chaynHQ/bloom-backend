@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { createMock, DeepMocked } from '@golevelup/ts-jest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
@@ -25,13 +24,6 @@ describe('PartnerAccessController', () => {
   let mockUserService: DeepMocked<UserService>;
   const date = Date.now();
   let authGuard: DeepMocked<PartnerAdminAuthGuard>;
-
-  const dto: CreatePartnerAccessDto = {
-    featureLiveChat: true,
-    featureTherapy: false,
-    therapySessionsRedeemed: 5,
-    therapySessionsRemaining: 5,
-  };
 
   beforeEach(async () => {
     authGuard = createMock<PartnerAdminAuthGuard>();

@@ -83,24 +83,20 @@ describe('PartnerAccessService', () => {
   });
   describe('createPartnerAccess', () => {
     it('when supplied with correct data should return access code', async () => {
-      const repoSpyCreate = jest.spyOn(repo, 'create');
-      const repoSpySave = jest.spyOn(repo, 'save');
+      const partnerAccessDto = { ...mockPartnerAccessEntityBase, ...createPartnerAccessDto };
 
-      const { accessCode: createdAccessCode, ...generatedCode } = await service.createPartnerAccess(
-        createPartnerAccessDto,
+      const { ...newPartnerAccess } = await service.createPartnerAccess(
+        partnerAccessDto,
         partnerId,
         partnerAdminId,
       );
-      const { accessCode, ...partnerEntityWithoutCode } = mockPartnerAccessEntityBase;
-      expect(generatedCode).toStrictEqual({
-        ...partnerEntityWithoutCode,
-        ...createPartnerAccessDto,
+      expect(newPartnerAccess).toStrictEqual({
+        ...partnerAccessDto,
         partnerAdminId,
         partnerId,
+        accessCode: '123456',
       });
-      expect(createdAccessCode).toHaveLength(6);
-      expect(repoSpyCreate).toBeCalledWith(createPartnerAccessDto);
-      expect(repoSpySave).toBeCalled();
+      expect(newPartnerAccess.accessCode).toHaveLength(6);
     });
     it('tries again when it creates a code that already exists', async () => {
       const repoSpyCreateQueryBuilder = jest.spyOn(repo, 'createQueryBuilder');

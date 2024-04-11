@@ -80,7 +80,7 @@ export const getBookingsForDate: (date: Date) => Promise<BookingInfo[]> = async 
   }
 };
 
-const handleError = (error: any, message: string) => {
+const handleError = (error, message: string) => {
   LOGGER.error(message, error);
   throw new Error(`${message}: ${error})`);
 };

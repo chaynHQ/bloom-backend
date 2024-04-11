@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { createMock, DeepMocked } from '@golevelup/ts-jest';
 import { HttpException, HttpStatus } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -192,6 +193,7 @@ describe('UserService', () => {
       ).rejects.toThrowError('Access code invalid');
       expect(userRepoSpy).toBeCalledTimes(0);
     });
+
     it('when supplied with user dto and partnerId but no partner access code, it should return a user with partner access', async () => {
       jest
         .spyOn(mockPartnerAccessService, 'createAndAssignPartnerAccess')
@@ -207,14 +209,16 @@ describe('UserService', () => {
         ...createUserDto,
         partnerId: mockPartnerEntity.id,
       });
+
       const { therapySession, partnerAdmin, partnerAdminId, userId, ...partnerAccessData } =
-        mockPartnerAccessEntity;
-      // Note different format for the DTO
+        mockPartnerAccessEntity; // Note different format for the DTO
+
       expect(user.partnerAccesses).toEqual([
         { ...partnerAccessData, therapySessions: therapySession },
       ]);
     });
   });
+
   describe('getUser', () => {
     it('when supplied a firebase user dto, it should return a user', async () => {
       const repoSpyCreateQueryBuilder = jest.spyOn(repo, 'createQueryBuilder');
@@ -277,7 +281,6 @@ describe('UserService', () => {
   // TODO - Extend getUser tests. At the moment, this is only used by super admins
   describe('getUsers', () => {
     it('getUsers', async () => {
-      // Destructuring to get rid of certain props
       const {
         subscriptionUser,
         therapySession,

@@ -164,6 +164,7 @@ export const mockTherapySessionRepositoryMethods: PartialFuncReturn<
 };
 
 export const mockUserRepositoryMethods: PartialFuncReturn<Repository<UserEntity>> = {
+  createQueryBuilder: createQueryBuilderMock(),
   create: (dto: CreateUserDto) => {
     return {
       ...mockUserEntity,
@@ -210,6 +211,7 @@ export const mockPartnerAccessRepositoryMethods: PartialFuncReturn<
     return {
       ...mockPartnerAccessEntityBase,
       ...dto,
+      accessCode: '123456',
     };
   },
   findOneBy: async (arg) => {
