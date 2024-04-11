@@ -19,7 +19,7 @@ import {
   SIMPLYBOOK_ACTION_ENUM,
   STORYBLOK_STORY_STATUS_ENUM,
 } from 'src/utils/constants';
-import { StoryblokResult } from 'storyblok-js-client';
+import { ISbResult } from 'storyblok-js-client';
 
 export const mockSessionStoryblokResult = {
   data: {
@@ -47,8 +47,8 @@ export const mockSessionStoryblokResult = {
   },
   perPage: 1,
   total: 1,
-  headers: 1,
-} as StoryblokResult;
+  headers: undefined,
+} as ISbResult;
 
 export const mockCourseStoryblokResult = {
   data: {
@@ -74,8 +74,8 @@ export const mockCourseStoryblokResult = {
   },
   perPage: 1,
   total: 1,
-  headers: 1,
-} as StoryblokResult;
+  headers: undefined,
+} as ISbResult;
 
 export const mockCourse: CourseEntity = {
   coursePartner: [],
