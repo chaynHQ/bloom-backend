@@ -213,7 +213,8 @@ export class WebhooksService {
     return emailLog;
   }
 
-  renameKeys = (obj: { [x: string] }) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  renameKeys = (obj: { [x: string]: any }) => {
     const keyValues = Object.keys(obj).map((key) => {
       const newKey = this.addUnderscore(key);
       return { [newKey]: obj[key] };
