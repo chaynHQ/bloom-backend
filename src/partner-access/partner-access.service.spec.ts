@@ -81,23 +81,31 @@ describe('PartnerAccessService', () => {
   it('should be defined', () => {
     expect(service).toBeDefined();
   });
+
   describe('createPartnerAccess', () => {
     it('when supplied with correct data should return access code', async () => {
       const partnerAccessDto = { ...mockPartnerAccessEntityBase, ...createPartnerAccessDto };
+      const expectedPartnerAccess = {
+        ...partnerAccessDto,
+        partnerAdminId,
+        partnerId,
+        accessCode: '123456',
+      };
+
+      const partnerAccessRepositorySpy = jest
+        .spyOn(mockPartnerAccessRepository, 'save')
+        .mockImplementationOnce(jest.fn().mockResolvedValue(expectedPartnerAccess)) as never;
 
       const { ...newPartnerAccess } = await service.createPartnerAccess(
         partnerAccessDto,
         partnerId,
         partnerAdminId,
       );
-      expect(newPartnerAccess).toStrictEqual({
-        ...partnerAccessDto,
-        partnerAdminId,
-        partnerId,
-        accessCode: '123456',
-      });
+      expect(newPartnerAccess).toStrictEqual(expectedPartnerAccess);
       expect(newPartnerAccess.accessCode).toHaveLength(6);
+      expect(partnerAccessRepositorySpy).toHaveBeenCalled();
     });
+
     it('tries again when it creates a code that already exists', async () => {
       const repoSpyCreateQueryBuilder = jest.spyOn(repo, 'createQueryBuilder');
       // Mocks that the accesscode already exists
@@ -116,6 +124,7 @@ describe('PartnerAccessService', () => {
       repoSpyCreateQueryBuilder.mockRestore();
     });
   });
+
   describe('assignPartnerAccess', () => {
     it('should update crisp profile and assign partner access', async () => {
       const repoSpyCreateQueryBuilder = jest.spyOn(repo, 'createQueryBuilder');
@@ -157,6 +166,7 @@ describe('PartnerAccessService', () => {
       });
     });
   });
+
   describe('assignPartnerAccessOnSignUp', () => {
     it('when partnerAccess is supplied, it should create a partner access and assign to user', async () => {
       jest.spyOn(repo, 'createQueryBuilder').mockImplementationOnce(
@@ -177,6 +187,7 @@ describe('PartnerAccessService', () => {
       expect(partnerAccess.featureTherapy).toBeTruthy();
     });
   });
+
   describe('createAndAssignPartnerAccess', () => {
     it('when partnerId is supplied, it should create a partner access and assign to user', async () => {
       const partnerAccess = await service.createAndAssignPartnerAccess(
@@ -192,6 +203,7 @@ describe('PartnerAccessService', () => {
       expect(partnerAccess.featureTherapy).toBeFalsy();
     });
   });
+
   describe('getPartnerAccessCodes', () => {
     it('when no filter dto is supplied, it should return all partner accesses', async () => {
       const partnerAccesses = await service.getPartnerAccessCodes(undefined);
@@ -244,6 +256,7 @@ describe('PartnerAccessService', () => {
       );
     });
   });
+
   describe('getUserTherapySessions', () => {
     it('should return user emails with their total therapy sessions available and an associated access code id', async () => {
       const repoSpyCreateQueryBuilder = jest.spyOn(repo, 'createQueryBuilder');

@@ -37,13 +37,13 @@ export class PartnerAccessService {
     partnerAdminId: string | null,
   ): Promise<PartnerAccessEntity> {
     const accessCode = await this.generateAccessCode(6);
-    const partnerAccess = {
+    const partnerAccess = this.partnerAccessRepository.create({
       ...createPartnerAccessDto,
       partnerAdminId,
       partnerId,
       accessCode,
-    };
-    return await this.partnerAccessRepository.create(partnerAccess);
+    });
+    return await this.partnerAccessRepository.save(partnerAccess);
   }
 
   private async generateAccessCode(length: number): Promise<string> {
