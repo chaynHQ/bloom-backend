@@ -1,4 +1,5 @@
 import { UserRecord } from 'firebase-admin/lib/auth/user-record';
+import { CoursePartnerEntity } from 'src/entities/course-partner.entity';
 import { CourseEntity } from 'src/entities/course.entity';
 import { EmailCampaignEntity } from 'src/entities/email-campaign.entity';
 import { EventLogEntity } from 'src/entities/event-log.entity';
@@ -18,7 +19,7 @@ import {
   SIMPLYBOOK_ACTION_ENUM,
   STORYBLOK_STORY_STATUS_ENUM,
 } from 'src/utils/constants';
-import { StoryblokResult } from 'storyblok-js-client';
+import { ISbResult } from 'storyblok-js-client';
 
 export const mockSessionStoryblokResult = {
   data: {
@@ -46,8 +47,8 @@ export const mockSessionStoryblokResult = {
   },
   perPage: 1,
   total: 1,
-  headers: 1,
-} as StoryblokResult;
+  headers: undefined,
+} as ISbResult;
 
 export const mockCourseStoryblokResult = {
   data: {
@@ -73,8 +74,8 @@ export const mockCourseStoryblokResult = {
   },
   perPage: 1,
   total: 1,
-  headers: 1,
-} as StoryblokResult;
+  headers: undefined,
+} as ISbResult;
 
 export const mockCourse: CourseEntity = {
   coursePartner: [],
@@ -171,7 +172,7 @@ export const mockSimplybookBodyBase: ZapierSimplybookBodyDto = {
   start_date_time: '2022-09-12T07:30:00+0000',
   end_date_time: '2022-09-12T08:30:00+0000',
   client_email: 'testuser@test.com',
-  user_id: '115e272a-5fc3-4991-8ea9-12dacad25bae',
+  user_id: 'userId2',
   client_timezone: 'Europe/London',
   booking_code: 'abc',
   service_name: 'bloom therapy',
@@ -199,7 +200,8 @@ export const mockPartnerAccessEntityBase = {
   createdAt: new Date(),
   therapySession: [],
   updatedAt: null,
-};
+} as PartnerAccessEntity;
+
 export const mockPartnerAccessEntity = {
   id: 'pa1',
   therapySessionsRemaining: 5,
@@ -217,6 +219,17 @@ export const mockPartnerAccessEntity = {
   active: true,
   userId: null,
 } as PartnerAccessEntity;
+
+export const mockCoursePartnerEntity: CoursePartnerEntity = {
+  id: 'coursePartnerId',
+  partnerId: mockPartnerEntity.id,
+  partner: mockPartnerEntity,
+  courseId: mockCourse.id,
+  course: { ...mockCourse },
+  active: true,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+};
 
 export const mockEmailCampaignEntity: EmailCampaignEntity = {
   email: 'test@test.com',

@@ -1,13 +1,17 @@
 import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { createHmac } from 'crypto';
-import { format, sub } from 'date-fns';
-import startOfDay from 'date-fns/startOfDay';
+import { format, startOfDay, sub } from 'date-fns';
 import { MailchimpClient } from 'src/api/mailchimp/mailchip-api';
 import { getBookingsForDate } from 'src/api/simplybook/simplybook-api';
 import { SlackMessageClient } from 'src/api/slack/slack-api';
+import { CourseEntity } from 'src/entities/course.entity';
+import { EmailCampaignEntity } from 'src/entities/email-campaign.entity';
 import { EventLogEntity } from 'src/entities/event-log.entity';
+import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
+import { SessionEntity } from 'src/entities/session.entity';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
+import { UserEntity } from 'src/entities/user.entity';
 import { EventLoggerService } from 'src/event-logger/event-logger.service';
 import { ZapierSimplybookBodyDto } from 'src/partner-access/dtos/zapier-body.dto';
 import { IUser } from 'src/user/user.interface';
@@ -15,13 +19,9 @@ import { serializeZapierSimplyBookDtoToTherapySessionEntity } from 'src/utils/se
 import { getYesterdaysDate } from 'src/utils/utils';
 import { WebhookCreateEventLogDto } from 'src/webhooks/dto/webhook-create-event-log.dto';
 import StoryblokClient from 'storyblok-js-client';
-import { Between } from 'typeorm';
+import { Between, ILike, Repository } from 'typeorm';
 import { getCrispPeopleData, updateCrispProfileData } from '../api/crisp/crisp-api';
 import { CoursePartnerService } from '../course-partner/course-partner.service';
-import { CourseRepository } from '../course/course.repository';
-import { PartnerAccessRepository } from '../partner-access/partner-access.repository';
-import { SessionRepository } from '../session/session.repository';
-import { UserRepository } from '../user/user.repository';
 import {
   CAMPAIGN_TYPE,
   SIMPLYBOOK_ACTION_ENUM,
@@ -30,25 +30,22 @@ import {
   storyblokToken,
 } from '../utils/constants';
 import { StoryDto } from './dto/story.dto';
-import { EmailCampaignRepository } from './email-campaign/email-campaign.repository';
-import { TherapySessionRepository } from './therapy-session.repository';
 
 @Injectable()
 export class WebhooksService {
   private readonly logger = new Logger('WebhookService');
 
   constructor(
-    @InjectRepository(PartnerAccessRepository)
-    private partnerAccessRepository: PartnerAccessRepository,
-    @InjectRepository(UserRepository)
-    private userRepository: UserRepository,
-    @InjectRepository(CourseRepository) private courseRepository: CourseRepository,
-    @InjectRepository(SessionRepository) private sessionRepository: SessionRepository,
+    @InjectRepository(PartnerAccessEntity)
+    private partnerAccessRepository: Repository<PartnerAccessEntity>,
+    @InjectRepository(UserEntity) private userRepository: Repository<UserEntity>,
+    @InjectRepository(CourseEntity) private courseRepository: Repository<CourseEntity>,
+    @InjectRepository(SessionEntity) private sessionRepository: Repository<SessionEntity>,
     private readonly coursePartnerService: CoursePartnerService,
-    @InjectRepository(TherapySessionRepository)
-    private therapySessionRepository: TherapySessionRepository,
-    @InjectRepository(EmailCampaignRepository)
-    private emailCampaignRepository: EmailCampaignRepository,
+    @InjectRepository(TherapySessionEntity)
+    private therapySessionRepository: Repository<TherapySessionEntity>,
+    @InjectRepository(EmailCampaignEntity)
+    private emailCampaignRepository: Repository<EmailCampaignEntity>,
     private eventLoggerService: EventLoggerService,
     private mailchimpClient: MailchimpClient,
     private slackMessageClient: SlackMessageClient,
@@ -64,12 +61,12 @@ export class WebhooksService {
         let therapySession: TherapySessionEntity;
 
         try {
-          therapySession = await this.therapySessionRepository.findOneOrFail(
-            {
+          therapySession = await this.therapySessionRepository.findOneOrFail({
+            where: {
               bookingCode: booking.bookingCode,
             },
-            { relations: ['user'] },
-          );
+            relations: { user: true },
+          });
         } catch (err) {
           this.logger.error(
             `sendFirstTherapySessionFeedbackEmail: failed to check therapySession due to error - ${err}`,
@@ -127,8 +124,9 @@ export class WebhooksService {
   }
 
   private async isFirstCampaignEmail(email: string, campaign: CAMPAIGN_TYPE) {
-    const matchingEntries = await this.emailCampaignRepository.find({
-      where: `"email" ILIKE '${email}' AND "campaignType" LIKE '${campaign}'`,
+    const matchingEntries = await this.emailCampaignRepository.findBy({
+      email: ILike(email),
+      campaignType: ILike(campaign),
     });
     return matchingEntries.length === 0;
   }
@@ -140,10 +138,8 @@ export class WebhooksService {
     let users = null;
     try {
       // Get user from database who made an account between 180 and 173 days ago
-      users = await this.userRepository.find({
-        where: {
-          createdAt: Between(startDate, endDate),
-        },
+      users = await this.userRepository.findBy({
+        createdAt: Between(startDate, endDate),
       });
       this.logger.log(
         `SendImpactMeasurementEmail - Successfully fetched ${users.length} from the database`,
@@ -178,9 +174,9 @@ export class WebhooksService {
           );
           continue;
         }
-      } catch (err) {
+      } catch (error) {
         this.logger.error(
-          `sendImpactMeasurementEmail: Failed to find user in emailCampaignRepository [email: ${user.email}]`,
+          `sendImpactMeasurementEmail: Failed to find user in emailCampaignRepository [email: ${user.email}] - ${error}`,
         );
         continue;
       }
@@ -189,9 +185,9 @@ export class WebhooksService {
         await this.mailchimpClient.sendImpactMeasurementEmail(user.email);
         this.logger.log(`Impact measurement feedback email sent to [email: ${user.email}]`);
         feedbackEmailsSent++;
-      } catch (err) {
+      } catch (error) {
         this.logger.error(
-          `Failed to send Impact measurement feedback email to [email: ${user.email}]`,
+          `Failed to send Impact measurement feedback email to [email: ${user.email}]- ${error}`,
         );
         continue;
       }
@@ -217,6 +213,7 @@ export class WebhooksService {
     return emailLog;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   renameKeys = (obj: { [x: string]: any }) => {
     const keyValues = Object.keys(obj).map((key) => {
       const newKey = this.addUnderscore(key);
@@ -264,8 +261,9 @@ export class WebhooksService {
     );
 
     // Retrieve existing therapy session record for this booking
-    const existingTherapySession = await this.therapySessionRepository.findOne({
-      where: `"clientEmail" ILIKE '${client_email}' AND "bookingCode" LIKE '${booking_code}'`,
+    const existingTherapySession = await this.therapySessionRepository.findOneBy({
+      clientEmail: ILike(client_email),
+      bookingCode: ILike(booking_code),
     });
 
     if (action !== SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING && !existingTherapySession) {
@@ -300,7 +298,7 @@ export class WebhooksService {
     // If the booking is cancelled, increment the therapy sessions remaining on related partner access
     if (action === SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING) {
       try {
-        const partnerAccess = await this.partnerAccessRepository.findOne({
+        const partnerAccess = await this.partnerAccessRepository.findOneBy({
           id: existingTherapySession.partnerAccessId,
         });
 
@@ -346,16 +344,16 @@ export class WebhooksService {
       // Try to find a user associated to this email
       try {
         // Check for previous therapy sessions associated to the email
-        const previousTherapySession = await this.therapySessionRepository.findOne({
-          where: `"clientEmail" ILIKE '${client_email}'`,
+        const previousTherapySession = await this.therapySessionRepository.findOneBy({
+          clientEmail: ILike(client_email),
         });
 
         if (previousTherapySession?.userId) {
           userId = previousTherapySession.userId;
         } else {
           // No previous therapy sessions, try matching email with user
-          const user = await this.userRepository.findOne({
-            where: `"email" ILIKE '${client_email}'`,
+          const user = await this.userRepository.findOneBy({
+            email: ILike(client_email),
           });
           if (user?.id) {
             userId = user.id;
@@ -376,7 +374,7 @@ export class WebhooksService {
 
     try {
       // userId available, find and return user record
-      const user = await this.userRepository.findOne({ id: userId });
+      const user = await this.userRepository.findOneBy({ id: userId });
       if (user) return user;
 
       // No user record found for userId, throw error
@@ -387,14 +385,14 @@ export class WebhooksService {
       this.logger.error(error);
       throw new HttpException(error, HttpStatus.BAD_REQUEST);
     } catch (err) {
-      const error = `UpdatePartnerAccessTherapy - error finding user with userID ${userId} and origin client_email ${client_email}`;
+      const error = `UpdatePartnerAccessTherapy - error finding user with userID ${userId} and origin client_email ${client_email} - ${err}`;
       this.logger.error(error);
       throw new HttpException(error, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
   private async newPartnerAccessTherapy(user: IUser, simplyBookDto: ZapierSimplybookBodyDto) {
-    const partnerAccesses = await this.partnerAccessRepository.find({
+    const partnerAccesses = await this.partnerAccessRepository.findBy({
       userId: user.id,
       active: true,
       featureTherapy: true,
@@ -411,9 +409,10 @@ export class WebhooksService {
 
     const partnerAccess = partnerAccesses
       .filter((tpa) => tpa.therapySessionsRemaining > 0)
-      .sort((a: any, b: any) => {
-        return a.createdAt - b.createdAt;
-      })[0];
+      .sort(
+        (a: PartnerAccessEntity, b: PartnerAccessEntity) =>
+          a.createdAt.getTime() - b.createdAt.getTime(),
+      )[0];
 
     if (!partnerAccess) {
       await this.slackMessageClient.sendMessageToTherapySlackChannel(
@@ -474,11 +473,11 @@ export class WebhooksService {
     };
     try {
       if (story.content?.component === 'Course') {
-        let course = await this.courseRepository.findOne({
+        let course = await this.courseRepository.findOneBy({
           storyblokId: story_id,
         });
 
-        if (!!course) {
+        if (course) {
           course.status = action;
           course.slug = story.full_slug;
         } else {
@@ -498,7 +497,7 @@ export class WebhooksService {
         story.content?.component === 'Session' ||
         story.content?.component === 'session_iba'
       ) {
-        const course = await this.courseRepository.findOne({
+        const course = await this.courseRepository.findOneBy({
           storyblokUuid: story.content.course,
         });
 
@@ -508,11 +507,11 @@ export class WebhooksService {
           throw new HttpException(error, HttpStatus.NOT_FOUND);
         }
 
-        let session = await this.sessionRepository.findOne({
+        let session = await this.sessionRepository.findOneBy({
           storyblokId: story_id,
         });
 
-        const newSession = !!session
+        const newSession = session
           ? {
               ...session,
               status: action,
@@ -563,22 +562,22 @@ export class WebhooksService {
 
     // Story was unpublished or deleted so cant be fetched from storyblok to get story type (Course or Session)
     // Try to find course with matching story_id first
-    let course = await this.courseRepository.findOne({
+    let course = await this.courseRepository.findOneBy({
       storyblokId: story_id,
     });
 
-    if (!!course) {
+    if (course) {
       course.status = action;
       course = await this.courseRepository.save(course);
       this.logger.log(`Storyblok course ${action} success - ${course.name}`);
       return course;
     } else if (!course) {
       // No course found, try finding session instead
-      let session = await this.sessionRepository.findOne({
+      let session = await this.sessionRepository.findOneBy({
         storyblokId: story_id,
       });
 
-      if (!!session) {
+      if (session) {
         session.status = action;
         session = await this.sessionRepository.save(session);
         this.logger.log(`Storyblok session ${action} success - ${session.name}`);
@@ -594,26 +593,22 @@ export class WebhooksService {
       throw new HttpException(error, HttpStatus.BAD_REQUEST);
     }
 
-    try {
-      // Only fetch user object if the userId is not provided
-      const user = createEventDto.userId
-        ? undefined
-        : await this.userRepository.findOne({ where: `"email" ILIKE '${createEventDto.email}'` });
+    // Only fetch user object if the userId is not provided
+    const user = createEventDto.userId
+      ? undefined
+      : await this.userRepository.findOneBy({ email: ILike(createEventDto.email) });
 
-      if (user || createEventDto.userId) {
-        const event = await this.eventLoggerService.createEventLog({
-          userId: createEventDto.userId || user.id,
-          event: createEventDto.event,
-          date: createEventDto.date,
-        });
-        return event;
-      } else {
-        const error = `createEventLog webhook failed - no user attached to email ${createEventDto.email}`;
-        this.logger.error(error);
-        throw new HttpException(error, HttpStatus.NOT_FOUND);
-      }
-    } catch (err) {
-      throw err;
+    if (user || createEventDto.userId) {
+      const event = await this.eventLoggerService.createEventLog({
+        userId: createEventDto.userId || user.id,
+        event: createEventDto.event,
+        date: createEventDto.date,
+      });
+      return event;
+    } else {
+      const error = `createEventLog webhook failed - no user attached to email ${createEventDto.email}`;
+      this.logger.error(error);
+      throw new HttpException(error, HttpStatus.NOT_FOUND);
     }
   }
 }

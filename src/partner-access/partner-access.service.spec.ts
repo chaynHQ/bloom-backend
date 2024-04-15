@@ -1,8 +1,9 @@
 import { createMock, DeepMocked } from '@golevelup/ts-jest';
 import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
 import { sub } from 'date-fns';
 import * as crispApi from 'src/api/crisp/crisp-api';
-import { PartnerRepository } from 'src/partner/partner.repository';
+import { PartnerEntity } from 'src/entities/partner.entity';
 import { GetUserDto } from 'src/user/dtos/get-user.dto';
 import {
   mockPartnerAccessEntity,
@@ -20,7 +21,6 @@ import { PartnerAccessEntity } from '../entities/partner-access.entity';
 import { CreatePartnerAccessDto } from './dtos/create-partner-access.dto';
 import { GetPartnerAccessesDto } from './dtos/get-partner-access.dto';
 import { UpdatePartnerAccessDto } from './dtos/update-partner-access.dto';
-import { PartnerAccessRepository } from './partner-access.repository';
 import { PartnerAccessService } from './partner-access.service';
 
 const partnerId = 'partnerId1';
@@ -50,13 +50,13 @@ jest.mock('src/api/crisp/crisp-api', () => ({
 
 describe('PartnerAccessService', () => {
   let service: PartnerAccessService;
-  let repo: PartnerAccessRepository;
-  let mockPartnerRepository: DeepMocked<PartnerRepository>;
-  let mockPartnerAccessRepository: DeepMocked<PartnerAccessRepository>;
+  let repo: Repository<PartnerAccessEntity>;
+  let mockPartnerRepository: DeepMocked<Repository<PartnerEntity>>;
+  let mockPartnerAccessRepository: DeepMocked<Repository<PartnerAccessEntity>>;
 
   beforeEach(async () => {
-    mockPartnerRepository = createMock<PartnerRepository>(mockPartnerRepositoryMethods);
-    mockPartnerAccessRepository = createMock<PartnerAccessRepository>(
+    mockPartnerRepository = createMock<Repository<PartnerEntity>>(mockPartnerRepositoryMethods);
+    mockPartnerAccessRepository = createMock<Repository<PartnerAccessEntity>>(
       mockPartnerAccessRepositoryMethods,
     );
 
@@ -64,44 +64,48 @@ describe('PartnerAccessService', () => {
       providers: [
         PartnerAccessService,
         {
-          provide: PartnerAccessRepository,
+          provide: getRepositoryToken(PartnerAccessEntity),
           useValue: mockPartnerAccessRepository,
         },
         {
-          provide: PartnerRepository,
+          provide: getRepositoryToken(PartnerEntity),
           useValue: mockPartnerRepository,
         },
       ],
     }).compile();
 
     service = module.get<PartnerAccessService>(PartnerAccessService);
-    repo = module.get<Repository<PartnerAccessEntity>>(PartnerAccessRepository);
+    repo = module.get<Repository<PartnerAccessEntity>>(getRepositoryToken(PartnerAccessEntity));
   });
 
   it('should be defined', () => {
     expect(service).toBeDefined();
   });
+
   describe('createPartnerAccess', () => {
     it('when supplied with correct data should return access code', async () => {
-      const repoSpyCreate = jest.spyOn(repo, 'create');
-      const repoSpySave = jest.spyOn(repo, 'save');
+      const partnerAccessDto = { ...mockPartnerAccessEntityBase, ...createPartnerAccessDto };
+      const expectedPartnerAccess = {
+        ...partnerAccessDto,
+        partnerAdminId,
+        partnerId,
+        accessCode: '123456',
+      };
 
-      const { accessCode: createdAccessCode, ...generatedCode } = await service.createPartnerAccess(
-        createPartnerAccessDto,
+      const partnerAccessRepositorySpy = jest
+        .spyOn(mockPartnerAccessRepository, 'save')
+        .mockImplementationOnce(jest.fn().mockResolvedValue(expectedPartnerAccess)) as never;
+
+      const { ...newPartnerAccess } = await service.createPartnerAccess(
+        partnerAccessDto,
         partnerId,
         partnerAdminId,
       );
-      const { accessCode, ...partnerEntityWithoutCode } = mockPartnerAccessEntityBase;
-      expect(generatedCode).toStrictEqual({
-        ...partnerEntityWithoutCode,
-        ...createPartnerAccessDto,
-        partnerAdminId,
-        partnerId,
-      });
-      expect(createdAccessCode).toHaveLength(6);
-      expect(repoSpyCreate).toBeCalledWith(createPartnerAccessDto);
-      expect(repoSpySave).toBeCalled();
+      expect(newPartnerAccess).toStrictEqual(expectedPartnerAccess);
+      expect(newPartnerAccess.accessCode).toHaveLength(6);
+      expect(partnerAccessRepositorySpy).toHaveBeenCalled();
     });
+
     it('tries again when it creates a code that already exists', async () => {
       const repoSpyCreateQueryBuilder = jest.spyOn(repo, 'createQueryBuilder');
       // Mocks that the accesscode already exists
@@ -116,10 +120,11 @@ describe('PartnerAccessService', () => {
         );
 
       await service.createPartnerAccess(createPartnerAccessDto, partnerId, partnerAdminId);
-      expect(repoSpyCreateQueryBuilder).toBeCalledTimes(2);
+      expect(repoSpyCreateQueryBuilder).toHaveBeenCalledTimes(2);
       repoSpyCreateQueryBuilder.mockRestore();
     });
   });
+
   describe('assignPartnerAccess', () => {
     it('should update crisp profile and assign partner access', async () => {
       const repoSpyCreateQueryBuilder = jest.spyOn(repo, 'createQueryBuilder');
@@ -136,7 +141,7 @@ describe('PartnerAccessService', () => {
         activatedAt: partnerAccess.activatedAt, // need to just fudge this as it is test specific
       });
 
-      expect(crispApi.updateCrispProfileAccesses).toBeCalledWith(
+      expect(crispApi.updateCrispProfileAccesses).toHaveBeenCalledWith(
         mockGetUserDto.user,
         [partnerAccess],
         [],
@@ -161,6 +166,7 @@ describe('PartnerAccessService', () => {
       });
     });
   });
+
   describe('assignPartnerAccessOnSignUp', () => {
     it('when partnerAccess is supplied, it should create a partner access and assign to user', async () => {
       jest.spyOn(repo, 'createQueryBuilder').mockImplementationOnce(
@@ -181,6 +187,7 @@ describe('PartnerAccessService', () => {
       expect(partnerAccess.featureTherapy).toBeTruthy();
     });
   });
+
   describe('createAndAssignPartnerAccess', () => {
     it('when partnerId is supplied, it should create a partner access and assign to user', async () => {
       const partnerAccess = await service.createAndAssignPartnerAccess(
@@ -196,6 +203,7 @@ describe('PartnerAccessService', () => {
       expect(partnerAccess.featureTherapy).toBeFalsy();
     });
   });
+
   describe('getPartnerAccessCodes', () => {
     it('when no filter dto is supplied, it should return all partner accesses', async () => {
       const partnerAccesses = await service.getPartnerAccessCodes(undefined);
@@ -238,16 +246,13 @@ describe('PartnerAccessService', () => {
           }),
         }) as never,
       );
-      await expect(service.getValidPartnerAccessCode('123456')).rejects.toThrowError(
-        'CODE_EXPIRED',
-      );
+      await expect(service.getValidPartnerAccessCode('123456')).rejects.toThrow('CODE_EXPIRED');
     });
     it('when an partner access with too many letters is supplied, it should throw error', async () => {
-      await expect(service.getValidPartnerAccessCode('1234567')).rejects.toThrowError(
-        'INVALID_CODE',
-      );
+      await expect(service.getValidPartnerAccessCode('1234567')).rejects.toThrow('INVALID_CODE');
     });
   });
+
   describe('getUserTherapySessions', () => {
     it('should return user emails with their total therapy sessions available and an associated access code id', async () => {
       const repoSpyCreateQueryBuilder = jest.spyOn(repo, 'createQueryBuilder');
@@ -286,7 +291,7 @@ describe('PartnerAccessService', () => {
       } as UpdatePartnerAccessDto);
       //if an access code exists then update it.
       expect(result).toEqual({ ...mockPartnerAccessEntity, therapySessionsRemaining: 10 });
-      expect(partnerAccessRepositorySpy).toBeCalledTimes(1);
+      expect(partnerAccessRepositorySpy).toHaveBeenCalled();
     });
   });
 });

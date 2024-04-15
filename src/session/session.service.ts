@@ -1,14 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { SessionEntity } from '../entities/session.entity';
-import { SessionRepository } from './session.repository';
 
 @Injectable()
 export class SessionService {
-  constructor(@InjectRepository(SessionRepository) private sessionRepository: SessionRepository) {}
+  constructor(
+    @InjectRepository(SessionEntity) private sessionRepository: Repository<SessionEntity>,
+  ) {}
 
   async getSession(id: string): Promise<SessionEntity> {
-    return await this.sessionRepository.findOne({ id });
+    return await this.sessionRepository.findOneBy({ id });
   }
 
   async getSessionByStoryblokId(storyblokId: number): Promise<SessionEntity> {

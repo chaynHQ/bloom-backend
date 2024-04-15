@@ -41,7 +41,7 @@ export const updateCrispProfileAccesses = async (
     partnerAccesses.length > 0
       ? partnerAccesses.map((pa) => pa.partner.name.toLowerCase())
       : ['public'];
-  if (!!hasCrispProfile) {
+  if (hasCrispProfile) {
     // Crisp profile exists, just update/replace PartnerAccess data
     await updateCrispProfileData(
       createCrispProfileData(user, partnerAccesses, courses),
@@ -93,11 +93,11 @@ export const updateCrispProfileSession = async (
   const sessionsStartedKey = formatSessionKey(courseName, PROGRESS_STATUS.STARTED);
   const sessionsCompletedKey = formatSessionKey(courseName, PROGRESS_STATUS.COMPLETED);
 
-  const startedSessions: string[] = !!crispData[sessionsStartedKey]
+  const startedSessions: string[] = crispData[sessionsStartedKey]
     ? crispData[sessionsStartedKey].split('; ')
     : [];
 
-  const completedSessions: string[] = !!crispData[sessionsCompletedKey]
+  const completedSessions: string[] = crispData[sessionsCompletedKey]
     ? crispData[sessionsCompletedKey].split('; ')
     : [];
 
@@ -123,15 +123,11 @@ export const updateCrispProfileSession = async (
 };
 
 export const getCrispPeopleData = async (email: string): Promise<AxiosResponse<CrispResponse>> => {
-  try {
-    return await apiCall({
-      url: `${baseUrl}/people/data/${email}`,
-      type: 'get',
-      headers,
-    });
-  } catch (error) {
-    throw error;
-  }
+  return await apiCall({
+    url: `${baseUrl}/people/data/${email}`,
+    type: 'get',
+    headers,
+  });
 };
 
 export const addCrispProfile = async (
@@ -172,63 +168,47 @@ export const updateCrispProfile = async (
   peopleProfile: UpdatePeopleProfile,
   email: string,
 ): Promise<AxiosResponse<CrispResponse>> => {
-  try {
-    return await apiCall({
-      url: `${baseUrl}/people/profile/${email}`,
-      type: 'patch',
-      data: peopleProfile,
-      headers,
-    });
-  } catch (error) {
-    throw error;
-  }
+  return await apiCall({
+    url: `${baseUrl}/people/profile/${email}`,
+    type: 'patch',
+    data: peopleProfile,
+    headers,
+  });
 };
 export const getCrispProfile = async (
   email: string,
 ): Promise<AxiosResponse<CrispProfileResponse>> => {
-  try {
-    return await apiCall({
-      url: `${baseUrl}/people/profile/${email}`,
-      type: 'get',
-      headers,
-    });
-  } catch (error) {
-    throw error;
-  }
+  return await apiCall({
+    url: `${baseUrl}/people/profile/${email}`,
+    type: 'get',
+    headers,
+  });
 };
 
 export const deleteCrispProfile = async (email: string) => {
-  try {
-    await apiCall({
-      url: `${baseUrl}/people/profile/${email}`,
-      type: 'delete',
-      headers,
-    });
+  await apiCall({
+    url: `${baseUrl}/people/profile/${email}`,
+    type: 'delete',
+    headers,
+  });
 
-    return 'ok';
-  } catch (error) {
-    throw error;
-  }
+  return 'ok';
 };
 
 export const deleteCypressCrispProfiles = async () => {
-  try {
-    const profiles = await apiCall({
-      url: `${baseUrl}/people/profiles/1?search_text=cypresstestemail+`,
-      type: 'get',
+  const profiles = await apiCall({
+    url: `${baseUrl}/people/profiles/1?search_text=cypresstestemail+`,
+    type: 'get',
+    headers,
+  });
+
+  profiles.data.data.forEach(async (profile) => {
+    await apiCall({
+      url: `${baseUrl}/people/profile/${profile.email}`,
+      type: 'delete',
       headers,
     });
+  });
 
-    profiles.data.data.forEach(async (profile) => {
-      await apiCall({
-        url: `${baseUrl}/people/profile/${profile.email}`,
-        type: 'delete',
-        headers,
-      });
-    });
-
-    return 'ok';
-  } catch (error) {
-    throw error;
-  }
+  return 'ok';
 };

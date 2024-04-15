@@ -1,33 +1,33 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { PartnerAdminRepository } from 'src/partner-admin/partner-admin.repository';
+import { CourseUserEntity } from 'src/entities/course-user.entity';
+import { CourseEntity } from 'src/entities/course.entity';
+import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
+import { PartnerAdminEntity } from 'src/entities/partner-admin.entity';
+import { PartnerEntity } from 'src/entities/partner.entity';
+import { SessionUserEntity } from 'src/entities/session-user.entity';
+import { SessionEntity } from 'src/entities/session.entity';
+import { UserEntity } from 'src/entities/user.entity';
 import { PartnerService } from 'src/partner/partner.service';
-import { CourseUserRepository } from '../course-user/course-user.repository';
 import { CourseUserService } from '../course-user/course-user.service';
-import { CourseRepository } from '../course/course.repository';
 import { CourseService } from '../course/course.service';
-import { PartnerAccessRepository } from '../partner-access/partner-access.repository';
 import { PartnerAccessService } from '../partner-access/partner-access.service';
-import { PartnerRepository } from '../partner/partner.repository';
-import { SessionRepository } from '../session/session.repository';
 import { SessionService } from '../session/session.service';
-import { UserRepository } from '../user/user.repository';
 import { UserService } from '../user/user.service';
 import { SessionUserController } from './session-user.controller';
-import { SessionUserRepository } from './session-user.repository';
 import { SessionUserService } from './session-user.service';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([
-      SessionUserRepository,
-      CourseUserRepository,
-      UserRepository,
-      PartnerRepository,
-      SessionRepository,
-      PartnerAccessRepository,
-      CourseRepository,
-      PartnerAdminRepository,
+      SessionUserEntity,
+      CourseUserEntity,
+      UserEntity,
+      PartnerEntity,
+      SessionEntity,
+      PartnerAccessEntity,
+      CourseEntity,
+      PartnerAdminEntity,
     ]),
   ],
   controllers: [SessionUserController],

@@ -1,4 +1,7 @@
-FROM node:16-alpine
+FROM node:20-alpine
+
+# Install git for devcontainers
+RUN apk add --no-cache git
 
 ENV NODE_ENV=development
 

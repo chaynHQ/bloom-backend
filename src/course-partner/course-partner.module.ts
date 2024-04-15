@@ -1,20 +1,20 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { PartnerAccessRepository } from 'src/partner-access/partner-access.repository';
-import { PartnerAdminRepository } from 'src/partner-admin/partner-admin.repository';
-import { PartnerRepository } from 'src/partner/partner.repository';
+import { CoursePartnerEntity } from 'src/entities/course-partner.entity';
+import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
+import { PartnerAdminEntity } from 'src/entities/partner-admin.entity';
+import { PartnerEntity } from 'src/entities/partner.entity';
+import { UserEntity } from 'src/entities/user.entity';
 import { PartnerService } from 'src/partner/partner.service';
-import { UserRepository } from 'src/user/user.repository';
-import { CoursePartnerRepository } from './course-partner.repository';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([
-      CoursePartnerRepository,
-      PartnerRepository,
-      PartnerAccessRepository,
-      PartnerAdminRepository,
-      UserRepository,
+      CoursePartnerEntity,
+      PartnerEntity,
+      PartnerAccessEntity,
+      PartnerAdminEntity,
+      UserEntity,
     ]),
   ],
   providers: [PartnerService],

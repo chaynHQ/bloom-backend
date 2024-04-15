@@ -1,10 +1,12 @@
 import { createMock, DeepMocked } from '@golevelup/ts-jest';
 import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { FeatureEntity } from 'src/entities/feature.entity';
+import { PartnerFeatureEntity } from 'src/entities/partner-feature.entity';
+import { PartnerEntity } from 'src/entities/partner.entity';
+import { UserEntity } from 'src/entities/user.entity';
 import { FeatureService } from 'src/feature/feature.service';
-import { PartnerFeatureRepository } from 'src/partner-feature/partner-feature.repository';
-import { PartnerRepository } from 'src/partner/partner.repository';
 import { PartnerService } from 'src/partner/partner.service';
-import { UserRepository } from 'src/user/user.repository';
 import { UserService } from 'src/user/user.service';
 import {
   mockFeatureRepositoryMethods,
@@ -12,7 +14,7 @@ import {
   mockPartnerRepositoryMethods,
   mockPartnerServiceMethods,
 } from 'test/utils/mockedServices';
-import { FeatureRepository } from './feature.repository';
+import { Repository } from 'typeorm';
 
 const createFeatureDto = {
   name: 'new feature',
@@ -20,32 +22,32 @@ const createFeatureDto = {
 
 describe('FeatureService', () => {
   let service: FeatureService;
-  let mockPartnerRepository: DeepMocked<PartnerRepository>;
+  let mockPartnerRepository: DeepMocked<Repository<PartnerEntity>>;
   let mockPartnerService: DeepMocked<PartnerService>;
   let mockUserService: DeepMocked<UserService>;
-  let mockUserRepository: DeepMocked<UserRepository>;
-  let mockPartnerFeatureRepository: DeepMocked<PartnerFeatureRepository>;
-  let mockFeatureRepository: DeepMocked<FeatureRepository>;
+  let mockUserRepository: DeepMocked<Repository<UserEntity>>;
+  let mockPartnerFeatureRepository: DeepMocked<Repository<PartnerFeatureEntity>>;
+  let mockFeatureRepository: DeepMocked<Repository<FeatureEntity>>;
 
   beforeEach(async () => {
-    mockPartnerRepository = createMock<PartnerRepository>(mockPartnerRepositoryMethods);
+    mockPartnerRepository = createMock<Repository<PartnerEntity>>(mockPartnerRepositoryMethods);
     mockPartnerService = createMock<PartnerService>(mockPartnerServiceMethods);
     mockUserService = createMock<UserService>();
-    mockUserRepository = createMock<UserRepository>();
-    mockPartnerFeatureRepository = createMock<PartnerFeatureRepository>(
+    mockUserRepository = createMock<Repository<UserEntity>>();
+    mockPartnerFeatureRepository = createMock<Repository<PartnerFeatureEntity>>(
       mockPartnerFeatureRepositoryMethods,
     );
-    mockFeatureRepository = createMock<FeatureRepository>(mockFeatureRepositoryMethods);
+    mockFeatureRepository = createMock<Repository<FeatureEntity>>(mockFeatureRepositoryMethods);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         FeatureService,
         {
-          provide: FeatureRepository,
+          provide: getRepositoryToken(FeatureEntity),
           useValue: mockFeatureRepository,
         },
         {
-          provide: PartnerRepository,
+          provide: getRepositoryToken(PartnerEntity),
           useValue: mockPartnerRepository,
         },
         {
@@ -53,10 +55,12 @@ describe('FeatureService', () => {
           useValue: mockPartnerService,
         },
         { provide: UserService, useValue: mockUserService },
-        { provide: UserRepository, useValue: mockUserRepository },
-        { provide: UserRepository, useValue: mockUserRepository },
+        { provide: getRepositoryToken(UserEntity), useValue: mockUserRepository },
 
-        { provide: PartnerFeatureRepository, useValue: mockPartnerFeatureRepository },
+        {
+          provide: getRepositoryToken(PartnerFeatureEntity),
+          useValue: mockPartnerFeatureRepository,
+        },
       ],
     }).compile();
 

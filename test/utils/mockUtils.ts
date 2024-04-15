@@ -1,4 +1,4 @@
-export const createQueryBuilderMock = (modifications?: Record<string, jest.Mock<any, any>>) =>
+export const createQueryBuilderMock = (modifications?: Record<string, jest.Mock>) =>
   jest.fn(() => ({
     where: jest.fn().mockReturnThis(),
     andWhere: jest.fn().mockReturnThis(),

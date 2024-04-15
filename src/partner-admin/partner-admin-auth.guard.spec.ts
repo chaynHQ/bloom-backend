@@ -4,7 +4,7 @@ import { DecodedIdToken } from 'firebase-admin/lib/auth/token-verifier';
 import { AuthService } from 'src/auth/auth.service';
 import { PartnerAdminEntity } from 'src/entities/partner-admin.entity';
 import { UserEntity } from 'src/entities/user.entity';
-import { UserRepository } from 'src/user/user.repository';
+import { Repository } from 'typeorm';
 import { createQueryBuilderMock } from '../../test/utils/mockUtils';
 import { PartnerAdminAuthGuard } from './partner-admin-auth.guard';
 
@@ -31,12 +31,12 @@ const userEntity: UserEntity = {
 describe('PartnerAdminAuthGuard', () => {
   let guard: PartnerAdminAuthGuard;
   let mockAuthService: DeepMocked<AuthService>;
-  let mockUserRepository: DeepMocked<UserRepository>;
+  let mockUserRepository: DeepMocked<Repository<UserEntity>>;
   let context: ExecutionContext;
 
   beforeEach(() => {
     mockAuthService = createMock<AuthService>();
-    mockUserRepository = createMock<UserRepository>();
+    mockUserRepository = createMock<Repository<UserEntity>>();
     guard = new PartnerAdminAuthGuard(mockAuthService, mockUserRepository);
     context = createMock<ExecutionContext>({
       switchToHttp: jest.fn().mockReturnValue({
@@ -114,7 +114,9 @@ describe('PartnerAdminAuthGuard', () => {
       }) as never, // TODO resolve this typescript issue
     );
 
-    await expect(guard.canActivate(context)).rejects.toThrowError();
+    const canActivate = await guard.canActivate(context);
+
+    expect(canActivate).toBe(false);
   });
 
   it('should return false when the authtoken cannot be resolved', async () => {

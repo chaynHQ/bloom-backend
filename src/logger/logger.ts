@@ -5,7 +5,7 @@ import { isProduction, rollbarEnv, rollbarToken } from '../utils/constants';
 export class Logger extends ConsoleLogger {
   private rollbar?: Rollbar;
 
-  constructor(context?: string, isTimestampEnabled?: any) {
+  constructor(context?: string, isTimestampEnabled?) {
     super(context, isTimestampEnabled);
 
     this.initialiseRollbar();

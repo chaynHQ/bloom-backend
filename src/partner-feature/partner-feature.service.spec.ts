@@ -1,9 +1,11 @@
 import { createMock, DeepMocked } from '@golevelup/ts-jest';
 import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { PartnerFeatureEntity } from 'src/entities/partner-feature.entity';
+import { PartnerEntity } from 'src/entities/partner.entity';
+import { UserEntity } from 'src/entities/user.entity';
 import { FeatureService } from 'src/feature/feature.service';
-import { PartnerRepository } from 'src/partner/partner.repository';
 import { PartnerService } from 'src/partner/partner.service';
-import { UserRepository } from 'src/user/user.repository';
 import { UserService } from 'src/user/user.service';
 import { FEATURES } from 'src/utils/constants';
 import { mockFeatureEntity, mockPartnerFeatureEntity } from 'test/utils/mockData';
@@ -14,7 +16,7 @@ import {
   mockPartnerServiceMethods,
 } from 'test/utils/mockedServices';
 import { createQueryBuilderMock } from 'test/utils/mockUtils';
-import { PartnerFeatureRepository } from './partner-feature.repository';
+import { Repository } from 'typeorm';
 import { PartnerFeatureService } from './partner-feature.service';
 
 const createPartnerFeatureDto = {
@@ -25,20 +27,20 @@ const createPartnerFeatureDto = {
 
 describe('PartnerFeatureService', () => {
   let service: PartnerFeatureService;
-  let mockPartnerRepository: DeepMocked<PartnerRepository>;
+  let mockPartnerRepository: DeepMocked<Repository<PartnerEntity>>;
   let mockPartnerService: DeepMocked<PartnerService>;
   let mockUserService: DeepMocked<UserService>;
-  let mockUserRepository: DeepMocked<UserRepository>;
+  let mockUserRepository: DeepMocked<Repository<UserEntity>>;
   let mockFeatureService: DeepMocked<FeatureService>;
-  let mockPartnerFeatureRepository: DeepMocked<PartnerFeatureRepository>;
+  let mockPartnerFeatureRepository: DeepMocked<Repository<PartnerFeatureEntity>>;
 
   beforeEach(async () => {
     mockFeatureService = createMock<FeatureService>(mockFeatureServiceMethods);
-    mockPartnerRepository = createMock<PartnerRepository>(mockPartnerRepositoryMethods);
+    mockPartnerRepository = createMock<Repository<PartnerEntity>>(mockPartnerRepositoryMethods);
     mockPartnerService = createMock<PartnerService>(mockPartnerServiceMethods);
     mockUserService = createMock<UserService>();
-    mockUserRepository = createMock<UserRepository>();
-    mockPartnerFeatureRepository = createMock<PartnerFeatureRepository>(
+    mockUserRepository = createMock<Repository<UserEntity>>();
+    mockPartnerFeatureRepository = createMock<Repository<PartnerFeatureEntity>>(
       mockPartnerFeatureRepositoryMethods,
     );
 
@@ -46,11 +48,11 @@ describe('PartnerFeatureService', () => {
       providers: [
         PartnerFeatureService,
         {
-          provide: PartnerFeatureRepository,
+          provide: getRepositoryToken(PartnerFeatureEntity),
           useValue: mockPartnerFeatureRepository,
         },
         {
-          provide: PartnerRepository,
+          provide: getRepositoryToken(PartnerEntity),
           useValue: mockPartnerRepository,
         },
         {
@@ -58,8 +60,7 @@ describe('PartnerFeatureService', () => {
           useValue: mockPartnerService,
         },
         { provide: UserService, useValue: mockUserService },
-        { provide: UserRepository, useValue: mockUserRepository },
-        { provide: UserRepository, useValue: mockUserRepository },
+        { provide: getRepositoryToken(UserEntity), useValue: mockUserRepository },
 
         { provide: FeatureService, useValue: mockFeatureService },
       ],
@@ -80,13 +81,13 @@ describe('PartnerFeatureService', () => {
       jest.spyOn(mockFeatureService, 'getFeature').mockImplementationOnce(() => {
         return undefined;
       });
-      await expect(service.createPartnerFeature(createPartnerFeatureDto)).rejects.toThrowError();
+      await expect(service.createPartnerFeature(createPartnerFeatureDto)).rejects.toThrow();
     });
     it('when supplied with incorrect partnerId should throw', async () => {
       jest.spyOn(mockPartnerService, 'getPartnerById').mockImplementationOnce(() => {
         return undefined;
       });
-      await expect(service.createPartnerFeature(createPartnerFeatureDto)).rejects.toThrowError();
+      await expect(service.createPartnerFeature(createPartnerFeatureDto)).rejects.toThrow();
     });
   });
   describe('getAutomaticAccessCodeFeatureForPartner', () => {
@@ -105,7 +106,7 @@ describe('PartnerFeatureService', () => {
     });
     it('when supplied with incorrect partner name, it should throw', async () => {
       jest.spyOn(mockPartnerService, 'getPartner').mockImplementationOnce(() => undefined);
-      await expect(service.getAutomaticAccessCodeFeatureForPartner('Badoo')).rejects.toThrowError(
+      await expect(service.getAutomaticAccessCodeFeatureForPartner('Badoo')).rejects.toThrow(
         'Unable to find partner with that name',
       );
     });
@@ -129,7 +130,7 @@ describe('PartnerFeatureService', () => {
 
       await expect(
         service.updatePartnerFeature('partnerFeatureId', { active: false }),
-      ).rejects.toThrowError('Error unable to update');
+      ).rejects.toThrow('Error unable to update');
     });
   });
 });

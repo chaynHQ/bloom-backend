@@ -1,8 +1,11 @@
+/* eslint-disable */
 import { createMock, DeepMocked } from '@golevelup/ts-jest';
 import { HttpException, HttpStatus } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
 import { addCrispProfile } from 'src/api/crisp/crisp-api';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
+import { PartnerEntity } from 'src/entities/partner.entity';
 import { FEATURES, PartnerAccessCodeStatusEnum } from 'src/utils/constants';
 import {
   mockFeatureEntity,
@@ -23,11 +26,9 @@ import { createQueryBuilderMock } from '../../test/utils/mockUtils';
 import { AuthService } from '../auth/auth.service';
 import { UserEntity } from '../entities/user.entity';
 import { PartnerAccessService } from '../partner-access/partner-access.service';
-import { PartnerRepository } from '../partner/partner.repository';
 import { PartnerService } from '../partner/partner.service';
 import { CreateUserDto } from './dtos/create-user.dto';
 import { UpdateUserDto } from './dtos/update-user.dto';
-import { UserRepository } from './user.repository';
 import { UserService } from './user.service';
 
 const createUserDto: CreateUserDto = {
@@ -68,9 +69,9 @@ jest.mock('src/api/crisp/crisp-api');
 
 describe('UserService', () => {
   let service: UserService;
-  let repo: UserRepository;
+  let repo: Repository<UserEntity>;
   let mockPartnerService: DeepMocked<PartnerService>;
-  let mockPartnerRepository: DeepMocked<PartnerRepository>;
+  let mockPartnerRepository: DeepMocked<Repository<PartnerEntity>>;
   let mockAuthService: DeepMocked<AuthService>;
   let mockPartnerAccessService: DeepMocked<PartnerAccessService>;
 
@@ -79,13 +80,13 @@ describe('UserService', () => {
     mockAuthService = createMock<AuthService>(mockAuthServiceMethods);
     mockPartnerService = createMock<PartnerService>(mockPartnerServiceMethods);
     mockPartnerAccessService = createMock<PartnerAccessService>();
-    mockPartnerRepository = createMock<PartnerRepository>();
+    mockPartnerRepository = createMock<Repository<PartnerEntity>>();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         UserService,
         {
-          provide: UserRepository,
+          provide: getRepositoryToken(UserEntity),
           useFactory: jest.fn(() => mockUserRepositoryMethodsFactory),
         },
         {
@@ -93,7 +94,7 @@ describe('UserService', () => {
           useValue: mockPartnerService,
         },
         {
-          provide: PartnerRepository,
+          provide: getRepositoryToken(PartnerEntity),
           useValue: mockPartnerRepository,
         },
         {
@@ -108,7 +109,7 @@ describe('UserService', () => {
     }).compile();
 
     service = module.get<UserService>(UserService);
-    repo = module.get<Repository<UserEntity>>(UserRepository);
+    repo = module.get<Repository<UserEntity>>(getRepositoryToken(UserEntity));
   });
 
   it('should be defined', () => {
@@ -123,9 +124,9 @@ describe('UserService', () => {
       expect(user.user.email).toBe('user@email.com');
       expect(user.partnerAdmin).toBeUndefined();
       expect(user.partnerAccesses).toBe(undefined);
-      expect(repoSpyCreate).toBeCalledWith(createUserRepositoryDto);
-      expect(repoSpySave).toBeCalled();
-      expect(addCrispProfile).toBeCalledWith({
+      expect(repoSpyCreate).toHaveBeenCalledWith(createUserRepositoryDto);
+      expect(repoSpySave).toHaveBeenCalled();
+      expect(addCrispProfile).toHaveBeenCalledWith({
         email: user.user.email,
         person: { nickname: 'name' },
         segments: ['public'],
@@ -154,11 +155,11 @@ describe('UserService', () => {
         { ...partnerAccessData, therapySessions: therapySession },
       ]);
 
-      expect(repoSpyCreate).toBeCalledWith(createUserRepositoryDto);
-      expect(partnerAccessSpy).toBeCalled();
-      expect(repoSpySave).toBeCalled();
+      expect(repoSpyCreate).toHaveBeenCalledWith(createUserRepositoryDto);
+      expect(partnerAccessSpy).toHaveBeenCalled();
+      expect(repoSpySave).toHaveBeenCalled();
 
-      expect(addCrispProfile).toBeCalledWith({
+      expect(addCrispProfile).toHaveBeenCalledWith({
         email: user.user.email,
         person: { nickname: 'name' },
         segments: ['bumble'],
@@ -176,8 +177,8 @@ describe('UserService', () => {
       await expect(async () => {
         await service.createUser({ ...createUserDto, partnerAccessCode: '123456' });
       }).rejects.toThrow(PartnerAccessCodeStatusEnum.ALREADY_IN_USE);
-      expect(userRepoSpy).toBeCalledTimes(0);
-      expect(assignCodeSpy).toBeCalledTimes(0);
+      expect(userRepoSpy).not.toHaveBeenCalled();
+      expect(assignCodeSpy).not.toHaveBeenCalled();
     });
     // TODO - what do we want to happen here?
     it('when supplied with user dto and partner access that is incorrect, it should throw an error', async () => {
@@ -189,9 +190,10 @@ describe('UserService', () => {
         });
       await expect(
         service.createUser({ ...createUserDto, partnerAccessCode: 'incorrect code' }),
-      ).rejects.toThrowError('Access code invalid');
-      expect(userRepoSpy).toBeCalledTimes(0);
+      ).rejects.toThrow('Access code invalid');
+      expect(userRepoSpy).not.toHaveBeenCalled();
     });
+
     it('when supplied with user dto and partnerId but no partner access code, it should return a user with partner access', async () => {
       jest
         .spyOn(mockPartnerAccessService, 'createAndAssignPartnerAccess')
@@ -207,14 +209,16 @@ describe('UserService', () => {
         ...createUserDto,
         partnerId: mockPartnerEntity.id,
       });
+
       const { therapySession, partnerAdmin, partnerAdminId, userId, ...partnerAccessData } =
-        mockPartnerAccessEntity;
-      // Note different format for the DTO
+        mockPartnerAccessEntity; // Note different format for the DTO
+
       expect(user.partnerAccesses).toEqual([
         { ...partnerAccessData, therapySessions: therapySession },
       ]);
     });
   });
+
   describe('getUser', () => {
     it('when supplied a firebase user dto, it should return a user', async () => {
       const repoSpyCreateQueryBuilder = jest.spyOn(repo, 'createQueryBuilder');
@@ -246,8 +250,8 @@ describe('UserService', () => {
       expect(user.contactPermission).toBe(true);
       expect(user.serviceEmailsPermission).toBe(false);
 
-      expect(repoSpySave).toBeCalledWith({ ...mockUserEntity, ...updateUserDto });
-      expect(repoSpySave).toBeCalled();
+      expect(repoSpySave).toHaveBeenCalledWith({ ...mockUserEntity, ...updateUserDto });
+      expect(repoSpySave).toHaveBeenCalled();
     });
   });
 
@@ -270,14 +274,13 @@ describe('UserService', () => {
       expect(user.name).not.toBe(mockUserEntity.name);
       expect(user.email).not.toBe(mockUserEntity.email);
 
-      expect(repoSpySave).toBeCalled();
+      expect(repoSpySave).toHaveBeenCalled();
     });
   });
 
   // TODO - Extend getUser tests. At the moment, this is only used by super admins
   describe('getUsers', () => {
     it('getUsers', async () => {
-      // Destructuring to get rid of certain props
       const {
         subscriptionUser,
         therapySession,
@@ -295,7 +298,7 @@ describe('UserService', () => {
           getMany: jest.fn().mockResolvedValue([{ ...mockUserEntity, email: 'a@b.com' }]),
         }) as never,
       );
-      const users = await service.getUsers({ email: 'a@b.com' }, [], [], 10);
+      const users = await service.getUsers({ email: 'a@b.com' }, {}, [], 10);
       expect(users).toEqual([{ user: { ...userBase, email: 'a@b.com' }, partnerAccesses: [] }]);
     });
   });

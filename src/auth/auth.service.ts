@@ -35,13 +35,9 @@ export class AuthService {
   }
 
   private async parseAndValidateToken(token: string): Promise<DecodedIdToken> {
-    try {
-      const decodedToken = await this.firebase.admin.auth().verifyIdToken(token);
+    const decodedToken = await this.firebase.admin.auth().verifyIdToken(token);
 
-      return decodedToken;
-    } catch (err) {
-      throw err;
-    }
+    return decodedToken;
   }
 
   public async createFirebaseUser(email: string, password: string) {

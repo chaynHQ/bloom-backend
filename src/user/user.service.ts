@@ -11,6 +11,7 @@ import {
   CREATE_USER_INVALID_EMAIL,
   CREATE_USER_WEAK_PASSWORD,
 } from 'src/utils/errors';
+import { Repository } from 'typeorm';
 import {
   addCrispProfile,
   deleteCrispProfile,
@@ -24,7 +25,6 @@ import { generateRandomString } from '../utils/utils';
 import { CreateUserDto } from './dtos/create-user.dto';
 import { GetUserDto } from './dtos/get-user.dto';
 import { UpdateUserDto } from './dtos/update-user.dto';
-import { UserRepository } from './user.repository';
 
 enum SIGNUP_TYPE {
   PUBLIC_USER = 'PUBLIC_USER',
@@ -37,8 +37,8 @@ export class UserService {
   private readonly logger = new Logger('UserService');
 
   constructor(
-    @InjectRepository(UserRepository)
-    private userRepository: UserRepository,
+    @InjectRepository(UserEntity)
+    private userRepository: Repository<UserEntity>,
     private readonly partnerAccessService: PartnerAccessService,
     private readonly partnerService: PartnerService,
     private readonly authService: AuthService,
@@ -151,21 +151,17 @@ export class UserService {
     { name, email, contactPermission, serviceEmailsPermission, signUpLanguage }: CreateUserDto,
     firebaseUid: string,
   ) {
-    try {
-      const createUserObject = this.userRepository.create({
-        name,
-        email,
-        firebaseUid,
-        contactPermission,
-        serviceEmailsPermission,
-        signUpLanguage,
-      });
-      const createUserResponse = await this.userRepository.save(createUserObject);
+    const createUserObject = this.userRepository.create({
+      name,
+      email,
+      firebaseUid,
+      contactPermission,
+      serviceEmailsPermission,
+      signUpLanguage,
+    });
+    const createUserResponse = await this.userRepository.save(createUserObject);
 
-      return { user: createUserResponse };
-    } catch (error) {
-      throw error;
-    }
+    return { user: createUserResponse };
   }
 
   public async createPartnerUserWithoutCode(
@@ -179,44 +175,38 @@ export class UserService {
     }: CreateUserDto,
     firebaseUid: string,
   ) {
-    try {
-      const partnerResponse = await this.partnerService.getPartnerWithPartnerFeaturesById(
-        partnerId,
-      );
-      if (!partnerResponse) {
-        throw new HttpException('Invalid partnerId supplied', HttpStatus.BAD_REQUEST);
-      }
-      const automaticAccessCodePartnerFeature = partnerResponse.partnerFeature.find(
-        (pf) => pf.feature.name === FEATURES.AUTOMATIC_ACCESS_CODE,
-      );
-      if (!automaticAccessCodePartnerFeature) {
-        throw new HttpException(
-          'Partner does not have automatic access code Feature',
-          HttpStatus.BAD_REQUEST,
-        );
-      }
-      const createUserObject = this.userRepository.create({
-        name,
-        email,
-        firebaseUid,
-        contactPermission,
-        serviceEmailsPermission,
-        signUpLanguage,
-      });
-
-      const createUserResponse = await this.userRepository.save(createUserObject);
-      const partnerAccessWithPartner = await this.partnerAccessService.createAndAssignPartnerAccess(
-        partnerResponse,
-        createUserResponse.id,
-      );
-
-      return formatUserObject({
-        ...createUserResponse,
-        ...(partnerAccessWithPartner ? { partnerAccess: [partnerAccessWithPartner] } : {}),
-      });
-    } catch (error) {
-      throw error;
+    const partnerResponse = await this.partnerService.getPartnerWithPartnerFeaturesById(partnerId);
+    if (!partnerResponse) {
+      throw new HttpException('Invalid partnerId supplied', HttpStatus.BAD_REQUEST);
     }
+    const automaticAccessCodePartnerFeature = partnerResponse.partnerFeature.find(
+      (pf) => pf.feature.name === FEATURES.AUTOMATIC_ACCESS_CODE,
+    );
+    if (!automaticAccessCodePartnerFeature) {
+      throw new HttpException(
+        'Partner does not have automatic access code Feature',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    const createUserObject = this.userRepository.create({
+      name,
+      email,
+      firebaseUid,
+      contactPermission,
+      serviceEmailsPermission,
+      signUpLanguage,
+    });
+
+    const createUserResponse = await this.userRepository.save(createUserObject);
+    const partnerAccessWithPartner = await this.partnerAccessService.createAndAssignPartnerAccess(
+      partnerResponse,
+      createUserResponse.id,
+    );
+
+    return formatUserObject({
+      ...createUserResponse,
+      ...(partnerAccessWithPartner ? { partnerAccess: [partnerAccessWithPartner] } : {}),
+    });
   }
 
   public async createPartnerUserWithCode(
@@ -230,34 +220,29 @@ export class UserService {
     }: CreateUserDto,
     firebaseUid: string,
   ) {
-    try {
-      const partnerAccess = await this.partnerAccessService.getValidPartnerAccessCode(
-        partnerAccessCode,
-      );
+    const partnerAccess =
+      await this.partnerAccessService.getValidPartnerAccessCode(partnerAccessCode);
 
-      const createUserObject = this.userRepository.create({
-        name,
-        email,
-        firebaseUid,
-        contactPermission,
-        serviceEmailsPermission,
-        signUpLanguage,
-      });
+    const createUserObject = this.userRepository.create({
+      name,
+      email,
+      firebaseUid,
+      contactPermission,
+      serviceEmailsPermission,
+      signUpLanguage,
+    });
 
-      const createUserResponse = await this.userRepository.save(createUserObject);
+    const createUserResponse = await this.userRepository.save(createUserObject);
 
-      const partnerAccessWithPartner = await this.partnerAccessService.assignPartnerAccessOnSignup(
-        partnerAccess,
-        createUserResponse.id,
-      );
+    const partnerAccessWithPartner = await this.partnerAccessService.assignPartnerAccessOnSignup(
+      partnerAccess,
+      createUserResponse.id,
+    );
 
-      return formatUserObject({
-        ...createUserResponse,
-        ...(partnerAccessWithPartner ? { partnerAccess: [partnerAccessWithPartner] } : {}),
-      });
-    } catch (error) {
-      throw error;
-    }
+    return formatUserObject({
+      ...createUserResponse,
+      ...(partnerAccessWithPartner ? { partnerAccess: [partnerAccessWithPartner] } : {}),
+    });
   }
 
   public async getUserByFirebaseId({ uid }: IFirebaseUser): Promise<GetUserDto | undefined> {
@@ -321,32 +306,28 @@ export class UserService {
 
   public async deleteUserById(id: string): Promise<UserEntity> {
     //Delete User From Firebase
-    try {
-      const user = await this.getUserById(id);
-      await this.authService.deleteFirebaseUser(user.firebaseUid);
-      //Delete Crisp People Profile
-      await deleteCrispProfile(user.email);
+    const user = await this.getUserById(id);
+    await this.authService.deleteFirebaseUser(user.firebaseUid);
+    //Delete Crisp People Profile
+    await deleteCrispProfile(user.email);
 
-      //Randomise User Data in DB
-      const randomString = generateRandomString(20);
-      const newUser = {
-        ...user,
-        name: randomString,
-        email: `${randomString}@deletedemail.com`,
-        firebaseUid: randomString,
-        isActive: false,
-      };
+    //Randomise User Data in DB
+    const randomString = generateRandomString(20);
+    const newUser = {
+      ...user,
+      name: randomString,
+      email: `${randomString}@deletedemail.com`,
+      firebaseUid: randomString,
+      isActive: false,
+    };
 
-      await this.userRepository.save(newUser);
+    await this.userRepository.save(newUser);
 
-      return newUser;
-    } catch (error) {
-      throw error;
-    }
+    return newUser;
   }
 
   public async updateUser(updateUserDto: UpdateUserDto, { user: { id } }: GetUserDto) {
-    const user = await this.userRepository.findOne({ where: { id } });
+    const user = await this.userRepository.findOneBy({ id });
 
     if (!user) {
       throw new HttpException('USER NOT FOUND', HttpStatus.NOT_FOUND);
@@ -380,6 +361,7 @@ export class UserService {
             return user;
           } catch (error) {
             await this.userRepository.delete(user);
+            throw error;
           }
         }),
       );
@@ -413,17 +395,25 @@ export class UserService {
       partnerAccess?: { userId: string; featureTherapy: boolean; active: boolean };
       partnerAdmin?: { partnerAdminId: string };
     },
-    relations: Array<string>,
+    relations: {
+      partner?: boolean;
+      partnerAccess?: boolean;
+      partnerAdmin?: boolean;
+      courseUser?: boolean;
+      subscriptionUser?: boolean;
+      therapySession?: boolean;
+      eventLog?: boolean;
+    },
     fields: Array<string>,
     limit: number,
   ): Promise<GetUserDto[] | undefined> {
     const query = this.userRepository.createQueryBuilder('user');
     // TODO this needs some refactoring but deprioritised for now
-    if (relations.indexOf('partnerAccess') >= 0) {
+    if (relations.partnerAccess) {
       query.leftJoinAndSelect('user.partnerAccess', 'partnerAccess');
     }
 
-    if (relations?.indexOf('partner-admin') >= 0) {
+    if (relations.partnerAdmin) {
       query.leftJoinAndSelect('user.partnerAdmin', 'partnerAdmin');
     }
 

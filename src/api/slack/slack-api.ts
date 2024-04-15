@@ -7,9 +7,7 @@ import apiCall from '../apiCalls';
 export class SlackMessageClient {
   private readonly logger = new Logger('SlackClient');
 
-  public async sendMessageToTherapySlackChannel(
-    text: string,
-  ): Promise<AxiosResponse<any, any> | string> {
+  public async sendMessageToTherapySlackChannel(text: string): Promise<AxiosResponse | string> {
     if (!isProduction) return; // only send messages in production environment
 
     try {

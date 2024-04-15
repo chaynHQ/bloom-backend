@@ -6,7 +6,7 @@
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "allowSyntheticDefaultImports": true,
-    "target": "es2017",
+    "target": "ES2022",
     "sourceMap": true,
     "outDir": "./dist",
     "baseUrl": "./",
@@ -20,5 +20,5 @@
     "esModuleInterop": true,
     "allowJs": true,
     "resolveJsonModule": true,
-  }
+  },
 }

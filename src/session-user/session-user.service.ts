@@ -1,6 +1,8 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import _ from 'lodash';
+import { UserEntity } from 'src/entities/user.entity';
+import { Repository } from 'typeorm';
 import { updateCrispProfileCourse, updateCrispProfileSession } from '../api/crisp/crisp-api';
 import { CourseUserService } from '../course-user/course-user.service';
 import { CourseService } from '../course/course.service';
@@ -10,21 +12,20 @@ import { SessionUserEntity } from '../entities/session-user.entity';
 import { Logger } from '../logger/logger';
 import { SessionService } from '../session/session.service';
 import { GetUserDto } from '../user/dtos/get-user.dto';
-import { UserRepository } from '../user/user.repository';
 import { UserService } from '../user/user.service';
 import { PROGRESS_STATUS, STORYBLOK_STORY_STATUS_ENUM } from '../utils/constants';
 import { formatCourseUserObject, formatCourseUserObjects } from '../utils/serialize';
 import { SessionUserDto } from './dtos/session-user.dto';
 import { UpdateSessionUserDto } from './dtos/update-session-user.dto';
-import { SessionUserRepository } from './session-user.repository';
 
 @Injectable()
 export class SessionUserService {
   private readonly logger = new Logger('SessionUserService');
 
   constructor(
-    @InjectRepository(SessionUserRepository) private sessionUserRepository: SessionUserRepository,
-    @InjectRepository(UserRepository) private userRepository: UserRepository,
+    @InjectRepository(SessionUserEntity)
+    private sessionUserRepository: Repository<SessionUserEntity>,
+    @InjectRepository(UserEntity) private userRepository: Repository<UserEntity>,
     private readonly courseUserService: CourseUserService,
     private readonly userService: UserService,
     private readonly sessionService: SessionService,
