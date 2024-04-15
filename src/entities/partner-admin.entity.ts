@@ -23,7 +23,6 @@ export class PartnerAdminEntity extends BaseBloomEntity {
   @OneToOne(() => UserEntity, (userEntity) => userEntity.partnerAdmin, {
     eager: true,
     onDelete: 'CASCADE',
-    nullable: true,
   })
   @JoinColumn({
     name: 'userId',
