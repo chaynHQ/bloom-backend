@@ -1,12 +1,14 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FeatureEntity } from 'src/entities/feature.entity';
+import { Repository } from 'typeorm';
 import { CreateFeatureDto } from './dtos/create-feature.dto';
-import { FeatureRepository } from './feature.repository';
 
 @Injectable()
 export class FeatureService {
-  constructor(@InjectRepository(FeatureRepository) private featureRepository: FeatureRepository) {}
+  constructor(
+    @InjectRepository(FeatureEntity) private featureRepository: Repository<FeatureEntity>,
+  ) {}
   async createFeature(createFeatureDto: CreateFeatureDto): Promise<FeatureEntity | unknown> {
     try {
       const featureObject = this.featureRepository.create(createFeatureDto);

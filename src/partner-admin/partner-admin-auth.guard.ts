@@ -5,13 +5,18 @@ import {
   HttpStatus,
   Injectable,
 } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
 import { Request } from 'express';
+import { UserEntity } from 'src/entities/user.entity';
+import { Repository } from 'typeorm';
 import { AuthService } from '../auth/auth.service';
-import { UserRepository } from '../user/user.repository';
 
 @Injectable()
 export class PartnerAdminAuthGuard implements CanActivate {
-  constructor(private authService: AuthService, private usersRepository: UserRepository) {}
+  constructor(
+    private authService: AuthService,
+    @InjectRepository(UserEntity) private userRepository: Repository<UserEntity>,
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<Request>();
@@ -38,18 +43,14 @@ export class PartnerAdminAuthGuard implements CanActivate {
       return false;
     }
 
-    const user = await this.usersRepository
+    const user = await this.userRepository
       .createQueryBuilder('user')
       .leftJoinAndSelect('user.partnerAdmin', 'partnerAdmin')
       .leftJoinAndSelect('partnerAdmin.partner', 'partner')
       .where('user.firebaseUid = :uid', { uid: userUid })
       .getOne();
-    if (user.partnerAdmin?.partner == null) {
+    if (user.partnerAdmin?.partner == null || !user.partnerAdmin.active) {
       return false;
-    }
-
-    if (!user.partnerAdmin?.active) {
-      throw new HttpException(`PartnerAdminAuthGuard - Partner admin is no longer active`, HttpStatus.FORBIDDEN);
     }
 
     request['partnerId'] = user.partnerAdmin.partner.id; // TODO is this the best way to be handling user details

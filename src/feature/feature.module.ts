@@ -1,12 +1,12 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { UserRepository } from 'src/user/user.repository';
+import { FeatureEntity } from 'src/entities/feature.entity';
+import { UserEntity } from 'src/entities/user.entity';
 import { FeatureController } from './feature.controller';
-import { FeatureRepository } from './feature.repository';
 import { FeatureService } from './feature.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([FeatureRepository, UserRepository])],
+  imports: [TypeOrmModule.forFeature([FeatureEntity, UserEntity])],
   controllers: [FeatureController],
   providers: [FeatureService],
 })

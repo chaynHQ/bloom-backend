@@ -1,8 +1,9 @@
 import { createMock, DeepMocked } from '@golevelup/ts-jest';
 import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
 import { sub } from 'date-fns';
 import * as crispApi from 'src/api/crisp/crisp-api';
-import { PartnerRepository } from 'src/partner/partner.repository';
+import { PartnerEntity } from 'src/entities/partner.entity';
 import { GetUserDto } from 'src/user/dtos/get-user.dto';
 import {
   mockPartnerAccessEntity,
@@ -20,7 +21,6 @@ import { PartnerAccessEntity } from '../entities/partner-access.entity';
 import { CreatePartnerAccessDto } from './dtos/create-partner-access.dto';
 import { GetPartnerAccessesDto } from './dtos/get-partner-access.dto';
 import { UpdatePartnerAccessDto } from './dtos/update-partner-access.dto';
-import { PartnerAccessRepository } from './partner-access.repository';
 import { PartnerAccessService } from './partner-access.service';
 
 const partnerId = 'partnerId1';
@@ -50,13 +50,13 @@ jest.mock('src/api/crisp/crisp-api', () => ({
 
 describe('PartnerAccessService', () => {
   let service: PartnerAccessService;
-  let repo: PartnerAccessRepository;
-  let mockPartnerRepository: DeepMocked<PartnerRepository>;
-  let mockPartnerAccessRepository: DeepMocked<PartnerAccessRepository>;
+  let repo: Repository<PartnerAccessEntity>;
+  let mockPartnerRepository: DeepMocked<Repository<PartnerEntity>>;
+  let mockPartnerAccessRepository: DeepMocked<Repository<PartnerAccessEntity>>;
 
   beforeEach(async () => {
-    mockPartnerRepository = createMock<PartnerRepository>(mockPartnerRepositoryMethods);
-    mockPartnerAccessRepository = createMock<PartnerAccessRepository>(
+    mockPartnerRepository = createMock<Repository<PartnerEntity>>(mockPartnerRepositoryMethods);
+    mockPartnerAccessRepository = createMock<Repository<PartnerAccessEntity>>(
       mockPartnerAccessRepositoryMethods,
     );
 
@@ -64,18 +64,18 @@ describe('PartnerAccessService', () => {
       providers: [
         PartnerAccessService,
         {
-          provide: PartnerAccessRepository,
+          provide: getRepositoryToken(PartnerAccessEntity),
           useValue: mockPartnerAccessRepository,
         },
         {
-          provide: PartnerRepository,
+          provide: getRepositoryToken(PartnerEntity),
           useValue: mockPartnerRepository,
         },
       ],
     }).compile();
 
     service = module.get<PartnerAccessService>(PartnerAccessService);
-    repo = module.get<Repository<PartnerAccessEntity>>(PartnerAccessRepository);
+    repo = module.get<Repository<PartnerAccessEntity>>(getRepositoryToken(PartnerAccessEntity));
   });
 
   it('should be defined', () => {
@@ -83,24 +83,20 @@ describe('PartnerAccessService', () => {
   });
   describe('createPartnerAccess', () => {
     it('when supplied with correct data should return access code', async () => {
-      const repoSpyCreate = jest.spyOn(repo, 'create');
-      const repoSpySave = jest.spyOn(repo, 'save');
+      const partnerAccessDto = { ...mockPartnerAccessEntityBase, ...createPartnerAccessDto };
 
-      const { accessCode: createdAccessCode, ...generatedCode } = await service.createPartnerAccess(
-        createPartnerAccessDto,
+      const { ...newPartnerAccess } = await service.createPartnerAccess(
+        partnerAccessDto,
         partnerId,
         partnerAdminId,
       );
-      const { accessCode, ...partnerEntityWithoutCode } = mockPartnerAccessEntityBase;
-      expect(generatedCode).toStrictEqual({
-        ...partnerEntityWithoutCode,
-        ...createPartnerAccessDto,
+      expect(newPartnerAccess).toStrictEqual({
+        ...partnerAccessDto,
         partnerAdminId,
         partnerId,
+        accessCode: '123456',
       });
-      expect(createdAccessCode).toHaveLength(6);
-      expect(repoSpyCreate).toBeCalledWith(createPartnerAccessDto);
-      expect(repoSpySave).toBeCalled();
+      expect(newPartnerAccess.accessCode).toHaveLength(6);
     });
     it('tries again when it creates a code that already exists', async () => {
       const repoSpyCreateQueryBuilder = jest.spyOn(repo, 'createQueryBuilder');

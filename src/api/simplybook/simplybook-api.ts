@@ -1,6 +1,6 @@
 import { Logger } from '@nestjs/common';
 import axios from 'axios';
-import format from 'date-fns/format';
+import { format } from 'date-fns';
 
 import { simplybookCompanyName, simplybookCredentials } from 'src/utils/constants';
 
@@ -80,7 +80,7 @@ export const getBookingsForDate: (date: Date) => Promise<BookingInfo[]> = async 
   }
 };
 
-const handleError = (error: any, message: string) => {
+const handleError = (error, message: string) => {
   LOGGER.error(message, error);
   throw new Error(`${message}: ${error})`);
 };

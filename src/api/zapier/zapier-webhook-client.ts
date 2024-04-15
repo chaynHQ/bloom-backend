@@ -13,7 +13,7 @@ export class ZapierWebhookClient {
   public async addContactToRespondIO({
     phonenumber,
     name,
-  }: AddContactParams): Promise<AxiosResponse<any, any> | string> {
+  }: AddContactParams): Promise<AxiosResponse | string> {
     try {
       const response = await apiCall({
         url: respondIoCreateContactWebhook,
@@ -33,7 +33,7 @@ export class ZapierWebhookClient {
 
   public async deleteContactFromRespondIO({
     phonenumber,
-  }: DeleteContactParams): Promise<AxiosResponse<any, any> | string> {
+  }: DeleteContactParams): Promise<AxiosResponse | string> {
     try {
       const response = await apiCall({
         url: respondIoDeleteContactWebhook,

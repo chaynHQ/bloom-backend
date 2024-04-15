@@ -7,14 +7,15 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Request } from 'express';
+import { UserEntity } from 'src/entities/user.entity';
+import { Repository } from 'typeorm';
 import { AuthService } from '../auth/auth.service';
-import { UserRepository } from '../user/user.repository';
 
 @Injectable()
 export class SuperAdminAuthGuard implements CanActivate {
   constructor(
     private authService: AuthService,
-    @InjectRepository(UserRepository) private usersRepository: UserRepository,
+    @InjectRepository(UserEntity) private userRepository: Repository<UserEntity>,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -43,7 +44,7 @@ export class SuperAdminAuthGuard implements CanActivate {
       );
     }
     try {
-      const user = await this.usersRepository.findOne({ firebaseUid: userUid });
+      const user = await this.userRepository.findOneBy({ firebaseUid: userUid });
 
       return !!user.isSuperAdmin && user.email.indexOf('@chayn.co') !== -1;
     } catch (error) {

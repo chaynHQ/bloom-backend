@@ -1,6 +1,6 @@
 import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 
-import { CAMPAIGN_TYPE } from 'src/utils/constants';
+import { CAMPAIGN_TYPE } from '../utils/constants';
 import { BaseBloomEntity } from './base.entity';
 
 @Entity({ name: 'email_campaign' })

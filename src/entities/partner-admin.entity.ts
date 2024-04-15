@@ -21,11 +21,12 @@ export class PartnerAdminEntity extends BaseBloomEntity {
   @Column({ nullable: true })
   userId: string;
   @OneToOne(() => UserEntity, (userEntity) => userEntity.partnerAdmin, {
-    primary: true,
     eager: true,
     onDelete: 'CASCADE',
   })
-  @JoinColumn({ name: 'userId' })
+  @JoinColumn({
+    name: 'userId',
+  })
   user: UserEntity;
 
   @Column()

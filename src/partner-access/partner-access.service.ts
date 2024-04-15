@@ -4,7 +4,7 @@ import { isBefore, sub } from 'date-fns';
 import _ from 'lodash';
 import { PartnerEntity } from 'src/entities/partner.entity';
 import { Logger } from 'src/logger/logger';
-import { PartnerRepository } from 'src/partner/partner.repository';
+import { Repository } from 'typeorm';
 import { updateCrispProfileAccesses } from '../api/crisp/crisp-api';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
 import { GetUserDto } from '../user/dtos/get-user.dto';
@@ -12,7 +12,6 @@ import { PartnerAccessCodeStatusEnum } from '../utils/constants';
 import { CreatePartnerAccessDto } from './dtos/create-partner-access.dto';
 import { GetPartnerAccessesDto } from './dtos/get-partner-access.dto';
 import { UpdatePartnerAccessDto } from './dtos/update-partner-access.dto';
-import { PartnerAccessRepository } from './partner-access.repository';
 
 // TODO storing base service minimum here but this might need to be a config setup eventually
 const basePartnerAccess = {
@@ -26,10 +25,10 @@ export class PartnerAccessService {
   private readonly logger = new Logger('PartnerAccessService');
 
   constructor(
-    @InjectRepository(PartnerAccessRepository)
-    private partnerAccessRepository: PartnerAccessRepository,
-    @InjectRepository(PartnerRepository)
-    private partnerRepository: PartnerRepository,
+    @InjectRepository(PartnerAccessEntity)
+    private partnerAccessRepository: Repository<PartnerAccessEntity>,
+    @InjectRepository(PartnerEntity)
+    private partnerRepository: Repository<PartnerEntity>,
   ) {}
 
   async createPartnerAccess(
@@ -37,21 +36,20 @@ export class PartnerAccessService {
     partnerId: string,
     partnerAdminId: string | null,
   ): Promise<PartnerAccessEntity> {
-    const partnerAccessBase = this.partnerAccessRepository.create(createPartnerAccessDto);
     const accessCode = await this.generateAccessCode(6);
     const partnerAccess = {
-      ...partnerAccessBase,
+      ...createPartnerAccessDto,
       partnerAdminId,
       partnerId,
       accessCode,
     };
-    return await this.partnerAccessRepository.save(partnerAccess);
+    return await this.partnerAccessRepository.create(partnerAccess);
   }
 
   private async generateAccessCode(length: number): Promise<string> {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUFWXYZ1234567890';
     const accessCode = _.sampleSize(chars, length || 6).join('');
-    if (!!(await this.findPartnerAccessByCode(accessCode))) {
+    if (await this.findPartnerAccessByCode(accessCode)) {
       this.generateAccessCode(6);
     }
     return accessCode;
@@ -66,7 +64,7 @@ export class PartnerAccessService {
   }
 
   async getValidPartnerAccessCode(partnerAccessCode: string): Promise<PartnerAccessEntity> {
-    const format = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/;
+    const format = /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/;
 
     if (format.test(partnerAccessCode) || partnerAccessCode.length !== 6) {
       throw new HttpException(PartnerAccessCodeStatusEnum.INVALID_CODE, HttpStatus.BAD_REQUEST);
@@ -78,7 +76,7 @@ export class PartnerAccessService {
       throw new HttpException(PartnerAccessCodeStatusEnum.DOES_NOT_EXIST, HttpStatus.BAD_REQUEST);
     }
 
-    if (!!partnerAccess.userId) {
+    if (partnerAccess.userId) {
       throw new HttpException(PartnerAccessCodeStatusEnum.ALREADY_IN_USE, HttpStatus.CONFLICT);
     }
 
@@ -94,8 +92,8 @@ export class PartnerAccessService {
     partnerAccessDto: GetPartnerAccessesDto | undefined,
   ): Promise<PartnerAccessEntity[]> {
     return await this.partnerAccessRepository.find({
-      relations: ['partner'],
-      where: partnerAccessDto ? partnerAccessDto : undefined,
+      where: partnerAccessDto || undefined,
+      relations: { partner: true },
     });
   }
 
@@ -130,8 +128,8 @@ export class PartnerAccessService {
     updates: UpdatePartnerAccessDto,
   ): Promise<PartnerAccessEntity> {
     try {
-      const property = await this.partnerAccessRepository.findOne({
-        where: { id },
+      const property = await this.partnerAccessRepository.findOneBy({
+        id,
       });
 
       return await this.partnerAccessRepository.save({
@@ -150,7 +148,7 @@ export class PartnerAccessService {
     partnerAccess: PartnerAccessEntity,
     userId: string,
   ): Promise<PartnerAccessEntity> {
-    const partnerResponse: PartnerEntity | undefined = await this.partnerRepository.findOne({
+    const partnerResponse: PartnerEntity | undefined = await this.partnerRepository.findOneBy({
       id: partnerAccess.partnerId,
     });
 

@@ -1,11 +1,11 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { createMock, DeepMocked } from '@golevelup/ts-jest';
 import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
 import { Request } from 'express';
+import { UserEntity } from 'src/entities/user.entity';
 import { AuthService } from '../auth/auth.service';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
 import { PartnerAdminAuthGuard } from '../partner-admin/partner-admin-auth.guard';
-import { UserRepository } from '../user/user.repository';
 import { UserService } from '../user/user.service';
 import { CreatePartnerAccessDto } from './dtos/create-partner-access.dto';
 import { PartnerAccessController } from './partner-access.controller';
@@ -24,13 +24,6 @@ describe('PartnerAccessController', () => {
   let mockUserService: DeepMocked<UserService>;
   const date = Date.now();
   let authGuard: DeepMocked<PartnerAdminAuthGuard>;
-
-  const dto: CreatePartnerAccessDto = {
-    featureLiveChat: true,
-    featureTherapy: false,
-    therapySessionsRedeemed: 5,
-    therapySessionsRemaining: 5,
-  };
 
   beforeEach(async () => {
     authGuard = createMock<PartnerAdminAuthGuard>();
@@ -63,7 +56,7 @@ describe('PartnerAccessController', () => {
         { provide: AuthService, useValue: mockAuthService },
         { provide: UserService, useValue: mockUserService },
         {
-          provide: UserRepository,
+          provide: getRepositoryToken(UserEntity),
           useFactory: mockUserRepository,
         },
       ],

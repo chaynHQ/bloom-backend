@@ -7,16 +7,12 @@ const apiCall = async ({
   data,
   url,
 }: ApiCallRequestOptions): Promise<AxiosResponse> => {
-  try {
-    return await axios({
-      method: type,
-      url,
-      data,
-      headers,
-    });
-  } catch (error) {
-    throw error;
-  }
+  return await axios({
+    method: type,
+    url,
+    data,
+    headers,
+  });
 };
 
 export default apiCall;
