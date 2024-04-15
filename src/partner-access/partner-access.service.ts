@@ -43,7 +43,7 @@ export class PartnerAccessService {
       partnerId,
       accessCode,
     };
-    return await this.partnerAccessRepository.create(partnerAccess);
+    return await this.partnerAccessRepository.save(partnerAccess);
   }
 
   private async generateAccessCode(length: number): Promise<string> {
