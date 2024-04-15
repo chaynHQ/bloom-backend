@@ -228,7 +228,7 @@ describe('WebhooksService', () => {
         text: '',
       };
 
-      return expect(service.updateStory(body, getWebhookSignature(body))).rejects.toThrowError(
+      return expect(service.updateStory(body, getWebhookSignature(body))).rejects.toThrow(
         'STORYBLOK STORY NOT FOUND',
       );
     });
@@ -308,7 +308,7 @@ describe('WebhooksService', () => {
 
       const session = (await service.updateStory(body, getWebhookSignature(body))) as SessionEntity;
 
-      expect(courseFindOneSpy).toBeCalledWith({
+      expect(courseFindOneSpy).toHaveBeenCalledWith({
         storyblokUuid: 'anotherCourseUuId',
       });
 
@@ -318,13 +318,13 @@ describe('WebhooksService', () => {
         courseId: 'courseId2',
       });
 
-      expect(sessionSaveRepoSpy).toBeCalledWith({
+      expect(sessionSaveRepoSpy).toHaveBeenCalledWith({
         ...mockSession,
         courseId: 'courseId2',
         course: course2,
       });
 
-      expect(sessionFindOneRepoSpy).toBeCalledWith({
+      expect(sessionFindOneRepoSpy).toHaveBeenCalledWith({
         storyblokId: mockSession.storyblokId,
       });
 
@@ -352,16 +352,16 @@ describe('WebhooksService', () => {
       const session = (await service.updateStory(body, getWebhookSignature(body))) as SessionEntity;
 
       expect(session).toEqual(mockSession);
-      expect(courseFindOneSpy).toBeCalledWith({
+      expect(courseFindOneSpy).toHaveBeenCalledWith({
         storyblokUuid: 'courseUuid1',
       });
-      expect(sessionSaveRepoSpy).toBeCalledWith({
+      expect(sessionSaveRepoSpy).toHaveBeenCalledWith({
         ...mockSession,
       });
-      expect(sessionSaveRepoSpy).toBeCalledWith({
+      expect(sessionSaveRepoSpy).toHaveBeenCalledWith({
         ...mockSession,
       });
-      expect(sessionFindOneRepoSpy).toBeCalledWith({
+      expect(sessionFindOneRepoSpy).toHaveBeenCalledWith({
         storyblokId: mockSession.storyblokId,
       });
 
@@ -411,7 +411,7 @@ describe('WebhooksService', () => {
       const session = (await service.updateStory(body, getWebhookSignature(body))) as SessionEntity;
 
       expect(session).toEqual(mockSession);
-      expect(sessionSaveRepoSpy).toBeCalledWith({
+      expect(sessionSaveRepoSpy).toHaveBeenCalledWith({
         ...mockSession,
       });
 
@@ -445,11 +445,11 @@ describe('WebhooksService', () => {
       const course = (await service.updateStory(body, getWebhookSignature(body))) as CourseEntity;
 
       expect(course).toEqual(mockCourse);
-      expect(courseFindOneRepoSpy).toBeCalledWith({
+      expect(courseFindOneRepoSpy).toHaveBeenCalledWith({
         storyblokId: mockCourseStoryblokResult.data.story.id,
       });
 
-      expect(courseCreateRepoSpy).toBeCalledWith({
+      expect(courseCreateRepoSpy).toHaveBeenCalledWith({
         storyblokId: mockCourseStoryblokResult.data.story.id,
         name: mockCourseStoryblokResult.data.story.name,
         status: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
@@ -457,7 +457,7 @@ describe('WebhooksService', () => {
         storyblokUuid: mockCourseStoryblokResult.data.story.uuid,
       });
 
-      expect(courseSaveRepoSpy).toBeCalledWith(mockCourse);
+      expect(courseSaveRepoSpy).toHaveBeenCalledWith(mockCourse);
 
       courseFindOneRepoSpy.mockClear();
       courseCreateRepoSpy.mockClear();
@@ -478,17 +478,17 @@ describe('WebhooksService', () => {
       });
       expect(booking).toHaveProperty('startDateTime', new Date(newStartTime));
       expect(booking).toHaveProperty('endDateTime', new Date(newEndTime));
-      expect(therapyRepoFindOneSpy).toBeCalled();
+      expect(therapyRepoFindOneSpy).toHaveBeenCalled();
     });
 
     it('should throw an error when action is on a user that doesnt exist', async () => {
       const userFindOneRepoSpy = jest
         .spyOn(mockedUserRepository, 'findOneBy')
         .mockImplementationOnce(() => undefined);
-      await expect(service.updatePartnerAccessTherapy(mockSimplybookBodyBase)).rejects.toThrowError(
+      await expect(service.updatePartnerAccessTherapy(mockSimplybookBodyBase)).rejects.toThrow(
         'UpdatePartnerAccessTherapy - error finding user with userID userId2 and origin client_email testuser@test.com',
       );
-      expect(userFindOneRepoSpy).toBeCalled();
+      expect(userFindOneRepoSpy).toHaveBeenCalled();
     });
 
     it('when creating a new therapy session and the userId is not provided, it should get userId from previous entry', async () => {
@@ -517,12 +517,12 @@ describe('WebhooksService', () => {
         endDateTime: new Date(mockSimplybookBodyBase.end_date_time),
       });
 
-      expect(findTherapySessionSpy).toBeCalledWith({
+      expect(findTherapySessionSpy).toHaveBeenCalledWith({
         clientEmail: ILike('testuser@test.com'),
         bookingCode: ILike('abc'),
       });
 
-      expect(findPartnerAccessSpy).toBeCalledWith({
+      expect(findPartnerAccessSpy).toHaveBeenCalledWith({
         userId: 'userId1',
         featureTherapy: true,
         active: true,
@@ -557,15 +557,15 @@ describe('WebhooksService', () => {
         endDateTime: new Date(mockSimplybookBodyBase.end_date_time),
       });
 
-      expect(findTherapySessionSpy).toBeCalledWith({
+      expect(findTherapySessionSpy).toHaveBeenCalledWith({
         clientEmail: ILike('testuser@test.com'),
         bookingCode: ILike('abc'),
       });
-      expect(findUserSpy).toBeCalledWith({
+      expect(findUserSpy).toHaveBeenCalledWith({
         id: 'userId1',
       });
 
-      expect(findPartnerAccessSpy).toBeCalledWith({
+      expect(findPartnerAccessSpy).toHaveBeenCalledWith({
         userId: 'userId1',
         featureTherapy: true,
         active: true,
@@ -598,7 +598,7 @@ describe('WebhooksService', () => {
           ...{ action: SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING },
         }),
       ).resolves.toHaveProperty('action', SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING);
-      expect(partnerAccessSaveSpy).toBeCalledWith({
+      expect(partnerAccessSaveSpy).toHaveBeenCalledWith({
         ...mockPartnerAccessEntity,
         therapySessionsRemaining: mockPartnerAccessEntity.therapySessionsRemaining + 1,
         therapySessionsRedeemed: mockPartnerAccessEntity.therapySessionsRedeemed - 1,
@@ -618,7 +618,7 @@ describe('WebhooksService', () => {
           ...{ action: SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING },
         }),
       ).resolves.toHaveProperty('action', SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING);
-      expect(partnerAccessFindSpy).toBeCalled();
+      expect(partnerAccessFindSpy).toHaveBeenCalled();
     });
 
     it('should throw if no partnerAccess exists when user tries to create a booking', async () => {
@@ -649,7 +649,7 @@ describe('WebhooksService', () => {
           ...{ action: SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING },
         }),
       ).resolves.toHaveProperty('action', SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING);
-      expect(partnerAccessSaveSpy).toBeCalledWith(mockPartnerAccessEntity);
+      expect(partnerAccessSaveSpy).toHaveBeenCalledWith(mockPartnerAccessEntity);
     });
     it('should not update partner access when user updates booking', async () => {
       const partnerAccessSaveSpy = jest.spyOn(mockedPartnerAccessRepository, 'save');
@@ -659,7 +659,7 @@ describe('WebhooksService', () => {
           ...{ action: SIMPLYBOOK_ACTION_ENUM.UPDATED_BOOKING },
         }),
       ).resolves.toHaveProperty('action', SIMPLYBOOK_ACTION_ENUM.UPDATED_BOOKING);
-      expect(partnerAccessSaveSpy).toBeCalledTimes(0);
+      expect(partnerAccessSaveSpy).not.toHaveBeenCalled();
     });
     it('should error if user creates booking when no therapy sessions remaining ', async () => {
       jest.spyOn(mockedPartnerAccessRepository, 'findBy').mockImplementationOnce(async () => {
@@ -677,7 +677,7 @@ describe('WebhooksService', () => {
           ...mockSimplybookBodyBase,
           ...{ action: SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING },
         }),
-      ).rejects.toThrowError(
+      ).rejects.toThrow(
         'newPartnerAccessTherapy - user has partner therapy access but has 0 therapy sessions remaining - email user@email.com userId userId2',
       );
     });
@@ -712,7 +712,7 @@ describe('WebhooksService', () => {
           ...{ action: SIMPLYBOOK_ACTION_ENUM.UPDATED_BOOKING },
         }),
       ).resolves.toHaveProperty('action', SIMPLYBOOK_ACTION_ENUM.UPDATED_BOOKING);
-      expect(therapySessionFindOneSpy).toBeCalledTimes(1);
+      expect(therapySessionFindOneSpy).toHaveBeenCalled();
     });
   });
   describe('sendFirstTherapySessionFeedbackEmail', () => {
@@ -746,8 +746,8 @@ describe('WebhooksService', () => {
           'dd/MM/yyyy',
         )}`,
       );
-      await expect(mailChimpSpy).toBeCalledTimes(0);
-      await expect(saveSpy).toBeCalledTimes(0);
+      await expect(mailChimpSpy).not.toHaveBeenCalled();
+      await expect(saveSpy).not.toHaveBeenCalled();
     });
 
     it('should only send emails to users who have signed up in english', async () => {
@@ -812,9 +812,9 @@ describe('WebhooksService', () => {
           'dd/MM/yyyy',
         )} - ${format(endDate, 'dd/MM/yyyy')}`,
       );
-      expect(mailChimpSpy).toBeCalledTimes(2);
-      expect(emailCampaignRepositorySpy).toBeCalledTimes(2);
-      expect(emailCampaignRepositoryFindSpy).toBeCalledTimes(2);
+      expect(mailChimpSpy).toHaveBeenCalledTimes(2);
+      expect(emailCampaignRepositorySpy).toHaveBeenCalledTimes(2);
+      expect(emailCampaignRepositoryFindSpy).toHaveBeenCalledTimes(2);
     });
 
     it('if error occurs for saving entry in campaign repository for one user, loop continues and error is logged', async () => {
@@ -841,9 +841,9 @@ describe('WebhooksService', () => {
           'dd/MM/yyyy',
         )} - ${format(endDate, 'dd/MM/yyyy')}`,
       );
-      expect(mailChimpSpy).toBeCalledTimes(2);
-      expect(emailCampaignRepositorySpy).toBeCalledTimes(2);
-      expect(emailCampaignRepositoryFindSpy).toBeCalledTimes(2);
+      expect(mailChimpSpy).toHaveBeenCalledTimes(2);
+      expect(emailCampaignRepositorySpy).toHaveBeenCalledTimes(2);
+      expect(emailCampaignRepositoryFindSpy).toHaveBeenCalledTimes(2);
     });
 
     it('if error occurs for sending email for one user, loop continues', async () => {
@@ -870,9 +870,9 @@ describe('WebhooksService', () => {
           'dd/MM/yyyy',
         )} - ${format(endDate, 'dd/MM/yyyy')}`,
       );
-      expect(mailChimpSpy).toBeCalledTimes(2);
-      expect(emailCampaignRepositorySpy).toBeCalledTimes(1);
-      expect(emailCampaignRepositoryFindSpy).toBeCalledTimes(2);
+      expect(mailChimpSpy).toHaveBeenCalledTimes(2);
+      expect(emailCampaignRepositorySpy).toHaveBeenCalled();
+      expect(emailCampaignRepositoryFindSpy).toHaveBeenCalledTimes(2);
     });
 
     it('if a user has already been sent an email, no second email is sent', async () => {
@@ -896,8 +896,8 @@ describe('WebhooksService', () => {
           'dd/MM/yyyy',
         )} - ${format(endDate, 'dd/MM/yyyy')}`,
       );
-      expect(emailCampaignRepositorySpy).toBeCalledTimes(1);
-      expect(emailCampaignRepositoryFindSpy).toBeCalledTimes(2);
+      expect(emailCampaignRepositorySpy).toHaveBeenCalled();
+      expect(emailCampaignRepositoryFindSpy).toHaveBeenCalledTimes(2);
     });
 
     it('if a user disabled service emails, no email is sent', async () => {
@@ -921,14 +921,14 @@ describe('WebhooksService', () => {
           'dd/MM/yyyy',
         )} - ${format(endDate, 'dd/MM/yyyy')}`,
       );
-      expect(emailCampaignRepositorySpy).toBeCalledTimes(0);
+      expect(emailCampaignRepositorySpy).not.toHaveBeenCalled();
     });
 
     it('if error occurs fetching users, error is thrown', async () => {
       jest.spyOn(mockedUserRepository, 'findBy').mockImplementationOnce(async () => {
         throw new Error('Failed to save');
       });
-      await expect(service.sendImpactMeasurementEmail()).rejects.toThrowError(
+      await expect(service.sendImpactMeasurementEmail()).rejects.toThrow(
         'SendImpactMeasurementEmail - Unable to fetch user',
       );
     });
@@ -960,7 +960,7 @@ describe('WebhooksService', () => {
         return null;
       });
 
-      await expect(service.createEventLog(eventDto)).rejects.toThrowError(
+      await expect(service.createEventLog(eventDto)).rejects.toThrow(
         `createEventLog webhook failed - no user attached to email a@b.com`,
       );
     });
@@ -974,7 +974,7 @@ describe('WebhooksService', () => {
         throw new Error('Unable to create event log error');
       });
 
-      await expect(service.createEventLog(eventDto)).rejects.toThrowError(
+      await expect(service.createEventLog(eventDto)).rejects.toThrow(
         `Unable to create event log error`,
       );
     });

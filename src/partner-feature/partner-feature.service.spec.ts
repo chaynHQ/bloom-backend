@@ -81,13 +81,13 @@ describe('PartnerFeatureService', () => {
       jest.spyOn(mockFeatureService, 'getFeature').mockImplementationOnce(() => {
         return undefined;
       });
-      await expect(service.createPartnerFeature(createPartnerFeatureDto)).rejects.toThrowError();
+      await expect(service.createPartnerFeature(createPartnerFeatureDto)).rejects.toThrow();
     });
     it('when supplied with incorrect partnerId should throw', async () => {
       jest.spyOn(mockPartnerService, 'getPartnerById').mockImplementationOnce(() => {
         return undefined;
       });
-      await expect(service.createPartnerFeature(createPartnerFeatureDto)).rejects.toThrowError();
+      await expect(service.createPartnerFeature(createPartnerFeatureDto)).rejects.toThrow();
     });
   });
   describe('getAutomaticAccessCodeFeatureForPartner', () => {
@@ -106,7 +106,7 @@ describe('PartnerFeatureService', () => {
     });
     it('when supplied with incorrect partner name, it should throw', async () => {
       jest.spyOn(mockPartnerService, 'getPartner').mockImplementationOnce(() => undefined);
-      await expect(service.getAutomaticAccessCodeFeatureForPartner('Badoo')).rejects.toThrowError(
+      await expect(service.getAutomaticAccessCodeFeatureForPartner('Badoo')).rejects.toThrow(
         'Unable to find partner with that name',
       );
     });
@@ -130,7 +130,7 @@ describe('PartnerFeatureService', () => {
 
       await expect(
         service.updatePartnerFeature('partnerFeatureId', { active: false }),
-      ).rejects.toThrowError('Error unable to update');
+      ).rejects.toThrow('Error unable to update');
     });
   });
 });
