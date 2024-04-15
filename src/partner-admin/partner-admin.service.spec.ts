@@ -81,7 +81,7 @@ describe('PartnerAdminService', () => {
       const response = await service.createPartnerAdminUser(dto);
       expect(response).toHaveProperty('partnerId', dto.partnerId);
       expect(response).toHaveProperty('userId', mockUserEntity.id);
-      expect(repoSpySave).toBeCalled();
+      expect(repoSpySave).toHaveBeenCalled();
     });
   });
   it('when supplied with an email that already exists, it should throw', async () => {

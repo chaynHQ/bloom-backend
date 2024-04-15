@@ -124,9 +124,9 @@ describe('UserService', () => {
       expect(user.user.email).toBe('user@email.com');
       expect(user.partnerAdmin).toBeUndefined();
       expect(user.partnerAccesses).toBe(undefined);
-      expect(repoSpyCreate).toBeCalledWith(createUserRepositoryDto);
-      expect(repoSpySave).toBeCalled();
-      expect(addCrispProfile).toBeCalledWith({
+      expect(repoSpyCreate).toHaveBeenCalledWith(createUserRepositoryDto);
+      expect(repoSpySave).toHaveBeenCalled();
+      expect(addCrispProfile).toHaveBeenCalledWith({
         email: user.user.email,
         person: { nickname: 'name' },
         segments: ['public'],
@@ -155,11 +155,11 @@ describe('UserService', () => {
         { ...partnerAccessData, therapySessions: therapySession },
       ]);
 
-      expect(repoSpyCreate).toBeCalledWith(createUserRepositoryDto);
-      expect(partnerAccessSpy).toBeCalled();
-      expect(repoSpySave).toBeCalled();
+      expect(repoSpyCreate).toHaveBeenCalledWith(createUserRepositoryDto);
+      expect(partnerAccessSpy).toHaveBeenCalled();
+      expect(repoSpySave).toHaveBeenCalled();
 
-      expect(addCrispProfile).toBeCalledWith({
+      expect(addCrispProfile).toHaveBeenCalledWith({
         email: user.user.email,
         person: { nickname: 'name' },
         segments: ['bumble'],
@@ -177,8 +177,8 @@ describe('UserService', () => {
       await expect(async () => {
         await service.createUser({ ...createUserDto, partnerAccessCode: '123456' });
       }).rejects.toThrow(PartnerAccessCodeStatusEnum.ALREADY_IN_USE);
-      expect(userRepoSpy).toBeCalledTimes(0);
-      expect(assignCodeSpy).toBeCalledTimes(0);
+      expect(userRepoSpy).not.toHaveBeenCalled();
+      expect(assignCodeSpy).not.toHaveBeenCalled();
     });
     // TODO - what do we want to happen here?
     it('when supplied with user dto and partner access that is incorrect, it should throw an error', async () => {
@@ -190,8 +190,8 @@ describe('UserService', () => {
         });
       await expect(
         service.createUser({ ...createUserDto, partnerAccessCode: 'incorrect code' }),
-      ).rejects.toThrowError('Access code invalid');
-      expect(userRepoSpy).toBeCalledTimes(0);
+      ).rejects.toThrow('Access code invalid');
+      expect(userRepoSpy).not.toHaveBeenCalled();
     });
 
     it('when supplied with user dto and partnerId but no partner access code, it should return a user with partner access', async () => {
@@ -250,8 +250,8 @@ describe('UserService', () => {
       expect(user.contactPermission).toBe(true);
       expect(user.serviceEmailsPermission).toBe(false);
 
-      expect(repoSpySave).toBeCalledWith({ ...mockUserEntity, ...updateUserDto });
-      expect(repoSpySave).toBeCalled();
+      expect(repoSpySave).toHaveBeenCalledWith({ ...mockUserEntity, ...updateUserDto });
+      expect(repoSpySave).toHaveBeenCalled();
     });
   });
 
@@ -274,7 +274,7 @@ describe('UserService', () => {
       expect(user.name).not.toBe(mockUserEntity.name);
       expect(user.email).not.toBe(mockUserEntity.email);
 
-      expect(repoSpySave).toBeCalled();
+      expect(repoSpySave).toHaveBeenCalled();
     });
   });
 

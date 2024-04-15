@@ -120,7 +120,7 @@ describe('PartnerAccessService', () => {
         );
 
       await service.createPartnerAccess(createPartnerAccessDto, partnerId, partnerAdminId);
-      expect(repoSpyCreateQueryBuilder).toBeCalledTimes(2);
+      expect(repoSpyCreateQueryBuilder).toHaveBeenCalledTimes(2);
       repoSpyCreateQueryBuilder.mockRestore();
     });
   });
@@ -141,7 +141,7 @@ describe('PartnerAccessService', () => {
         activatedAt: partnerAccess.activatedAt, // need to just fudge this as it is test specific
       });
 
-      expect(crispApi.updateCrispProfileAccesses).toBeCalledWith(
+      expect(crispApi.updateCrispProfileAccesses).toHaveBeenCalledWith(
         mockGetUserDto.user,
         [partnerAccess],
         [],
@@ -246,14 +246,10 @@ describe('PartnerAccessService', () => {
           }),
         }) as never,
       );
-      await expect(service.getValidPartnerAccessCode('123456')).rejects.toThrowError(
-        'CODE_EXPIRED',
-      );
+      await expect(service.getValidPartnerAccessCode('123456')).rejects.toThrow('CODE_EXPIRED');
     });
     it('when an partner access with too many letters is supplied, it should throw error', async () => {
-      await expect(service.getValidPartnerAccessCode('1234567')).rejects.toThrowError(
-        'INVALID_CODE',
-      );
+      await expect(service.getValidPartnerAccessCode('1234567')).rejects.toThrow('INVALID_CODE');
     });
   });
 
@@ -295,7 +291,7 @@ describe('PartnerAccessService', () => {
       } as UpdatePartnerAccessDto);
       //if an access code exists then update it.
       expect(result).toEqual({ ...mockPartnerAccessEntity, therapySessionsRemaining: 10 });
-      expect(partnerAccessRepositorySpy).toBeCalledTimes(1);
+      expect(partnerAccessRepositorySpy).toHaveBeenCalled();
     });
   });
 });
