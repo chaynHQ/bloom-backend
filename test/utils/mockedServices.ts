@@ -197,6 +197,9 @@ export const mockUserRepositoryMethodsFactory = {
       ...dto,
     };
   },
+  find: async () => {
+    return [mockUserEntity];
+  },
   findOneBy: ({ email: client_email }) => {
     return { ...mockUserEntity, ...(client_email ? { email: client_email } : {}) };
   },

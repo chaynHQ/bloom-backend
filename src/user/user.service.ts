@@ -11,7 +11,7 @@ import {
   CREATE_USER_INVALID_EMAIL,
   CREATE_USER_WEAK_PASSWORD,
 } from 'src/utils/errors';
-import { Repository } from 'typeorm';
+import { ILike, Repository } from 'typeorm';
 import {
   addCrispProfile,
   deleteCrispProfile,
@@ -407,46 +407,31 @@ export class UserService {
     fields: Array<string>,
     limit: number,
   ): Promise<GetUserDto[] | undefined> {
-    const query = this.userRepository.createQueryBuilder('user');
-    // TODO this needs some refactoring but deprioritised for now
-    if (relations.partnerAccess) {
-      query.leftJoinAndSelect('user.partnerAccess', 'partnerAccess');
-    }
+    const users = await this.userRepository.find({
+      relations: relations,
+      where: {
+        ...(filters.email && { email: ILike(filters.email) }),
+        ...(filters.partnerAccess && {
+          partnerAccess: {
+            ...(filters.partnerAccess.userId && { userId: filters.partnerAccess.userId }),
+            ...(typeof filters.partnerAccess.featureTherapy !== 'undefined' && {
+              featureTherapy: filters.partnerAccess.featureTherapy,
+            }),
+            ...(typeof filters.partnerAccess.active !== 'undefined' && {
+              active: filters.partnerAccess.active,
+            }),
+          },
+        }),
+        ...(filters.partnerAdmin && {
+          partnerAdmin: {
+            ...(filters.partnerAdmin && { id: filters.partnerAdmin.partnerAdminId }),
+          },
+        }),
+      },
+      ...(limit && { take: limit }),
+    });
 
-    if (relations.partnerAdmin) {
-      query.leftJoinAndSelect('user.partnerAdmin', 'partnerAdmin');
-    }
-
-    if (filters?.partnerAdmin?.partnerAdminId === 'IS NOT NULL') {
-      query.andWhere('partnerAdmin.partnerAdminId IS NOT NULL');
-    }
-
-    if (filters.partnerAccess?.userId === 'IS NOT NULL') {
-      query.andWhere('partnerAccess.userId IS NOT NULL');
-    }
-
-    if (filters.partnerAccess?.featureTherapy) {
-      query.andWhere('partnerAccess.featureTherapy = :featureTherapy', {
-        featureTherapy: filters.partnerAccess.featureTherapy,
-      });
-    }
-
-    if (filters.partnerAccess?.active) {
-      query.andWhere('partnerAccess.active = :active', {
-        active: filters.partnerAccess.active,
-      });
-    }
-
-    if (filters.email) {
-      query.andWhere('user.email ILike :email', { email: `%${filters.email}%` });
-    }
-
-    if (limit) {
-      query.limit(limit);
-    }
-
-    const queryResult = await query.getMany();
-    const formattedUsers = queryResult.map((user) => formatGetUsersObject(user));
+    const formattedUsers = users.map((user) => formatGetUsersObject(user));
     return formattedUsers;
   }
 }

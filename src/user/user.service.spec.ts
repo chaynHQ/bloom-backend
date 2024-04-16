@@ -293,11 +293,9 @@ describe('UserService', () => {
         eventLog,
         ...userBase
       } = mockUserEntity;
-      jest.spyOn(repo, 'createQueryBuilder').mockImplementationOnce(
-        createQueryBuilderMock({
-          getMany: jest.fn().mockResolvedValue([{ ...mockUserEntity, email: 'a@b.com' }]),
-        }) as never,
-      );
+      jest
+        .spyOn(repo, 'find')
+        .mockImplementationOnce(async () => [{ ...mockUserEntity, email: 'a@b.com' }]);
       const users = await service.getUsers({ email: 'a@b.com' }, {}, [], 10);
       expect(users).toEqual([{ user: { ...userBase, email: 'a@b.com' }, partnerAccesses: [] }]);
     });
