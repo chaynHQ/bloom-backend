@@ -410,7 +410,7 @@ export class UserService {
     const users = await this.userRepository.find({
       relations: relations,
       where: {
-        ...(filters.email && { email: ILike(filters.email) }),
+        ...(filters.email && { email: ILike(`%${filters.email}%`) }),
         ...(filters.partnerAccess && {
           partnerAccess: {
             ...(filters.partnerAccess.userId && { userId: filters.partnerAccess.userId }),
