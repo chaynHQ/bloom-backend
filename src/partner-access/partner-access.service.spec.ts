@@ -18,6 +18,7 @@ import {
 import { Repository } from 'typeorm';
 import { createQueryBuilderMock } from '../../test/utils/mockUtils';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
+import { PartnerAccessCodeStatusEnum } from '../utils/constants';
 import { CreatePartnerAccessDto } from './dtos/create-partner-access.dto';
 import { GetPartnerAccessesDto } from './dtos/get-partner-access.dto';
 import { UpdatePartnerAccessDto } from './dtos/update-partner-access.dto';
@@ -164,6 +165,30 @@ describe('PartnerAccessService', () => {
         userId: mockGetUserDto.user.id,
         activatedAt: partnerAccess.activatedAt, // need to just fudge this as it is test specific
       });
+    });
+    it('should return an error when partner access code has already been used by another user account', async () => {
+      const repoSpyCreateQueryBuilder = jest.spyOn(repo, 'createQueryBuilder');
+      repoSpyCreateQueryBuilder.mockImplementation(
+        createQueryBuilderMock({
+          getOne: jest.fn().mockResolvedValue({ id: '123456', userId: 'anotherUserId' }),
+        }) as never,
+      );
+
+      await expect(service.assignPartnerAccess(mockGetUserDto, '123456')).rejects.toThrow(
+        PartnerAccessCodeStatusEnum.ALREADY_IN_USE,
+      );
+    });
+    it('should return an error when partner access code has already been applied to the account', async () => {
+      const repoSpyCreateQueryBuilder = jest.spyOn(repo, 'createQueryBuilder');
+      repoSpyCreateQueryBuilder.mockImplementation(
+        createQueryBuilderMock({
+          getOne: jest.fn().mockResolvedValue({ id: '123456', userId: mockGetUserDto.user.id }),
+        }) as never,
+      );
+
+      await expect(service.assignPartnerAccess(mockGetUserDto, '123456')).rejects.toThrow(
+        PartnerAccessCodeStatusEnum.ALREADY_APPLIED,
+      );
     });
   });
 

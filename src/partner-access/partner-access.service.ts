@@ -63,7 +63,10 @@ export class PartnerAccessService {
       .getOne();
   }
 
-  async getValidPartnerAccessCode(partnerAccessCode: string): Promise<PartnerAccessEntity> {
+  async getValidPartnerAccessCode(
+    partnerAccessCode: string,
+    userId?: string,
+  ): Promise<PartnerAccessEntity> {
     const format = /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/;
 
     if (format.test(partnerAccessCode) || partnerAccessCode.length !== 6) {
@@ -77,7 +80,11 @@ export class PartnerAccessService {
     }
 
     if (partnerAccess.userId) {
-      throw new HttpException(PartnerAccessCodeStatusEnum.ALREADY_IN_USE, HttpStatus.CONFLICT);
+      if (userId && partnerAccess.userId === userId) {
+        throw new HttpException(PartnerAccessCodeStatusEnum.ALREADY_APPLIED, HttpStatus.CONFLICT);
+      } else {
+        throw new HttpException(PartnerAccessCodeStatusEnum.ALREADY_IN_USE, HttpStatus.CONFLICT);
+      }
     }
 
     // ensure the partner access code has been created no more than a year ago
@@ -180,7 +187,7 @@ export class PartnerAccessService {
     { user, partnerAccesses, courses }: GetUserDto,
     partnerAccessCode: string,
   ): Promise<PartnerAccessEntity> {
-    const partnerAccess = await this.getValidPartnerAccessCode(partnerAccessCode);
+    const partnerAccess = await this.getValidPartnerAccessCode(partnerAccessCode, user.id);
 
     partnerAccess.userId = user.id;
     partnerAccess.activatedAt = new Date();
