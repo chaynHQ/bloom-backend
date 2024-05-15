@@ -28,3 +28,6 @@ Stores relationship between a `User` and `Course` records, once a user has start
 
 **SessionUser**
 Stores relationship between a `User` and `Session` records, once a user has started a session. A users session progress (`completed`) for the session is updated (true) when the `/complete` endpoint is called.
+
+## Database Schema
+![Database schema](../database_schema.png)
