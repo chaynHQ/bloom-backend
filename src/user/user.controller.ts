@@ -47,22 +47,6 @@ export class UserController {
     return req['user'];
   }
 
-  /**
-   * This POST endpoint deviates from REST patterns.
-   * Please use `getUserByFirebaseId` above which is a GET endpoint.
-   * Do not delete this until frontend usage is migrated.
-   */
-  @ApiBearerAuth('access-token')
-  @ApiOperation({
-    description:
-      'Returns user profile data with their nested partner access, partner admin, course user and session user data.',
-  })
-  @Post('/me')
-  @UseGuards(FirebaseAuthGuard)
-  async getUserProfileByFirebaseId(@Req() req: Request): Promise<GetUserDto> {
-    return req['user'];
-  }
-
   // TODO - work out if this is used anywhere and delete if necessary
   @ApiBearerAuth()
   @Post('/delete')
