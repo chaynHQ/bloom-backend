@@ -5,22 +5,19 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { addCrispProfile } from 'src/api/crisp/crisp-api';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
-import { PartnerEntity } from 'src/entities/partner.entity';
 import { SubscriptionUserService } from 'src/subscription-user/subscription-user.service';
 import { TherapySessionService } from 'src/therapy-session/therapy-session.service';
-import { FEATURES, PartnerAccessCodeStatusEnum } from 'src/utils/constants';
+import { PartnerAccessCodeStatusEnum } from 'src/utils/constants';
 import {
-  mockFeatureEntity,
   mockIFirebaseUser,
   mockPartnerAccessEntity,
   mockPartnerEntity,
-  mockPartnerFeatureEntity,
   mockUserEntity,
   mockUserRecord,
 } from 'test/utils/mockData';
 import {
   mockAuthServiceMethods,
-  mockPartnerServiceMethods,
+  mockPartnerAccessRepositoryMethods,
   mockUserRepositoryMethodsFactory,
 } from 'test/utils/mockedServices';
 import { Repository } from 'typeorm';
@@ -28,7 +25,6 @@ import { createQueryBuilderMock } from '../../test/utils/mockUtils';
 import { AuthService } from '../auth/auth.service';
 import { UserEntity } from '../entities/user.entity';
 import { PartnerAccessService } from '../partner-access/partner-access.service';
-import { PartnerService } from '../partner/partner.service';
 import { CreateUserDto } from './dtos/create-user.dto';
 import { UpdateUserDto } from './dtos/update-user.dto';
 import { UserService } from './user.service';
@@ -44,6 +40,7 @@ const createUserDto: CreateUserDto = {
 
 const createUserRepositoryDto = {
   email: 'user@email.com',
+  password: 'password',
   name: 'name',
   contactPermission: false,
   serviceEmailsPermission: true,
@@ -57,16 +54,6 @@ const updateUserDto: UpdateUserDto = {
   serviceEmailsPermission: false,
 };
 
-const mockPartnerWithAutomaticAccessCodeFeature = {
-  ...mockPartnerEntity,
-  partnerFeature: [
-    {
-      ...mockPartnerFeatureEntity,
-      feature: { ...mockFeatureEntity, name: FEATURES.AUTOMATIC_ACCESS_CODE },
-    },
-  ],
-};
-
 const mockSubscriptionUserServiceMethods = {};
 const mockTherapySessionServiceMethods = {};
 
@@ -75,8 +62,6 @@ jest.mock('src/api/crisp/crisp-api');
 describe('UserService', () => {
   let service: UserService;
   let repo: Repository<UserEntity>;
-  let mockPartnerService: DeepMocked<PartnerService>;
-  let mockPartnerRepository: DeepMocked<Repository<PartnerEntity>>;
   let mockAuthService: DeepMocked<AuthService>;
   let mockPartnerAccessService: DeepMocked<PartnerAccessService>;
   let mockSubscriptionUserService: DeepMocked<SubscriptionUserService>;
@@ -85,9 +70,7 @@ describe('UserService', () => {
   beforeEach(async () => {
     jest.clearAllMocks();
     mockAuthService = createMock<AuthService>(mockAuthServiceMethods);
-    mockPartnerService = createMock<PartnerService>(mockPartnerServiceMethods);
     mockPartnerAccessService = createMock<PartnerAccessService>();
-    mockPartnerRepository = createMock<Repository<PartnerEntity>>();
     mockSubscriptionUserService = createMock<SubscriptionUserService>(
       mockSubscriptionUserServiceMethods,
     );
@@ -101,12 +84,8 @@ describe('UserService', () => {
           useFactory: jest.fn(() => mockUserRepositoryMethodsFactory),
         },
         {
-          provide: PartnerService,
-          useValue: mockPartnerService,
-        },
-        {
-          provide: getRepositoryToken(PartnerEntity),
-          useValue: mockPartnerRepository,
+          provide: getRepositoryToken(PartnerAccessEntity),
+          useFactory: jest.fn(() => mockPartnerAccessRepositoryMethods),
         },
         {
           provide: AuthService,
@@ -130,15 +109,13 @@ describe('UserService', () => {
   });
   describe('createUser', () => {
     it('when supplied with user dto and no partner access, it should return a public user', async () => {
-      const repoSpyCreate = jest.spyOn(repo, 'create');
       const repoSpySave = jest.spyOn(repo, 'save');
 
       const user = await service.createUser(createUserDto);
       expect(user.user.email).toBe('user@email.com');
-      expect(user.partnerAdmin).toBeUndefined();
-      expect(user.partnerAccesses).toBe(undefined);
-      expect(repoSpyCreate).toHaveBeenCalledWith(createUserRepositoryDto);
-      expect(repoSpySave).toHaveBeenCalled();
+      expect(user.partnerAdmin).toBeNull();
+      expect(user.partnerAccesses).toBeNull();
+      expect(repoSpySave).toHaveBeenCalledWith(createUserRepositoryDto);
       expect(addCrispProfile).toHaveBeenCalledWith({
         email: user.user.email,
         person: { nickname: 'name' },
@@ -149,11 +126,8 @@ describe('UserService', () => {
       const repoSpyCreate = jest.spyOn(repo, 'create');
       const repoSpySave = jest.spyOn(repo, 'save');
       const partnerAccessSpy = jest
-        .spyOn(mockPartnerAccessService, 'assignPartnerAccessOnSignup')
-        .mockResolvedValue({
-          ...mockPartnerAccessEntity,
-          partner: mockPartnerEntity,
-        } as PartnerAccessEntity);
+        .spyOn(mockPartnerAccessService, 'assignPartnerAccess')
+        .mockResolvedValue(mockPartnerAccessEntity as PartnerAccessEntity);
 
       const user = await service.createUser({
         ...createUserDto,
@@ -181,9 +155,9 @@ describe('UserService', () => {
 
     it('when supplied with user dto and partner access that has already been used, it should return an error', async () => {
       const userRepoSpy = jest.spyOn(repo, 'save');
-      const assignCodeSpy = jest.spyOn(mockPartnerAccessService, 'assignPartnerAccessOnSignup');
+      const assignCodeSpy = jest.spyOn(mockPartnerAccessService, 'assignPartnerAccess');
       jest
-        .spyOn(mockPartnerAccessService, 'getValidPartnerAccessCode')
+        .spyOn(mockPartnerAccessService, 'getPartnerAccessByCode')
         .mockImplementationOnce(async () => {
           throw new HttpException(PartnerAccessCodeStatusEnum.ALREADY_IN_USE, HttpStatus.CONFLICT);
         });
@@ -197,7 +171,7 @@ describe('UserService', () => {
     it('when supplied with user dto and partner access that is incorrect, it should throw an error', async () => {
       const userRepoSpy = jest.spyOn(repo, 'save');
       jest
-        .spyOn(mockPartnerAccessService, 'getValidPartnerAccessCode')
+        .spyOn(mockPartnerAccessService, 'getPartnerAccessByCode')
         .mockImplementationOnce(async () => {
           throw new Error('Access code invalid');
         });
@@ -209,14 +183,8 @@ describe('UserService', () => {
 
     it('when supplied with user dto and partnerId but no partner access code, it should return a user with partner access', async () => {
       jest
-        .spyOn(mockPartnerAccessService, 'createAndAssignPartnerAccess')
+        .spyOn(mockPartnerAccessService, 'createPartnerAccess')
         .mockResolvedValue(mockPartnerAccessEntity);
-
-      jest
-        .spyOn(mockPartnerService, 'getPartnerWithPartnerFeaturesById')
-        .mockImplementationOnce(
-          jest.fn().mockResolvedValue(mockPartnerWithAutomaticAccessCodeFeature),
-        );
 
       const user = await service.createUser({
         ...createUserDto,

@@ -55,26 +55,30 @@ export const formatPartnerAccessObjects = (partnerAccessObjects: PartnerAccessEn
       therapySessionsRemaining: partnerAccess.therapySessionsRemaining,
       therapySessionsRedeemed: partnerAccess.therapySessionsRedeemed,
       partner: partnerAccess.partner ? formatPartnerObject(partnerAccess.partner) : null,
-      therapySessions: partnerAccess.therapySession?.map((ts) => {
-        return {
-          id: ts.id,
-          action: ts.action,
-          clientTimezone: ts.clientTimezone,
-          serviceName: ts.serviceName,
-          serviceProviderName: ts.serviceProviderName,
-          serviceProviderEmail: ts.serviceProviderEmail,
-          startDateTime: ts.startDateTime,
-          endDateTime: ts.endDateTime,
-          cancelledAt: ts.cancelledAt,
-          rescheduledFrom: ts.rescheduledFrom,
-          completedAt: ts.completedAt,
-        };
-      }),
+      therapySessions:
+        partnerAccess.therapySession.length === 0
+          ? []
+          : partnerAccess.therapySession?.map((ts) => {
+              return {
+                id: ts.id,
+                action: ts.action,
+                clientTimezone: ts.clientTimezone,
+                serviceName: ts.serviceName,
+                serviceProviderName: ts.serviceProviderName,
+                serviceProviderEmail: ts.serviceProviderEmail,
+                startDateTime: ts.startDateTime,
+                endDateTime: ts.endDateTime,
+                cancelledAt: ts.cancelledAt,
+                rescheduledFrom: ts.rescheduledFrom,
+                completedAt: ts.completedAt,
+              };
+            }),
     };
   });
 };
 
 export const formatUserObject = (userObject: UserEntity): GetUserDto => {
+  console.log(userObject);
   return {
     user: {
       id: userObject.id,

@@ -92,7 +92,7 @@ export class PartnerAccessController {
   async validatePartnerAccessCode(
     @Body() { partnerAccessCode }: ValidatePartnerAccessCodeDto,
   ): Promise<PartnerAccessEntity> {
-    return this.partnerAccessService.getValidPartnerAccessCode(partnerAccessCode.toUpperCase());
+    return this.partnerAccessService.getPartnerAccessByCode(partnerAccessCode.toUpperCase());
   }
 
   @ApiBearerAuth('access-token')

@@ -8,7 +8,6 @@ import { GetUserDto } from 'src/user/dtos/get-user.dto';
 import {
   mockPartnerAccessEntity,
   mockPartnerAccessEntityBase,
-  mockPartnerEntity,
   mockUserEntity,
 } from 'test/utils/mockData';
 import {
@@ -192,43 +191,6 @@ describe('PartnerAccessService', () => {
     });
   });
 
-  describe('assignPartnerAccessOnSignUp', () => {
-    it('when partnerAccess is supplied, it should create a partner access and assign to user', async () => {
-      jest.spyOn(repo, 'createQueryBuilder').mockImplementationOnce(
-        createQueryBuilderMock({
-          getOne: jest.fn().mockResolvedValue(mockPartnerAccessEntity),
-        }) as never,
-      );
-      const partnerAccess = await service.assignPartnerAccessOnSignup(
-        mockPartnerAccessEntity,
-        mockGetUserDto.user.id,
-      );
-
-      expect(partnerAccess.partnerAdminId).toBeNull();
-      expect(partnerAccess.partnerAdmin).toBeNull();
-
-      expect(partnerAccess.userId).toBe(mockGetUserDto.user.id);
-      expect(partnerAccess.featureLiveChat).toBeTruthy();
-      expect(partnerAccess.featureTherapy).toBeTruthy();
-    });
-  });
-
-  describe('createAndAssignPartnerAccess', () => {
-    it('when partnerId is supplied, it should create a partner access and assign to user', async () => {
-      const partnerAccess = await service.createAndAssignPartnerAccess(
-        mockPartnerEntity,
-        mockGetUserDto.user.id,
-      );
-
-      expect(partnerAccess.partnerAdminId).toBeNull();
-      expect(partnerAccess.partnerAdmin).toBeNull();
-
-      expect(partnerAccess.userId).toBe(mockGetUserDto.user.id);
-      expect(partnerAccess.featureLiveChat).toBeTruthy();
-      expect(partnerAccess.featureTherapy).toBeFalsy();
-    });
-  });
-
   describe('getPartnerAccessCodes', () => {
     it('when no filter dto is supplied, it should return all partner accesses', async () => {
       const partnerAccesses = await service.getPartnerAccessCodes(undefined);
@@ -248,7 +210,7 @@ describe('PartnerAccessService', () => {
     });
   });
 
-  describe('getValidPartnerAccessCode', () => {
+  describe('getPartnerAccessByCode', () => {
     it('when a valid partner access is supplied, it should return partner access', async () => {
       jest.spyOn(repo, 'createQueryBuilder').mockImplementationOnce(
         createQueryBuilderMock({
@@ -256,7 +218,7 @@ describe('PartnerAccessService', () => {
           getOne: jest.fn().mockResolvedValue(mockPartnerAccessEntity),
         }) as never,
       );
-      const partnerAccess = await service.getValidPartnerAccessCode('123456');
+      const partnerAccess = await service.getPartnerAccessByCode('123456');
       expect(partnerAccess).toHaveProperty('accessCode', '123456');
     });
 
@@ -271,10 +233,10 @@ describe('PartnerAccessService', () => {
           }),
         }) as never,
       );
-      await expect(service.getValidPartnerAccessCode('123456')).rejects.toThrow('CODE_EXPIRED');
+      await expect(service.getPartnerAccessByCode('123456')).rejects.toThrow('CODE_EXPIRED');
     });
     it('when an partner access with too many letters is supplied, it should throw error', async () => {
-      await expect(service.getValidPartnerAccessCode('1234567')).rejects.toThrow('INVALID_CODE');
+      await expect(service.getPartnerAccessByCode('1234567')).rejects.toThrow('INVALID_CODE');
     });
   });
 

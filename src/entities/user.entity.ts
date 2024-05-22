@@ -25,10 +25,10 @@ export class UserEntity extends BaseBloomEntity {
   signUpLanguage: string;
 
   @Column({ default: false })
-  contactPermission: boolean; // marketing consent
+  contactPermission: boolean; // marketing consent - mapped to mailchimp marketing_permissions field
 
   @Column({ default: true })
-  serviceEmailsPermission: boolean; // service emails consent
+  serviceEmailsPermission: boolean; // service emails consent - mapped to mailchimp status field
 
   @Column({ type: Boolean, default: false })
   isSuperAdmin: boolean;
