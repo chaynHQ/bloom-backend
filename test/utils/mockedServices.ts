@@ -55,9 +55,6 @@ export const mockPartnerServiceMethods = {
   getPartnerById: async (arg): Promise<PartnerEntity> => {
     return { ...mockPartnerEntity, id: arg };
   },
-  getPartnerWithPartnerFeaturesById: async (arg): Promise<PartnerEntity> => {
-    return { ...mockPartnerEntity, id: arg };
-  },
   getPartnerWithPartnerFeaturesByName: async (arg): Promise<PartnerEntity> => {
     return { ...mockPartnerEntity, name: arg };
   },
@@ -160,12 +157,6 @@ export const mockTherapySessionRepositoryMethods: PartialFuncReturn<
 
 export const mockUserRepositoryMethods: PartialFuncReturn<Repository<UserEntity>> = {
   createQueryBuilder: createQueryBuilderMock(),
-  create: (dto: CreateUserDto) => {
-    return {
-      ...mockUserEntity,
-      ...dto,
-    } as UserEntity;
-  },
   findOneBy: async (arg) => {
     return { ...mockUserEntity, ...(arg ? { ...arg } : {}) } as UserEntity;
   },

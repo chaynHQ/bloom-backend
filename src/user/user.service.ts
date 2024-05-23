@@ -2,6 +2,7 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { createCrispProfileData } from 'src/api/crisp/utils/createCrispProfileData';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
+import { PartnerEntity } from 'src/entities/partner.entity';
 import { UserEntity } from 'src/entities/user.entity';
 import { IFirebaseUser } from 'src/firebase/firebase-user.interface';
 import { Logger } from 'src/logger/logger';
@@ -36,6 +37,8 @@ export class UserService {
     private userRepository: Repository<UserEntity>,
     @InjectRepository(PartnerAccessEntity)
     private partnerAccessRepository: Repository<PartnerAccessEntity>,
+    @InjectRepository(PartnerEntity)
+    private partnerRepository: Repository<PartnerEntity>,
     private readonly authService: AuthService,
     private readonly subscriptionUserService: SubscriptionUserService,
     private readonly therapySessionService: TherapySessionService,
@@ -44,19 +47,21 @@ export class UserService {
 
   public async createUser(createUserDto: CreateUserDto): Promise<GetUserDto> {
     const { email, partnerAccessCode, partnerId, password } = createUserDto;
-    const signUpType =
-      partnerAccessCode || partnerId
-        ? partnerAccessCode
-          ? SIGNUP_TYPE.PARTNER_USER_WITH_CODE
-          : SIGNUP_TYPE.PARTNER_USER_WITHOUT_CODE
+
+    const signUpType = partnerAccessCode
+      ? SIGNUP_TYPE.PARTNER_USER_WITH_CODE
+      : partnerId
+        ? SIGNUP_TYPE.PARTNER_USER_WITHOUT_CODE
         : SIGNUP_TYPE.PUBLIC_USER;
 
     let partnerAccess: PartnerAccessEntity | null;
+    const partner = await this.partnerRepository.findOneBy({ id: partnerId });
 
     try {
       if (signUpType === SIGNUP_TYPE.PARTNER_USER_WITHOUT_CODE) {
         await this.partnerAccessService.validatePartnerAutomaticAccessCode(partnerId);
       }
+
       if (signUpType === SIGNUP_TYPE.PARTNER_USER_WITH_CODE) {
         partnerAccess = await this.partnerAccessService.getPartnerAccessByCode(partnerAccessCode);
       }
@@ -68,6 +73,7 @@ export class UserService {
       });
 
       if (signUpType === SIGNUP_TYPE.PARTNER_USER_WITHOUT_CODE) {
+        // Create and assign new partner access without code
         partnerAccess = await this.partnerAccessService.createPartnerAccess(
           basePartnerAccess,
           partnerId,
@@ -76,6 +82,7 @@ export class UserService {
         );
         this.logger.log(`Create user: (no access code) created partner user in db. User: ${email}`);
       } else if (signUpType === SIGNUP_TYPE.PARTNER_USER_WITH_CODE) {
+        // Assign the existing partner access to new user
         partnerAccess.userId = user.id;
         partnerAccess = await this.partnerAccessRepository.save(partnerAccess);
         this.logger.log(
@@ -85,24 +92,32 @@ export class UserService {
         this.logger.log(`Create user: created public user in db. User: ${email}`);
       }
 
+      // Create profiles for external services
+      if (partnerAccess) partnerAccess.partner = partner;
+
       await addCrispProfile({
         email: user.email,
         person: { nickname: user.name },
-        segments: [SIGNUP_TYPE.PUBLIC_USER ? 'public' : partnerAccess.partner.name.toLowerCase()],
+        segments: [
+          signUpType === SIGNUP_TYPE.PUBLIC_USER
+            ? 'public'
+            : partnerAccess.partner.name.toLowerCase(),
+        ],
       });
 
       this.logger.log(`Create user: added crisp profile: ${email}`);
 
       await updateCrispProfileData(
-        createCrispProfileData(user, SIGNUP_TYPE.PUBLIC_USER ? [] : [partnerAccess]),
+        createCrispProfileData(user, signUpType === SIGNUP_TYPE.PUBLIC_USER ? [] : [partnerAccess]),
         user.email,
       );
       this.logger.log(`Create user: updated crisp profile ${email}`);
 
-      return formatUserObject({
+      const userDto = formatUserObject({
         ...user,
         ...(partnerAccess && { partnerAccess: [partnerAccess] }),
       });
+      return userDto;
     } catch (error) {
       this.logger.error(`Create user: Error creating user ${email}: ${error}`);
       throw error;
@@ -295,7 +310,7 @@ export class UserService {
       ...(limit && { take: limit }),
     });
 
-    const formattedUsers = users.map((user) => formatGetUsersObject(user));
-    return formattedUsers;
+    const usersDto = users.map((user) => formatGetUsersObject(user));
+    return usersDto;
   }
 }

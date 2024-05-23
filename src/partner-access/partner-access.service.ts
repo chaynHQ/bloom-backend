@@ -51,8 +51,11 @@ export class PartnerAccessService {
   private async generateAccessCode(length: number): Promise<string> {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUFWXYZ1234567890';
     const accessCode = _.sampleSize(chars, length || 6).join('');
-    if (await this.partnerAccessRepository.findOneBy({ accessCode })) {
-      this.generateAccessCode(6);
+
+    const existingPartnerAccess = await this.partnerAccessRepository.findOneBy({ accessCode });
+
+    if (existingPartnerAccess) {
+      await this.generateAccessCode(6);
     }
     return accessCode;
   }
@@ -72,7 +75,7 @@ export class PartnerAccessService {
       relations: { partner: true },
     });
 
-    if (partnerAccess === undefined) {
+    if (!partnerAccess) {
       throw new HttpException(PartnerAccessCodeStatusEnum.DOES_NOT_EXIST, HttpStatus.BAD_REQUEST);
     }
 
@@ -176,12 +179,10 @@ export class PartnerAccessService {
     partnerAccessCode: string,
   ): Promise<PartnerAccessEntity> {
     const partnerAccess = await this.getPartnerAccessByCode(partnerAccessCode, user.id);
+    const assignedPartnerAccess = { ...partnerAccess, userId: user.id, activatedAt: new Date() };
+    await this.partnerAccessRepository.save(assignedPartnerAccess);
 
-    partnerAccess.userId = user.id;
-    partnerAccess.activatedAt = new Date();
-    partnerAccesses.push(partnerAccess);
-
-    await this.partnerAccessRepository.save(partnerAccess);
+    partnerAccesses.push(assignedPartnerAccess);
     try {
       await updateCrispProfileAccesses(user, partnerAccesses, courses);
     } catch (error) {
@@ -191,7 +192,7 @@ export class PartnerAccessService {
       );
     }
 
-    return partnerAccess;
+    return assignedPartnerAccess;
   }
 
   public async deleteCypressTestAccessCodes(): Promise<void> {

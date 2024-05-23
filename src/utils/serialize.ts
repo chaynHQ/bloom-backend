@@ -78,7 +78,6 @@ export const formatPartnerAccessObjects = (partnerAccessObjects: PartnerAccessEn
 };
 
 export const formatUserObject = (userObject: UserEntity): GetUserDto => {
-  console.log(userObject);
   return {
     user: {
       id: userObject.id,

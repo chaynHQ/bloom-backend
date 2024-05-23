@@ -5,6 +5,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { addCrispProfile } from 'src/api/crisp/crisp-api';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
+import { PartnerEntity } from 'src/entities/partner.entity';
 import { SubscriptionUserService } from 'src/subscription-user/subscription-user.service';
 import { TherapySessionService } from 'src/therapy-session/therapy-session.service';
 import { PartnerAccessCodeStatusEnum } from 'src/utils/constants';
@@ -18,6 +19,7 @@ import {
 import {
   mockAuthServiceMethods,
   mockPartnerAccessRepositoryMethods,
+  mockPartnerRepositoryMethods,
   mockUserRepositoryMethodsFactory,
 } from 'test/utils/mockedServices';
 import { Repository } from 'typeorm';
@@ -84,6 +86,10 @@ describe('UserService', () => {
           useFactory: jest.fn(() => mockUserRepositoryMethodsFactory),
         },
         {
+          provide: getRepositoryToken(PartnerEntity),
+          useFactory: jest.fn(() => mockPartnerRepositoryMethods),
+        },
+        {
           provide: getRepositoryToken(PartnerAccessEntity),
           useFactory: jest.fn(() => mockPartnerAccessRepositoryMethods),
         },
@@ -109,30 +115,32 @@ describe('UserService', () => {
   });
   describe('createUser', () => {
     it('when supplied with user dto and no partner access, it should return a public user', async () => {
-      const repoSpySave = jest.spyOn(repo, 'save');
+      const repoSaveSpy = jest.spyOn(repo, 'save');
 
       const user = await service.createUser(createUserDto);
       expect(user.user.email).toBe('user@email.com');
       expect(user.partnerAdmin).toBeNull();
       expect(user.partnerAccesses).toBeNull();
-      expect(repoSpySave).toHaveBeenCalledWith(createUserRepositoryDto);
+      expect(repoSaveSpy).toHaveBeenCalledWith(createUserRepositoryDto);
       expect(addCrispProfile).toHaveBeenCalledWith({
         email: user.user.email,
         person: { nickname: 'name' },
         segments: ['public'],
       });
     });
-    it('when supplied with user dto and partner access, it should return a new partner user', async () => {
-      const repoSpyCreate = jest.spyOn(repo, 'create');
-      const repoSpySave = jest.spyOn(repo, 'save');
-      const partnerAccessSpy = jest
-        .spyOn(mockPartnerAccessService, 'assignPartnerAccess')
-        .mockResolvedValue(mockPartnerAccessEntity as PartnerAccessEntity);
+    it('when supplied with user dto and partner access code, it should return a new partner user', async () => {
+      const repoSaveSpy = jest.spyOn(repo, 'save');
+      jest
+        .spyOn(mockPartnerAccessService, 'getPartnerAccessByCode')
+        .mockImplementationOnce(async () => mockPartnerAccessEntity);
 
       const user = await service.createUser({
         ...createUserDto,
         partnerAccessCode: mockPartnerAccessEntity.accessCode,
       });
+
+      expect(repoSaveSpy).toHaveBeenCalled();
+
       expect(user.user.email).toBe('user@email.com');
       expect(user.partnerAdmin).toBeNull();
 
@@ -141,10 +149,6 @@ describe('UserService', () => {
       expect(user.partnerAccesses).toEqual([
         { ...partnerAccessData, therapySessions: therapySession },
       ]);
-
-      expect(repoSpyCreate).toHaveBeenCalledWith(createUserRepositoryDto);
-      expect(partnerAccessSpy).toHaveBeenCalled();
-      expect(repoSpySave).toHaveBeenCalled();
 
       expect(addCrispProfile).toHaveBeenCalledWith({
         email: user.user.email,
@@ -223,7 +227,7 @@ describe('UserService', () => {
 
   describe('updateUser', () => {
     it('when supplied a firebase user dto, it should return a user', async () => {
-      const repoSpySave = jest.spyOn(repo, 'save');
+      const repoSaveSpy = jest.spyOn(repo, 'save');
 
       const user = await service.updateUser(updateUserDto, { user: mockUserEntity });
       expect(user.name).toBe('new name');
@@ -231,8 +235,8 @@ describe('UserService', () => {
       expect(user.contactPermission).toBe(true);
       expect(user.serviceEmailsPermission).toBe(false);
 
-      expect(repoSpySave).toHaveBeenCalledWith({ ...mockUserEntity, ...updateUserDto });
-      expect(repoSpySave).toHaveBeenCalled();
+      expect(repoSaveSpy).toHaveBeenCalledWith({ ...mockUserEntity, ...updateUserDto });
+      expect(repoSaveSpy).toHaveBeenCalled();
     });
   });
 

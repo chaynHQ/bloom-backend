@@ -92,9 +92,12 @@ describe('PartnerAccessService', () => {
         accessCode: '123456',
       };
 
+      const repoFindOneBySpy = jest.spyOn(repo, 'findOneBy');
+      repoFindOneBySpy.mockResolvedValueOnce(null);
+
       const partnerAccessRepositorySpy = jest
         .spyOn(mockPartnerAccessRepository, 'save')
-        .mockImplementationOnce(jest.fn().mockResolvedValue(expectedPartnerAccess)) as never;
+        .mockResolvedValueOnce(expectedPartnerAccess);
 
       const { ...newPartnerAccess } = await service.createPartnerAccess(
         partnerAccessDto,
@@ -104,41 +107,43 @@ describe('PartnerAccessService', () => {
       expect(newPartnerAccess).toStrictEqual(expectedPartnerAccess);
       expect(newPartnerAccess.accessCode).toHaveLength(6);
       expect(partnerAccessRepositorySpy).toHaveBeenCalled();
+      repoFindOneBySpy.mockRestore();
+      partnerAccessRepositorySpy.mockRestore();
     });
 
     it('tries again when it creates a code that already exists', async () => {
-      const repoSpyCreateQueryBuilder = jest.spyOn(repo, 'createQueryBuilder');
       // Mocks that the accesscode already exists
-      repoSpyCreateQueryBuilder
-        .mockImplementation(
-          createQueryBuilderMock() as never, // TODO resolve this typescript issue
-        )
-        .mockImplementationOnce(
-          createQueryBuilderMock({
-            getOne: jest.fn().mockResolvedValue({ id: 'accessCodeId' }),
-          }) as never,
-        );
+      const repoFindOneBySpy = jest.spyOn(repo, 'findOneBy');
+      repoFindOneBySpy.mockResolvedValueOnce(mockPartnerAccessEntity).mockResolvedValue(null);
 
-      await service.createPartnerAccess(createPartnerAccessDto, partnerId, partnerAdminId);
-      expect(repoSpyCreateQueryBuilder).toHaveBeenCalledTimes(2);
-      repoSpyCreateQueryBuilder.mockRestore();
+      const partnerAccessDto = { ...mockPartnerAccessEntityBase, ...createPartnerAccessDto };
+
+      await service.createPartnerAccess(partnerAccessDto, partnerId, partnerAdminId);
+      expect(repoFindOneBySpy).toHaveBeenCalledTimes(2);
+      repoFindOneBySpy.mockRestore();
     });
   });
 
   describe('assignPartnerAccess', () => {
     it('should update crisp profile and assign partner access', async () => {
-      const repoSpyCreateQueryBuilder = jest.spyOn(repo, 'createQueryBuilder');
+      // Mocks save so same
+      jest.spyOn(repo, 'save').mockImplementationOnce(async () => {
+        return {
+          ...mockPartnerAccessEntity,
+          id: '123456',
+          userId: mockGetUserDto.user.id,
+        };
+      });
       // Mocks that the accesscode already exists
-      repoSpyCreateQueryBuilder.mockImplementation(
-        createQueryBuilderMock({ getOne: jest.fn().mockResolvedValue({ id: '123456' }) }) as never, // TODO resolve this typescript issue
-      );
+      jest.spyOn(repo, 'findOne').mockResolvedValueOnce(mockPartnerAccessEntity);
 
       const partnerAccess = await service.assignPartnerAccess(mockGetUserDto, '123456');
 
       expect(partnerAccess).toEqual({
-        id: '123456',
+        ...mockPartnerAccessEntity,
+        id: 'pa1',
         userId: mockGetUserDto.user.id,
-        activatedAt: partnerAccess.activatedAt, // need to just fudge this as it is test specific
+        activatedAt: partnerAccess.activatedAt,
       });
 
       expect(crispApi.updateCrispProfileAccesses).toHaveBeenCalledWith(
@@ -147,12 +152,11 @@ describe('PartnerAccessService', () => {
         [],
       );
     });
+
     it('should assign partner access even if crisp profile api fails', async () => {
-      const repoSpyCreateQueryBuilder = jest.spyOn(repo, 'createQueryBuilder');
       // Mocks that the accesscode already exists
-      repoSpyCreateQueryBuilder.mockImplementation(
-        createQueryBuilderMock({ getOne: jest.fn().mockResolvedValue({ id: '123456' }) }) as never, // TODO resolve this typescript issue
-      );
+      jest.spyOn(repo, 'findOne').mockResolvedValueOnce(mockPartnerAccessEntity);
+
       jest.spyOn(crispApi, 'updateCrispProfileAccesses').mockImplementationOnce(async () => {
         throw new Error('Test throw');
       });
@@ -160,30 +164,30 @@ describe('PartnerAccessService', () => {
       const partnerAccess = await service.assignPartnerAccess(mockGetUserDto, '123456');
 
       expect(partnerAccess).toEqual({
-        id: '123456',
+        ...mockPartnerAccessEntity,
         userId: mockGetUserDto.user.id,
-        activatedAt: partnerAccess.activatedAt, // need to just fudge this as it is test specific
+        activatedAt: partnerAccess.activatedAt,
       });
     });
+
     it('should return an error when partner access code has already been used by another user account', async () => {
-      const repoSpyCreateQueryBuilder = jest.spyOn(repo, 'createQueryBuilder');
-      repoSpyCreateQueryBuilder.mockImplementation(
-        createQueryBuilderMock({
-          getOne: jest.fn().mockResolvedValue({ id: '123456', userId: 'anotherUserId' }),
-        }) as never,
-      );
+      jest.spyOn(repo, 'findOne').mockResolvedValueOnce({
+        ...mockPartnerAccessEntity,
+        id: '123456',
+        userId: 'anotherUserId',
+      });
 
       await expect(service.assignPartnerAccess(mockGetUserDto, '123456')).rejects.toThrow(
         PartnerAccessCodeStatusEnum.ALREADY_IN_USE,
       );
     });
+
     it('should return an error when partner access code has already been applied to the account', async () => {
-      const repoSpyCreateQueryBuilder = jest.spyOn(repo, 'createQueryBuilder');
-      repoSpyCreateQueryBuilder.mockImplementation(
-        createQueryBuilderMock({
-          getOne: jest.fn().mockResolvedValue({ id: '123456', userId: mockGetUserDto.user.id }),
-        }) as never,
-      );
+      jest.spyOn(repo, 'findOne').mockResolvedValueOnce({
+        ...mockPartnerAccessEntity,
+        id: '123456',
+        userId: mockGetUserDto.user.id,
+      });
 
       await expect(service.assignPartnerAccess(mockGetUserDto, '123456')).rejects.toThrow(
         PartnerAccessCodeStatusEnum.ALREADY_APPLIED,
@@ -196,6 +200,7 @@ describe('PartnerAccessService', () => {
       const partnerAccesses = await service.getPartnerAccessCodes(undefined);
       expect(partnerAccesses.length).toBeGreaterThan(0);
     });
+
     it('when a accessCode filter is supplied, it should return all matching accessCodes', async () => {
       jest
         .spyOn(repo, 'find')
@@ -212,29 +217,20 @@ describe('PartnerAccessService', () => {
 
   describe('getPartnerAccessByCode', () => {
     it('when a valid partner access is supplied, it should return partner access', async () => {
-      jest.spyOn(repo, 'createQueryBuilder').mockImplementationOnce(
-        createQueryBuilderMock({
-          leftJoinAndSelect: jest.fn().mockReturnThis(),
-          getOne: jest.fn().mockResolvedValue(mockPartnerAccessEntity),
-        }) as never,
-      );
+      jest.spyOn(repo, 'findOne').mockResolvedValueOnce(mockPartnerAccessEntity);
       const partnerAccess = await service.getPartnerAccessByCode('123456');
       expect(partnerAccess).toHaveProperty('accessCode', '123456');
     });
 
     it('when a valid partner access is supplied, but it was created over a year ago, it should throw error', async () => {
-      jest.spyOn(repo, 'createQueryBuilder').mockImplementationOnce(
-        createQueryBuilderMock({
-          leftJoinAndSelect: jest.fn().mockReturnThis(),
+      jest.spyOn(repo, 'findOne').mockResolvedValueOnce({
+        ...mockPartnerAccessEntity,
+        createdAt: sub(new Date(), { years: 1, days: 1 }),
+      });
 
-          getOne: jest.fn().mockResolvedValue({
-            ...mockPartnerAccessEntity,
-            createdAt: sub(new Date(), { years: 1, days: 1 }),
-          }),
-        }) as never,
-      );
       await expect(service.getPartnerAccessByCode('123456')).rejects.toThrow('CODE_EXPIRED');
     });
+
     it('when an partner access with too many letters is supplied, it should throw error', async () => {
       await expect(service.getPartnerAccessByCode('1234567')).rejects.toThrow('INVALID_CODE');
     });
