@@ -1,6 +1,5 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { createCrispProfileData } from 'src/api/crisp/utils/createCrispProfileData';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { PartnerEntity } from 'src/entities/partner.entity';
 import { UserEntity } from 'src/entities/user.entity';
@@ -8,12 +7,10 @@ import { IFirebaseUser } from 'src/firebase/firebase-user.interface';
 import { Logger } from 'src/logger/logger';
 import { SubscriptionUserService } from 'src/subscription-user/subscription-user.service';
 import { TherapySessionService } from 'src/therapy-session/therapy-session.service';
+import { SIGNUP_TYPE } from 'src/utils/constants';
+import { createServicesProfiles } from 'src/utils/profileData';
 import { ILike, Repository } from 'typeorm';
-import {
-  addCrispProfile,
-  deleteCypressCrispProfiles,
-  updateCrispProfileData,
-} from '../api/crisp/crisp-api';
+import { deleteCypressCrispProfiles } from '../api/crisp/crisp-api';
 import { AuthService } from '../auth/auth.service';
 import { PartnerAccessService, basePartnerAccess } from '../partner-access/partner-access.service';
 import { formatGetUsersObject, formatUserObject } from '../utils/serialize';
@@ -21,12 +18,6 @@ import { generateRandomString } from '../utils/utils';
 import { CreateUserDto } from './dtos/create-user.dto';
 import { GetUserDto } from './dtos/get-user.dto';
 import { UpdateUserDto } from './dtos/update-user.dto';
-
-enum SIGNUP_TYPE {
-  PUBLIC_USER = 'PUBLIC_USER',
-  PARTNER_USER_WITH_CODE = 'PARTNER_USER_WITH_CODE',
-  PARTNER_USER_WITHOUT_CODE = 'PARTNER_USER_WITHOUT_CODE',
-}
 
 @Injectable()
 export class UserService {
@@ -61,7 +52,6 @@ export class UserService {
       if (signUpType === SIGNUP_TYPE.PARTNER_USER_WITHOUT_CODE) {
         await this.partnerAccessService.validatePartnerAutomaticAccessCode(partnerId);
       }
-
       if (signUpType === SIGNUP_TYPE.PARTNER_USER_WITH_CODE) {
         partnerAccess = await this.partnerAccessService.getPartnerAccessByCode(partnerAccessCode);
       }
@@ -93,24 +83,7 @@ export class UserService {
       }
 
       // Create profiles for external services
-      if (partnerAccess) partnerAccess.partner = partner;
-
-      await addCrispProfile({
-        email: user.email,
-        person: { nickname: user.name },
-        segments: [
-          signUpType === SIGNUP_TYPE.PUBLIC_USER
-            ? 'public'
-            : partnerAccess.partner.name.toLowerCase(),
-        ],
-      });
-
-      this.logger.log(`Create user: added crisp profile: ${email}`);
-
-      await updateCrispProfileData(
-        createCrispProfileData(user, signUpType === SIGNUP_TYPE.PUBLIC_USER ? [] : [partnerAccess]),
-        user.email,
-      );
+      createServicesProfiles(user, partner, partnerAccess);
       this.logger.log(`Create user: updated crisp profile ${email}`);
 
       const userDto = formatUserObject({
@@ -124,7 +97,10 @@ export class UserService {
     }
   }
 
-  public async getUserByFirebaseId({ uid }: IFirebaseUser): Promise<GetUserDto | undefined> {
+  public async getUserByFirebaseId({ uid }: IFirebaseUser): Promise<{
+    userEntity: UserEntity | undefined;
+    userDto: GetUserDto | undefined;
+  }> {
     const queryResult = await this.userRepository
       .createQueryBuilder('user')
       .leftJoinAndSelect('user.partnerAccess', 'partnerAccess')
@@ -146,7 +122,7 @@ export class UserService {
       throw new HttpException('USER NOT FOUND', HttpStatus.NOT_FOUND);
     }
 
-    return formatUserObject(queryResult);
+    return { userEntity: queryResult, userDto: formatUserObject(queryResult) };
   }
 
   public async getUserById(id: string): Promise<UserEntity | undefined> {

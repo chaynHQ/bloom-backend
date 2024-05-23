@@ -113,6 +113,7 @@ describe('UserService', () => {
   it('should be defined', () => {
     expect(service).toBeDefined();
   });
+
   describe('createUser', () => {
     it('when supplied with user dto and no partner access, it should return a public user', async () => {
       const repoSaveSpy = jest.spyOn(repo, 'save');
@@ -128,6 +129,7 @@ describe('UserService', () => {
         segments: ['public'],
       });
     });
+
     it('when supplied with user dto and partner access code, it should return a new partner user', async () => {
       const repoSaveSpy = jest.spyOn(repo, 'save');
       jest
@@ -171,6 +173,7 @@ describe('UserService', () => {
       expect(userRepoSpy).not.toHaveBeenCalled();
       expect(assignCodeSpy).not.toHaveBeenCalled();
     });
+
     // TODO - what do we want to happen here?
     it('when supplied with user dto and partner access that is incorrect, it should throw an error', async () => {
       const userRepoSpy = jest.spyOn(repo, 'save');

@@ -3,11 +3,11 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { isBefore, sub } from 'date-fns';
 import _ from 'lodash';
 import { PartnerEntity } from 'src/entities/partner.entity';
+import { UserEntity } from 'src/entities/user.entity';
 import { Logger } from 'src/logger/logger';
 import { Repository } from 'typeorm';
 import { updateCrispProfileAccesses } from '../api/crisp/crisp-api';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
-import { GetUserDto } from '../user/dtos/get-user.dto';
 import { FEATURES, PartnerAccessCodeStatusEnum } from '../utils/constants';
 import { CreatePartnerAccessDto } from './dtos/create-partner-access.dto';
 import { GetPartnerAccessesDto } from './dtos/get-partner-access.dto';
@@ -175,16 +175,18 @@ export class PartnerAccessService {
   }
 
   async assignPartnerAccess(
-    { user, partnerAccesses, courses }: GetUserDto,
+    user: UserEntity,
     partnerAccessCode: string,
   ): Promise<PartnerAccessEntity> {
     const partnerAccess = await this.getPartnerAccessByCode(partnerAccessCode, user.id);
-    const assignedPartnerAccess = { ...partnerAccess, userId: user.id, activatedAt: new Date() };
-    await this.partnerAccessRepository.save(assignedPartnerAccess);
+    const assignedPartnerAccess = await this.partnerAccessRepository.save({
+      ...partnerAccess,
+      userId: user.id,
+      activatedAt: new Date(),
+    });
 
-    partnerAccesses.push(assignedPartnerAccess);
     try {
-      await updateCrispProfileAccesses(user, partnerAccesses, courses);
+      await updateCrispProfileAccesses(user, [...user.partnerAccess, assignedPartnerAccess]);
     } catch (error) {
       this.logger.error(
         `Error: Unable to update crisp profile for ${user.email}. Error: ${error.message} `,

@@ -1,6 +1,12 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
+export enum SIGNUP_TYPE {
+  PUBLIC_USER = 'PUBLIC_USER',
+  PARTNER_USER_WITH_CODE = 'PARTNER_USER_WITH_CODE',
+  PARTNER_USER_WITHOUT_CODE = 'PARTNER_USER_WITHOUT_CODE',
+}
+
 export enum FEATURES {
   AUTOMATIC_ACCESS_CODE = 'AUTOMATIC_ACCESS_CODE',
 }
@@ -120,6 +126,10 @@ export const respondIoDeleteContactWebhook = getEnv(
 );
 
 export const mailchimpApiKey = getEnv(process.env.MAILCHIMP_API_KEY, 'MAILCHIMP_API_KEY');
+export const mailchimpAudienceId = getEnv(
+  process.env.MAILCHIMP_AUDIENCE_ID,
+  'MAILCHIMP_AUDIENCE_ID',
+);
 export const mailchimpServerPrefix = getEnv(
   process.env.MAILCHIMP_SERVER_PREFIX,
   'MAILCHIMP_SERVER_PREFIX',

@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import _ from 'lodash';
 import { UserEntity } from 'src/entities/user.entity';
 import { Repository } from 'typeorm';
-import { updateCrispProfileCourse, updateCrispProfileSession } from '../api/crisp/crisp-api';
+import { updateCrispProfileCourse } from '../api/crisp/crisp-api';
 import { CourseUserService } from '../course-user/course-user.service';
 import { CourseService } from '../course/course.service';
 import { CourseUserEntity } from '../entities/course-user.entity';
@@ -13,7 +13,7 @@ import { Logger } from '../logger/logger';
 import { SessionService } from '../session/session.service';
 import { GetUserDto } from '../user/dtos/get-user.dto';
 import { UserService } from '../user/user.service';
-import { PROGRESS_STATUS, STORYBLOK_STORY_STATUS_ENUM } from '../utils/constants';
+import { STORYBLOK_STORY_STATUS_ENUM } from '../utils/constants';
 import { formatCourseUserObject, formatCourseUserObjects } from '../utils/serialize';
 import { SessionUserDto } from './dtos/session-user.dto';
 import { UpdateSessionUserDto } from './dtos/update-session-user.dto';
@@ -25,6 +25,8 @@ export class SessionUserService {
   constructor(
     @InjectRepository(SessionUserEntity)
     private sessionUserRepository: Repository<SessionUserEntity>,
+    @InjectRepository(CourseEntity)
+    private courseRepository: Repository<CourseEntity>,
     @InjectRepository(UserEntity) private userRepository: Repository<UserEntity>,
     private readonly courseUserService: CourseUserService,
     private readonly userService: UserService,
@@ -35,7 +37,6 @@ export class SessionUserService {
   private async checkCourseIsComplete(
     courseUser: CourseUserEntity,
     course: CourseEntity,
-    userEmail: string,
   ): Promise<CourseUserEntity> {
     const userSessionIds = courseUser.sessionUser.map((sessionUser) => {
       if (sessionUser.completed) return sessionUser.sessionId;
@@ -55,9 +56,6 @@ export class SessionUserService {
         },
         courseIsComplete,
       );
-
-      const crispStatus = courseIsComplete ? PROGRESS_STATUS.COMPLETED : PROGRESS_STATUS.STARTED;
-      updateCrispProfileCourse(course.name, userEmail, crispStatus);
 
       courseUser.completed = courseIsComplete;
     }
@@ -110,8 +108,6 @@ export class SessionUserService {
         userId: user.id,
         courseId,
       });
-
-      updateCrispProfileCourse(session.course.name, user.email, PROGRESS_STATUS.STARTED);
     }
 
     let sessionUser = await this.getSessionUser({
@@ -125,13 +121,6 @@ export class SessionUserService {
         courseUserId: courseUser.id,
         completed: false,
       });
-
-      updateCrispProfileSession(
-        session.course.name,
-        session.name,
-        PROGRESS_STATUS.STARTED,
-        user.email,
-      );
     }
 
     // Retrieve data for response
@@ -139,6 +128,8 @@ export class SessionUserService {
       userId: user.id,
       courseId,
     });
+
+    updateCrispProfileCourse(user.email, updatedCourseUser);
 
     return formatCourseUserObject(updatedCourseUser);
   }
@@ -170,8 +161,6 @@ export class SessionUserService {
         courseId,
       });
       courseUser.sessionUser = []; // initialise session user array
-
-      updateCrispProfileCourse(session.course.name, user.email, PROGRESS_STATUS.STARTED);
 
       this.logger.error(
         `Course user not found for user (user-id: ${user.id}) for course (course-id: ${courseId}).
@@ -206,14 +195,12 @@ export class SessionUserService {
     }
 
     // Attach data to object to be serialized for response
-    const course = await this.courseService.getCourseWithSessions(courseId);
-    courseUser = await this.checkCourseIsComplete(courseUser, course, user.email);
+    const course = await this.courseRepository.findOneBy({ id: courseId });
+    courseUser = await this.checkCourseIsComplete(courseUser, course);
     courseUser.course = course;
     const formattedResponse = formatCourseUserObjects([courseUser])[0];
 
-    const crispStatus = completed ? PROGRESS_STATUS.COMPLETED : PROGRESS_STATUS.STARTED;
-
-    updateCrispProfileSession(session.course.name, session.name, crispStatus, user.email);
+    updateCrispProfileCourse(user.email, courseUser);
 
     return formattedResponse;
   }

@@ -1,12 +1,12 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { Request } from 'express';
+import { UserEntity } from 'src/entities/user.entity';
 import { isProduction } from 'src/utils/constants';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
 import { FirebaseAuthGuard } from '../firebase/firebase-auth.guard';
 import { PartnerAdminAuthGuard } from '../partner-admin/partner-admin-auth.guard';
 import { SuperAdminAuthGuard } from '../partner-admin/super-admin-auth.guard';
-import { GetUserDto } from '../user/dtos/get-user.dto';
 import { ControllerDecorator } from '../utils/controller.decorator';
 import { CreatePartnerAccessDto } from './dtos/create-partner-access.dto';
 import { GetPartnerAccessesDto } from './dtos/get-partner-access.dto';
@@ -107,7 +107,7 @@ export class PartnerAccessController {
     @Body() { partnerAccessCode }: ValidatePartnerAccessCodeDto,
   ): Promise<PartnerAccessEntity> {
     return this.partnerAccessService.assignPartnerAccess(
-      req['user'] as GetUserDto,
+      req['userEntity'] as UserEntity,
       partnerAccessCode,
     );
   }
