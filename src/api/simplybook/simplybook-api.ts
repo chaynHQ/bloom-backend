@@ -80,6 +80,24 @@ export const getBookingsForDate: (date: Date) => Promise<BookingInfo[]> = async 
   }
 };
 
+// Not currently used but might be used in future implementations so am keeping
+export const deleteClient: (clientId: string) => Promise<string> = async (clientId) => {
+  const token = await getAuthToken();
+
+  try {
+    const bookingsResponse = await axios.get(`${SIMPLYBOOK_API_BASE_URL}/client/${clientId}`, {
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Company-Login': simplybookCompanyName,
+        'X-Token': `${token}`,
+      },
+    });
+    return bookingsResponse.data.data;
+  } catch (error) {
+    handleError(`Failed to delete client ${clientId} from Simplybook.`, error);
+  }
+};
+
 const handleError = (error, message: string) => {
   LOGGER.error(message, error);
   throw new Error(`${message}: ${error})`);
