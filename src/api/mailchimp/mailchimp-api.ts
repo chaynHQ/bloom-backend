@@ -22,7 +22,7 @@ export async function ping() {
   console.log(response);
 }
 
-export async function createContact(user: UserEntity) {
+export async function createMailchimpProfile(user: UserEntity) {
   const response = await mailchimp.lists.addListMember(mailchimpAudienceId, {
     email_address: user.email,
     status: 'subscribed',

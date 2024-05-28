@@ -21,15 +21,7 @@ const headers = {
 
 const logger = new Logger('UserService');
 
-export const getCrispPeopleData = async (email: string): Promise<AxiosResponse<CrispResponse>> => {
-  return await apiCall({
-    url: `${baseUrl}/people/data/${email}`,
-    type: 'get',
-    headers,
-  });
-};
-
-export const addCrispProfile = async (
+export const createMailchimpProfile = async (
   newPeopleProfile: NewPeopleProfile,
 ): Promise<AxiosResponse<NewPeopleProfileResponse>> => {
   try {
@@ -44,6 +36,36 @@ export const addCrispProfile = async (
 
     throw error;
   }
+};
+
+export const getCrispProfile = async (
+  email: string,
+): Promise<AxiosResponse<CrispProfileResponse>> => {
+  return await apiCall({
+    url: `${baseUrl}/people/profile/${email}`,
+    type: 'get',
+    headers,
+  });
+};
+
+export const getCrispPeopleData = async (email: string): Promise<AxiosResponse<CrispResponse>> => {
+  return await apiCall({
+    url: `${baseUrl}/people/data/${email}`,
+    type: 'get',
+    headers,
+  });
+};
+
+export const updateCrispProfile = async (
+  peopleProfile: UpdatePeopleProfile,
+  email: string,
+): Promise<AxiosResponse<CrispResponse>> => {
+  return await apiCall({
+    url: `${baseUrl}/people/profile/${email}`,
+    type: 'patch',
+    data: peopleProfile,
+    headers,
+  });
 };
 
 export const updateCrispProfileData = async (
@@ -62,28 +84,6 @@ export const updateCrispProfileData = async (
 
     throw error;
   }
-};
-
-export const updateCrispProfile = async (
-  peopleProfile: UpdatePeopleProfile,
-  email: string,
-): Promise<AxiosResponse<CrispResponse>> => {
-  return await apiCall({
-    url: `${baseUrl}/people/profile/${email}`,
-    type: 'patch',
-    data: peopleProfile,
-    headers,
-  });
-};
-
-export const getCrispProfile = async (
-  email: string,
-): Promise<AxiosResponse<CrispProfileResponse>> => {
-  return await apiCall({
-    url: `${baseUrl}/people/profile/${email}`,
-    type: 'get',
-    headers,
-  });
 };
 
 export const deleteCrispProfile = async (email: string) => {
