@@ -1,8 +1,4 @@
 import { AxiosResponse } from 'axios';
-import { CourseUserEntity } from 'src/entities/course-user.entity';
-import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
-import { UserEntity } from 'src/entities/user.entity';
-import { serializeCourseData, serializePartnerAccessData } from 'src/utils/profileData';
 import { Logger } from '../../logger/logger';
 import { crispToken, crispWebsiteId } from '../../utils/constants';
 import apiCall from '../apiCalls';
@@ -24,37 +20,6 @@ const headers = {
 };
 
 const logger = new Logger('UserService');
-
-export const updateCrispProfileTherapy = async (partnerAccesses: PartnerAccessEntity[], email) => {
-  const therapySessionsRemaining = partnerAccesses.reduce(
-    (sum, partnerAccess) => sum + partnerAccess.therapySessionsRemaining,
-    0,
-  );
-  const therapySessionsRedeemed = partnerAccesses.reduce(
-    (sum, partnerAccess) => sum + partnerAccess.therapySessionsRedeemed,
-    0,
-  );
-
-  const therapyData = {
-    therapy_sessions_remaining: therapySessionsRemaining,
-    therapy_sessions_redeemed: therapySessionsRedeemed,
-  };
-
-  updateCrispProfileData(therapyData, email);
-};
-
-export const updateCrispProfileAccesses = async (
-  user: UserEntity,
-  partnerAccesses: PartnerAccessEntity[],
-) => {
-  updateCrispProfileData(serializePartnerAccessData(partnerAccesses), user.email);
-  return 'ok';
-};
-
-export const updateCrispProfileCourse = async (email: string, courseUser: CourseUserEntity) => {
-  updateCrispProfileData(serializeCourseData(courseUser), email);
-  return 'ok';
-};
 
 export const getCrispPeopleData = async (email: string): Promise<AxiosResponse<CrispResponse>> => {
   return await apiCall({

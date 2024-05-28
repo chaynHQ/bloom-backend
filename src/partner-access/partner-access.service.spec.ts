@@ -5,6 +5,7 @@ import { sub } from 'date-fns';
 import * as crispApi from 'src/api/crisp/crisp-api';
 import { PartnerEntity } from 'src/entities/partner.entity';
 import { GetUserDto } from 'src/user/dtos/get-user.dto';
+import * as profileData from 'src/utils/profileData';
 import {
   mockPartnerAccessEntity,
   mockPartnerAccessEntityBase,
@@ -44,8 +45,12 @@ const mockGetUserDto = {
 jest.mock('src/api/crisp/crisp-api', () => ({
   getCrispProfileData: jest.fn(),
   updateCrispProfileData: jest.fn(),
-  updateCrispProfileAccesses: jest.fn(),
+  updateServicesProfilesPartnerAccess: jest.fn(),
   updateCrispProfile: jest.fn(),
+}));
+
+jest.mock('src/utils/profileData', () => ({
+  updateServicesProfilesPartnerAccess: jest.fn(),
 }));
 
 describe('PartnerAccessService', () => {
@@ -146,7 +151,7 @@ describe('PartnerAccessService', () => {
         activatedAt: partnerAccess.activatedAt,
       });
 
-      expect(crispApi.updateCrispProfileAccesses).toHaveBeenCalledWith(mockUserEntity, [
+      expect(profileData.updateServicesProfilesPartnerAccess).toHaveBeenCalledWith(mockUserEntity, [
         partnerAccess,
       ]);
     });

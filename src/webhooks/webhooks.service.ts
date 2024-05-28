@@ -1,7 +1,6 @@
 import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { createHmac } from 'crypto';
-import { updateCrispProfileTherapy } from 'src/api/crisp/crisp-api';
 import { SlackMessageClient } from 'src/api/slack/slack-api';
 import { CourseEntity } from 'src/entities/course.entity';
 import { EventLogEntity } from 'src/entities/event-log.entity';
@@ -12,6 +11,7 @@ import { UserEntity } from 'src/entities/user.entity';
 import { EventLoggerService } from 'src/event-logger/event-logger.service';
 import { ZapierSimplybookBodyDto } from 'src/partner-access/dtos/zapier-body.dto';
 import { IUser } from 'src/user/user.interface';
+import { updateServicesProfilesTherapy } from 'src/utils/profileData';
 import { serializeZapierSimplyBookDtoToTherapySessionEntity } from 'src/utils/serialize';
 import { WebhookCreateEventLogDto } from 'src/webhooks/dto/webhook-create-event-log.dto';
 import StoryblokClient from 'storyblok-js-client';
@@ -122,7 +122,7 @@ export class WebhooksService {
         active: true,
         featureTherapy: true,
       });
-      updateCrispProfileTherapy(partnerAccesses, user.email);
+      updateServicesProfilesTherapy(partnerAccesses, user.email);
 
       this.logger.log(
         `Update therapy session webhook function COMPLETED for ${action} - ${user.email} - ${booking_code} - userId ${user_id}`,
@@ -223,7 +223,7 @@ export class WebhooksService {
     partnerAccess.therapySessionsRemaining -= 1;
     partnerAccess.therapySessionsRedeemed += 1;
 
-    updateCrispProfileTherapy([...partnerAccesses, partnerAccess], user.email);
+    updateServicesProfilesTherapy([...partnerAccesses, partnerAccess], user.email);
 
     try {
       const serializedTherapySession = serializeZapierSimplyBookDtoToTherapySessionEntity(

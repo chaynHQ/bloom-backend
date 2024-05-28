@@ -3,7 +3,7 @@ import { CourseUserEntity } from 'src/entities/course-user.entity';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { PartnerEntity } from 'src/entities/partner.entity';
 import { UserEntity } from 'src/entities/user.entity';
-import { PROGRESS_STATUS } from './constants';
+import { COMMUNICATION_SERVICE, PROGRESS_STATUS } from './constants';
 
 export const getAcronym = (text: string) => {
   return `${text
@@ -25,31 +25,94 @@ export const createServicesProfiles = async (
 
   await updateCrispProfileData(
     {
-      ...serializeUserData(user),
-      ...(partnerAccess && serializePartnerAccessData([{ ...partnerAccess, partner }])),
+      ...serializeUserData(user, COMMUNICATION_SERVICE.CRISP),
+      ...(partnerAccess &&
+        serializePartnerAccessData([{ ...partnerAccess, partner }], COMMUNICATION_SERVICE.CRISP)),
     },
     user.email,
   );
 };
 
-export const serializeUserData = (user: UserEntity) => {
+export const updateServicesProfilesTherapy = async (
+  partnerAccesses: PartnerAccessEntity[],
+  email,
+) => {
+  const therapySessionsRemaining = partnerAccesses.reduce(
+    (sum, partnerAccess) => sum + partnerAccess.therapySessionsRemaining,
+    0,
+  );
+  const therapySessionsRedeemed = partnerAccesses.reduce(
+    (sum, partnerAccess) => sum + partnerAccess.therapySessionsRedeemed,
+    0,
+  );
+
+  const therapyData = {
+    therapy_sessions_remaining: therapySessionsRemaining,
+    therapy_sessions_redeemed: therapySessionsRedeemed,
+  };
+
+  updateCrispProfileData(therapyData, email);
+  // TODO add updateMailchimp function
+};
+
+export const updateServicesProfilesPartnerAccess = async (
+  user: UserEntity,
+  partnerAccesses: PartnerAccessEntity[],
+) => {
+  updateCrispProfileData(
+    serializePartnerAccessData(partnerAccesses, COMMUNICATION_SERVICE.CRISP),
+    user.email,
+  );
+  // TODO add updateMailchimp function
+  return 'ok';
+};
+
+export const updateServicesProfilesCourse = async (email: string, courseUser: CourseUserEntity) => {
+  updateCrispProfileData(serializeCourseData(courseUser, COMMUNICATION_SERVICE.CRISP), email);
+
+  // TODO add updateMailchimp function
+  return 'ok';
+};
+
+export const serializeUserData = (user: UserEntity, service: COMMUNICATION_SERVICE) => {
+  const isCrisp = service === COMMUNICATION_SERVICE.CRISP;
+
+  const keys = {
+    signUpLanguage: isCrisp ? 'language' : 'LANG',
+    contactPermission: 'marketing_permission', // Handled separately in mailchimp
+    serviceEmailsPermission: 'service_emails_permission', // Handled separately in mailchimp
+  };
+
   const userData = {
-    language: user.signUpLanguage,
-    marketing_permission: user.contactPermission,
-    service_emails_permission: user.serviceEmailsPermission,
+    [keys.signUpLanguage]: user.signUpLanguage,
+    ...(isCrisp && { [keys.contactPermission]: user.contactPermission }),
+    ...(isCrisp && { [keys.serviceEmailsPermission]: user.serviceEmailsPermission }),
   };
   return userData;
 };
 
-export const serializePartnerAccessData = (partnerAccesses: PartnerAccessEntity[]) => {
+export const serializePartnerAccessData = (
+  partnerAccesses: PartnerAccessEntity[],
+  service: COMMUNICATION_SERVICE,
+) => {
+  const isCrisp = service === COMMUNICATION_SERVICE.CRISP;
+
+  const keys = {
+    partners: isCrisp ? 'partners' : 'PARTNERS',
+    featureLiveChat: isCrisp ? 'feature_live_chat' : 'FEATCHAT',
+    featureTherapy: isCrisp ? 'feature_therapy' : 'FEATTHER',
+    therapySessionsRemaining: isCrisp ? 'therapy_sessions_remaining' : 'THERREMAIN',
+    therapySessionsRedeemed: isCrisp ? 'therapy_sessions_redeemed' : 'THERREDEEM',
+  };
+
   const partnerAccessData = {
-    partners: partnerAccesses.map((pa) => pa.partner?.name || '').join('; ') || '',
-    feature_live_chat: !!partnerAccesses.find((pa) => !!pa.featureLiveChat),
-    feature_therapy: !!partnerAccesses.find((pa) => !!pa.featureTherapy),
-    therapy_sessions_remaining: partnerAccesses
+    [keys.partners]: partnerAccesses.map((pa) => pa.partner?.name || '').join('; ') || '',
+    [keys.featureLiveChat]: !!partnerAccesses.find((pa) => !!pa.featureLiveChat),
+    [keys.featureTherapy]: !!partnerAccesses.find((pa) => !!pa.featureTherapy),
+    [keys.therapySessionsRemaining]: partnerAccesses
       .map((pa) => pa.therapySessionsRemaining)
       .reduce((a, b) => a + b, 0),
-    therapy_sessions_redeemed: partnerAccesses
+    [keys.therapySessionsRedeemed]: partnerAccesses
       .map((pa) => pa.therapySessionsRedeemed)
       .reduce((a, b) => a + b, 0),
   };
@@ -57,14 +120,26 @@ export const serializePartnerAccessData = (partnerAccesses: PartnerAccessEntity[
   return partnerAccessData;
 };
 
-export const serializeCourseData = (courseUser: CourseUserEntity) => {
+export const serializeCourseData = (
+  courseUser: CourseUserEntity,
+  service: COMMUNICATION_SERVICE,
+) => {
+  const isCrisp = service === COMMUNICATION_SERVICE.CRISP;
+  const courseAcronymLowercase = getAcronym(courseUser.course.name);
+  const courseAcronymUppercase = getAcronym(courseUser.course.name).toUpperCase();
+
+  const keys = {
+    course: isCrisp ? `course_${courseAcronymLowercase}` : `C_${courseAcronymUppercase}`,
+    sessions: isCrisp
+      ? `course_${courseAcronymLowercase}_sessions`
+      : `C_${courseAcronymUppercase}_S`,
+  };
+
   // Returns e.g. { course_IBA: "Started", course_IBA_sessions: "IBDP:Started; DOC:Completed"}
   const courseData = {
-    [`course_${getAcronym(courseUser.course.name)}`]: courseUser.completed
-      ? PROGRESS_STATUS.COMPLETED
-      : PROGRESS_STATUS.STARTED,
+    [keys.course]: courseUser.completed ? PROGRESS_STATUS.COMPLETED : PROGRESS_STATUS.STARTED,
 
-    [`course_${getAcronym(courseUser.course.name)}_sessions`]: courseUser.sessionUser
+    [keys.sessions]: courseUser.sessionUser
       .map(
         (sessionUser) =>
           `${getAcronym(sessionUser.session.name)}:${sessionUser.completed ? 'C' : 'S'}`,

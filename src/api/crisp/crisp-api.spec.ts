@@ -1,14 +1,14 @@
 import { AxiosResponse } from 'axios';
 import apiCall from 'src/api/apiCalls';
 import { crispWebsiteId } from 'src/utils/constants';
+import { updateServicesProfilesPartnerAccess } from 'src/utils/profileData';
 import { mockPartnerAccessEntity, mockPartnerEntity, mockUserEntity } from 'test/utils/mockData';
-import { updateCrispProfileAccesses } from './crisp-api';
 import { CrispProfileResponse, CrispResponse } from './crisp-api.interfaces';
 
 jest.mock('src/api/apiCalls');
 
 describe('CrispApi', () => {
-  describe('updateCrispProfileAccesses', () => {
+  describe('updateServicesProfilesPartnerAccess', () => {
     it('should updateCrispProfile', async () => {
       const mockedApiCall = apiCall as jest.MockedFunction<typeof apiCall>;
       mockedApiCall
@@ -33,7 +33,7 @@ describe('CrispApi', () => {
 
       // Clear the mock so the next test starts with fresh data
 
-      await updateCrispProfileAccesses(mockUserEntity, [
+      await updateServicesProfilesPartnerAccess(mockUserEntity, [
         { ...mockPartnerAccessEntity, partner: mockPartnerEntity },
       ]);
       const baseUrl = `https://api.crisp.chat/v1/website/${crispWebsiteId}`;

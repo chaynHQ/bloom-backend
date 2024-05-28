@@ -48,6 +48,11 @@ export enum WhatsappSubscriptionStatusEnum {
   ALREADY_EXISTS = 'ALREADY_EXISTS',
 }
 
+export enum COMMUNICATION_SERVICE {
+  CRISP = 'CRISP',
+  MAILCHIMP = 'MAILCHIMP',
+}
+
 const getEnv = (env: string, envName: string): string => {
   try {
     if (!env) throw `Unable to get environemt variable ${envName}`;
