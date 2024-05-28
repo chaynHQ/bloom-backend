@@ -63,20 +63,13 @@ export class UserController {
     return req['user'];
   }
 
-  // TODO - work out if this is used anywhere and delete if necessary
-  @ApiBearerAuth()
-  @Post('/delete')
-  @UseGuards(FirebaseAuthGuard)
-  async deleteUserRecord(@Req() req: Request): Promise<string> {
-    return await this.userService.deleteUser(req['user'] as GetUserDto);
-  }
-
   @ApiBearerAuth()
   @Delete()
   @UseGuards(FirebaseAuthGuard)
-  async deleteUser(@Req() req: Request): Promise<string> {
-    return await this.userService.deleteUser(req['user'] as GetUserDto);
+  async deleteUser(@Req() req: Request): Promise<UserEntity> {
+    return await this.userService.deleteUser(req['user'].user as UserEntity);
   }
+
   // This route must go before the Delete user route below as we want nestjs to check against this one first
   @ApiBearerAuth('access-token')
   @Delete('/cypress')

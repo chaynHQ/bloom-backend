@@ -5,6 +5,8 @@ import { UserEntity } from 'src/entities/user.entity';
 import { IFirebaseUser } from 'src/firebase/firebase-user.interface';
 import { Logger } from 'src/logger/logger';
 import { PartnerService } from 'src/partner/partner.service';
+import { SubscriptionUserService } from 'src/subscription-user/subscription-user.service';
+import { TherapySessionService } from 'src/therapy-session/therapy-session.service';
 import { FEATURES } from 'src/utils/constants';
 import {
   CREATE_USER_EMAIL_ALREADY_EXISTS,
@@ -14,7 +16,6 @@ import {
 import { ILike, Repository } from 'typeorm';
 import {
   addCrispProfile,
-  deleteCrispProfile,
   deleteCypressCrispProfiles,
   updateCrispProfileData,
 } from '../api/crisp/crisp-api';
@@ -42,6 +43,8 @@ export class UserService {
     private readonly partnerAccessService: PartnerAccessService,
     private readonly partnerService: PartnerService,
     private readonly authService: AuthService,
+    private readonly subscriptionUserService: SubscriptionUserService,
+    private readonly therapySessionService: TherapySessionService,
   ) {}
 
   public async createUser(createUserDto: CreateUserDto): Promise<GetUserDto> {
@@ -282,48 +285,48 @@ export class UserService {
     return queryResult;
   }
 
-  public async deleteUser({ user, partnerAdmin }: GetUserDto) {
-    //Delete User From Firebase
-    await this.authService.deleteFirebaseUser(user.firebaseUid);
-
-    //Delete Crisp People Profile
-    if (!partnerAdmin) {
-      await deleteCrispProfile(user.email);
-    }
-
-    //Randomise User Data in DB
+  public async deleteUser(user: UserEntity): Promise<UserEntity> {
     const randomString = generateRandomString(20);
 
-    user.name = randomString;
-    user.email = randomString;
-    user.firebaseUid = randomString;
-    user.isActive = false;
+    try {
+      const firebaseResponse = await this.authService.deleteFirebaseUser(user.firebaseUid);
+      this.logger.log(`Firebase account deleted for user with ID ${user.id}`);
+    } catch (err) {
+      // Continue to delete user, even if firebase request fails
+      this.logger.error(
+        `deleteUser - firebase error. Unable to delete user ${user.email} due to error ${err}`,
+      );
+    }
 
-    await this.userRepository.save(user);
+    try {
+      //TODO Not yet sure if deleting automatically from Crisp is the right thing to do
+      // as we don't know whether we need to manually check if there is any safeguarding concerns before we delete.
+      // const crispResponse = await deleteCrispProfile(user.email);
 
-    return 'Successful';
+      // if they have subscriptions,redact the number
+      await this.subscriptionUserService.softDeleteSubscriptionsForUser(user.id, user.email);
+      // if they have therapy sessions redact email and delete client from therapy sessions
+      await this.therapySessionService.softDeleteTherapySessions(user.id, user.email, randomString);
+
+      //Randomise User Data in DB
+      const updateUser = {
+        ...user,
+        name: randomString,
+        email: randomString,
+        isActive: false,
+      };
+      return await this.userRepository.save(updateUser);
+    } catch (error) {
+      throw new HttpException(
+        `Unable to complete deleting user, ${user.email} due to error - ${error}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 
   public async deleteUserById(id: string): Promise<UserEntity> {
-    //Delete User From Firebase
     const user = await this.getUserById(id);
-    await this.authService.deleteFirebaseUser(user.firebaseUid);
-    //Delete Crisp People Profile
-    await deleteCrispProfile(user.email);
-
-    //Randomise User Data in DB
-    const randomString = generateRandomString(20);
-    const newUser = {
-      ...user,
-      name: randomString,
-      email: `${randomString}@deletedemail.com`,
-      firebaseUid: randomString,
-      isActive: false,
-    };
-
-    await this.userRepository.save(newUser);
-
-    return newUser;
+    return await this.deleteUser(user);
   }
 
   public async updateUser(updateUserDto: UpdateUserDto, { user: { id } }: GetUserDto) {
