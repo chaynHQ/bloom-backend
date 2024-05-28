@@ -54,8 +54,14 @@ import { WebhooksService } from './webhooks.service';
 const webhookSecret = process.env.STORYBLOK_WEBHOOK_SECRET;
 
 const getWebhookSignature = (body) => {
-  return createHmac('sha1', webhookSecret).update(JSON.stringify(body)).digest('hex');
+  return createHmac('sha1', webhookSecret).update(""+body).digest('hex');
 };
+const createRequestObject = (body) => {
+  return {
+  rawBody: "" + body,
+  setEncoding: ()=>{},
+  encoding: "utf8"
+}}
 
 // Difficult to mock classes as well as node modules.
 // This seemed the best approach
@@ -228,7 +234,7 @@ describe('WebhooksService', () => {
         text: '',
       };
 
-      return expect(service.updateStory(body, getWebhookSignature(body))).rejects.toThrow(
+      return expect(service.updateStory(createRequestObject(body), body, getWebhookSignature(body))).rejects.toThrow(
         'STORYBLOK STORY NOT FOUND',
       );
     });
@@ -241,6 +247,7 @@ describe('WebhooksService', () => {
       };
 
       const deletedStory = (await service.updateStory(
+        createRequestObject(body), 
         body,
         getWebhookSignature(body),
       )) as SessionEntity;
@@ -256,6 +263,7 @@ describe('WebhooksService', () => {
       };
 
       const unpublished = (await service.updateStory(
+        createRequestObject(body),
         body,
         getWebhookSignature(body),
       )) as SessionEntity;
@@ -306,7 +314,7 @@ describe('WebhooksService', () => {
         text: '',
       };
 
-      const session = (await service.updateStory(body, getWebhookSignature(body))) as SessionEntity;
+      const session = (await service.updateStory(createRequestObject(body), body, getWebhookSignature(body))) as SessionEntity;
 
       expect(courseFindOneSpy).toHaveBeenCalledWith({
         storyblokUuid: 'anotherCourseUuId',
@@ -349,7 +357,7 @@ describe('WebhooksService', () => {
         text: '',
       };
 
-      const session = (await service.updateStory(body, getWebhookSignature(body))) as SessionEntity;
+      const session = (await service.updateStory(createRequestObject(body), body, getWebhookSignature(body))) as SessionEntity;
 
       expect(session).toEqual(mockSession);
       expect(courseFindOneSpy).toHaveBeenCalledWith({
@@ -408,7 +416,7 @@ describe('WebhooksService', () => {
         text: '',
       };
 
-      const session = (await service.updateStory(body, getWebhookSignature(body))) as SessionEntity;
+      const session = (await service.updateStory(createRequestObject(body), body, getWebhookSignature(body))) as SessionEntity;
 
       expect(session).toEqual(mockSession);
       expect(sessionSaveRepoSpy).toHaveBeenCalledWith({
@@ -442,7 +450,7 @@ describe('WebhooksService', () => {
         text: '',
       };
 
-      const course = (await service.updateStory(body, getWebhookSignature(body))) as CourseEntity;
+      const course = (await service.updateStory(createRequestObject(body), body, getWebhookSignature(body))) as CourseEntity;
 
       expect(course).toEqual(mockCourse);
       expect(courseFindOneRepoSpy).toHaveBeenCalledWith({
