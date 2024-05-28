@@ -1,6 +1,6 @@
 ## Database models
 
-![Database models](../database_models.jpg 'Database models')
+![Database models](database_models.jpg 'Database models')
 
 **User**
 Stores basic profile data for a user and relationships.
@@ -30,4 +30,4 @@ Stores relationship between a `User` and `Course` records, once a user has start
 Stores relationship between a `User` and `Session` records, once a user has started a session. A users session progress (`completed`) for the session is updated (true) when the `/complete` endpoint is called.
 
 ## Database Schema
-![Database schema](../database_schema.png)
+![Database schema](database_schema.png)
