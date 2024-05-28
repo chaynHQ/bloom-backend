@@ -130,42 +130,40 @@ describe('PartnerAccessService', () => {
       jest.spyOn(repo, 'save').mockImplementationOnce(async () => {
         return {
           ...mockPartnerAccessEntity,
-          id: '123456',
+          id: 'pa1',
           userId: mockGetUserDto.user.id,
         };
       });
       // Mocks that the accesscode already exists
       jest.spyOn(repo, 'findOne').mockResolvedValueOnce(mockPartnerAccessEntity);
 
-      const partnerAccess = await service.assignPartnerAccess(mockGetUserDto, '123456');
+      const partnerAccess = await service.assignPartnerAccess(mockUserEntity, '123456');
 
       expect(partnerAccess).toEqual({
         ...mockPartnerAccessEntity,
         id: 'pa1',
-        userId: mockGetUserDto.user.id,
+        userId: mockUserEntity.id,
         activatedAt: partnerAccess.activatedAt,
       });
 
-      expect(crispApi.updateCrispProfileAccesses).toHaveBeenCalledWith(
-        mockGetUserDto.user,
-        [partnerAccess],
-        [],
-      );
+      expect(crispApi.updateCrispProfileAccesses).toHaveBeenCalledWith(mockUserEntity, [
+        partnerAccess,
+      ]);
     });
 
     it('should assign partner access even if crisp profile api fails', async () => {
       // Mocks that the accesscode already exists
       jest.spyOn(repo, 'findOne').mockResolvedValueOnce(mockPartnerAccessEntity);
 
-      jest.spyOn(crispApi, 'updateCrispProfileAccesses').mockImplementationOnce(async () => {
+      jest.spyOn(crispApi, 'updateCrispProfileData').mockImplementationOnce(async () => {
         throw new Error('Test throw');
       });
 
-      const partnerAccess = await service.assignPartnerAccess(mockGetUserDto, '123456');
+      const partnerAccess = await service.assignPartnerAccess(mockUserEntity, '123456');
 
       expect(partnerAccess).toEqual({
         ...mockPartnerAccessEntity,
-        userId: mockGetUserDto.user.id,
+        userId: mockUserEntity.id,
         activatedAt: partnerAccess.activatedAt,
       });
     });
@@ -177,7 +175,7 @@ describe('PartnerAccessService', () => {
         userId: 'anotherUserId',
       });
 
-      await expect(service.assignPartnerAccess(mockGetUserDto, '123456')).rejects.toThrow(
+      await expect(service.assignPartnerAccess(mockUserEntity, '123456')).rejects.toThrow(
         PartnerAccessCodeStatusEnum.ALREADY_IN_USE,
       );
     });
@@ -189,7 +187,7 @@ describe('PartnerAccessService', () => {
         userId: mockGetUserDto.user.id,
       });
 
-      await expect(service.assignPartnerAccess(mockGetUserDto, '123456')).rejects.toThrow(
+      await expect(service.assignPartnerAccess(mockUserEntity, '123456')).rejects.toThrow(
         PartnerAccessCodeStatusEnum.ALREADY_APPLIED,
       );
     });

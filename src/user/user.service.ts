@@ -45,8 +45,8 @@ export class UserService {
         ? SIGNUP_TYPE.PARTNER_USER_WITHOUT_CODE
         : SIGNUP_TYPE.PUBLIC_USER;
 
-    let partnerAccess: PartnerAccessEntity | null;
-    const partner = await this.partnerRepository.findOneBy({ id: partnerId });
+    let partnerAccess: PartnerAccessEntity | null = null;
+    const partner = partnerId ? await this.partnerRepository.findOneBy({ id: partnerId }) : null;
 
     try {
       if (signUpType === SIGNUP_TYPE.PARTNER_USER_WITHOUT_CODE) {

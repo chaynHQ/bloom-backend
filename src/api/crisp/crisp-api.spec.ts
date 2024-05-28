@@ -16,67 +16,36 @@ describe('CrispApi', () => {
           async () =>
             ({
               data: { error: false, reason: 'resolved', data: {} },
-            } as AxiosResponse<CrispResponse>),
+            }) as AxiosResponse<CrispResponse>,
         )
         .mockImplementationOnce(
           async () =>
             ({
               data: { error: false, reason: 'resolved', data: {} },
-            } as AxiosResponse<CrispResponse>),
+            }) as AxiosResponse<CrispResponse>,
         )
         .mockImplementationOnce(
           async () =>
             ({
               data: { error: false, reason: 'resolved', data: { segments: ['public'] } },
-            } as AxiosResponse<CrispProfileResponse>),
+            }) as AxiosResponse<CrispProfileResponse>,
         );
 
       // Clear the mock so the next test starts with fresh data
 
-      await updateCrispProfileAccesses(
-        mockUserEntity,
-        [{ ...mockPartnerAccessEntity, partner: mockPartnerEntity }],
-        [],
-      );
+      await updateCrispProfileAccesses(mockUserEntity, [
+        { ...mockPartnerAccessEntity, partner: mockPartnerEntity },
+      ]);
       const baseUrl = `https://api.crisp.chat/v1/website/${crispWebsiteId}`;
-      // request to get profile data
       expect(apiCall).toHaveBeenNthCalledWith(
         1,
-        expect.objectContaining({
-          url: `${baseUrl}/people/data/${mockUserEntity.email}`,
-          type: 'get',
-        }),
-      );
-
-      expect(apiCall).toHaveBeenNthCalledWith(
-        2,
         expect.objectContaining({
           // updating people data
           url: `${baseUrl}/people/data/${mockUserEntity.email}`,
           type: 'patch',
         }),
       );
-      expect(apiCall).toHaveBeenNthCalledWith(
-        3,
-        // request to get
-        expect.objectContaining({
-          // request to update profile
-          url: `${baseUrl}/people/profile/${mockUserEntity.email}`,
-          type: 'get',
-        }),
-      );
-      expect(apiCall).toHaveBeenNthCalledWith(
-        4,
-        // request to get
-        expect.objectContaining({
-          // request to update profile
-          url: `${baseUrl}/people/profile/${mockUserEntity.email}`,
-          type: 'patch',
-          data: expect.objectContaining({
-            segments: ['bumble', 'public'],
-          }),
-        }),
-      );
+      expect(apiCall).toHaveBeenCalledTimes(1);
       mockedApiCall.mockClear();
     });
   });

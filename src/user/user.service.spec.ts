@@ -138,6 +138,7 @@ describe('UserService', () => {
 
       const user = await service.createUser({
         ...createUserDto,
+        partnerId: mockPartnerEntity.id,
         partnerAccessCode: mockPartnerAccessEntity.accessCode,
       });
 
@@ -221,10 +222,12 @@ describe('UserService', () => {
           }) as never,
         );
 
-      const user = await service.getUserByFirebaseId(mockIFirebaseUser);
-      expect(user.user.email).toBe('user@email.com');
-      expect(user.partnerAdmin).toBeNull();
-      expect(user.partnerAccesses).toEqual([]);
+      const userResponse = await service.getUserByFirebaseId(mockIFirebaseUser);
+      expect(userResponse.userEntity.email).toBe('user@email.com');
+      expect(userResponse.userDto.user.email).toBe('user@email.com');
+      expect(userResponse.userDto.user.email).toBe('user@email.com');
+      expect(userResponse.userDto.partnerAdmin).toBeNull();
+      expect(userResponse.userDto.partnerAccesses).toEqual([]);
     });
   });
 

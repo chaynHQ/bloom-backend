@@ -2,8 +2,8 @@ import { addCrispProfile, updateCrispProfileData } from 'src/api/crisp/crisp-api
 import { CourseUserEntity } from 'src/entities/course-user.entity';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { PartnerEntity } from 'src/entities/partner.entity';
-import { SessionUserEntity } from 'src/entities/session-user.entity';
 import { UserEntity } from 'src/entities/user.entity';
+import { PROGRESS_STATUS } from './constants';
 
 export const getAcronym = (text: string) => {
   return `${text
@@ -12,22 +12,11 @@ export const getAcronym = (text: string) => {
     .toLowerCase()}`;
 };
 
-export const formatCourseUserValue = (courseUser: CourseUserEntity) => {
-  return `${getAcronym(courseUser.course.name)}:${courseUser.completed ? 'C' : 'S'}`;
-};
-
-export const formatSessionUserValue = (sessionUser: SessionUserEntity) => {
-  return `${getAcronym(sessionUser.session.name)}:${sessionUser.completed ? 'C' : 'S'}`;
-};
-
 export const createServicesProfiles = async (
   user: UserEntity,
   partner: PartnerEntity,
   partnerAccess: PartnerAccessEntity,
-  courses?: CourseUserEntity[],
 ) => {
-  if (partnerAccess) partnerAccess.partner = partner;
-
   await addCrispProfile({
     email: user.email,
     person: { nickname: user.name },
@@ -37,8 +26,7 @@ export const createServicesProfiles = async (
   await updateCrispProfileData(
     {
       ...serializeUserData(user),
-      ...serializePartnerAccessData([partnerAccess]),
-      ...(courses?.length && { ...serializeCourseData(courses) }),
+      ...(partnerAccess && serializePartnerAccessData([{ ...partnerAccess, partner }])),
     },
     user.email,
   );
@@ -55,7 +43,7 @@ export const serializeUserData = (user: UserEntity) => {
 
 export const serializePartnerAccessData = (partnerAccesses: PartnerAccessEntity[]) => {
   const partnerAccessData = {
-    partners: partnerAccesses.map((pa) => pa.partner.name).join('; ') || '',
+    partners: partnerAccesses.map((pa) => pa.partner?.name || '').join('; ') || '',
     feature_live_chat: !!partnerAccesses.find((pa) => !!pa.featureLiveChat),
     feature_therapy: !!partnerAccesses.find((pa) => !!pa.featureTherapy),
     therapy_sessions_remaining: partnerAccesses
@@ -65,20 +53,23 @@ export const serializePartnerAccessData = (partnerAccesses: PartnerAccessEntity[
       .map((pa) => pa.therapySessionsRedeemed)
       .reduce((a, b) => a + b, 0),
   };
+
   return partnerAccessData;
 };
 
-export const serializeCourseData = (courseUsers?: CourseUserEntity[]) => {
-  const sessionKeyValues = {};
-
-  courseUsers.forEach((courseUser) => {
-    sessionKeyValues[`course_${getAcronym(courseUser.course.name)}_sessions`] =
-      courseUser.sessionUser.map((sessionUser) => formatSessionUserValue(sessionUser)).join('; ');
-  });
-
+export const serializeCourseData = (courseUser: CourseUserEntity) => {
+  // Returns e.g. { course_IBA: "Started", course_IBA_sessions: "IBDP:Started; DOC:Completed"}
   const courseData = {
-    courses: courseUsers.map((courseUser) => formatCourseUserValue(courseUser)).join(';'),
-    ...sessionKeyValues,
+    [`course_${getAcronym(courseUser.course.name)}`]: courseUser.completed
+      ? PROGRESS_STATUS.COMPLETED
+      : PROGRESS_STATUS.STARTED,
+
+    [`course_${getAcronym(courseUser.course.name)}_sessions`]: courseUser.sessionUser
+      .map(
+        (sessionUser) =>
+          `${getAcronym(sessionUser.session.name)}:${sessionUser.completed ? 'C' : 'S'}`,
+      )
+      .join('; '),
   };
 
   return courseData;

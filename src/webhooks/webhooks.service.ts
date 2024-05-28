@@ -1,6 +1,7 @@
 import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { createHmac } from 'crypto';
+import { updateCrispProfileTherapy } from 'src/api/crisp/crisp-api';
 import { SlackMessageClient } from 'src/api/slack/slack-api';
 import { CourseEntity } from 'src/entities/course.entity';
 import { EventLogEntity } from 'src/entities/event-log.entity';
@@ -15,7 +16,6 @@ import { serializeZapierSimplyBookDtoToTherapySessionEntity } from 'src/utils/se
 import { WebhookCreateEventLogDto } from 'src/webhooks/dto/webhook-create-event-log.dto';
 import StoryblokClient from 'storyblok-js-client';
 import { ILike, Repository } from 'typeorm';
-import { getCrispPeopleData, updateCrispProfileData } from '../api/crisp/crisp-api';
 import { CoursePartnerService } from '../course-partner/course-partner.service';
 import {
   SIMPLYBOOK_ACTION_ENUM,
@@ -41,28 +41,6 @@ export class WebhooksService {
     private eventLoggerService: EventLoggerService,
     private slackMessageClient: SlackMessageClient,
   ) {}
-
-  async updateCrispProfileTherapyData(action, email) {
-    let partnerAccessUpdateCrisp = {};
-    const crispResponse = await getCrispPeopleData(email);
-    const crispData = crispResponse.data.data.data;
-
-    if (action === SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING) {
-      partnerAccessUpdateCrisp = {
-        therapy_sessions_remaining: crispData['therapy_sessions_remaining'] - 1,
-        therapy_sessions_redeemed: crispData['therapy_sessions_redeemed'] + 1,
-      };
-    }
-
-    if (action === SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING) {
-      partnerAccessUpdateCrisp = {
-        therapy_sessions_remaining: crispData['therapy_sessions_remaining'] + 1,
-        therapy_sessions_redeemed: crispData['therapy_sessions_redeemed'] - 1,
-      };
-    }
-
-    updateCrispProfileData(partnerAccessUpdateCrisp, email);
-  }
 
   async updatePartnerAccessTherapy(
     simplyBookDto: ZapierSimplybookBodyDto,
@@ -106,8 +84,6 @@ export class WebhooksService {
     // Updating an existing therapy session
     existingTherapySession.action = action;
 
-    this.updateCrispProfileTherapyData(action, user.email);
-
     // If the booking is cancelled, increment the therapy sessions remaining on related partner access
     if (action === SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING) {
       try {
@@ -140,6 +116,14 @@ export class WebhooksService {
 
     try {
       const therapySession = await this.therapySessionRepository.save(existingTherapySession);
+
+      const partnerAccesses = await this.partnerAccessRepository.findBy({
+        userId: user.id,
+        active: true,
+        featureTherapy: true,
+      });
+      updateCrispProfileTherapy(partnerAccesses, user.email);
+
       this.logger.log(
         `Update therapy session webhook function COMPLETED for ${action} - ${user.email} - ${booking_code} - userId ${user_id}`,
       );
@@ -236,10 +220,10 @@ export class WebhooksService {
       throw new HttpException(error, HttpStatus.FORBIDDEN);
     }
 
-    this.updateCrispProfileTherapyData(SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING, user.email);
-
     partnerAccess.therapySessionsRemaining -= 1;
     partnerAccess.therapySessionsRedeemed += 1;
+
+    updateCrispProfileTherapy([...partnerAccesses, partnerAccess], user.email);
 
     try {
       const serializedTherapySession = serializeZapierSimplyBookDtoToTherapySessionEntity(

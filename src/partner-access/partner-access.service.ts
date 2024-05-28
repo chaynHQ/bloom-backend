@@ -184,9 +184,14 @@ export class PartnerAccessService {
       userId: user.id,
       activatedAt: new Date(),
     });
+    assignedPartnerAccess.partner = partnerAccess.partner;
 
     try {
-      await updateCrispProfileAccesses(user, [...user.partnerAccess, assignedPartnerAccess]);
+      const partnerAccesses = await this.partnerAccessRepository.findBy({
+        userId: user.id,
+        active: true,
+      });
+      updateCrispProfileAccesses(user, partnerAccesses);
     } catch (error) {
       this.logger.error(
         `Error: Unable to update crisp profile for ${user.email}. Error: ${error.message} `,

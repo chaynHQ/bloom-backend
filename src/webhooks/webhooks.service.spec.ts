@@ -89,6 +89,9 @@ jest.mock('../api/crisp/crisp-api', () => {
     updateCrispProfileData: () => {
       return;
     },
+    updateCrispProfileTherapy: () => {
+      return;
+    },
     getCrispPeopleData: () => {
       return {
         error: false,
