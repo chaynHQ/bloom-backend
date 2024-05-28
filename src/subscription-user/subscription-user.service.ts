@@ -66,20 +66,21 @@ export class SubscriptionUserService {
   }
 
   async cancelWhatsappSubscription(
-    { user }: GetUserDto,
+    userId: string,
+    userEmail: string,
     { cancelledAt }: UpdateSubscriptionUserDto,
     id: string,
   ) {
     const subscription = await this.subscriptionUserRepository
       .createQueryBuilder('subscription_user')
       .where('subscription_user.subscriptionUserId = :id', { id })
-      .andWhere('subscription_user.userId = :userId', { userId: user.id })
+      .andWhere('subscription_user.userId = :userId', { userId: userId })
       .getOne();
 
     if (subscription) {
       if (!subscription.cancelledAt) {
         this.logger.log(
-          `Triggering zapier to remove contact (number: ${subscription.subscriptionInfo}) from respond.io for user ${user.email}.`,
+          `Triggering zapier to remove contact (number: ${subscription.subscriptionInfo}) from respond.io for user ${userEmail}.`,
         );
         await this.zapierClient.deleteContactFromRespondIO({
           phonenumber: subscription.subscriptionInfo,
@@ -88,7 +89,7 @@ export class SubscriptionUserService {
         subscription.cancelledAt = cancelledAt;
         await this.subscriptionUserRepository.save(subscription);
 
-        return this.getFullSubscriptionInfo({ id: subscription.id, userId: user.id });
+        return this.getFullSubscriptionInfo({ id: subscription.id, userId });
       } else {
         throw new HttpException('Subscription has already been cancelled', HttpStatus.CONFLICT);
       }
@@ -117,4 +118,39 @@ export class SubscriptionUserService {
   sanitizePhonenumber = (phonenumber: string) => {
     return phonenumber.replace(/\s/g, ''); // remove spaces
   };
+
+  async softDeleteSubscriptionsForUser(userId, userEmail): Promise<SubscriptionUserEntity[]> {
+    try {
+      const subscriptions = await this.subscriptionUserRepository.find({
+        where: { userId: userId },
+      });
+      const cancelledAt = new Date();
+
+      const updatedSubscriptions: SubscriptionUserEntity[] = await Promise.all(
+        subscriptions.map(async (subs): Promise<SubscriptionUserEntity> => {
+          if (subs.cancelledAt !== null) {
+            await this.cancelWhatsappSubscription(userId, userEmail, { cancelledAt }, subs.id);
+          }
+          const subscription = await this.subscriptionUserRepository.findOne({
+            where: { id: subs.id },
+          });
+          const updatedSubscription = {
+            ...subscription,
+            subscriptionInfo: `Number Redacted`,
+          };
+
+          return await this.subscriptionUserRepository.save(updatedSubscription);
+        }),
+      );
+      this.logger.log(
+        `Redacted number for ${updatedSubscriptions.length} subscription(s) for user with email ${userEmail}`,
+      );
+      return updatedSubscriptions;
+    } catch (err) {
+      throw new HttpException(
+        `softDeleteSubscriptionUser error - ${err}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
 }
