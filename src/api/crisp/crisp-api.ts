@@ -21,7 +21,7 @@ const headers = {
 
 const logger = new Logger('UserService');
 
-export const createMailchimpProfile = async (
+export const createCrispProfile = async (
   newPeopleProfile: NewPeopleProfile,
 ): Promise<AxiosResponse<NewPeopleProfileResponse>> => {
   try {

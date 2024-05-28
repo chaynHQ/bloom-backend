@@ -1,4 +1,4 @@
-import { createMailchimpProfile, updateCrispProfileData } from 'src/api/crisp/crisp-api';
+import { createCrispProfile, updateCrispProfileData } from 'src/api/crisp/crisp-api';
 import { CourseUserEntity } from 'src/entities/course-user.entity';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { PartnerEntity } from 'src/entities/partner.entity';
@@ -17,7 +17,7 @@ export const createServicesProfiles = async (
   partner: PartnerEntity,
   partnerAccess: PartnerAccessEntity,
 ) => {
-  await createMailchimpProfile({
+  await createCrispProfile({
     email: user.email,
     person: { nickname: user.name },
     segments: [partner?.name.toLowerCase() || 'public'],

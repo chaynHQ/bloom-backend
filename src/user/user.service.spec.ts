@@ -3,7 +3,7 @@ import { createMock, DeepMocked } from '@golevelup/ts-jest';
 import { HttpException, HttpStatus } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { createMailchimpProfile } from 'src/api/crisp/crisp-api';
+import { createCrispProfile } from 'src/api/crisp/crisp-api';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { PartnerEntity } from 'src/entities/partner.entity';
 import { SubscriptionUserService } from 'src/subscription-user/subscription-user.service';
@@ -123,7 +123,7 @@ describe('UserService', () => {
       expect(user.partnerAdmin).toBeNull();
       expect(user.partnerAccesses).toBeNull();
       expect(repoSaveSpy).toHaveBeenCalledWith(createUserRepositoryDto);
-      expect(createMailchimpProfile).toHaveBeenCalledWith({
+      expect(createCrispProfile).toHaveBeenCalledWith({
         email: user.user.email,
         person: { nickname: 'name' },
         segments: ['public'],
@@ -153,7 +153,7 @@ describe('UserService', () => {
         { ...partnerAccessData, therapySessions: therapySession },
       ]);
 
-      expect(createMailchimpProfile).toHaveBeenCalledWith({
+      expect(createCrispProfile).toHaveBeenCalledWith({
         email: user.user.email,
         person: { nickname: 'name' },
         segments: ['bumble'],
