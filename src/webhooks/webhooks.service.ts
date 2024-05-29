@@ -11,8 +11,11 @@ import { UserEntity } from 'src/entities/user.entity';
 import { EventLoggerService } from 'src/event-logger/event-logger.service';
 import { ZapierSimplybookBodyDto } from 'src/partner-access/dtos/zapier-body.dto';
 import { IUser } from 'src/user/user.interface';
-import { updateServicesProfilesTherapy } from 'src/utils/profileData';
 import { serializeZapierSimplyBookDtoToTherapySessionEntity } from 'src/utils/serialize';
+import {
+  createMailchimpCourseMergeField,
+  updateServiceUserProfilesTherapy,
+} from 'src/utils/serviceUserProfiles';
 import { WebhookCreateEventLogDto } from 'src/webhooks/dto/webhook-create-event-log.dto';
 import StoryblokClient from 'storyblok-js-client';
 import { ILike, Repository } from 'typeorm';
@@ -122,7 +125,7 @@ export class WebhooksService {
         active: true,
         featureTherapy: true,
       });
-      updateServicesProfilesTherapy(partnerAccesses, user.email);
+      updateServiceUserProfilesTherapy(partnerAccesses, user.email);
 
       this.logger.log(
         `Update therapy session webhook function COMPLETED for ${action} - ${user.email} - ${booking_code} - userId ${user_id}`,
@@ -223,7 +226,7 @@ export class WebhooksService {
     partnerAccess.therapySessionsRemaining -= 1;
     partnerAccess.therapySessionsRedeemed += 1;
 
-    updateServicesProfilesTherapy([...partnerAccesses, partnerAccess], user.email);
+    updateServiceUserProfilesTherapy([...partnerAccesses, partnerAccess], user.email);
 
     try {
       const serializedTherapySession = serializeZapierSimplyBookDtoToTherapySessionEntity(
@@ -279,6 +282,7 @@ export class WebhooksService {
           course.slug = story.full_slug;
         } else {
           course = this.courseRepository.create(storyData);
+          createMailchimpCourseMergeField(storyData.name);
         }
         course.name = story.content?.name;
         course = await this.courseRepository.save(course);

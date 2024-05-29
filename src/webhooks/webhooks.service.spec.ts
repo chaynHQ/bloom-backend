@@ -86,7 +86,7 @@ jest.mock('src/api/simplybook/simplybook-api', () => {
 });
 jest.mock('../api/crisp/crisp-api', () => {
   return {
-    updateCrispProfileData: () => {
+    updateCrispProfile: () => {
       return;
     },
     getCrispPeopleData: () => {

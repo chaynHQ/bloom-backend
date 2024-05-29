@@ -1,7 +1,12 @@
 import { mailchimp } from '@mailchimp/mailchimp_marketing';
 import { createHash } from 'crypto';
 import { mailchimpApiKey, mailchimpAudienceId, mailchimpServerPrefix } from 'src/utils/constants';
-import { ListMember, ListMemberPartial, UpdateListMemberRequest } from './mailchimp-api.interfaces';
+import {
+  ListMember,
+  ListMemberPartial,
+  MAILCHIMP_MERGE_FIELD,
+  UpdateListMemberRequest,
+} from './mailchimp-api.interfaces';
 
 mailchimp.setConfig({
   apiKey: mailchimpApiKey,
@@ -28,40 +33,69 @@ export async function ping() {
 }
 
 export async function createMailchimpProfile(profileData: Partial<UpdateListMemberRequest>) {
-  const response = await mailchimp.lists.addListMember(mailchimpAudienceId, profileData);
-
-  console.log(
-    `Successfully added contact as an audience member. The contact's id is ${response.id}.`,
-  );
+  try {
+    return await mailchimp.lists.addListMember(mailchimpAudienceId, profileData);
+  } catch (error) {
+    throw new Error(`Create mailchimp profile API call failed: ${error}`);
+  }
 }
 
 // Note getMailchimpProfile is not currently used
 export const getMailchimpProfile = async (email: string): Promise<ListMember> => {
-  return await mailchimp.lists.getListMember(mailchimpAudienceId, getEmailMD5Hash(email));
+  try {
+    return await mailchimp.lists.getListMember(mailchimpAudienceId, getEmailMD5Hash(email));
+  } catch (error) {
+    throw new Error(`Get mailchimp profile API call failed: ${error}`);
+  }
 };
 
 export const updateMailchimpProfile = async (
   newProfileData: ListMemberPartial,
   email: string,
 ): Promise<ListMember> => {
-  return await mailchimp.lists.updateListMember(mailchimpAudienceId, getEmailMD5Hash(email), {
-    newProfileData,
-  });
+  try {
+    return await mailchimp.lists.updateListMember(mailchimpAudienceId, getEmailMD5Hash(email), {
+      newProfileData,
+    });
+  } catch (error) {
+    throw new Error(`Update mailchimp profile API call failed: ${error}`);
+  }
+};
+
+export const createMailchimpMergeField = async (
+  name: string,
+  type: MAILCHIMP_MERGE_FIELD,
+): Promise<ListMember> => {
+  try {
+    return await mailchimp.lists.addListMergeField(mailchimpAudienceId, {
+      name,
+      type,
+      required: false,
+    });
+  } catch (error) {
+    throw new Error(`Create mailchimp merge field API call failed: ${error}`);
+  }
 };
 
 export const deleteMailchimpProfile = async (email: string) => {
-  return await mailchimp.lists.deleteListMember(mailchimpAudienceId, getEmailMD5Hash(email));
+  try {
+    return await mailchimp.lists.deleteListMember(mailchimpAudienceId, getEmailMD5Hash(email));
+  } catch (error) {
+    throw new Error(`Delete mailchimp profile API call failed: ${error}`);
+  }
 };
 
 export const deleteCypressMailchimpProfiles = async () => {
-  const cypressProfiles = (await mailchimp.lists.getSegmentMembersList(
-    mailchimpAudienceId,
-    '874073',
-  )) as { members: ListMember[] };
+  try {
+    const cypressProfiles = (await mailchimp.lists.getSegmentMembersList(
+      mailchimpAudienceId,
+      '874073',
+    )) as { members: ListMember[] };
 
-  cypressProfiles.members.forEach(async (profile: ListMember) => {
-    deleteMailchimpProfile(profile.email_address);
-  });
-
-  return 'ok';
+    cypressProfiles.members.forEach(async (profile: ListMember) => {
+      deleteMailchimpProfile(profile.email_address);
+    });
+  } catch (error) {
+    throw new Error(`Delete cypress mailchimp profiles API call failed: ${error}`);
+  }
 };

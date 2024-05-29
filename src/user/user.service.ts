@@ -8,7 +8,10 @@ import { Logger } from 'src/logger/logger';
 import { SubscriptionUserService } from 'src/subscription-user/subscription-user.service';
 import { TherapySessionService } from 'src/therapy-session/therapy-session.service';
 import { SIGNUP_TYPE } from 'src/utils/constants';
-import { createServicesProfiles } from 'src/utils/profileData';
+import {
+  createServiceUserProfiles,
+  updateServiceUserProfilesUser,
+} from 'src/utils/serviceUserProfiles';
 import { ILike, Repository } from 'typeorm';
 import { deleteCypressCrispProfiles } from '../api/crisp/crisp-api';
 import { AuthService } from '../auth/auth.service';
@@ -83,7 +86,7 @@ export class UserService {
       }
 
       // Create profiles for external services
-      createServicesProfiles(user, partner, partnerAccess);
+      createServiceUserProfiles(user, partner, partnerAccess);
       this.logger.log(`Create user: updated crisp profile ${email}`);
 
       const userDto = formatUserObject({
@@ -188,12 +191,17 @@ export class UserService {
       throw new HttpException('USER NOT FOUND', HttpStatus.NOT_FOUND);
     }
 
-    const updatedUser: UserEntity = {
+    const newUserData: UserEntity = {
       ...user,
       ...updateUserDto,
     };
+    const updatedUser = await this.userRepository.save(newUserData);
 
-    return await this.userRepository.save(updatedUser);
+    const isNameOrLanguageUpdated =
+      user.signUpLanguage !== updateUserDto.signUpLanguage && user.name !== updateUserDto.name;
+    updateServiceUserProfilesUser(user, isNameOrLanguageUpdated, user.email);
+
+    return updatedUser;
   }
 
   public async deleteCypressTestUsers(clean = false): Promise<UserEntity[]> {

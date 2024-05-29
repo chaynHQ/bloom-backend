@@ -1,3 +1,16 @@
+export enum MAILCHIMP_MERGE_FIELD {
+  TEXT = 'text',
+  NUMBER = 'number',
+  ADDRESS = 'address',
+  PHONE = 'phone',
+  DATE = 'date',
+  URL = 'url',
+  IMAGEURL = 'imageurl',
+  RADIO = 'radio',
+  DROPDOWN = 'dropdown',
+  BIRTHDAY = 'birthday',
+  ZIP = 'zip',
+}
 export interface ListMemberCustomFields {
   NAME?: string;
   SIGNUPD?: string;

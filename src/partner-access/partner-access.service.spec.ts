@@ -5,7 +5,7 @@ import { sub } from 'date-fns';
 import * as crispApi from 'src/api/crisp/crisp-api';
 import { PartnerEntity } from 'src/entities/partner.entity';
 import { GetUserDto } from 'src/user/dtos/get-user.dto';
-import * as profileData from 'src/utils/profileData';
+import * as profileData from 'src/utils/serviceUserProfiles';
 import {
   mockPartnerAccessEntity,
   mockPartnerAccessEntityBase,
@@ -44,13 +44,13 @@ const mockGetUserDto = {
 
 jest.mock('src/api/crisp/crisp-api', () => ({
   getCrispProfileData: jest.fn(),
-  updateCrispProfileData: jest.fn(),
-  updateServicesProfilesPartnerAccess: jest.fn(),
+  updateCrispProfile: jest.fn(),
+  updateServiceUserProfilesPartnerAccess: jest.fn(),
   updateCrispProfile: jest.fn(),
 }));
 
 jest.mock('src/utils/profileData', () => ({
-  updateServicesProfilesPartnerAccess: jest.fn(),
+  updateServiceUserProfilesPartnerAccess: jest.fn(),
 }));
 
 describe('PartnerAccessService', () => {
@@ -151,16 +151,17 @@ describe('PartnerAccessService', () => {
         activatedAt: partnerAccess.activatedAt,
       });
 
-      expect(profileData.updateServicesProfilesPartnerAccess).toHaveBeenCalledWith(mockUserEntity, [
-        partnerAccess,
-      ]);
+      expect(profileData.updateServiceUserProfilesPartnerAccess).toHaveBeenCalledWith(
+        mockUserEntity,
+        [partnerAccess],
+      );
     });
 
     it('should assign partner access even if crisp profile api fails', async () => {
       // Mocks that the accesscode already exists
       jest.spyOn(repo, 'findOne').mockResolvedValueOnce(mockPartnerAccessEntity);
 
-      jest.spyOn(crispApi, 'updateCrispProfileData').mockImplementationOnce(async () => {
+      jest.spyOn(crispApi, 'updateCrispProfile').mockImplementationOnce(async () => {
         throw new Error('Test throw');
       });
 

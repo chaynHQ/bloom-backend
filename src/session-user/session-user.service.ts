@@ -2,7 +2,7 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import _ from 'lodash';
 import { UserEntity } from 'src/entities/user.entity';
-import { updateServicesProfilesCourse } from 'src/utils/profileData';
+import { updateServiceUserProfilesCourse } from 'src/utils/serviceUserProfiles';
 import { Repository } from 'typeorm';
 import { CourseUserService } from '../course-user/course-user.service';
 import { CourseService } from '../course/course.service';
@@ -129,7 +129,7 @@ export class SessionUserService {
       courseId,
     });
 
-    updateServicesProfilesCourse(user.email, updatedCourseUser);
+    updateServiceUserProfilesCourse(user.email, updatedCourseUser);
 
     return formatCourseUserObject(updatedCourseUser);
   }
@@ -200,7 +200,7 @@ export class SessionUserService {
     courseUser.course = course;
     const formattedResponse = formatCourseUserObjects([courseUser])[0];
 
-    updateServicesProfilesCourse(user.email, courseUser);
+    updateServiceUserProfilesCourse(user.email, courseUser);
 
     return formattedResponse;
   }

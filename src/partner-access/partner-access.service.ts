@@ -5,7 +5,7 @@ import _ from 'lodash';
 import { PartnerEntity } from 'src/entities/partner.entity';
 import { UserEntity } from 'src/entities/user.entity';
 import { Logger } from 'src/logger/logger';
-import { updateServicesProfilesPartnerAccess } from 'src/utils/profileData';
+import { updateServiceUserProfilesPartnerAccess } from 'src/utils/serviceUserProfiles';
 import { Repository } from 'typeorm';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
 import { FEATURES, PartnerAccessCodeStatusEnum } from '../utils/constants';
@@ -191,7 +191,7 @@ export class PartnerAccessService {
         userId: user.id,
         active: true,
       });
-      updateServicesProfilesPartnerAccess(user.email, partnerAccesses);
+      updateServiceUserProfilesPartnerAccess(user.email, partnerAccesses);
     } catch (error) {
       this.logger.error(
         `Error: Unable to update crisp profile for ${user.email}. Error: ${error.message} `,

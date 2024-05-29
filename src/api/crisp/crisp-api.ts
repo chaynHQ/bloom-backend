@@ -3,12 +3,11 @@ import { Logger } from '../../logger/logger';
 import { crispToken, crispWebsiteId } from '../../utils/constants';
 import apiCall from '../apiCalls';
 import {
-  CrispProfileResponse,
-  CrispResponse,
-  NewPeopleProfile,
-  NewPeopleProfileResponse,
-  PeopleData,
-  UpdatePeopleProfile,
+  CrispProfileBase,
+  CrispProfileBaseResponse,
+  CrispProfileCustomFields,
+  CrispProfileDataResponse,
+  NewCrispProfileBaseResponse,
 } from './crisp-api.interfaces';
 
 const baseUrl = `https://api.crisp.chat/v1/website/${crispWebsiteId}`;
@@ -22,8 +21,8 @@ const headers = {
 const logger = new Logger('UserService');
 
 export const createCrispProfile = async (
-  newPeopleProfile: NewPeopleProfile,
-): Promise<AxiosResponse<NewPeopleProfileResponse>> => {
+  newPeopleProfile: CrispProfileBase,
+): Promise<AxiosResponse<NewCrispProfileBaseResponse>> => {
   try {
     return await apiCall({
       url: `${baseUrl}/people/profile`,
@@ -32,48 +31,60 @@ export const createCrispProfile = async (
       headers,
     });
   } catch (error) {
-    logger.error(`Could not add crisp profile for user: ${newPeopleProfile.email}`);
-
-    throw error;
+    throw new Error(`Create crisp profile API call failed: ${error}`);
   }
 };
 
 // Note getCrispProfile is not currently used
 export const getCrispProfile = async (
   email: string,
-): Promise<AxiosResponse<CrispProfileResponse>> => {
-  return await apiCall({
-    url: `${baseUrl}/people/profile/${email}`,
-    type: 'get',
-    headers,
-  });
+): Promise<AxiosResponse<CrispProfileBaseResponse>> => {
+  try {
+    return await apiCall({
+      url: `${baseUrl}/people/profile/${email}`,
+      type: 'get',
+      headers,
+    });
+  } catch (error) {
+    throw new Error(`Get crisp profile base API call failed: ${error}`);
+  }
 };
 
 // Note getCrispPeopleData is not currently used
-export const getCrispPeopleData = async (email: string): Promise<AxiosResponse<CrispResponse>> => {
-  return await apiCall({
-    url: `${baseUrl}/people/data/${email}`,
-    type: 'get',
-    headers,
-  });
+export const getCrispPeopleData = async (
+  email: string,
+): Promise<AxiosResponse<CrispProfileDataResponse>> => {
+  try {
+    return await apiCall({
+      url: `${baseUrl}/people/data/${email}`,
+      type: 'get',
+      headers,
+    });
+  } catch (error) {
+    throw new Error(`Get crisp profile API call failed: ${error}`);
+  }
+};
+
+export const updateCrispProfileBase = async (
+  peopleProfile: CrispProfileBase,
+  email: string,
+): Promise<AxiosResponse<CrispProfileBaseResponse>> => {
+  try {
+    return await apiCall({
+      url: `${baseUrl}/people/profile/${email}`,
+      type: 'patch',
+      data: peopleProfile,
+      headers,
+    });
+  } catch (error) {
+    throw new Error(`Update crisp profile base API call failed: ${error}`);
+  }
 };
 
 export const updateCrispProfile = async (
-  peopleProfile: UpdatePeopleProfile,
+  peopleData: CrispProfileCustomFields,
   email: string,
-): Promise<AxiosResponse<CrispResponse>> => {
-  return await apiCall({
-    url: `${baseUrl}/people/profile/${email}`,
-    type: 'patch',
-    data: peopleProfile,
-    headers,
-  });
-};
-
-export const updateCrispProfileData = async (
-  peopleData: PeopleData,
-  email: string,
-): Promise<AxiosResponse<CrispResponse>> => {
+): Promise<AxiosResponse<CrispProfileDataResponse>> => {
   try {
     return await apiCall({
       url: `${baseUrl}/people/data/${email}`,
@@ -82,36 +93,38 @@ export const updateCrispProfileData = async (
       headers,
     });
   } catch (error) {
-    logger.error(`Could not update crisp profile for user: ${email}`);
-
-    throw error;
+    throw new Error(`Update crisp profile API call failed: ${error}`);
   }
 };
 
 export const deleteCrispProfile = async (email: string) => {
-  await apiCall({
-    url: `${baseUrl}/people/profile/${email}`,
-    type: 'delete',
-    headers,
-  });
-
-  return 'ok';
-};
-
-export const deleteCypressCrispProfiles = async () => {
-  const profiles = await apiCall({
-    url: `${baseUrl}/people/profiles/1?search_text=cypresstestemail+`,
-    type: 'get',
-    headers,
-  });
-
-  profiles.data.data.forEach(async (profile) => {
+  try {
     await apiCall({
-      url: `${baseUrl}/people/profile/${profile.email}`,
+      url: `${baseUrl}/people/profile/${email}`,
       type: 'delete',
       headers,
     });
-  });
+  } catch (error) {
+    logger.error(`Delete crisp profile API call failed: ${error}`);
+  }
+};
 
-  return 'ok';
+export const deleteCypressCrispProfiles = async () => {
+  try {
+    const profiles = await apiCall({
+      url: `${baseUrl}/people/profiles/1?search_text=cypresstestemail+`,
+      type: 'get',
+      headers,
+    });
+
+    profiles.data.data.forEach(async (profile) => {
+      await apiCall({
+        url: `${baseUrl}/people/profile/${profile.email}`,
+        type: 'delete',
+        headers,
+      });
+    });
+  } catch (error) {
+    throw new Error(`Delete cypress crisp profiles API call failed: ${error}`);
+  }
 };
