@@ -33,7 +33,7 @@ describe('CrispApi', () => {
 
       // Clear the mock so the next test starts with fresh data
 
-      await updateServicesProfilesPartnerAccess(mockUserEntity, [
+      await updateServicesProfilesPartnerAccess(mockUserEntity.email, [
         { ...mockPartnerAccessEntity, partner: mockPartnerEntity },
       ]);
       const baseUrl = `https://api.crisp.chat/v1/website/${crispWebsiteId}`;

@@ -38,6 +38,7 @@ export const createCrispProfile = async (
   }
 };
 
+// Note getCrispProfile is not currently used
 export const getCrispProfile = async (
   email: string,
 ): Promise<AxiosResponse<CrispProfileResponse>> => {
@@ -48,6 +49,7 @@ export const getCrispProfile = async (
   });
 };
 
+// Note getCrispPeopleData is not currently used
 export const getCrispPeopleData = async (email: string): Promise<AxiosResponse<CrispResponse>> => {
   return await apiCall({
     url: `${baseUrl}/people/data/${email}`,

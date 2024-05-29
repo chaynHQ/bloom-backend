@@ -191,7 +191,7 @@ export class PartnerAccessService {
         userId: user.id,
         active: true,
       });
-      updateServicesProfilesPartnerAccess(user, partnerAccesses);
+      updateServicesProfilesPartnerAccess(user.email, partnerAccesses);
     } catch (error) {
       this.logger.error(
         `Error: Unable to update crisp profile for ${user.email}. Error: ${error.message} `,

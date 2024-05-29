@@ -1,4 +1,5 @@
 import { createCrispProfile, updateCrispProfileData } from 'src/api/crisp/crisp-api';
+import { createMailchimpProfile, updateMailchimpProfile } from 'src/api/mailchimp/mailchimp-api';
 import { CourseUserEntity } from 'src/entities/course-user.entity';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { PartnerEntity } from 'src/entities/partner.entity';
@@ -6,10 +7,13 @@ import { UserEntity } from 'src/entities/user.entity';
 import { COMMUNICATION_SERVICE, PROGRESS_STATUS } from './constants';
 
 export const getAcronym = (text: string) => {
-  return `${text
-    .split(/\s/)
+  const exclude = ['in', 'and', 'the', 'from', 'as', 'or', 'to'];
+  const string = text.split(' ').filter((word) => !exclude.includes(word));
+  const abbreviatedString = string
     .reduce((response, word) => (response += word.slice(0, 1)), '')
-    .toLowerCase()}`;
+    .toLowerCase();
+
+  return abbreviatedString;
 };
 
 export const createServicesProfiles = async (
@@ -31,59 +35,66 @@ export const createServicesProfiles = async (
     },
     user.email,
   );
+
+  await createMailchimpProfile({
+    email_address: user.email,
+    status: 'subscribed',
+    merge_fields: {
+      ...serializeUserData(user, COMMUNICATION_SERVICE.MAILCHIMP),
+      ...(partnerAccess &&
+        serializePartnerAccessData(
+          [{ ...partnerAccess, partner }],
+          COMMUNICATION_SERVICE.MAILCHIMP,
+        )),
+    },
+  });
 };
 
 export const updateServicesProfilesTherapy = async (
   partnerAccesses: PartnerAccessEntity[],
   email,
 ) => {
-  const therapySessionsRemaining = partnerAccesses.reduce(
-    (sum, partnerAccess) => sum + partnerAccess.therapySessionsRemaining,
-    0,
+  updateCrispProfileData(serializeTherapyData(partnerAccesses, COMMUNICATION_SERVICE.CRISP), email);
+  updateMailchimpProfile(
+    { merge_fields: serializeTherapyData(partnerAccesses, COMMUNICATION_SERVICE.MAILCHIMP) },
+    email,
   );
-  const therapySessionsRedeemed = partnerAccesses.reduce(
-    (sum, partnerAccess) => sum + partnerAccess.therapySessionsRedeemed,
-    0,
-  );
-
-  const therapyData = {
-    therapy_sessions_remaining: therapySessionsRemaining,
-    therapy_sessions_redeemed: therapySessionsRedeemed,
-  };
-
-  updateCrispProfileData(therapyData, email);
-  // TODO add updateMailchimp function
 };
 
 export const updateServicesProfilesPartnerAccess = async (
-  user: UserEntity,
+  email: string,
   partnerAccesses: PartnerAccessEntity[],
 ) => {
   updateCrispProfileData(
     serializePartnerAccessData(partnerAccesses, COMMUNICATION_SERVICE.CRISP),
-    user.email,
+    email,
   );
-  // TODO add updateMailchimp function
-  return 'ok';
+  updateMailchimpProfile(
+    { merge_fields: serializePartnerAccessData(partnerAccesses, COMMUNICATION_SERVICE.MAILCHIMP) },
+    email,
+  );
 };
 
 export const updateServicesProfilesCourse = async (email: string, courseUser: CourseUserEntity) => {
   updateCrispProfileData(serializeCourseData(courseUser, COMMUNICATION_SERVICE.CRISP), email);
-
-  // TODO add updateMailchimp function
-  return 'ok';
+  updateMailchimpProfile(
+    { merge_fields: serializeCourseData(courseUser, COMMUNICATION_SERVICE.MAILCHIMP) },
+    email,
+  );
 };
 
 export const serializeUserData = (user: UserEntity, service: COMMUNICATION_SERVICE) => {
   const isCrisp = service === COMMUNICATION_SERVICE.CRISP;
 
   const keys = {
-    signUpLanguage: isCrisp ? 'language' : 'LANG',
+    name: isCrisp ? 'nickname' : 'NAME',
+    signUpLanguage: isCrisp ? 'language' : 'LANGUAGE',
     contactPermission: 'marketing_permission', // Handled separately in mailchimp
     serviceEmailsPermission: 'service_emails_permission', // Handled separately in mailchimp
   };
 
   const userData = {
+    [keys.name]: user.name,
     [keys.signUpLanguage]: user.signUpLanguage,
     ...(isCrisp && { [keys.contactPermission]: user.contactPermission }),
     ...(isCrisp && { [keys.serviceEmailsPermission]: user.serviceEmailsPermission }),
@@ -148,4 +159,31 @@ export const serializeCourseData = (
   };
 
   return courseData;
+};
+
+export const serializeTherapyData = (
+  partnerAccesses: PartnerAccessEntity[],
+  service: COMMUNICATION_SERVICE,
+) => {
+  const isCrisp = service === COMMUNICATION_SERVICE.CRISP;
+
+  const keys = {
+    therapySessionsRemaining: isCrisp ? 'therapy_sessions_remaining' : 'THERREMAIN',
+    therapySessionsRedeemed: isCrisp ? 'therapy_sessions_redeemed' : 'THERREDEEM',
+  };
+
+  const therapySessionsRemaining = partnerAccesses.reduce(
+    (sum, partnerAccess) => sum + partnerAccess.therapySessionsRemaining,
+    0,
+  );
+  const therapySessionsRedeemed = partnerAccesses.reduce(
+    (sum, partnerAccess) => sum + partnerAccess.therapySessionsRedeemed,
+    0,
+  );
+
+  const therapyData = {
+    [keys.therapySessionsRemaining]: therapySessionsRemaining,
+    [keys.therapySessionsRedeemed]: therapySessionsRedeemed,
+  };
+  return therapyData;
 };
