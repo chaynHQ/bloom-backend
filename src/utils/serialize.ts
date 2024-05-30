@@ -89,6 +89,7 @@ export const formatUserObject = (userObject: UserEntity): GetUserDto => {
       isActive: userObject.isActive,
       crispTokenId: userObject.crispTokenId,
       isSuperAdmin: userObject.isSuperAdmin,
+      signUpLanguage: userObject.signUpLanguage,
     },
     partnerAccesses: userObject.partnerAccess
       ? formatPartnerAccessObjects(userObject.partnerAccess)
@@ -123,6 +124,7 @@ export const formatGetUsersObject = (userObject: UserEntity): GetUserDto => {
       isActive: userObject.isActive,
       crispTokenId: userObject.crispTokenId,
       isSuperAdmin: userObject.isSuperAdmin,
+      signUpLanguage: userObject.signUpLanguage,
     },
     ...(userObject.partnerAccess
       ? {

@@ -44,12 +44,12 @@ const mockGetUserDto = {
 
 jest.mock('src/api/crisp/crisp-api', () => ({
   getCrispProfileData: jest.fn(),
+  updateCrispProfileBase: jest.fn(),
   updateCrispProfile: jest.fn(),
   updateServiceUserProfilesPartnerAccess: jest.fn(),
-  updateCrispProfile: jest.fn(),
 }));
 
-jest.mock('src/utils/profileData', () => ({
+jest.mock('src/utils/serviceUserProfiles', () => ({
   updateServiceUserProfilesPartnerAccess: jest.fn(),
 }));
 
@@ -130,7 +130,7 @@ describe('PartnerAccessService', () => {
   });
 
   describe('assignPartnerAccess', () => {
-    it('should update crisp profile and assign partner access', async () => {
+    it('should assign partner access and update service profiles', async () => {
       // Mocks save so same
       jest.spyOn(repo, 'save').mockImplementationOnce(async () => {
         return {
@@ -152,8 +152,8 @@ describe('PartnerAccessService', () => {
       });
 
       expect(profileData.updateServiceUserProfilesPartnerAccess).toHaveBeenCalledWith(
-        mockUserEntity,
         [partnerAccess],
+        mockUserEntity.email,
       );
     });
 

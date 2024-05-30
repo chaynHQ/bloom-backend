@@ -1,4 +1,5 @@
 export interface CrispProfileCustomFields {
+  signed_up_at?: string;
   language?: string;
   marketing_permission?: boolean;
   service_emails_permission?: boolean;

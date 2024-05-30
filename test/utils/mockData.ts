@@ -1,5 +1,6 @@
 import { UserRecord } from 'firebase-admin/lib/auth/user-record';
 import { CoursePartnerEntity } from 'src/entities/course-partner.entity';
+import { CourseUserEntity } from 'src/entities/course-user.entity';
 import { CourseEntity } from 'src/entities/course.entity';
 import { EventLogEntity } from 'src/entities/event-log.entity';
 import { FeatureEntity } from 'src/entities/feature.entity';
@@ -7,6 +8,7 @@ import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { PartnerAdminEntity } from 'src/entities/partner-admin.entity';
 import { PartnerFeatureEntity } from 'src/entities/partner-feature.entity';
 import { PartnerEntity } from 'src/entities/partner.entity';
+import { SessionUserEntity } from 'src/entities/session-user.entity';
 import { SessionEntity } from 'src/entities/session.entity';
 import { SubscriptionUserEntity } from 'src/entities/subscription-user.entity';
 import { SubscriptionEntity } from 'src/entities/subscription.entity';
@@ -183,6 +185,12 @@ export const mockPartnerEntity = {
   partnerFeature: [],
 } as PartnerEntity;
 
+export const mockAltPartnerEntity = {
+  name: 'Badoo',
+  id: 'partnerAltId',
+  partnerFeature: [],
+} as PartnerEntity;
+
 export const mockPartnerAccessEntityBase = {
   id: 'randomId',
   userId: null,
@@ -216,6 +224,49 @@ export const mockPartnerAccessEntity = {
   active: true,
   userId: null,
 } as PartnerAccessEntity;
+
+export const mockAltPartnerAccessEntity = {
+  id: 'pa2',
+  therapySessionsRemaining: 3,
+  therapySessionsRedeemed: 3,
+  featureTherapy: true,
+  featureLiveChat: false,
+  accessCode: '654321',
+  partner: mockAltPartnerEntity,
+  partnerAdmin: null,
+  partnerAdminId: null,
+  createdAt: new Date(),
+  activatedAt: new Date(),
+  therapySession: [],
+  updatedAt: new Date(),
+  active: true,
+  userId: null,
+} as PartnerAccessEntity;
+
+export const mockSessionUserEntity: SessionUserEntity = {
+  id: 'su1',
+  sessionId: 'sessionId1',
+  session: mockSession,
+  completed: true,
+  completedAt: new Date('2022-09-12T07:30:00+0100'),
+  courseUserId: 'cu1',
+  courseUser: null,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+};
+
+export const mockCourseUserEntity: CourseUserEntity = {
+  id: 'cu1',
+  completed: false,
+  completedAt: null,
+  userId: 'userId1',
+  user: null,
+  courseId: 'courseId1',
+  course: mockCourse,
+  sessionUser: [mockSessionUserEntity],
+  createdAt: new Date(),
+  updatedAt: new Date(),
+};
 
 export const mockCoursePartnerEntity: CoursePartnerEntity = {
   id: 'coursePartnerId',

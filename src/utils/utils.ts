@@ -20,7 +20,7 @@ export const getAcronym = (text: string) => {
   const string = text.split(' ').filter((word) => !exclude.includes(word));
   const abbreviatedString = string
     .reduce((response, word) => (response += word.slice(0, 1)), '')
-    .toLowerCase();
+    .toUpperCase();
 
   return abbreviatedString;
 };

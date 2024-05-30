@@ -11,7 +11,7 @@ import {
 } from 'src/api/mailchimp/mailchimp-api';
 import {
   ListMemberPartial,
-  MAILCHIMP_MERGE_FIELD,
+  MAILCHIMP_MERGE_FIELD_TYPES,
 } from 'src/api/mailchimp/mailchimp-api.interfaces';
 import { CourseUserEntity } from 'src/entities/course-user.entity';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
@@ -30,8 +30,8 @@ const logger = new Logger('UserService');
 
 export const createServiceUserProfiles = async (
   user: UserEntity,
-  partner: PartnerEntity,
-  partnerAccess: PartnerAccessEntity,
+  partner?: PartnerEntity | null,
+  partnerAccess?: PartnerAccessEntity | null,
 ) => {
   try {
     const userData = serializeUserData(user);
@@ -42,24 +42,35 @@ export const createServiceUserProfiles = async (
     await createCrispProfile({
       email: user.email,
       person: { nickname: user.name, locales: [user.signUpLanguage || 'en'] },
-      segments: serializeCrispPartnerSegments([partner]),
+      segments: serializeCrispPartnerSegments(partner ? [partner] : []),
     });
 
-    await updateCrispProfile(
+    const userSignedUpAt = user.createdAt?.toISOString();
+
+    updateCrispProfile(
       {
+        signed_up_at: userSignedUpAt,
         ...userData.crispSchema,
         ...(partnerData && partnerData.crispSchema),
       },
       user.email,
     );
 
-    await createMailchimpProfile({
+    const mailchimpMergeFields = {
+      SIGNUPD: userSignedUpAt,
+      ...userData.mailchimpSchema.merge_fields,
+      ...(partnerData && partnerData.mailchimpSchema.merge_fields),
+    };
+
+    createMailchimpProfile({
       email_address: user.email,
       ...userData.mailchimpSchema,
       ...(partnerData && partnerData.mailchimpSchema),
+      merge_fields: mailchimpMergeFields,
     });
   } catch (error) {
     logger.error(`Create service user profiles error - ${error}`);
+    throw error;
   }
 };
 
@@ -85,12 +96,15 @@ export const updateServiceUserProfilesUser = async (
 };
 
 export const updateServiceUserProfilesPartnerAccess = async (
-  email: string,
   partnerAccesses: PartnerAccessEntity[],
+  email: string,
 ) => {
   try {
+    const partners = partnerAccesses.map((pa) => pa.partner);
     updateCrispProfileBase(
-      { segments: serializeCrispPartnerSegments(partnerAccesses.map((pa) => pa.partner)) },
+      {
+        segments: serializeCrispPartnerSegments(partners),
+      },
       email,
     );
 
@@ -116,8 +130,8 @@ export const updateServiceUserProfilesTherapy = async (
 };
 
 export const updateServiceUserProfilesCourse = async (
-  email: string,
   courseUser: CourseUserEntity,
+  email: string,
 ) => {
   try {
     const courseData = serializeCourseData(courseUser);
@@ -132,15 +146,19 @@ export const updateServiceUserProfilesCourse = async (
 // This function creates 2 new mailchimp merge fields for a new course
 export const createMailchimpCourseMergeField = async (courseName: string) => {
   try {
-    const courseAcronymUppercase = getAcronym(courseName).toUpperCase();
-    const courseMergeFieldKey = `C_${courseAcronymUppercase}`;
-    const courseSessionsMergeFieldKey = `C_${courseAcronymUppercase}_S`;
+    const courseAcronym = getAcronym(courseName);
+    const courseMergeFieldKey = `C_${courseAcronym}`;
+    const courseSessionsMergeFieldKey = `C_${courseAcronym}_S`;
 
-    createMailchimpMergeField(courseMergeFieldKey, MAILCHIMP_MERGE_FIELD.TEXT);
-    createMailchimpMergeField(courseSessionsMergeFieldKey, MAILCHIMP_MERGE_FIELD.TEXT);
+    createMailchimpMergeField(courseMergeFieldKey, MAILCHIMP_MERGE_FIELD_TYPES.TEXT);
+    createMailchimpMergeField(courseSessionsMergeFieldKey, MAILCHIMP_MERGE_FIELD_TYPES.TEXT);
   } catch (error) {
     logger.error(`Create mailchimp course merge fields error - ${error}`);
   }
+};
+
+export const serializePartnersString = (partnerAccesses: PartnerAccessEntity[]) => {
+  return partnerAccesses.map((pa) => pa.partner.name.toLowerCase()).join('; ') || '';
 };
 
 const serializeUserData = (user: UserEntity) => {
@@ -170,9 +188,9 @@ const serializeUserData = (user: UserEntity) => {
 
 const serializePartnerAccessData = (partnerAccesses: PartnerAccessEntity[]) => {
   const data = {
-    partners: partnerAccesses.map((pa) => pa.partner?.name || '').join('; ') || '',
-    featureLiveChat: !!partnerAccesses.find((pa) => !!pa.featureLiveChat),
-    featureTherapy: !!partnerAccesses.find((pa) => !!pa.featureTherapy),
+    partners: serializePartnersString(partnerAccesses),
+    featureLiveChat: !!partnerAccesses.find((pa) => pa.featureLiveChat),
+    featureTherapy: !!partnerAccesses.find((pa) => pa.featureTherapy),
     therapySessionsRemaining: partnerAccesses
       .map((pa) => pa.therapySessionsRemaining)
       .reduce((a, b) => a + b, 0),
@@ -229,8 +247,8 @@ const serializeTherapyData = (partnerAccesses: PartnerAccessEntity[]) => {
 };
 
 const serializeCourseData = (courseUser: CourseUserEntity) => {
-  const courseAcronymLowercase = getAcronym(courseUser.course.name);
-  const courseAcronymUppercase = getAcronym(courseUser.course.name).toUpperCase();
+  const courseAcronymLowercase = getAcronym(courseUser.course.name).toLowerCase();
+  const courseAcronymUppercase = getAcronym(courseUser.course.name);
 
   const data = {
     course: courseUser.completed ? PROGRESS_STATUS.COMPLETED : PROGRESS_STATUS.STARTED,
@@ -258,5 +276,6 @@ const serializeCourseData = (courseUser: CourseUserEntity) => {
 };
 
 const serializeCrispPartnerSegments = (partners: PartnerEntity[]) => {
-  return partners.map((p) => p.name.toLowerCase()) || ['public'];
+  if (!partners.length) return ['public'];
+  return partners.map((p) => p.name.toLowerCase());
 };

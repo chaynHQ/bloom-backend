@@ -3,7 +3,8 @@ import { createMock, DeepMocked } from '@golevelup/ts-jest';
 import { HttpException, HttpStatus } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { createCrispProfile } from 'src/api/crisp/crisp-api';
+import { createCrispProfile, updateCrispProfile } from 'src/api/crisp/crisp-api';
+import { createMailchimpProfile } from 'src/api/mailchimp/mailchimp-api';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { PartnerEntity } from 'src/entities/partner.entity';
 import { SubscriptionUserService } from 'src/subscription-user/subscription-user.service';
@@ -54,12 +55,14 @@ const updateUserDto: UpdateUserDto = {
   name: 'new name',
   contactPermission: true,
   serviceEmailsPermission: false,
+  signUpLanguage: 'en',
 };
 
 const mockSubscriptionUserServiceMethods = {};
 const mockTherapySessionServiceMethods = {};
 
 jest.mock('src/api/crisp/crisp-api');
+jest.mock('src/api/mailchimp/mailchimp-api');
 
 describe('UserService', () => {
   let service: UserService;
@@ -119,14 +122,29 @@ describe('UserService', () => {
       const repoSaveSpy = jest.spyOn(repo, 'save');
 
       const user = await service.createUser(createUserDto);
+      expect(repoSaveSpy).toHaveBeenCalledWith(createUserRepositoryDto);
       expect(user.user.email).toBe('user@email.com');
       expect(user.partnerAdmin).toBeNull();
       expect(user.partnerAccesses).toBeNull();
-      expect(repoSaveSpy).toHaveBeenCalledWith(createUserRepositoryDto);
+
+      // Test services user profiles are created
       expect(createCrispProfile).toHaveBeenCalledWith({
         email: user.user.email,
-        person: { nickname: 'name' },
+        person: { nickname: user.user.name, locales: [user.user.signUpLanguage] },
         segments: ['public'],
+      });
+      expect(createMailchimpProfile).toHaveBeenCalledWith({
+        email_address: user.user.email,
+        language: user.user.signUpLanguage,
+        status: 'subscribed',
+        marketing_permissions: [
+          {
+            marketing_permission_id: '874073',
+            text: 'Marketing Permissions',
+            enabled: false,
+          },
+        ],
+        merge_fields: { NAME: user.user.name },
       });
     });
 
@@ -138,12 +156,12 @@ describe('UserService', () => {
 
       const user = await service.createUser({
         ...createUserDto,
+        contactPermission: true,
         partnerId: mockPartnerEntity.id,
         partnerAccessCode: mockPartnerAccessEntity.accessCode,
       });
 
       expect(repoSaveSpy).toHaveBeenCalled();
-
       expect(user.user.email).toBe('user@email.com');
       expect(user.partnerAdmin).toBeNull();
 
@@ -153,10 +171,44 @@ describe('UserService', () => {
         { ...partnerAccessData, therapySessions: therapySession },
       ]);
 
+      // Test services user profiles are created
       expect(createCrispProfile).toHaveBeenCalledWith({
         email: user.user.email,
-        person: { nickname: 'name' },
+        person: { nickname: 'name', locales: ['en'] },
         segments: ['bumble'],
+      });
+      expect(updateCrispProfile).toHaveBeenCalledWith(
+        {
+          signed_up_at: user.user.createdAt,
+          marketing_permission: true,
+          service_emails_permission: true,
+          partners: 'bumble',
+          feature_live_chat: true,
+          feature_therapy: true,
+          therapy_sessions_remaining: 5,
+          therapy_sessions_redeemed: 1,
+        },
+        'user@email.com',
+      );
+      expect(createMailchimpProfile).toHaveBeenCalledWith({
+        email_address: user.user.email,
+        language: 'en',
+        status: 'subscribed',
+        marketing_permissions: [
+          {
+            marketing_permission_id: '874073',
+            text: 'Marketing Permissions',
+            enabled: true,
+          },
+        ],
+        merge_fields: {
+          NAME: 'name',
+          PARTNERS: 'bumble',
+          THERREMAIN: 5,
+          THERREDEEM: 1,
+          FEATTHER: 'true',
+          FEATCHAT: 'true',
+        },
       });
     });
 
@@ -449,7 +501,6 @@ describe('UserService', () => {
         therapySession,
         partnerAdmin,
         partnerAccess,
-        signUpLanguage,
         contactPermission,
         serviceEmailsPermission,
         courseUser,

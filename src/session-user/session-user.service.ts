@@ -129,7 +129,7 @@ export class SessionUserService {
       courseId,
     });
 
-    updateServiceUserProfilesCourse(user.email, updatedCourseUser);
+    updateServiceUserProfilesCourse(updatedCourseUser, user.email);
 
     return formatCourseUserObject(updatedCourseUser);
   }
@@ -200,7 +200,7 @@ export class SessionUserService {
     courseUser.course = course;
     const formattedResponse = formatCourseUserObjects([courseUser])[0];
 
-    updateServiceUserProfilesCourse(user.email, courseUser);
+    updateServiceUserProfilesCourse(courseUser, user.email);
 
     return formattedResponse;
   }

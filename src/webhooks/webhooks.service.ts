@@ -273,6 +273,8 @@ export class WebhooksService {
     };
     try {
       if (story.content?.component === 'Course') {
+        const courseName = story.content?.name;
+
         let course = await this.courseRepository.findOneBy({
           storyblokId: story_id,
         });
@@ -282,9 +284,10 @@ export class WebhooksService {
           course.slug = story.full_slug;
         } else {
           course = this.courseRepository.create(storyData);
-          createMailchimpCourseMergeField(storyData.name);
+          createMailchimpCourseMergeField(courseName);
         }
-        course.name = story.content?.name;
+
+        course.name = courseName;
         course = await this.courseRepository.save(course);
 
         await this.coursePartnerService.updateCoursePartners(

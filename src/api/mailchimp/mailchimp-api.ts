@@ -1,10 +1,10 @@
-import { mailchimp } from '@mailchimp/mailchimp_marketing';
+import mailchimp from '@mailchimp/mailchimp_marketing';
 import { createHash } from 'crypto';
 import { mailchimpApiKey, mailchimpAudienceId, mailchimpServerPrefix } from 'src/utils/constants';
 import {
   ListMember,
   ListMemberPartial,
-  MAILCHIMP_MERGE_FIELD,
+  MAILCHIMP_MERGE_FIELD_TYPES,
   UpdateListMemberRequest,
 } from './mailchimp-api.interfaces';
 
@@ -12,16 +12,6 @@ mailchimp.setConfig({
   apiKey: mailchimpApiKey,
   server: mailchimpServerPrefix,
 });
-
-export interface MailchimpAudience {
-  NAME: string;
-  SIGNUPD: string;
-  FTHERAPYD: string;
-  NTHERAPYD: string;
-  LTHERAPYD: string;
-  PARTNERS: string;
-  COURSES: string;
-}
 
 export async function getEmailMD5Hash(email: string) {
   return createHash('md5').update(email).digest('hex');
@@ -64,7 +54,7 @@ export const updateMailchimpProfile = async (
 
 export const createMailchimpMergeField = async (
   name: string,
-  type: MAILCHIMP_MERGE_FIELD,
+  type: MAILCHIMP_MERGE_FIELD_TYPES,
 ): Promise<ListMember> => {
   try {
     return await mailchimp.lists.addListMergeField(mailchimpAudienceId, {

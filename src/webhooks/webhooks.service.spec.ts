@@ -17,6 +17,7 @@ import { EVENT_NAME } from 'src/event-logger/event-logger.interface';
 import { EventLoggerService } from 'src/event-logger/event-logger.service';
 import { PartnerService } from 'src/partner/partner.service';
 import { SIMPLYBOOK_ACTION_ENUM, STORYBLOK_STORY_STATUS_ENUM } from 'src/utils/constants';
+import { createMailchimpCourseMergeField } from 'src/utils/serviceUserProfiles';
 import StoryblokClient from 'storyblok-js-client';
 import {
   mockCourse,
@@ -84,27 +85,8 @@ jest.mock('src/api/simplybook/simplybook-api', () => {
     },
   };
 });
-jest.mock('../api/crisp/crisp-api', () => {
-  return {
-    updateCrispProfile: () => {
-      return;
-    },
-    getCrispPeopleData: () => {
-      return {
-        error: false,
-        reason: undefined,
-        data: {
-          data: {
-            data: {
-              therapy_sessions_remaining: 10,
-              therapy_sessions_redeemed: 10,
-            },
-          },
-        },
-      };
-    },
-  };
-});
+jest.mock('src/api/crisp/crisp-api');
+jest.mock('src/utils/serviceUserProfiles');
 
 describe('WebhooksService', () => {
   let service: WebhooksService;
@@ -467,7 +449,7 @@ describe('WebhooksService', () => {
       });
 
       expect(courseSaveRepoSpy).toHaveBeenCalledWith(mockCourse);
-
+      expect(createMailchimpCourseMergeField).toHaveBeenCalledWith(mockCourse.name);
       courseFindOneRepoSpy.mockClear();
       courseCreateRepoSpy.mockClear();
       courseSaveRepoSpy.mockClear();

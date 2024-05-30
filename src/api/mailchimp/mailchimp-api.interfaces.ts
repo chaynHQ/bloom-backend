@@ -1,4 +1,4 @@
-export enum MAILCHIMP_MERGE_FIELD {
+export enum MAILCHIMP_MERGE_FIELD_TYPES {
   TEXT = 'text',
   NUMBER = 'number',
   ADDRESS = 'address',
@@ -10,6 +10,16 @@ export enum MAILCHIMP_MERGE_FIELD {
   DROPDOWN = 'dropdown',
   BIRTHDAY = 'birthday',
   ZIP = 'zip',
+}
+
+export interface MailchimpAudience {
+  NAME: string;
+  SIGNUPD: string;
+  FTHERAPYD: string;
+  NTHERAPYD: string;
+  LTHERAPYD: string;
+  PARTNERS: string;
+  COURSES: string;
 }
 export interface ListMemberCustomFields {
   NAME?: string;
