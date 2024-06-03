@@ -6,6 +6,8 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { addCrispProfile } from 'src/api/crisp/crisp-api';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { PartnerEntity } from 'src/entities/partner.entity';
+import { SubscriptionUserService } from 'src/subscription-user/subscription-user.service';
+import { TherapySessionService } from 'src/therapy-session/therapy-session.service';
 import { FEATURES, PartnerAccessCodeStatusEnum } from 'src/utils/constants';
 import {
   mockFeatureEntity,
@@ -65,6 +67,9 @@ const mockPartnerWithAutomaticAccessCodeFeature = {
   ],
 };
 
+const mockSubscriptionUserServiceMethods = {};
+const mockTherapySessionServiceMethods = {};
+
 jest.mock('src/api/crisp/crisp-api');
 
 describe('UserService', () => {
@@ -74,6 +79,8 @@ describe('UserService', () => {
   let mockPartnerRepository: DeepMocked<Repository<PartnerEntity>>;
   let mockAuthService: DeepMocked<AuthService>;
   let mockPartnerAccessService: DeepMocked<PartnerAccessService>;
+  let mockSubscriptionUserService: DeepMocked<SubscriptionUserService>;
+  let mockTherapySessionService: DeepMocked<TherapySessionService>;
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -81,6 +88,10 @@ describe('UserService', () => {
     mockPartnerService = createMock<PartnerService>(mockPartnerServiceMethods);
     mockPartnerAccessService = createMock<PartnerAccessService>();
     mockPartnerRepository = createMock<Repository<PartnerEntity>>();
+    mockSubscriptionUserService = createMock<SubscriptionUserService>(
+      mockSubscriptionUserServiceMethods,
+    );
+    mockTherapySessionService = createMock<TherapySessionService>(mockTherapySessionServiceMethods);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -105,6 +116,8 @@ describe('UserService', () => {
           provide: PartnerAccessService,
           useValue: mockPartnerAccessService,
         },
+        { provide: SubscriptionUserService, useValue: mockSubscriptionUserService },
+        { provide: TherapySessionService, useValue: mockTherapySessionService },
       ],
     }).compile();
 
@@ -269,12 +282,184 @@ describe('UserService', () => {
         );
 
       const repoSpySave = jest.spyOn(repo, 'save');
+      const mockTherapySessionServiceSpy = jest.spyOn(
+        mockTherapySessionService,
+        'softDeleteTherapySessions',
+      );
+      const mockSubscriptionUserServiceSpy = jest.spyOn(
+        mockSubscriptionUserService,
+        'softDeleteSubscriptionsForUser',
+      );
+      const mockAuthServiceSpy = jest.spyOn(mockAuthService, 'deleteFirebaseUser');
 
       const user = await service.deleteUserById(mockUserEntity.id);
       expect(user.name).not.toBe(mockUserEntity.name);
+      expect(user.id).toBe(mockUserEntity.id);
       expect(user.email).not.toBe(mockUserEntity.email);
 
       expect(repoSpySave).toHaveBeenCalled();
+      expect(user.name).not.toBe(mockUserEntity.name);
+      expect(user.id).toBe(mockUserEntity.id);
+      expect(user.email).not.toBe(mockUserEntity.email);
+
+      expect(repoSpySave).toHaveBeenCalled();
+      expect(mockTherapySessionServiceSpy).toHaveBeenCalled();
+      expect(mockSubscriptionUserServiceSpy).toHaveBeenCalledWith(
+        mockUserEntity.id,
+        mockUserEntity.email,
+      );
+      expect(mockAuthServiceSpy).toHaveBeenCalledWith(mockUserEntity.firebaseUid);
+    });
+  });
+
+  describe('deleteUser', () => {
+    it('when user id supplied, should soft delete', async () => {
+      const repoSpyCreateQueryBuilder = jest.spyOn(repo, 'createQueryBuilder');
+      repoSpyCreateQueryBuilder
+        .mockImplementation(
+          createQueryBuilderMock() as never, // TODO resolve this typescript issue
+        )
+        .mockImplementationOnce(
+          createQueryBuilderMock({
+            getOne: jest.fn().mockResolvedValue(mockUserEntity),
+          }) as never,
+        );
+
+      const repoSpySave = jest.spyOn(repo, 'save');
+      const mockTherapySessionServiceSpy = jest.spyOn(
+        mockTherapySessionService,
+        'softDeleteTherapySessions',
+      );
+      const mockSubscriptionUserServiceSpy = jest.spyOn(
+        mockSubscriptionUserService,
+        'softDeleteSubscriptionsForUser',
+      );
+      const mockAuthServiceSpy = jest.spyOn(mockAuthService, 'deleteFirebaseUser');
+
+      const user = await service.deleteUser(mockUserEntity);
+      expect(user.name).not.toBe(mockUserEntity.name);
+      expect(user.id).toBe(mockUserEntity.id);
+      expect(user.email).not.toBe(mockUserEntity.email);
+
+      expect(repoSpySave).toHaveBeenCalled();
+      expect(mockTherapySessionServiceSpy).toHaveBeenCalled();
+      expect(mockSubscriptionUserServiceSpy).toHaveBeenCalledWith(
+        mockUserEntity.id,
+        mockUserEntity.email,
+      );
+      expect(mockAuthServiceSpy).toHaveBeenCalledWith(mockUserEntity.firebaseUid);
+    });
+
+    it('when user id supplied, but firebaseRequestFails, it should not throw', async () => {
+      const repoSpyCreateQueryBuilder = jest.spyOn(repo, 'createQueryBuilder');
+      repoSpyCreateQueryBuilder
+        .mockImplementation(
+          createQueryBuilderMock() as never, // TODO resolve this typescript issue
+        )
+        .mockImplementationOnce(
+          createQueryBuilderMock({
+            getOne: jest.fn().mockResolvedValue(mockUserEntity),
+          }) as never,
+        );
+
+      const repoSpySave = jest.spyOn(repo, 'save');
+      const mockTherapySessionServiceSpy = jest.spyOn(
+        mockTherapySessionService,
+        'softDeleteTherapySessions',
+      );
+      const mockSubscriptionUserServiceSpy = jest.spyOn(
+        mockSubscriptionUserService,
+        'softDeleteSubscriptionsForUser',
+      );
+      const mockAuthServiceSpy = jest
+        .spyOn(mockAuthService, 'deleteFirebaseUser')
+        .mockImplementationOnce(async () => {
+          throw new Error('Firebase error, unable to delete firebase user');
+        });
+
+      const user = await service.deleteUser(mockUserEntity);
+      expect(user.name).not.toBe(mockUserEntity.name);
+      expect(user.id).toBe(mockUserEntity.id);
+      expect(user.email).not.toBe(mockUserEntity.email);
+
+      expect(repoSpySave).toHaveBeenCalledTimes(1);
+      expect(mockTherapySessionServiceSpy).toHaveBeenCalledTimes(1);
+      expect(mockSubscriptionUserServiceSpy).toHaveBeenCalledTimes(1);
+      expect(mockAuthServiceSpy).toHaveBeenCalledWith(mockUserEntity.firebaseUid);
+    });
+    it('when user id supplied, but deleting subscriptions fails, it should throw with helpful error', async () => {
+      const repoSpyCreateQueryBuilder = jest.spyOn(repo, 'createQueryBuilder');
+      repoSpyCreateQueryBuilder
+        .mockImplementation(
+          createQueryBuilderMock() as never, // TODO resolve this typescript issue
+        )
+        .mockImplementationOnce(
+          createQueryBuilderMock({
+            getOne: jest.fn().mockResolvedValue(mockUserEntity),
+          }) as never,
+        );
+
+      const repoSpySave = jest.spyOn(repo, 'save');
+      const mockTherapySessionServiceSpy = jest.spyOn(
+        mockTherapySessionService,
+        'softDeleteTherapySessions',
+      );
+      const mockSubscriptionUserServiceSpy = jest
+        .spyOn(mockSubscriptionUserService, 'softDeleteSubscriptionsForUser')
+        .mockImplementationOnce(async () => {
+          throw new Error(
+            'Subscription deletion error, unable to redact subscriptions for user with id ' +
+              mockUserEntity.id,
+          );
+        });
+      const mockAuthServiceSpy = jest.spyOn(mockAuthService, 'deleteFirebaseUser');
+
+      await expect(service.deleteUser(mockUserEntity)).rejects.toThrow(
+        'Unable to complete deleting user, user@email.com due to error - Error: Subscription deletion error, unable to redact subscriptions for user with id userId1',
+      );
+
+      expect(repoSpySave).toHaveBeenCalledTimes(0);
+      expect(mockTherapySessionServiceSpy).toHaveBeenCalledTimes(0);
+      expect(mockSubscriptionUserServiceSpy).toHaveBeenCalledTimes(1);
+      expect(mockAuthServiceSpy).toHaveBeenCalledWith(mockUserEntity.firebaseUid);
+    });
+
+    it('when user id supplied, but deleting therapysessions fails, it should throw with helpful error', async () => {
+      const repoSpyCreateQueryBuilder = jest.spyOn(repo, 'createQueryBuilder');
+      repoSpyCreateQueryBuilder
+        .mockImplementation(
+          createQueryBuilderMock() as never, // TODO resolve this typescript issue
+        )
+        .mockImplementationOnce(
+          createQueryBuilderMock({
+            getOne: jest.fn().mockResolvedValue(mockUserEntity),
+          }) as never,
+        );
+
+      const repoSpySave = jest.spyOn(repo, 'save');
+      const mockTherapySessionServiceSpy = jest
+        .spyOn(mockTherapySessionService, 'softDeleteTherapySessions')
+        .mockImplementationOnce(async () => {
+          throw new Error(
+            'Therapy deletion error, unable to redact therapy sessions for user with id ' +
+              mockUserEntity.id,
+          );
+        });
+      const mockSubscriptionUserServiceSpy = jest.spyOn(
+        mockSubscriptionUserService,
+        'softDeleteSubscriptionsForUser',
+      );
+
+      const mockAuthServiceSpy = jest.spyOn(mockAuthService, 'deleteFirebaseUser');
+
+      await expect(service.deleteUser(mockUserEntity)).rejects.toThrow(
+        'Unable to complete deleting user, user@email.com due to error - Error: Therapy deletion error, unable to redact therapy sessions for user with id userId1',
+      );
+
+      expect(repoSpySave).toHaveBeenCalledTimes(0);
+      expect(mockTherapySessionServiceSpy).toHaveBeenCalledTimes(1);
+      expect(mockSubscriptionUserServiceSpy).toHaveBeenCalledTimes(1);
+      expect(mockAuthServiceSpy).toHaveBeenCalledWith(mockUserEntity.firebaseUid);
     });
   });
 

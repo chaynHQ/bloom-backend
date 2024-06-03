@@ -2,6 +2,7 @@ import { PartialFuncReturn } from '@golevelup/ts-jest';
 import { UserRecord } from 'firebase-admin/lib/auth/user-record';
 import { MailchimpClient } from 'src/api/mailchimp/mailchip-api';
 import { SlackMessageClient } from 'src/api/slack/slack-api';
+import { ZapierWebhookClient } from 'src/api/zapier/zapier-webhook-client';
 import { CoursePartnerService } from 'src/course-partner/course-partner.service';
 import { CoursePartnerEntity } from 'src/entities/course-partner.entity';
 import { CourseEntity } from 'src/entities/course.entity';
@@ -13,6 +14,7 @@ import { PartnerAdminEntity } from 'src/entities/partner-admin.entity';
 import { PartnerFeatureEntity } from 'src/entities/partner-feature.entity';
 import { PartnerEntity } from 'src/entities/partner.entity';
 import { SessionEntity } from 'src/entities/session.entity';
+import { SubscriptionUserEntity } from 'src/entities/subscription-user.entity';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
 import { UserEntity } from 'src/entities/user.entity';
 import { EventLoggerService } from 'src/event-logger/event-logger.service';
@@ -32,6 +34,7 @@ import {
   mockPartnerEntity,
   mockPartnerFeatureEntity,
   mockSession,
+  mockSubscriptionUserEntity,
   mockTherapySessionEntity,
   mockUserEntity,
   mockUserRecord,
@@ -149,6 +152,9 @@ export const mockPartnerAdminRepositoryMethods: PartialFuncReturn<Repository<Par
 export const mockTherapySessionRepositoryMethods: PartialFuncReturn<
   Repository<TherapySessionEntity>
 > = {
+  createQueryBuilder: createQueryBuilderMock({
+    getMany: jest.fn().mockResolvedValue([TherapySessionEntity]),
+  }),
   findOneBy: async (arg) => {
     return { ...mockTherapySessionEntity, ...(arg ? arg : {}) } as TherapySessionEntity;
   },
@@ -328,3 +334,43 @@ export const mockEventLoggerRepositoryMethods: PartialFuncReturn<Repository<Even
   },
   save: async (arg) => arg as EventLogEntity,
 };
+
+export const mockSubscriptionUserRepositoryMethods: PartialFuncReturn<
+  Repository<SubscriptionUserEntity>
+> = {
+  createQueryBuilder: createQueryBuilderMock({
+    getOne: jest.fn().mockResolvedValue(mockSubscriptionUserEntity),
+  }),
+  create: (dto) => {
+    return {
+      ...mockSubscriptionUserEntity,
+      ...dto,
+      id: 'newId',
+    } as SubscriptionUserEntity;
+  },
+  findOneBy: async (arg) => {
+    return {
+      ...mockSubscriptionUserEntity,
+      ...(arg ? { ...arg } : {}),
+    } as SubscriptionUserEntity;
+  },
+  findOne: async (arg) => {
+    return {
+      ...mockSubscriptionUserEntity,
+      ...(arg ? { ...arg } : {}),
+    } as SubscriptionUserEntity;
+  },
+  find: async (arg) => {
+    return [
+      { ...mockSubscriptionUserEntity, ...(arg ? { ...arg } : {}) },
+    ] as SubscriptionUserEntity[];
+  },
+  findBy: async (arg) => {
+    return [
+      { ...mockSubscriptionUserEntity, ...(arg ? { ...arg } : {}) },
+    ] as SubscriptionUserEntity[];
+  },
+  save: async (arg) => arg as SubscriptionUserEntity,
+};
+
+export const mockZapierWebhookClientMethods = {} as ZapierWebhookClient;
