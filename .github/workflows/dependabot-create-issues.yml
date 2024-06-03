@@ -1,3 +1,6 @@
+# This workflow opens issues for pull requests opened by dependabot.
+# See for more info: https://github.com/actions/dependency-review-action
+
 name: Create Dependabot Issues # from pull requests
 
 on:
@@ -10,12 +13,12 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       issues: write
-    if: ${{ github.event.pull_request.user.login == 'dependabot[bot]' }} 
+    if: ${{ github.event.pull_request.user.login == 'dependabot[bot]' }}
     steps:
       - name: Create issue
         uses: actions-cool/issues-helper@v3
         with:
-          actions: 'create-issue'
+          actions: "create-issue"
           token: ${{ secrets.GITHUB_TOKEN }}
           title: ${{ github.event.pull_request.title }}
           body: |
@@ -28,4 +31,4 @@ jobs:
 
             ### Resources
             GitHub Docs - Reviewing Pull Requests with Dependency Updates: https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/reviewing-changes-in-pull-requests/reviewing-dependency-changes-in-a-pull-request
-          labels: 'dependencies'
+          labels: "dependencies"
