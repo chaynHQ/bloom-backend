@@ -93,6 +93,7 @@ export const formatUserObject = (userObject: UserEntity): GetUserDto => {
     partnerAdmin: userObject.partnerAdmin
       ? {
           id: userObject.partnerAdmin.id,
+          active: userObject.partnerAdmin.active,
           createdAt: userObject.partnerAdmin.createdAt,
           updatedAt: userObject.partnerAdmin.updatedAt,
           partner: formatPartnerObject(userObject.partnerAdmin.partner),
