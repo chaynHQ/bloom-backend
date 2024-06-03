@@ -12,24 +12,15 @@ export enum MAILCHIMP_MERGE_FIELD_TYPES {
   ZIP = 'zip',
 }
 
-export interface MailchimpAudience {
-  NAME: string;
-  SIGNUPD: string;
-  FTHERAPYD: string;
-  NTHERAPYD: string;
-  LTHERAPYD: string;
-  PARTNERS: string;
-  COURSES: string;
-}
 export interface ListMemberCustomFields {
   NAME?: string;
   SIGNUPD?: string;
   PARTNERS?: string;
   FEATTHER?: string;
   FEATCHAT?: string;
-  FTHERAPYD?: string;
-  NTHERAPYD?: string;
-  LTHERAPYD?: string;
+  THERFIRSAT?: string;
+  THERNEXTAT?: string;
+  THERLASTAT?: string;
   THERREMAIN?: number;
   THERREDEEM?: number;
   C_HST?: string;

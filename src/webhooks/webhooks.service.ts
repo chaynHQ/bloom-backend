@@ -78,6 +78,7 @@ export class WebhooksService {
     // Creating a new therapy session
     if (action === SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING) {
       const therapySession = await this.newPartnerAccessTherapy(user, simplyBookDto);
+
       this.logger.log(
         `Update therapy session webhook function COMPLETED for ${action} - ${user.email} - ${booking_code} - userId ${user_id}`,
       );
@@ -107,10 +108,6 @@ export class WebhooksService {
       }
     }
 
-    if (action === SIMPLYBOOK_ACTION_ENUM.COMPLETED_BOOKING) {
-      existingTherapySession.completedAt = new Date();
-    }
-
     if (action === SIMPLYBOOK_ACTION_ENUM.UPDATED_BOOKING) {
       existingTherapySession.rescheduledFrom = existingTherapySession.startDateTime;
       existingTherapySession.startDateTime = new Date(simplyBookDto.start_date_time);
@@ -120,12 +117,23 @@ export class WebhooksService {
     try {
       const therapySession = await this.therapySessionRepository.save(existingTherapySession);
 
-      const partnerAccesses = await this.partnerAccessRepository.findBy({
-        userId: user.id,
-        active: true,
-        featureTherapy: true,
+      const partnerAccesses = await this.partnerAccessRepository.find({
+        where: {
+          userId: user.id,
+          active: true,
+          featureTherapy: true,
+        },
+        relations: {
+          therapySession: true,
+        },
       });
-      updateServiceUserProfilesTherapy(partnerAccesses, user.email);
+
+      updateServiceUserProfilesTherapy(
+        [...partnerAccesses],
+        action,
+        therapySession.startDateTime,
+        user.email,
+      );
 
       this.logger.log(
         `Update therapy session webhook function COMPLETED for ${action} - ${user.email} - ${booking_code} - userId ${user_id}`,
@@ -192,10 +200,15 @@ export class WebhooksService {
   }
 
   private async newPartnerAccessTherapy(user: IUser, simplyBookDto: ZapierSimplybookBodyDto) {
-    const partnerAccesses = await this.partnerAccessRepository.findBy({
-      userId: user.id,
-      active: true,
-      featureTherapy: true,
+    const partnerAccesses = await this.partnerAccessRepository.find({
+      where: {
+        userId: user.id,
+        active: true,
+        featureTherapy: true,
+      },
+      relations: {
+        therapySession: true,
+      },
     });
 
     if (!partnerAccesses.length) {
@@ -226,15 +239,23 @@ export class WebhooksService {
     partnerAccess.therapySessionsRemaining -= 1;
     partnerAccess.therapySessionsRedeemed += 1;
 
-    updateServiceUserProfilesTherapy([...partnerAccesses, partnerAccess], user.email);
-
     try {
       const serializedTherapySession = serializeZapierSimplyBookDtoToTherapySessionEntity(
         simplyBookDto,
         partnerAccess,
       );
+
       await this.partnerAccessRepository.save(partnerAccess);
-      return await this.therapySessionRepository.save(serializedTherapySession);
+      const therapySession = await this.therapySessionRepository.save(serializedTherapySession);
+
+      updateServiceUserProfilesTherapy(
+        [...partnerAccesses, partnerAccess],
+        SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING,
+        therapySession.startDateTime,
+        user.email,
+      );
+
+      return therapySession;
     } catch (err) {
       const error = `newPartnerAccessTherapy - error saving new therapy session and partner access - email ${user.email} userId ${user.id} - ${err}`;
       this.logger.error(error);

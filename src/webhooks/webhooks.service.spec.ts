@@ -27,6 +27,7 @@ import {
   mockSessionStoryblokResult,
   mockSimplybookBodyBase,
   mockTherapySessionEntity,
+  mockUserEntity,
 } from 'test/utils/mockData';
 import {
   mockCoursePartnerRepositoryMethods,
@@ -485,11 +486,16 @@ describe('WebhooksService', () => {
     it('when creating a new therapy session and the userId is not provided, it should get userId from previous entry', async () => {
       const findTherapySessionSpy = jest
         .spyOn(mockedTherapySessionRepository, 'findOneBy')
-        .mockImplementationOnce(async () => {
+        .mockImplementation(async () => {
           return { ...mockTherapySessionEntity, clientEmail: mockSimplybookBodyBase.client_email };
         });
+      const findUserSpy = jest
+        .spyOn(mockedUserRepository, 'findOneBy')
+        .mockImplementationOnce(async () => {
+          return mockUserEntity;
+        });
       const findPartnerAccessSpy = jest
-        .spyOn(mockedPartnerAccessRepository, 'findBy')
+        .spyOn(mockedPartnerAccessRepository, 'find')
         .mockImplementationOnce(async () => {
           return [{ ...mockPartnerAccessEntity, userId: 'userId1' }];
         });
@@ -499,6 +505,26 @@ describe('WebhooksService', () => {
         action: SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING,
       });
 
+      expect(findTherapySessionSpy).toHaveBeenCalledWith({
+        clientEmail: ILike('testuser@test.com'),
+        bookingCode: ILike('abc'),
+      });
+
+      expect(findUserSpy).toHaveBeenCalledWith({
+        id: 'userId1',
+      });
+
+      expect(findPartnerAccessSpy).toHaveBeenCalledWith({
+        where: {
+          userId: 'userId1',
+          active: true,
+          featureTherapy: true,
+        },
+        relations: {
+          therapySession: true,
+        },
+      });
+
       expect(newTherapySession).toEqual({
         ...mockTherapySessionEntity,
         clientEmail: mockSimplybookBodyBase.client_email,
@@ -506,17 +532,6 @@ describe('WebhooksService', () => {
         action: SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING,
         startDateTime: new Date(mockSimplybookBodyBase.start_date_time),
         endDateTime: new Date(mockSimplybookBodyBase.end_date_time),
-      });
-
-      expect(findTherapySessionSpy).toHaveBeenCalledWith({
-        clientEmail: ILike('testuser@test.com'),
-        bookingCode: ILike('abc'),
-      });
-
-      expect(findPartnerAccessSpy).toHaveBeenCalledWith({
-        userId: 'userId1',
-        featureTherapy: true,
-        active: true,
       });
     });
 
@@ -529,7 +544,7 @@ describe('WebhooksService', () => {
       const findUserSpy = jest.spyOn(mockedUserRepository, 'findOneBy');
 
       const findPartnerAccessSpy = jest
-        .spyOn(mockedPartnerAccessRepository, 'findBy')
+        .spyOn(mockedPartnerAccessRepository, 'find')
         .mockImplementationOnce(async () => {
           return [{ ...mockPartnerAccessEntity, userId: 'userId1' }];
         });
@@ -557,9 +572,14 @@ describe('WebhooksService', () => {
       });
 
       expect(findPartnerAccessSpy).toHaveBeenCalledWith({
-        userId: 'userId1',
-        featureTherapy: true,
-        active: true,
+        where: {
+          userId: 'userId1',
+          active: true,
+          featureTherapy: true,
+        },
+        relations: {
+          therapySession: true,
+        },
       });
     });
 
@@ -613,7 +633,7 @@ describe('WebhooksService', () => {
     });
 
     it('should throw if no partnerAccess exists when user tries to create a booking', async () => {
-      jest.spyOn(mockedPartnerAccessRepository, 'findBy').mockImplementationOnce(async () => {
+      jest.spyOn(mockedPartnerAccessRepository, 'find').mockImplementationOnce(async () => {
         return [];
       });
       await expect(
@@ -627,7 +647,7 @@ describe('WebhooksService', () => {
     });
 
     it('should deduct therapyRemaining when user creates a new booking', async () => {
-      jest.spyOn(mockedPartnerAccessRepository, 'findBy').mockImplementationOnce(async () => {
+      jest.spyOn(mockedPartnerAccessRepository, 'find').mockImplementationOnce(async () => {
         return [
           { ...mockPartnerAccessEntity, therapySessionsRemaining: 6, therapySessionsRedeemed: 0 },
         ];
@@ -642,6 +662,7 @@ describe('WebhooksService', () => {
       ).resolves.toHaveProperty('action', SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING);
       expect(partnerAccessSaveSpy).toHaveBeenCalledWith(mockPartnerAccessEntity);
     });
+
     it('should not update partner access when user updates booking', async () => {
       const partnerAccessSaveSpy = jest.spyOn(mockedPartnerAccessRepository, 'save');
       await expect(
@@ -653,7 +674,7 @@ describe('WebhooksService', () => {
       expect(partnerAccessSaveSpy).not.toHaveBeenCalled();
     });
     it('should error if user creates booking when no therapy sessions remaining ', async () => {
-      jest.spyOn(mockedPartnerAccessRepository, 'findBy').mockImplementationOnce(async () => {
+      jest.spyOn(mockedPartnerAccessRepository, 'find').mockImplementationOnce(async () => {
         return [
           {
             ...mockPartnerAccessEntity,

@@ -1,3 +1,4 @@
+import { add } from 'date-fns';
 import { UserRecord } from 'firebase-admin/lib/auth/user-record';
 import { CoursePartnerEntity } from 'src/entities/course-partner.entity';
 import { CourseUserEntity } from 'src/entities/course-user.entity';
@@ -166,6 +167,41 @@ export const mockTherapySessionEntity = {
   user: { signUpLanguage: 'en' } as UserEntity,
 } as TherapySessionEntity;
 
+export const mockTherapySessionDto = {
+  id: mockTherapySessionEntity.id,
+  action: mockTherapySessionEntity.action,
+  clientTimezone: mockTherapySessionEntity.clientTimezone,
+  serviceName: mockTherapySessionEntity.serviceName,
+  serviceProviderName: mockTherapySessionEntity.serviceProviderName,
+  serviceProviderEmail: mockTherapySessionEntity.serviceProviderEmail,
+  startDateTime: mockTherapySessionEntity.startDateTime,
+  endDateTime: mockTherapySessionEntity.endDateTime,
+  cancelledAt: mockTherapySessionEntity.cancelledAt,
+  rescheduledFrom: mockTherapySessionEntity.rescheduledFrom,
+  completedAt: mockTherapySessionEntity.completedAt,
+};
+
+export const mockAltTherapySessionEntity = {
+  createdAt: new Date(),
+  partnerAccessId: 'pa2',
+  partnerAccess: { id: 'pa2' } as PartnerAccessEntity,
+  updatedAt: new Date(),
+  serviceName: 'bloom therapy',
+  serviceProviderEmail: 'therapist@test.com',
+  serviceProviderName: 'Therapist name',
+  bookingCode: '321',
+  clientTimezone: 'Europe/London',
+  clientEmail: 'client@test.com',
+  startDateTime: new Date('2022-09-15T07:30:00+0100'),
+  endDateTime: new Date('2022-09-15T08:30:00+0100'),
+  cancelledAt: null,
+  rescheduledFrom: null,
+  completedAt: null,
+  id: 'ts2',
+  userId: 'userId1',
+  user: { signUpLanguage: 'en' } as UserEntity,
+} as TherapySessionEntity;
+
 export const mockSimplybookBodyBase: ZapierSimplybookBodyDto = {
   action: SIMPLYBOOK_ACTION_ENUM.UPDATED_BOOKING,
   start_date_time: '2022-09-12T07:30:00+0000',
@@ -219,7 +255,7 @@ export const mockPartnerAccessEntity = {
   partnerAdminId: null,
   createdAt: new Date(),
   activatedAt: new Date(),
-  therapySession: [],
+  therapySession: [mockTherapySessionEntity],
   updatedAt: new Date(),
   active: true,
   userId: null,
@@ -227,8 +263,8 @@ export const mockPartnerAccessEntity = {
 
 export const mockAltPartnerAccessEntity = {
   id: 'pa2',
-  therapySessionsRemaining: 3,
-  therapySessionsRedeemed: 3,
+  therapySessionsRemaining: 4,
+  therapySessionsRedeemed: 2,
   featureTherapy: true,
   featureLiveChat: false,
   accessCode: '654321',
@@ -237,7 +273,16 @@ export const mockAltPartnerAccessEntity = {
   partnerAdminId: null,
   createdAt: new Date(),
   activatedAt: new Date(),
-  therapySession: [],
+  therapySession: [
+    mockAltTherapySessionEntity,
+    {
+      ...mockAltTherapySessionEntity,
+      id: 'ts3',
+      bookingCode: '432',
+      startDateTime: add(new Date(), { days: 3 }),
+      endDateTime: add(new Date(), { days: 3, hours: 1 }),
+    },
+  ],
   updatedAt: new Date(),
   active: true,
   userId: null,

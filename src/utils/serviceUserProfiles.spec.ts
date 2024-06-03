@@ -16,6 +16,7 @@ import {
   mockPartnerEntity,
   mockUserEntity,
 } from 'test/utils/mockData';
+import { SIMPLYBOOK_ACTION_ENUM } from './constants';
 import {
   createMailchimpCourseMergeField,
   createServiceUserProfiles,
@@ -256,8 +257,8 @@ describe('Service user profiles', () => {
           partners: partnerString,
           feature_live_chat: true,
           feature_therapy: true,
-          therapy_sessions_remaining: 8,
-          therapy_sessions_redeemed: 4,
+          therapy_sessions_remaining: 9,
+          therapy_sessions_redeemed: 3,
         },
         mockUserEntity.email,
       );
@@ -268,8 +269,8 @@ describe('Service user profiles', () => {
             PARTNERS: partnerString,
             FEATCHAT: 'true',
             FEATTHER: 'true',
-            THERREMAIN: 8,
-            THERREDEEM: 4,
+            THERREMAIN: 9,
+            THERREDEEM: 3,
           },
         },
         mockUserEntity.email,
@@ -278,14 +279,35 @@ describe('Service user profiles', () => {
   });
 
   describe('updateServiceUserProfilesTherapy', () => {
-    it('should update crisp and mailchimp profile combined therapy data', async () => {
-      const partnerAccesses = [mockPartnerAccessEntity, mockAltPartnerAccessEntity];
-      await updateServiceUserProfilesTherapy(partnerAccesses, mockUserEntity.email);
+    it('should update crisp and mailchimp profile for first therapy booking', async () => {
+      const therapySession = mockAltPartnerAccessEntity.therapySession[1];
+      const partnerAccesses = [
+        {
+          ...mockAltPartnerAccessEntity,
+          therapySessionsRemaining: 5,
+          therapySessionsRedeemed: 1,
+          therapySession: [therapySession],
+        },
+      ];
+
+      await updateServiceUserProfilesTherapy(
+        partnerAccesses,
+        SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING,
+        therapySession.startDateTime,
+        mockUserEntity.email,
+      );
+
+      const firstTherapySessionAt = therapySession.startDateTime.toISOString();
+      const nextTherapySessionAt = therapySession.startDateTime.toISOString();
+      const lastTherapySessionAt = '';
 
       expect(updateCrispProfile).toHaveBeenCalledWith(
         {
-          therapy_sessions_remaining: 8,
-          therapy_sessions_redeemed: 4,
+          therapy_sessions_remaining: 5,
+          therapy_sessions_redeemed: 1,
+          therapy_session_first_at: firstTherapySessionAt,
+          therapy_session_next_at: nextTherapySessionAt,
+          therapy_session_last_at: lastTherapySessionAt,
         },
         mockUserEntity.email,
       );
@@ -293,8 +315,137 @@ describe('Service user profiles', () => {
       expect(updateMailchimpProfile).toHaveBeenCalledWith(
         {
           merge_fields: {
-            THERREMAIN: 8,
-            THERREDEEM: 4,
+            THERREMAIN: 5,
+            THERREDEEM: 1,
+            THERFIRSAT: firstTherapySessionAt,
+            THERNEXTAT: nextTherapySessionAt,
+            THERLASTAT: lastTherapySessionAt,
+          },
+        },
+        mockUserEntity.email,
+      );
+    });
+
+    it('should update crisp and mailchimp profile combined therapy data for new booking', async () => {
+      const partnerAccesses = [mockPartnerAccessEntity, mockAltPartnerAccessEntity];
+
+      await updateServiceUserProfilesTherapy(
+        partnerAccesses,
+        SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING,
+        mockAltPartnerAccessEntity.therapySession[1].startDateTime,
+        mockUserEntity.email,
+      );
+
+      const firstTherapySessionAt =
+        mockPartnerAccessEntity.therapySession[0].startDateTime.toISOString();
+      const nextTherapySessionAt =
+        mockAltPartnerAccessEntity.therapySession[1].startDateTime.toISOString();
+      const lastTherapySessionAt =
+        mockAltPartnerAccessEntity.therapySession[0].startDateTime.toISOString();
+
+      expect(updateCrispProfile).toHaveBeenCalledWith(
+        {
+          therapy_sessions_remaining: 9,
+          therapy_sessions_redeemed: 3,
+          therapy_session_first_at: firstTherapySessionAt,
+          therapy_session_next_at: nextTherapySessionAt,
+          therapy_session_last_at: lastTherapySessionAt,
+        },
+        mockUserEntity.email,
+      );
+
+      expect(updateMailchimpProfile).toHaveBeenCalledWith(
+        {
+          merge_fields: {
+            THERREMAIN: 9,
+            THERREDEEM: 3,
+            THERFIRSAT: firstTherapySessionAt,
+            THERNEXTAT: nextTherapySessionAt,
+            THERLASTAT: lastTherapySessionAt,
+          },
+        },
+        mockUserEntity.email,
+      );
+    });
+
+    it('should update crisp and mailchimp profile combined therapy data for updated booking', async () => {
+      const partnerAccesses = [mockPartnerAccessEntity, mockAltPartnerAccessEntity];
+
+      await updateServiceUserProfilesTherapy(
+        partnerAccesses,
+        SIMPLYBOOK_ACTION_ENUM.UPDATED_BOOKING,
+        mockAltPartnerAccessEntity.therapySession[1].startDateTime,
+        mockUserEntity.email,
+      );
+
+      const firstTherapySessionAt =
+        mockPartnerAccessEntity.therapySession[0].startDateTime.toISOString();
+      const nextTherapySessionAt =
+        mockAltPartnerAccessEntity.therapySession[1].startDateTime.toISOString();
+      const lastTherapySessionAt =
+        mockAltPartnerAccessEntity.therapySession[0].startDateTime.toISOString();
+
+      expect(updateCrispProfile).toHaveBeenCalledWith(
+        {
+          therapy_sessions_remaining: 9,
+          therapy_sessions_redeemed: 3,
+          therapy_session_first_at: firstTherapySessionAt,
+          therapy_session_next_at: nextTherapySessionAt,
+          therapy_session_last_at: lastTherapySessionAt,
+        },
+        mockUserEntity.email,
+      );
+
+      expect(updateMailchimpProfile).toHaveBeenCalledWith(
+        {
+          merge_fields: {
+            THERREMAIN: 9,
+            THERREDEEM: 3,
+            THERFIRSAT: firstTherapySessionAt,
+            THERNEXTAT: nextTherapySessionAt,
+            THERLASTAT: lastTherapySessionAt,
+          },
+        },
+        mockUserEntity.email,
+      );
+    });
+
+    it('should update crisp and mailchimp profile combined therapy data for cancelled booking', async () => {
+      mockAltPartnerAccessEntity.therapySession[1].action =
+        SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING;
+      const partnerAccesses = [mockPartnerAccessEntity, mockAltPartnerAccessEntity];
+
+      await updateServiceUserProfilesTherapy(
+        partnerAccesses,
+        SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING,
+        mockAltPartnerAccessEntity.therapySession[1].startDateTime,
+        mockUserEntity.email,
+      );
+
+      const firstTherapySessionAt =
+        mockPartnerAccessEntity.therapySession[0].startDateTime.toISOString();
+      const lastTherapySessionAt =
+        mockAltPartnerAccessEntity.therapySession[0].startDateTime.toISOString();
+
+      expect(updateCrispProfile).toHaveBeenCalledWith(
+        {
+          therapy_sessions_remaining: 9,
+          therapy_sessions_redeemed: 3,
+          therapy_session_first_at: firstTherapySessionAt,
+          therapy_session_next_at: '',
+          therapy_session_last_at: lastTherapySessionAt,
+        },
+        mockUserEntity.email,
+      );
+
+      expect(updateMailchimpProfile).toHaveBeenCalledWith(
+        {
+          merge_fields: {
+            THERREMAIN: 9,
+            THERREDEEM: 3,
+            THERFIRSAT: firstTherapySessionAt,
+            THERNEXTAT: '',
+            THERLASTAT: lastTherapySessionAt,
           },
         },
         mockUserEntity.email,

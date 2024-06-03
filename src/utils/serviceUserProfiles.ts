@@ -17,7 +17,7 @@ import { CourseUserEntity } from 'src/entities/course-user.entity';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { PartnerEntity } from 'src/entities/partner.entity';
 import { UserEntity } from 'src/entities/user.entity';
-import { PROGRESS_STATUS } from './constants';
+import { PROGRESS_STATUS, SIMPLYBOOK_ACTION_ENUM } from './constants';
 import { getAcronym } from './utils';
 
 // Functionality for syncing user profiles for Crisp and Mailchimp communications services.
@@ -118,10 +118,16 @@ export const updateServiceUserProfilesPartnerAccess = async (
 
 export const updateServiceUserProfilesTherapy = async (
   partnerAccesses: PartnerAccessEntity[],
+  therapySessionAction: SIMPLYBOOK_ACTION_ENUM,
+  therapySessionDate: Date,
   email,
 ) => {
   try {
-    const therapyData = serializeTherapyData(partnerAccesses);
+    const therapyData = serializeTherapyData(
+      partnerAccesses,
+      therapySessionAction,
+      therapySessionDate,
+    );
     updateCrispProfile(therapyData.crispSchema, email);
     updateMailchimpProfile(therapyData.mailchimpSchema, email);
   } catch (error) {
@@ -220,7 +226,34 @@ const serializePartnerAccessData = (partnerAccesses: PartnerAccessEntity[]) => {
   return { crispSchema, mailchimpSchema };
 };
 
-const serializeTherapyData = (partnerAccesses: PartnerAccessEntity[]) => {
+const serializeTherapyData = (
+  partnerAccesses: PartnerAccessEntity[],
+  therapySessionAction: SIMPLYBOOK_ACTION_ENUM,
+  therapySessionDate: Date,
+) => {
+  const therapySessions = partnerAccesses
+    .flatMap((partnerAccess) => partnerAccess.therapySession)
+    .filter((therapySession) => therapySession.action !== SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING)
+    .sort((a, b) => a.startDateTime.getTime() - b.startDateTime.getTime());
+
+  const pastTherapySessions = therapySessions.filter(
+    (therapySession) =>
+      therapySession.startDateTime !== therapySessionDate &&
+      therapySession.startDateTime.getTime() < new Date().getTime(),
+  );
+  const futureTherapySessions = therapySessions.filter(
+    (therapySession) => therapySession.startDateTime.getTime() > new Date().getTime(),
+  );
+
+  const firstTherapySessionAt = therapySessions?.at(0)?.startDateTime.toISOString() || '';
+
+  const lastTherapySessionAt = pastTherapySessions?.at(-1)?.startDateTime.toISOString() || '';
+
+  const nextTherapySessionAt =
+    therapySessionAction === SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING
+      ? futureTherapySessions?.at(-1)?.startDateTime.toISOString() || ''
+      : therapySessionDate.toISOString();
+
   const data = {
     therapySessionsRemaining: partnerAccesses.reduce(
       (sum, partnerAccess) => sum + partnerAccess.therapySessionsRemaining,
@@ -235,14 +268,21 @@ const serializeTherapyData = (partnerAccesses: PartnerAccessEntity[]) => {
   const crispSchema = {
     therapy_sessions_remaining: data.therapySessionsRemaining,
     therapy_sessions_redeemed: data.therapySessionsRedeemed,
+    therapy_session_first_at: firstTherapySessionAt,
+    therapy_session_next_at: nextTherapySessionAt,
+    therapy_session_last_at: lastTherapySessionAt,
   };
 
   const mailchimpSchema = {
     merge_fields: {
       THERREMAIN: data.therapySessionsRemaining,
       THERREDEEM: data.therapySessionsRedeemed,
+      THERFIRSAT: firstTherapySessionAt,
+      THERNEXTAT: nextTherapySessionAt,
+      THERLASTAT: lastTherapySessionAt,
     },
   };
+
   return { crispSchema, mailchimpSchema };
 };
 

@@ -14,6 +14,7 @@ import {
   mockIFirebaseUser,
   mockPartnerAccessEntity,
   mockPartnerEntity,
+  mockTherapySessionDto,
   mockUserEntity,
   mockUserRecord,
 } from 'test/utils/mockData';
@@ -168,7 +169,7 @@ describe('UserService', () => {
       const { therapySession, partnerAdmin, partnerAdminId, userId, ...partnerAccessData } =
         mockPartnerAccessEntity;
       expect(user.partnerAccesses).toEqual([
-        { ...partnerAccessData, therapySessions: therapySession },
+        { ...partnerAccessData, therapySessions: [mockTherapySessionDto] },
       ]);
 
       // Test services user profiles are created
@@ -255,7 +256,7 @@ describe('UserService', () => {
         mockPartnerAccessEntity; // Note different format for the DTO
 
       expect(user.partnerAccesses).toEqual([
-        { ...partnerAccessData, therapySessions: therapySession },
+        { ...partnerAccessData, therapySessions: [mockTherapySessionDto] },
       ]);
     });
   });
