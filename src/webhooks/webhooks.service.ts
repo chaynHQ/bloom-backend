@@ -534,7 +534,7 @@ export class WebhooksService {
     }
   }
 
-  async updateStory(data: StoryDto, signature: string | undefined) {
+  async updateStory(req, data: StoryDto, signature: string | undefined) {
     // Verify storyblok signature uses storyblok webhook secret - see https://www.storyblok.com/docs/guide/in-depth/webhooks#securing-a-webhook
     if (!signature) {
       const error = `Storyblok webhook error - no signature provided`;
@@ -543,7 +543,11 @@ export class WebhooksService {
     }
 
     const webhookSecret = process.env.STORYBLOK_WEBHOOK_SECRET;
-    const bodyHmac = createHmac('sha1', webhookSecret).update(JSON.stringify(data)).digest('hex');
+
+    req.rawBody = '' + data;
+    req.setEncoding('utf8');
+
+    const bodyHmac = createHmac('sha1', webhookSecret).update(req.rawBody).digest('hex');
 
     if (bodyHmac !== signature) {
       const error = `Storyblok webhook error - signature mismatch`;

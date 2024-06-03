@@ -6,5 +6,6 @@ import { SubscriptionService } from './subscription.service';
 @Module({
   imports: [TypeOrmModule.forFeature([SubscriptionEntity])],
   providers: [SubscriptionService],
+  exports: [SubscriptionService],
 })
 export class SubscriptionModule {}

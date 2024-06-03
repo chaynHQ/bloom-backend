@@ -9,6 +9,8 @@ import { PartnerAdminEntity } from 'src/entities/partner-admin.entity';
 import { PartnerFeatureEntity } from 'src/entities/partner-feature.entity';
 import { PartnerEntity } from 'src/entities/partner.entity';
 import { SessionEntity } from 'src/entities/session.entity';
+import { SubscriptionUserEntity } from 'src/entities/subscription-user.entity';
+import { SubscriptionEntity } from 'src/entities/subscription.entity';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
 import { UserEntity } from 'src/entities/user.entity';
 import { EVENT_NAME } from 'src/event-logger/event-logger.interface';
@@ -289,3 +291,14 @@ export const mockEventLog: EventLogEntity = {
   date: new Date(2000, 1, 1),
   userId: '123',
 } as EventLogEntity;
+
+export const mockSubscriptionEntity = {
+  name: 'whatsapp',
+} as SubscriptionEntity;
+
+export const mockSubscriptionUserEntity = {
+  id: 'su1',
+  subscriptionInfo: '07898987655',
+  userId: mockUserEntity.id,
+  subscription: mockSubscriptionEntity,
+} as SubscriptionUserEntity;
