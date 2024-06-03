@@ -30,7 +30,7 @@ describe('SubscriptionUserService', () => {
         SubscriptionUserService,
         {
           provide: getRepositoryToken(SubscriptionUserEntity),
-          useValue: mockSubscriptionUserRepositoryMethods,
+          useValue: mockedSubscriptionUserRepository,
         },
         {
           provide: SubscriptionService,

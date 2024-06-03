@@ -25,7 +25,7 @@ describe('TherapySessionService', () => {
         TherapySessionService,
         {
           provide: getRepositoryToken(TherapySessionEntity),
-          useValue: mockTherapySessionRepositoryMethods,
+          useValue: mockedTherapySessionRepository,
         },
         {
           provide: SlackMessageClient,

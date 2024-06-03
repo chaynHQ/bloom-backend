@@ -289,7 +289,7 @@ export class UserService {
     const randomString = generateRandomString(20);
 
     try {
-      const firebaseResponse = await this.authService.deleteFirebaseUser(user.firebaseUid);
+      await this.authService.deleteFirebaseUser(user.firebaseUid);
       this.logger.log(`Firebase account deleted for user with ID ${user.id}`);
     } catch (err) {
       // Continue to delete user, even if firebase request fails
