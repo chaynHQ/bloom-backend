@@ -29,7 +29,7 @@
     "migration:show": "yarn build && yarn typeorm -- migration:show"
   },
   "dependencies": {
-    "@mailchimp/mailchimp_transactional": "^1.0.47",
+    "@mailchimp/mailchimp_marketing": "^3.0.80",
     "@nestjs/common": "^10.3.6",
     "@nestjs/config": "^3.2.2",
     "@nestjs/core": "^10.3.6",

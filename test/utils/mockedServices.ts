@@ -1,12 +1,10 @@
 import { PartialFuncReturn } from '@golevelup/ts-jest';
 import { UserRecord } from 'firebase-admin/lib/auth/user-record';
-import { MailchimpClient } from 'src/api/mailchimp/mailchip-api';
 import { SlackMessageClient } from 'src/api/slack/slack-api';
 import { ZapierWebhookClient } from 'src/api/zapier/zapier-webhook-client';
 import { CoursePartnerService } from 'src/course-partner/course-partner.service';
 import { CoursePartnerEntity } from 'src/entities/course-partner.entity';
 import { CourseEntity } from 'src/entities/course.entity';
-import { EmailCampaignEntity } from 'src/entities/email-campaign.entity';
 import { EventLogEntity } from 'src/entities/event-log.entity';
 import { FeatureEntity } from 'src/entities/feature.entity';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
@@ -25,7 +23,6 @@ import { DeepPartial, Repository } from 'typeorm';
 import {
   mockCourse,
   mockCoursePartnerEntity,
-  mockEmailCampaignEntity,
   mockEventLog,
   mockFeatureEntity,
   mockPartnerAccessEntity,
@@ -54,19 +51,8 @@ export const mockWebhooksServiceMethods: PartialFuncReturn<WebhooksService> = {
   },
 };
 
-export const mockMailchimpClientMethods: PartialFuncReturn<MailchimpClient> = {
-  sendTherapyFeedbackEmail: async () => {
-    return [];
-  },
-  sendImpactMeasurementEmail: async () => {
-    return [];
-  },
-};
 export const mockPartnerServiceMethods = {
   getPartnerById: async (arg): Promise<PartnerEntity> => {
-    return { ...mockPartnerEntity, id: arg };
-  },
-  getPartnerWithPartnerFeaturesById: async (arg): Promise<PartnerEntity> => {
     return { ...mockPartnerEntity, id: arg };
   },
   getPartnerWithPartnerFeaturesByName: async (arg): Promise<PartnerEntity> => {
@@ -171,12 +157,6 @@ export const mockTherapySessionRepositoryMethods: PartialFuncReturn<
 
 export const mockUserRepositoryMethods: PartialFuncReturn<Repository<UserEntity>> = {
   createQueryBuilder: createQueryBuilderMock(),
-  create: (dto: CreateUserDto) => {
-    return {
-      ...mockUserEntity,
-      ...dto,
-    } as UserEntity;
-  },
   findOneBy: async (arg) => {
     return { ...mockUserEntity, ...(arg ? { ...arg } : {}) } as UserEntity;
   },
@@ -255,18 +235,6 @@ export const mockPartnerRepositoryMethods: PartialFuncReturn<Repository<PartnerE
     return [{ ...mockPartnerEntity, ...(arg ? { ...arg } : {}) }] as PartnerEntity[];
   },
   save: async (arg) => arg as PartnerEntity,
-};
-
-export const mockEmailCampaignRepositoryMethods: PartialFuncReturn<
-  Repository<EmailCampaignEntity>
-> = {
-  find: async (arg) => {
-    return [{ ...mockEmailCampaignEntity, ...(arg ? arg : {}) }] as EmailCampaignEntity[];
-  },
-  findBy: async (arg) => {
-    return [{ ...mockEmailCampaignEntity, ...(arg ? arg : {}) }] as EmailCampaignEntity[];
-  },
-  save: async (arg) => arg as EmailCampaignEntity,
 };
 
 export const mockPartnerFeatureRepositoryMethods: PartialFuncReturn<
