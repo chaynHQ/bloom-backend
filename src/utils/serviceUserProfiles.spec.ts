@@ -16,7 +16,7 @@ import {
   mockPartnerEntity,
   mockUserEntity,
 } from 'test/utils/mockData';
-import { SIMPLYBOOK_ACTION_ENUM } from './constants';
+import { SIMPLYBOOK_ACTION_ENUM, mailchimpMarketingPermissionId } from './constants';
 import {
   createMailchimpCourseMergeField,
   createServiceUserProfiles,
@@ -50,6 +50,11 @@ describe('Service user profiles', () => {
           marketing_permission: mockUserEntity.contactPermission,
           service_emails_permission: mockUserEntity.serviceEmailsPermission,
           signed_up_at: mockUserEntity.createdAt.toISOString(),
+          feature_live_chat: true,
+          feature_therapy: false,
+          partners: '',
+          therapy_sessions_redeemed: 0,
+          therapy_sessions_remaining: 0,
         },
         mockUserEntity.email,
       );
@@ -60,14 +65,19 @@ describe('Service user profiles', () => {
         status: 'subscribed',
         marketing_permissions: [
           {
-            marketing_permission_id: '874073',
-            text: 'Marketing Permissions',
+            marketing_permission_id: mailchimpMarketingPermissionId,
+            text: 'Email',
             enabled: mockUserEntity.contactPermission,
           },
         ],
         merge_fields: {
           SIGNUPD: mockUserEntity.createdAt.toISOString(),
           NAME: mockUserEntity.name,
+          FEATCHAT: 'true',
+          FEATTHER: 'false',
+          PARTNERS: '',
+          THERREMAIN: 0,
+          THERREDEEM: 0,
         },
       });
     });
@@ -103,8 +113,8 @@ describe('Service user profiles', () => {
         status: 'subscribed',
         marketing_permissions: [
           {
-            marketing_permission_id: '874073',
-            text: 'Marketing Permissions',
+            marketing_permission_id: mailchimpMarketingPermissionId,
+            text: 'Email',
             enabled: mockUserEntity.contactPermission,
           },
         ],
@@ -138,8 +148,8 @@ describe('Service user profiles', () => {
           status: 'subscribed',
           marketing_permissions: [
             {
-              marketing_permission_id: '874073',
-              text: 'Marketing Permissions',
+              marketing_permission_id: mailchimpMarketingPermissionId,
+              text: 'Email',
               enabled: mockUserEntity.contactPermission,
             },
           ],
@@ -172,8 +182,8 @@ describe('Service user profiles', () => {
           status: 'unsubscribed',
           marketing_permissions: [
             {
-              marketing_permission_id: '874073',
-              text: 'Marketing Permissions',
+              marketing_permission_id: mailchimpMarketingPermissionId,
+              text: 'Email',
               enabled: false,
             },
           ],
@@ -478,10 +488,21 @@ describe('Service user profiles', () => {
   });
 
   describe('createMailchimpCourseMergeField', () => {
-    it('should update crisp and mailchimp profile course data', async () => {
+    it('should create mailchimp course merge field', async () => {
       await createMailchimpCourseMergeField('Full course name');
 
-      expect(createMailchimpMergeField).toHaveBeenNthCalledWith(1, 'C_FCN', 'text');
+      expect(createMailchimpMergeField).toHaveBeenNthCalledWith(
+        1,
+        'Course FCN Status',
+        'C_FCN',
+        'text',
+      );
+      expect(createMailchimpMergeField).toHaveBeenNthCalledWith(
+        2,
+        'Course FCN Sessions',
+        'C_FCN_S',
+        'text',
+      );
     });
   });
 });

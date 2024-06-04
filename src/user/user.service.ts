@@ -48,15 +48,17 @@ export class UserService {
         ? SIGNUP_TYPE.PARTNER_USER_WITHOUT_CODE
         : SIGNUP_TYPE.PUBLIC_USER;
 
-    let partnerAccess: PartnerAccessEntity | null = null;
-    const partner = partnerId ? await this.partnerRepository.findOneBy({ id: partnerId }) : null;
-
     try {
+      let partnerAccess: PartnerAccessEntity;
+      let partner: PartnerEntity;
+
       if (signUpType === SIGNUP_TYPE.PARTNER_USER_WITHOUT_CODE) {
         await this.partnerAccessService.validatePartnerAutomaticAccessCode(partnerId);
+        partner = await this.partnerRepository.findOneBy({ id: partnerId });
       }
       if (signUpType === SIGNUP_TYPE.PARTNER_USER_WITH_CODE) {
         partnerAccess = await this.partnerAccessService.getPartnerAccessByCode(partnerAccessCode);
+        partner = partnerAccess.partner;
       }
 
       const firebaseUser = await this.authService.createFirebaseUser(email, password);
@@ -73,6 +75,7 @@ export class UserService {
           null,
           user.id,
         );
+
         this.logger.log(`Create user: (no access code) created partner user in db. User: ${email}`);
       } else if (signUpType === SIGNUP_TYPE.PARTNER_USER_WITH_CODE) {
         // Assign the existing partner access to new user
@@ -85,13 +88,11 @@ export class UserService {
         this.logger.log(`Create user: created public user in db. User: ${email}`);
       }
 
-      // Create profiles for external services
       createServiceUserProfiles(user, partner, partnerAccess);
-      this.logger.log(`Create user: updated crisp profile ${email}`);
 
       const userDto = formatUserObject({
         ...user,
-        ...(partnerAccess && { partnerAccess: [partnerAccess] }),
+        ...(partnerAccess && { partnerAccess: [{ ...partnerAccess, partner }] }),
       });
       return userDto;
     } catch (error) {

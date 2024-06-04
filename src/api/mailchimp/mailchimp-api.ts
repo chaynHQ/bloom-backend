@@ -13,7 +13,7 @@ mailchimp.setConfig({
   server: mailchimpServerPrefix,
 });
 
-export async function getEmailMD5Hash(email: string) {
+export function getEmailMD5Hash(email: string) {
   return createHash('md5').update(email).digest('hex');
 }
 
@@ -22,13 +22,15 @@ export async function ping() {
   console.log(response);
 }
 
-export async function createMailchimpProfile(profileData: Partial<UpdateListMemberRequest>) {
+export const createMailchimpProfile = async (
+  profileData: Partial<UpdateListMemberRequest>,
+): Promise<ListMember> => {
   try {
     return await mailchimp.lists.addListMember(mailchimpAudienceId, profileData);
   } catch (error) {
     throw new Error(`Create mailchimp profile API call failed: ${error}`);
   }
-}
+};
 
 // Note getMailchimpProfile is not currently used
 export const getMailchimpProfile = async (email: string): Promise<ListMember> => {
@@ -44,9 +46,11 @@ export const updateMailchimpProfile = async (
   email: string,
 ): Promise<ListMember> => {
   try {
-    return await mailchimp.lists.updateListMember(mailchimpAudienceId, getEmailMD5Hash(email), {
+    return await mailchimp.lists.updateListMember(
+      mailchimpAudienceId,
+      getEmailMD5Hash(email),
       newProfileData,
-    });
+    );
   } catch (error) {
     throw new Error(`Update mailchimp profile API call failed: ${error}`);
   }
@@ -54,11 +58,13 @@ export const updateMailchimpProfile = async (
 
 export const createMailchimpMergeField = async (
   name: string,
+  tag: string,
   type: MAILCHIMP_MERGE_FIELD_TYPES,
 ): Promise<ListMember> => {
   try {
     return await mailchimp.lists.addListMergeField(mailchimpAudienceId, {
       name,
+      tag,
       type,
       required: false,
     });
@@ -79,7 +85,7 @@ export const deleteCypressMailchimpProfiles = async () => {
   try {
     const cypressProfiles = (await mailchimp.lists.getSegmentMembersList(
       mailchimpAudienceId,
-      '874073',
+      '5101590',
     )) as { members: ListMember[] };
 
     cypressProfiles.members.forEach(async (profile: ListMember) => {

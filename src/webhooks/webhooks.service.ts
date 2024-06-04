@@ -18,7 +18,7 @@ import {
 } from 'src/utils/serviceUserProfiles';
 import { WebhookCreateEventLogDto } from 'src/webhooks/dto/webhook-create-event-log.dto';
 import StoryblokClient from 'storyblok-js-client';
-import { ILike, Repository } from 'typeorm';
+import { ILike, MoreThan, Repository } from 'typeorm';
 import { CoursePartnerService } from '../course-partner/course-partner.service';
 import {
   SIMPLYBOOK_ACTION_ENUM,
@@ -205,6 +205,7 @@ export class WebhooksService {
         userId: user.id,
         active: true,
         featureTherapy: true,
+        therapySessionsRemaining: MoreThan(0),
       },
       relations: {
         therapySession: true,

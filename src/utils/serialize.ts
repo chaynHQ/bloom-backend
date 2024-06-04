@@ -56,7 +56,7 @@ export const formatPartnerAccessObjects = (partnerAccessObjects: PartnerAccessEn
       therapySessionsRedeemed: partnerAccess.therapySessionsRedeemed,
       partner: partnerAccess.partner ? formatPartnerObject(partnerAccess.partner) : null,
       therapySessions:
-        partnerAccess.therapySession.length === 0
+        partnerAccess.therapySession?.length === 0
           ? []
           : partnerAccess.therapySession?.map((ts) => {
               return {

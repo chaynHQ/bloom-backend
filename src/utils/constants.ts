@@ -131,6 +131,10 @@ export const respondIoDeleteContactWebhook = getEnv(
 );
 
 export const mailchimpApiKey = getEnv(process.env.MAILCHIMP_API_KEY, 'MAILCHIMP_API_KEY');
+export const mailchimpMarketingPermissionId = getEnv(
+  process.env.MAILCHIMP_MARKETING_PERMISSION_ID,
+  'MAILCHIMP_MARKETING_PERMISSION_ID',
+);
 export const mailchimpAudienceId = getEnv(
   process.env.MAILCHIMP_AUDIENCE_ID,
   'MAILCHIMP_AUDIENCE_ID',

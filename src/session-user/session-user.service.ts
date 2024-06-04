@@ -38,11 +38,11 @@ export class SessionUserService {
     courseUser: CourseUserEntity,
     course: CourseEntity,
   ): Promise<CourseUserEntity> {
-    const userSessionIds = courseUser.sessionUser.map((sessionUser) => {
+    const userSessionIds = courseUser.sessionUser?.map((sessionUser) => {
       if (sessionUser.completed) return sessionUser.sessionId;
     });
 
-    const courseSessionIds = course.session.map((session) => {
+    const courseSessionIds = course.session?.map((session) => {
       if (session.status === STORYBLOK_STORY_STATUS_ENUM.PUBLISHED) return session.id;
     });
 
@@ -178,7 +178,7 @@ export class SessionUserService {
       sessionUser.completedAt = completed ? new Date() : null;
       await this.sessionUserRepository.save(sessionUser);
 
-      courseUser.sessionUser.map((su) => {
+      courseUser.sessionUser?.map((su) => {
         if (su.sessionId === id) {
           su.completed = completed;
         }
@@ -195,7 +195,10 @@ export class SessionUserService {
     }
 
     // Attach data to object to be serialized for response
-    const course = await this.courseRepository.findOneBy({ id: courseId });
+    const course = await this.courseRepository.findOne({
+      where: { id: courseId },
+      relations: { session: true },
+    });
     courseUser = await this.checkCourseIsComplete(courseUser, course);
     courseUser.course = course;
     const formattedResponse = formatCourseUserObjects([courseUser])[0];

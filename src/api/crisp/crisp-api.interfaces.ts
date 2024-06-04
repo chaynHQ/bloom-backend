@@ -16,8 +16,8 @@ export interface CrispProfileCustomFields {
   course_dbr_sessions?: string;
   course_iaro?: string;
   course_iaro_sessions?: string;
-  course_rtr?: string;
-  course_rtr_sessions?: string;
+  course_rtar?: string;
+  course_rtar_sessions?: string;
   course_rryts?: string;
   course_rryts_sessions?: string;
   course_ma?: string;

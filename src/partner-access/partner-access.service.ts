@@ -98,7 +98,7 @@ export class PartnerAccessService {
   async validatePartnerAutomaticAccessCode(partnerId: string) {
     const partner = await this.partnerRepository.findOne({
       where: { id: partnerId },
-      relations: { partnerFeature: true },
+      relations: { partnerFeature: { feature: true } },
     });
 
     if (!partner) {
@@ -109,7 +109,7 @@ export class PartnerAccessService {
       (pf) => pf.feature.name === FEATURES.AUTOMATIC_ACCESS_CODE,
     );
 
-    if (!automaticAccessCodePartnerFeature) {
+    if (!automaticAccessCodePartnerFeature || !partner.partnerFeature) {
       throw new HttpException(
         'Partner does not have automatic access code Feature',
         HttpStatus.BAD_REQUEST,

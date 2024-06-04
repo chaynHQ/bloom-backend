@@ -519,6 +519,7 @@ describe('WebhooksService', () => {
           userId: 'userId1',
           active: true,
           featureTherapy: true,
+          therapySessionsRemaining: expect.objectContaining({ _value: 0 }),
         },
         relations: {
           therapySession: true,
@@ -576,6 +577,7 @@ describe('WebhooksService', () => {
           userId: 'userId1',
           active: true,
           featureTherapy: true,
+          therapySessionsRemaining: expect.objectContaining({ _value: 0 }),
         },
         relations: {
           therapySession: true,

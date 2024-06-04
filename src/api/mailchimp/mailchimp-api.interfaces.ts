@@ -31,8 +31,8 @@ export interface ListMemberCustomFields {
   C_DBR_S?: string;
   C_IARO?: string;
   C_IARO_S?: string;
-  C_RTR?: string;
-  C_RTR_S?: string;
+  C_RTAR?: string;
+  C_RTAR_S?: string;
   C_RRYTS?: string;
   C_RRYTS_S?: string;
   C_MA?: string;

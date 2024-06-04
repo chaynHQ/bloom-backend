@@ -4,7 +4,6 @@ import { HttpException, HttpStatus } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { createCrispProfile, updateCrispProfile } from 'src/api/crisp/crisp-api';
-import { createMailchimpProfile } from 'src/api/mailchimp/mailchimp-api';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { PartnerEntity } from 'src/entities/partner.entity';
 import { SubscriptionUserService } from 'src/subscription-user/subscription-user.service';
@@ -134,19 +133,7 @@ describe('UserService', () => {
         person: { nickname: user.user.name, locales: [user.user.signUpLanguage] },
         segments: ['public'],
       });
-      expect(createMailchimpProfile).toHaveBeenCalledWith({
-        email_address: user.user.email,
-        language: user.user.signUpLanguage,
-        status: 'subscribed',
-        marketing_permissions: [
-          {
-            marketing_permission_id: '874073',
-            text: 'Marketing Permissions',
-            enabled: false,
-          },
-        ],
-        merge_fields: { NAME: user.user.name },
-      });
+      expect(updateCrispProfile).toHaveBeenCalled();
     });
 
     it('when supplied with user dto and partner access code, it should return a new partner user', async () => {
@@ -191,26 +178,6 @@ describe('UserService', () => {
         },
         'user@email.com',
       );
-      expect(createMailchimpProfile).toHaveBeenCalledWith({
-        email_address: user.user.email,
-        language: 'en',
-        status: 'subscribed',
-        marketing_permissions: [
-          {
-            marketing_permission_id: '874073',
-            text: 'Marketing Permissions',
-            enabled: true,
-          },
-        ],
-        merge_fields: {
-          NAME: 'name',
-          PARTNERS: 'bumble',
-          THERREMAIN: 5,
-          THERREDEEM: 1,
-          FEATTHER: 'true',
-          FEATCHAT: 'true',
-        },
-      });
     });
 
     it('when supplied with user dto and partner access that has already been used, it should return an error', async () => {

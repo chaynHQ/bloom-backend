@@ -17,7 +17,11 @@ import { CourseUserEntity } from 'src/entities/course-user.entity';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { PartnerEntity } from 'src/entities/partner.entity';
 import { UserEntity } from 'src/entities/user.entity';
-import { PROGRESS_STATUS, SIMPLYBOOK_ACTION_ENUM } from './constants';
+import {
+  PROGRESS_STATUS,
+  SIMPLYBOOK_ACTION_ENUM,
+  mailchimpMarketingPermissionId,
+} from './constants';
 import { getAcronym } from './utils';
 
 // Functionality for syncing user profiles for Crisp and Mailchimp communications services.
@@ -26,50 +30,54 @@ import { getAcronym } from './utils';
 
 // Note errors are not thrown to prevent the more important calling functions from failing
 // Instead log errors which are also captured by rollbar error reporting
-const logger = new Logger('UserService');
+const logger = new Logger('ServiceUserProfiles');
 
 export const createServiceUserProfiles = async (
   user: UserEntity,
   partner?: PartnerEntity | null,
   partnerAccess?: PartnerAccessEntity | null,
 ) => {
+  const { email } = user;
   try {
     const userData = serializeUserData(user);
-    const partnerData = partnerAccess
-      ? serializePartnerAccessData([{ ...partnerAccess, partner }])
-      : null;
+
+    const partnerData = serializePartnerAccessData(
+      partnerAccess ? [{ ...partnerAccess, partner }] : [],
+    );
 
     await createCrispProfile({
-      email: user.email,
+      email: email,
       person: { nickname: user.name, locales: [user.signUpLanguage || 'en'] },
       segments: serializeCrispPartnerSegments(partner ? [partner] : []),
     });
 
     const userSignedUpAt = user.createdAt?.toISOString();
 
-    updateCrispProfile(
+    await updateCrispProfile(
       {
         signed_up_at: userSignedUpAt,
         ...userData.crispSchema,
-        ...(partnerData && partnerData.crispSchema),
+        ...partnerData.crispSchema,
       },
-      user.email,
+      email,
     );
 
     const mailchimpMergeFields = {
       SIGNUPD: userSignedUpAt,
       ...userData.mailchimpSchema.merge_fields,
-      ...(partnerData && partnerData.mailchimpSchema.merge_fields),
+      ...partnerData.mailchimpSchema.merge_fields,
     };
 
-    createMailchimpProfile({
-      email_address: user.email,
+    await createMailchimpProfile({
+      email_address: email,
       ...userData.mailchimpSchema,
-      ...(partnerData && partnerData.mailchimpSchema),
+      ...partnerData.mailchimpSchema,
       merge_fields: mailchimpMergeFields,
     });
+
+    logger.log(`Create user: updated service user profiles. User: ${email}`);
   } catch (error) {
-    logger.error(`Create service user profiles error - ${error}`);
+    logger.error(`Create service user profiles error - ${error}. User: ${email}`);
     throw error;
   }
 };
@@ -82,14 +90,14 @@ export const updateServiceUserProfilesUser = async (
   try {
     if (isCrispBaseUpdateRequired) {
       // Extra call required to update crisp "base" profile when name or sign up language is changed
-      updateCrispProfileBase(
+      await updateCrispProfileBase(
         { person: { nickname: user.name, locales: [user.signUpLanguage || 'en'] } },
         email,
       );
     }
     const userData = serializeUserData(user);
-    updateCrispProfile(userData.crispSchema, email);
-    updateMailchimpProfile(userData.mailchimpSchema, email);
+    await updateCrispProfile(userData.crispSchema, email);
+    await updateMailchimpProfile(userData.mailchimpSchema, email);
   } catch (error) {
     logger.error(`Update service user profiles user error - ${error}`);
   }
@@ -101,7 +109,7 @@ export const updateServiceUserProfilesPartnerAccess = async (
 ) => {
   try {
     const partners = partnerAccesses.map((pa) => pa.partner);
-    updateCrispProfileBase(
+    await updateCrispProfileBase(
       {
         segments: serializeCrispPartnerSegments(partners),
       },
@@ -109,8 +117,8 @@ export const updateServiceUserProfilesPartnerAccess = async (
     );
 
     const partnerAccessData = serializePartnerAccessData(partnerAccesses);
-    updateCrispProfile(partnerAccessData.crispSchema, email);
-    updateMailchimpProfile(partnerAccessData.mailchimpSchema, email);
+    await updateCrispProfile(partnerAccessData.crispSchema, email);
+    await updateMailchimpProfile(partnerAccessData.mailchimpSchema, email);
   } catch (error) {
     logger.error(`Update service user profiles partner access error - ${error}`);
   }
@@ -128,8 +136,8 @@ export const updateServiceUserProfilesTherapy = async (
       therapySessionAction,
       therapySessionDate,
     );
-    updateCrispProfile(therapyData.crispSchema, email);
-    updateMailchimpProfile(therapyData.mailchimpSchema, email);
+    await updateCrispProfile(therapyData.crispSchema, email);
+    await updateMailchimpProfile(therapyData.mailchimpSchema, email);
   } catch (error) {
     logger.error(`Update service user profiles therapy error - ${error}`);
   }
@@ -141,8 +149,8 @@ export const updateServiceUserProfilesCourse = async (
 ) => {
   try {
     const courseData = serializeCourseData(courseUser);
-    updateCrispProfile(courseData.crispSchema, email);
-    updateMailchimpProfile(courseData.mailchimpSchema, email);
+    await updateCrispProfile(courseData.crispSchema, email);
+    await updateMailchimpProfile(courseData.mailchimpSchema, email);
   } catch (error) {
     logger.error(`Update service user profiles course error - ${error}`);
   }
@@ -153,18 +161,28 @@ export const updateServiceUserProfilesCourse = async (
 export const createMailchimpCourseMergeField = async (courseName: string) => {
   try {
     const courseAcronym = getAcronym(courseName);
-    const courseMergeFieldKey = `C_${courseAcronym}`;
-    const courseSessionsMergeFieldKey = `C_${courseAcronym}_S`;
+    const courseMergeFieldName = `Course ${courseAcronym} Status`;
+    const courseMergeFieldTag = `C_${courseAcronym}`;
+    const courseSessionsMergeFieldName = `Course ${courseAcronym} Sessions`;
+    const courseSessionsMergeFieldTag = `C_${courseAcronym}_S`;
 
-    createMailchimpMergeField(courseMergeFieldKey, MAILCHIMP_MERGE_FIELD_TYPES.TEXT);
-    createMailchimpMergeField(courseSessionsMergeFieldKey, MAILCHIMP_MERGE_FIELD_TYPES.TEXT);
+    await createMailchimpMergeField(
+      courseMergeFieldName,
+      courseMergeFieldTag,
+      MAILCHIMP_MERGE_FIELD_TYPES.TEXT,
+    );
+    await createMailchimpMergeField(
+      courseSessionsMergeFieldName,
+      courseSessionsMergeFieldTag,
+      MAILCHIMP_MERGE_FIELD_TYPES.TEXT,
+    );
   } catch (error) {
     logger.error(`Create mailchimp course merge fields error - ${error}`);
   }
 };
 
 export const serializePartnersString = (partnerAccesses: PartnerAccessEntity[]) => {
-  return partnerAccesses.map((pa) => pa.partner.name.toLowerCase()).join('; ') || '';
+  return partnerAccesses?.map((pa) => pa.partner.name.toLowerCase()).join('; ') || '';
 };
 
 const serializeUserData = (user: UserEntity) => {
@@ -180,8 +198,8 @@ const serializeUserData = (user: UserEntity) => {
     status: serviceEmailsPermission ? 'subscribed' : 'unsubscribed',
     marketing_permissions: [
       {
-        marketing_permission_id: '874073',
-        text: 'Marketing Permissions',
+        marketing_permission_id: mailchimpMarketingPermissionId,
+        text: 'Email',
         enabled: contactPermission,
       },
     ],
@@ -193,17 +211,27 @@ const serializeUserData = (user: UserEntity) => {
 };
 
 const serializePartnerAccessData = (partnerAccesses: PartnerAccessEntity[]) => {
-  const data = {
-    partners: serializePartnersString(partnerAccesses),
-    featureLiveChat: !!partnerAccesses.find((pa) => pa.featureLiveChat),
-    featureTherapy: !!partnerAccesses.find((pa) => pa.featureTherapy),
-    therapySessionsRemaining: partnerAccesses
-      .map((pa) => pa.therapySessionsRemaining)
-      .reduce((a, b) => a + b, 0),
-    therapySessionsRedeemed: partnerAccesses
-      .map((pa) => pa.therapySessionsRedeemed)
-      .reduce((a, b) => a + b, 0),
-  };
+  const publicUser = !partnerAccesses || !partnerAccesses[0]?.id;
+
+  const data = publicUser
+    ? {
+        partners: '',
+        featureLiveChat: true,
+        featureTherapy: false,
+        therapySessionsRemaining: 0,
+        therapySessionsRedeemed: 0,
+      }
+    : {
+        partners: serializePartnersString(partnerAccesses),
+        featureLiveChat: !!partnerAccesses.find((pa) => pa.featureLiveChat) || true,
+        featureTherapy: !!partnerAccesses.find((pa) => pa.featureTherapy),
+        therapySessionsRemaining: partnerAccesses
+          .map((pa) => pa.therapySessionsRemaining)
+          .reduce((a, b) => a + b, 0),
+        therapySessionsRedeemed: partnerAccesses
+          .map((pa) => pa.therapySessionsRedeemed)
+          .reduce((a, b) => a + b, 0),
+      };
 
   const crispSchema = {
     partners: data.partners,
@@ -249,10 +277,7 @@ const serializeTherapyData = (
 
   const lastTherapySessionAt = pastTherapySessions?.at(-1)?.startDateTime.toISOString() || '';
 
-  const nextTherapySessionAt =
-    therapySessionAction === SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING
-      ? futureTherapySessions?.at(-1)?.startDateTime.toISOString() || ''
-      : therapySessionDate.toISOString();
+  const nextTherapySessionAt = futureTherapySessions?.at(0)?.startDateTime.toISOString() || '';
 
   const data = {
     therapySessionsRemaining: partnerAccesses.reduce(
