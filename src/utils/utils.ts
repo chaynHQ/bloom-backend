@@ -15,4 +15,14 @@ export const generateRandomString = (length: number) => {
     .join('');
 };
 
+export const getAcronym = (text: string) => {
+  const exclude = ['in', 'and', 'the', 'from', 'as', 'or', 'to'];
+  const string = text.split(' ').filter((word) => !exclude.includes(word));
+  const abbreviatedString = string
+    .reduce((response, word) => (response += word.slice(0, 1)), '')
+    .toUpperCase();
+
+  return abbreviatedString;
+};
+
 export const getYesterdaysDate = () => sub(new Date(), { days: 1 });

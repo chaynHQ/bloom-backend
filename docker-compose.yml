@@ -1,7 +1,6 @@
 version: '3.9'
 
 services:
-
   api:
     container_name: bloom-backend
     build:
@@ -16,7 +15,7 @@ services:
     volumes:
       - .:/app
 
-  db: 
+  db:
     image: postgres:14-alpine
     container_name: bloom-local-db
     restart: unless-stopped

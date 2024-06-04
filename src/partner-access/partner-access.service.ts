@@ -3,18 +3,18 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { isBefore, sub } from 'date-fns';
 import _ from 'lodash';
 import { PartnerEntity } from 'src/entities/partner.entity';
+import { UserEntity } from 'src/entities/user.entity';
 import { Logger } from 'src/logger/logger';
+import { updateServiceUserProfilesPartnerAccess } from 'src/utils/serviceUserProfiles';
 import { Repository } from 'typeorm';
-import { updateCrispProfileAccesses } from '../api/crisp/crisp-api';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
-import { GetUserDto } from '../user/dtos/get-user.dto';
-import { PartnerAccessCodeStatusEnum } from '../utils/constants';
+import { FEATURES, PartnerAccessCodeStatusEnum } from '../utils/constants';
 import { CreatePartnerAccessDto } from './dtos/create-partner-access.dto';
 import { GetPartnerAccessesDto } from './dtos/get-partner-access.dto';
 import { UpdatePartnerAccessDto } from './dtos/update-partner-access.dto';
 
 // TODO storing base service minimum here but this might need to be a config setup eventually
-const basePartnerAccess = {
+export const basePartnerAccess = {
   featureTherapy: false,
   featureLiveChat: true,
   therapySessionsRemaining: 0,
@@ -35,10 +35,12 @@ export class PartnerAccessService {
     createPartnerAccessDto: CreatePartnerAccessDto,
     partnerId: string,
     partnerAdminId: string | null,
+    userId?: string,
   ): Promise<PartnerAccessEntity> {
     const accessCode = await this.generateAccessCode(6);
     const partnerAccess = this.partnerAccessRepository.create({
       ...createPartnerAccessDto,
+      ...(userId && { userId }),
       partnerAdminId,
       partnerId,
       accessCode,
@@ -49,21 +51,16 @@ export class PartnerAccessService {
   private async generateAccessCode(length: number): Promise<string> {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUFWXYZ1234567890';
     const accessCode = _.sampleSize(chars, length || 6).join('');
-    if (await this.findPartnerAccessByCode(accessCode)) {
-      this.generateAccessCode(6);
+
+    const existingPartnerAccess = await this.partnerAccessRepository.findOneBy({ accessCode });
+
+    if (existingPartnerAccess) {
+      await this.generateAccessCode(6);
     }
     return accessCode;
   }
 
-  private async findPartnerAccessByCode(accessCode: string): Promise<PartnerAccessEntity> {
-    return await this.partnerAccessRepository
-      .createQueryBuilder('partnerAccess')
-      .leftJoinAndSelect('partnerAccess.partner', 'partner')
-      .where('partnerAccess.accessCode = :accessCode', { accessCode })
-      .getOne();
-  }
-
-  async getValidPartnerAccessCode(
+  async getPartnerAccessByCode(
     partnerAccessCode: string,
     userId?: string,
   ): Promise<PartnerAccessEntity> {
@@ -73,9 +70,12 @@ export class PartnerAccessService {
       throw new HttpException(PartnerAccessCodeStatusEnum.INVALID_CODE, HttpStatus.BAD_REQUEST);
     }
 
-    const partnerAccess = await this.findPartnerAccessByCode(partnerAccessCode);
+    const partnerAccess = await this.partnerAccessRepository.findOne({
+      where: { accessCode: partnerAccessCode },
+      relations: { partner: true },
+    });
 
-    if (partnerAccess === undefined) {
+    if (!partnerAccess) {
       throw new HttpException(PartnerAccessCodeStatusEnum.DOES_NOT_EXIST, HttpStatus.BAD_REQUEST);
     }
 
@@ -93,6 +93,29 @@ export class PartnerAccessService {
     }
 
     return partnerAccess;
+  }
+
+  async validatePartnerAutomaticAccessCode(partnerId: string) {
+    const partner = await this.partnerRepository.findOne({
+      where: { id: partnerId },
+      relations: { partnerFeature: { feature: true } },
+    });
+
+    if (!partner) {
+      throw new HttpException('Invalid partnerId supplied', HttpStatus.BAD_REQUEST);
+    }
+
+    const automaticAccessCodePartnerFeature = partner.partnerFeature.find(
+      (pf) => pf.feature.name === FEATURES.AUTOMATIC_ACCESS_CODE,
+    );
+
+    if (!automaticAccessCodePartnerFeature || !partner.partnerFeature) {
+      throw new HttpException(
+        'Partner does not have automatic access code Feature',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    return true;
   }
 
   async getPartnerAccessCodes(
@@ -151,51 +174,24 @@ export class PartnerAccessService {
     }
   }
 
-  async assignPartnerAccessOnSignup(
-    partnerAccess: PartnerAccessEntity,
-    userId: string,
-  ): Promise<PartnerAccessEntity> {
-    const partnerResponse: PartnerEntity | undefined = await this.partnerRepository.findOneBy({
-      id: partnerAccess.partnerId,
-    });
-
-    const updatedPartnerAccess = await this.partnerAccessRepository.save({
-      ...partnerAccess,
-      userId,
-      activatedAt: new Date(),
-    });
-
-    return { ...updatedPartnerAccess, partner: partnerResponse };
-  }
-  async createAndAssignPartnerAccess(
-    partner: PartnerEntity,
-    userId: string,
-  ): Promise<PartnerAccessEntity> {
-    // Base partner access is for bumble. For future iterations we might want to store this base config somewhere
-    const partnerAccessBase = await this.createPartnerAccess(basePartnerAccess, partner.id, null);
-    const partnerAccess = {
-      ...partnerAccessBase,
-      userId,
-      activatedAt: new Date(),
-    };
-    const updatedPartnerAccess = await this.partnerAccessRepository.save(partnerAccess);
-
-    return { ...updatedPartnerAccess, partner: partner };
-  }
-
   async assignPartnerAccess(
-    { user, partnerAccesses, courses }: GetUserDto,
+    user: UserEntity,
     partnerAccessCode: string,
   ): Promise<PartnerAccessEntity> {
-    const partnerAccess = await this.getValidPartnerAccessCode(partnerAccessCode, user.id);
+    const partnerAccess = await this.getPartnerAccessByCode(partnerAccessCode, user.id);
+    const assignedPartnerAccess = await this.partnerAccessRepository.save({
+      ...partnerAccess,
+      userId: user.id,
+      activatedAt: new Date(),
+    });
+    assignedPartnerAccess.partner = partnerAccess.partner;
 
-    partnerAccess.userId = user.id;
-    partnerAccess.activatedAt = new Date();
-    partnerAccesses.push(partnerAccess);
-
-    await this.partnerAccessRepository.save(partnerAccess);
     try {
-      await updateCrispProfileAccesses(user, partnerAccesses, courses);
+      const partnerAccesses = await this.partnerAccessRepository.findBy({
+        userId: user.id,
+        active: true,
+      });
+      updateServiceUserProfilesPartnerAccess(partnerAccesses, user.email);
     } catch (error) {
       this.logger.error(
         `Error: Unable to update crisp profile for ${user.email}. Error: ${error.message} `,
@@ -203,7 +199,7 @@ export class PartnerAccessService {
       );
     }
 
-    return partnerAccess;
+    return assignedPartnerAccess;
   }
 
   public async deleteCypressTestAccessCodes(): Promise<void> {

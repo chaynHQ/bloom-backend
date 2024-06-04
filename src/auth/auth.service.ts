@@ -7,6 +7,11 @@ import {
 } from '@nestjs/common';
 import { DecodedIdToken } from 'firebase-admin/lib/auth/token-verifier';
 import { Logger } from 'src/logger/logger';
+import {
+  CREATE_USER_FIREBASE_ERROR,
+  CREATE_USER_INVALID_EMAIL,
+  CREATE_USER_WEAK_PASSWORD,
+} from 'src/utils/errors';
 import { FIREBASE } from '../firebase/firebase-factory';
 import { FirebaseServices } from '../firebase/firebase.types';
 import { UserAuthDto } from './dto/user-auth.dto';
@@ -41,16 +46,43 @@ export class AuthService {
   }
 
   public async createFirebaseUser(email: string, password: string) {
-    const userRecord = await this.firebase.admin.auth().createUser({
-      email,
-      password,
-    });
-    return userRecord;
+    try {
+      const firebaseUser = await this.firebase.admin.auth().createUser({
+        email,
+        password,
+      });
+      this.logger.log(`Create user: Firebase user created: ${email}`);
+      return firebaseUser;
+    } catch (err) {
+      const errorCode = err.code;
+      if (errorCode === 'auth/invalid-email') {
+        this.logger.warn(
+          `Create user: user tried to create email with invalid email: ${email} - ${err}`,
+        );
+        throw new HttpException(CREATE_USER_INVALID_EMAIL, HttpStatus.BAD_REQUEST);
+      }
+      if (
+        errorCode === 'auth/weak-password' ||
+        err.message.includes('The password must be a string with at least 6 characters')
+      ) {
+        this.logger.warn(`Create user: user tried to create email with weak password - ${err}`);
+        throw new HttpException(CREATE_USER_WEAK_PASSWORD, HttpStatus.BAD_REQUEST);
+      }
+      if (errorCode === 'auth/email-already-in-use' && errorCode === 'auth/email-already-exists') {
+        this.logger.log(
+          `Create user: Firebase user already exists so fetching firebase user: ${email}`,
+        );
+        return await this.getFirebaseUser(email);
+      } else {
+        this.logger.error(`Create user: Error creating firebase user - ${email}: ${err}`);
+        throw new HttpException(CREATE_USER_FIREBASE_ERROR, HttpStatus.BAD_REQUEST);
+      }
+    }
   }
 
   public async getFirebaseUser(email: string) {
-    const userRecord = await this.firebase.admin.auth().getUserByEmail(email);
-    return userRecord;
+    const firebaseUser = await this.firebase.admin.auth().getUserByEmail(email);
+    return firebaseUser;
   }
 
   public async deleteFirebaseUser(firebaseUid: string) {

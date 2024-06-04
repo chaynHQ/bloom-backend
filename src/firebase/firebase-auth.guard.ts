@@ -13,7 +13,10 @@ import { IFirebaseUser } from './firebase-user.interface';
 
 @Injectable()
 export class FirebaseAuthGuard implements CanActivate {
-  constructor(private authService: AuthService, private userService: UserService) {}
+  constructor(
+    private authService: AuthService,
+    private userService: UserService,
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<Request>();
@@ -39,7 +42,11 @@ export class FirebaseAuthGuard implements CanActivate {
     }
 
     try {
-      request['user'] = await this.userService.getUserByFirebaseId(user as IFirebaseUser);
+      const { userEntity, userDto } = await this.userService.getUserByFirebaseId(
+        user as IFirebaseUser,
+      );
+      request['user'] = userDto;
+      request['userEntity'] = userEntity;
     } catch (error) {
       if (error.message === 'USER NOT FOUND') {
         throw new HttpException(
