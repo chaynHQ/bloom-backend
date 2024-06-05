@@ -42,6 +42,7 @@ For a more detailed explanation of this project's key concepts and architecture,
 - [Slack](https://api.slack.com/messaging/webhooks) - Slack webhooks to send messages to the team
 - [Rollbar](https://rollbar.com/) - Error reporting
 - [Crisp](https://crisp.chat/en/) - User messaging
+- [Mailchimp](https://mailchimp.com/developer/marketing/) - Transactional email
 - [Docker](https://www.docker.com/) - Containers for api and db
 - [Heroku](https://heroku.com) - Build, deploy and operate staging and production apps
 - [GitHub Actions](https://github.com/features/actions) - CI pipeline
@@ -58,14 +59,15 @@ For a more detailed explanation of this project's key concepts and architecture,
 
 **Recommended for Visual Studio & Visual Studio Code users.**
 
-This method will automatically install all dependencies and IDE settings in a Dev Container (Docker container) within Visual Studio Code. 
+This method will automatically install all dependencies and IDE settings in a Dev Container (Docker container) within Visual Studio Code.
 
 Directions for running a dev container:
+
 1. Meet the [system requirements](https://code.visualstudio.com/docs/devcontainers/containers#_system-requirements)
 2. Follow the [installation instructions](https://code.visualstudio.com/docs/devcontainers/containers#_installation)
 3. [Check the installation](https://code.visualstudio.com/docs/devcontainers/tutorial#_check-installation)
 4. After you've verified that the extension is installed and working, click on the "Remote Status" bar icon and select
-"Reopen in Container". From here, the option to "Re-open in Container" should pop up in notifications whenever opening this project in VS.
+   "Reopen in Container". From here, the option to "Re-open in Container" should pop up in notifications whenever opening this project in VS.
 5. [Configure your environment variables](#configure-environment-variables) and develop as you normally would.
 
 The dev Container is configured in the `.devcontainer` directory:
@@ -84,8 +86,8 @@ yarn
 ### Configure Environment Variables
 
 Create a new `.env` file and populate it with the variables below. Note that only the Firebase and Simplybook tokens are required.
-To configure the Firebase variables, first [create a Firebase project in the Firebase console](https://firebase.google.com/) (Google account required). 
-Next, follow [these directions](https://firebase.google.com/docs/cloud-messaging/auth-server#provide-credentials-manually) to generate a private key file in JSON format. 
+To configure the Firebase variables, first [create a Firebase project in the Firebase console](https://firebase.google.com/) (Google account required).
+Next, follow [these directions](https://firebase.google.com/docs/cloud-messaging/auth-server#provide-credentials-manually) to generate a private key file in JSON format.
 These will generate all the required Firebase variables.
 
 The Simplybook variables can be mocked data, meaning **you do not need to use real Simplybook variables, simply copy paste the values given below.**

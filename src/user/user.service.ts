@@ -1,5 +1,6 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { batchCreateMailchimpProfiles } from 'src/api/mailchimp/mailchimp-api';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { PartnerEntity } from 'src/entities/partner.entity';
 import { UserEntity } from 'src/entities/user.entity';
@@ -12,7 +13,7 @@ import {
   createServiceUserProfiles,
   updateServiceUserProfilesUser,
 } from 'src/utils/serviceUserProfiles';
-import { ILike, Repository } from 'typeorm';
+import { And, ILike, Raw, Repository } from 'typeorm';
 import { deleteCypressCrispProfiles } from '../api/crisp/crisp-api';
 import { AuthService } from '../auth/auth.service';
 import { PartnerAccessService, basePartnerAccess } from '../partner-access/partner-access.service';
@@ -297,5 +298,33 @@ export class UserService {
 
     const usersDto = users.map((user) => formatGetUsersObject(user));
     return usersDto;
+  }
+
+  public async bulkUploadMailchimpProfiles() {
+    try {
+      const filterStartDate = '2023-01-01';
+      const filterEndDate = '2024-01-01';
+      const users = await this.userRepository.find({
+        where: {
+          createdAt: And(
+            Raw((alias) => `${alias} >= :filterStartDate`, { filterStartDate: filterStartDate }),
+            Raw((alias) => `${alias} < :filterEndDate`, { filterEndDate: filterEndDate }),
+          ),
+        },
+        relations: {
+          partnerAccess: { partner: true, therapySession: true },
+          courseUser: { course: true, sessionUser: { session: true } },
+        },
+      });
+      const usersWithCourseUsers = users.filter((user) => user.courseUser.length > 0);
+
+      console.log(usersWithCourseUsers);
+      await batchCreateMailchimpProfiles(usersWithCourseUsers);
+      this.logger.log(
+        `Created batch mailchimp profiles for ${usersWithCourseUsers.length} users, created before ${filterStartDate}`,
+      );
+    } catch (error) {
+      throw new Error(`Bulk upload mailchimp profiles API call failed: ${error}`);
+    }
   }
 }

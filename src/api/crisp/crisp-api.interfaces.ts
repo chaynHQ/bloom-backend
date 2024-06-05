@@ -10,8 +10,8 @@ export interface CrispProfileCustomFields {
   therapy_sessions_redeemed?: number;
   course_hst?: string;
   course_hst_sessions?: string;
-  course_pst?: string;
-  course_pst_sessions?: string;
+  course_spst?: string;
+  course_spst_sessions?: string;
   course_dbr?: string;
   course_dbr_sessions?: string;
   course_iaro?: string;

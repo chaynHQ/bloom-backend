@@ -300,12 +300,7 @@ describe('Service user profiles', () => {
         },
       ];
 
-      await updateServiceUserProfilesTherapy(
-        partnerAccesses,
-        SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING,
-        therapySession.startDateTime,
-        mockUserEntity.email,
-      );
+      await updateServiceUserProfilesTherapy(partnerAccesses, mockUserEntity.email);
 
       const firstTherapySessionAt = therapySession.startDateTime.toISOString();
       const nextTherapySessionAt = therapySession.startDateTime.toISOString();
@@ -339,12 +334,7 @@ describe('Service user profiles', () => {
     it('should update crisp and mailchimp profile combined therapy data for new booking', async () => {
       const partnerAccesses = [mockPartnerAccessEntity, mockAltPartnerAccessEntity];
 
-      await updateServiceUserProfilesTherapy(
-        partnerAccesses,
-        SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING,
-        mockAltPartnerAccessEntity.therapySession[1].startDateTime,
-        mockUserEntity.email,
-      );
+      await updateServiceUserProfilesTherapy(partnerAccesses, mockUserEntity.email);
 
       const firstTherapySessionAt =
         mockPartnerAccessEntity.therapySession[0].startDateTime.toISOString();
@@ -381,12 +371,7 @@ describe('Service user profiles', () => {
     it('should update crisp and mailchimp profile combined therapy data for updated booking', async () => {
       const partnerAccesses = [mockPartnerAccessEntity, mockAltPartnerAccessEntity];
 
-      await updateServiceUserProfilesTherapy(
-        partnerAccesses,
-        SIMPLYBOOK_ACTION_ENUM.UPDATED_BOOKING,
-        mockAltPartnerAccessEntity.therapySession[1].startDateTime,
-        mockUserEntity.email,
-      );
+      await updateServiceUserProfilesTherapy(partnerAccesses, mockUserEntity.email);
 
       const firstTherapySessionAt =
         mockPartnerAccessEntity.therapySession[0].startDateTime.toISOString();
@@ -425,12 +410,7 @@ describe('Service user profiles', () => {
         SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING;
       const partnerAccesses = [mockPartnerAccessEntity, mockAltPartnerAccessEntity];
 
-      await updateServiceUserProfilesTherapy(
-        partnerAccesses,
-        SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING,
-        mockAltPartnerAccessEntity.therapySession[1].startDateTime,
-        mockUserEntity.email,
-      );
+      await updateServiceUserProfilesTherapy(partnerAccesses, mockUserEntity.email);
 
       const firstTherapySessionAt =
         mockPartnerAccessEntity.therapySession[0].startDateTime.toISOString();
