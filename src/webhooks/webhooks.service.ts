@@ -128,12 +128,7 @@ export class WebhooksService {
         },
       });
 
-      updateServiceUserProfilesTherapy(
-        [...partnerAccesses],
-        action,
-        therapySession.startDateTime,
-        user.email,
-      );
+      updateServiceUserProfilesTherapy([...partnerAccesses], user.email);
 
       this.logger.log(
         `Update therapy session webhook function COMPLETED for ${action} - ${user.email} - ${booking_code} - userId ${user_id}`,
@@ -249,12 +244,7 @@ export class WebhooksService {
       await this.partnerAccessRepository.save(partnerAccess);
       const therapySession = await this.therapySessionRepository.save(serializedTherapySession);
 
-      updateServiceUserProfilesTherapy(
-        [...partnerAccesses, partnerAccess],
-        SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING,
-        therapySession.startDateTime,
-        user.email,
-      );
+      updateServiceUserProfilesTherapy([...partnerAccesses, partnerAccess], user.email);
 
       return therapySession;
     } catch (err) {

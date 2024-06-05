@@ -109,4 +109,12 @@ export class UserController {
       : { include: [], fields: [], limit: undefined };
     return await this.userService.getUsers(userQuery, include, fields, limit);
   }
+
+  // Use only if users have not been added to mailchimp due to e.g. an ongoing bug
+  @ApiBearerAuth()
+  @Post('/bulk-mailchimp-upload')
+  @UseGuards(FirebaseAuthGuard)
+  async bulkUploadMailchimpProfiles() {
+    return await this.userService.bulkUploadMailchimpProfiles();
+  }
 }

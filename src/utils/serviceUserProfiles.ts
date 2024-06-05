@@ -126,16 +126,10 @@ export const updateServiceUserProfilesPartnerAccess = async (
 
 export const updateServiceUserProfilesTherapy = async (
   partnerAccesses: PartnerAccessEntity[],
-  therapySessionAction: SIMPLYBOOK_ACTION_ENUM,
-  therapySessionDate: Date,
   email,
 ) => {
   try {
-    const therapyData = serializeTherapyData(
-      partnerAccesses,
-      therapySessionAction,
-      therapySessionDate,
-    );
+    const therapyData = serializeTherapyData(partnerAccesses);
     await updateCrispProfile(therapyData.crispSchema, email);
     await updateMailchimpProfile(therapyData.mailchimpSchema, email);
   } catch (error) {
@@ -181,6 +175,36 @@ export const createMailchimpCourseMergeField = async (courseName: string) => {
   }
 };
 
+// Currently only used in bulk upload function, as mailchimp profiles are typically built
+// incrementally on sign up and subsequent user actions
+export const createCompleteMailchimpUserProfile = (user: UserEntity): ListMemberPartial => {
+  const userData = serializeUserData(user);
+  const partnerData = serializePartnerAccessData(user.partnerAccess);
+  const therapyData = serializeTherapyData(user.partnerAccess);
+
+  const courseData = {};
+  user.courseUser.forEach((courseUser) => {
+    const courseUserData = serializeCourseData(courseUser);
+    Object.keys(courseUserData.mailchimpSchema.merge_fields).forEach((key) => {
+      courseData[key] = courseUserData.mailchimpSchema.merge_fields[key];
+    });
+  });
+
+  const profileData = {
+    email_address: user.email,
+    ...userData.mailchimpSchema,
+
+    merge_fields: {
+      SIGNUPD: user.createdAt?.toISOString(),
+      ...userData.mailchimpSchema.merge_fields,
+      ...partnerData.mailchimpSchema.merge_fields,
+      ...therapyData.mailchimpSchema.merge_fields,
+      ...courseData,
+    },
+  };
+  return profileData;
+};
+
 export const serializePartnersString = (partnerAccesses: PartnerAccessEntity[]) => {
   return partnerAccesses?.map((pa) => pa.partner.name.toLowerCase()).join('; ') || '';
 };
@@ -203,7 +227,7 @@ const serializeUserData = (user: UserEntity) => {
         enabled: contactPermission,
       },
     ],
-    language: signUpLanguage,
+    language: signUpLanguage || 'en',
     merge_fields: { NAME: name },
   } as ListMemberPartial;
 
@@ -254,20 +278,14 @@ const serializePartnerAccessData = (partnerAccesses: PartnerAccessEntity[]) => {
   return { crispSchema, mailchimpSchema };
 };
 
-const serializeTherapyData = (
-  partnerAccesses: PartnerAccessEntity[],
-  therapySessionAction: SIMPLYBOOK_ACTION_ENUM,
-  therapySessionDate: Date,
-) => {
+const serializeTherapyData = (partnerAccesses: PartnerAccessEntity[]) => {
   const therapySessions = partnerAccesses
     .flatMap((partnerAccess) => partnerAccess.therapySession)
     .filter((therapySession) => therapySession.action !== SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING)
     .sort((a, b) => a.startDateTime.getTime() - b.startDateTime.getTime());
 
   const pastTherapySessions = therapySessions.filter(
-    (therapySession) =>
-      therapySession.startDateTime !== therapySessionDate &&
-      therapySession.startDateTime.getTime() < new Date().getTime(),
+    (therapySession) => therapySession.startDateTime.getTime() < new Date().getTime(),
   );
   const futureTherapySessions = therapySessions.filter(
     (therapySession) => therapySession.startDateTime.getTime() > new Date().getTime(),

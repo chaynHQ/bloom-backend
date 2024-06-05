@@ -1,6 +1,8 @@
 import mailchimp from '@mailchimp/mailchimp_marketing';
 import { createHash } from 'crypto';
+import { UserEntity } from 'src/entities/user.entity';
 import { mailchimpApiKey, mailchimpAudienceId, mailchimpServerPrefix } from 'src/utils/constants';
+import { createCompleteMailchimpUserProfile } from 'src/utils/serviceUserProfiles';
 import {
   ListMember,
   ListMemberPartial,
@@ -29,6 +31,36 @@ export const createMailchimpProfile = async (
     return await mailchimp.lists.addListMember(mailchimpAudienceId, profileData);
   } catch (error) {
     throw new Error(`Create mailchimp profile API call failed: ${error}`);
+  }
+};
+
+export const batchCreateMailchimpProfiles = async (users: UserEntity[]) => {
+  try {
+    const operations = [];
+
+    users.forEach((user) => {
+      const profileData = createCompleteMailchimpUserProfile(user);
+      operations.push({
+        method: 'POST',
+        path: `/lists/${mailchimpAudienceId}/members`,
+        operation_id: user.id,
+        body: JSON.stringify(profileData),
+      });
+    });
+
+    const batchRequest = await mailchimp.batches.start({
+      operations: operations,
+    });
+    console.log('Mailchimp batch request:', batchRequest);
+    console.log('Wait 2 minutes before calling response...');
+
+    setTimeout(async () => {
+      const batchResponse = await mailchimp.batches.status(batchRequest.id);
+      console.log('Mailchimp batch response:', batchResponse);
+    }, 120000);
+  } catch (error) {
+    console.log(error);
+    throw new Error(`Batch create mailchimp profiles API call failed: ${error}`);
   }
 };
 
