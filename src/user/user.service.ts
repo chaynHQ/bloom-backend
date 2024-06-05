@@ -300,12 +300,15 @@ export class UserService {
     return usersDto;
   }
 
+  // Static bulk upload function to be used in specific cases
+  // UPDATE THE FILTERS to the current requirements
   public async bulkUploadMailchimpProfiles() {
     try {
-      const filterStartDate = '2023-01-01';
-      const filterEndDate = '2024-01-01';
+      const filterStartDate = '2023-01-01'; // UPDATE
+      const filterEndDate = '2024-01-01'; // UPDATE
       const users = await this.userRepository.find({
         where: {
+          // UPDATE TO ANY FILTERS
           createdAt: And(
             Raw((alias) => `${alias} >= :filterStartDate`, { filterStartDate: filterStartDate }),
             Raw((alias) => `${alias} < :filterEndDate`, { filterEndDate: filterEndDate }),
