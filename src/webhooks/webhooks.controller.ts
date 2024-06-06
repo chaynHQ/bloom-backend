@@ -1,4 +1,4 @@
-import { Body, Controller, Headers, Logger, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Headers, Logger, Post, Request, UseGuards } from '@nestjs/common';
 import { ApiBody, ApiTags } from '@nestjs/swagger';
 import { EventLogEntity } from 'src/entities/event-log.entity';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
@@ -26,18 +26,6 @@ export class WebhooksController {
   }
 
   @UseGuards(ZapierAuthGuard)
-  @Post('therapy-feedback')
-  async sendTherapyFeedbackEmail(): Promise<string> {
-    return this.webhooksService.sendFirstTherapySessionFeedbackEmail();
-  }
-
-  @UseGuards(ZapierAuthGuard)
-  @Post('impact-measurement')
-  async sendImpactMeasurementEmail(): Promise<string> {
-    return this.webhooksService.sendImpactMeasurementEmail();
-  }
-
-  @UseGuards(ZapierAuthGuard)
   @Post('event-log')
   @ApiBody({ type: WebhookCreateEventLogDto })
   async createEventLog(@Body() createEventLogDto): Promise<EventLogEntity> {
@@ -46,8 +34,8 @@ export class WebhooksController {
 
   @Post('storyblok')
   @ApiBody({ type: StoryDto })
-  async updateStory(@Body() data: StoryDto, @Headers() headers) {
+  async updateStory(@Request() req, @Body() data: StoryDto, @Headers() headers) {
     const signature: string | undefined = headers['webhook-signature'];
-    return this.webhooksService.updateStory(data, signature);
+    return this.webhooksService.updateStory(req, data, signature);
   }
 }

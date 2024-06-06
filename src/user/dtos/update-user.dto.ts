@@ -16,4 +16,9 @@ export class UpdateUserDto {
   @IsOptional()
   @ApiProperty({ type: Boolean })
   serviceEmailsPermission: boolean;
+
+  @IsString()
+  @IsOptional()
+  @ApiProperty({ type: String })
+  signUpLanguage: string;
 }
