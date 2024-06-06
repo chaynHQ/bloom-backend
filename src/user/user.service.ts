@@ -11,7 +11,7 @@ import {
   CREATE_USER_INVALID_EMAIL,
   CREATE_USER_WEAK_PASSWORD,
 } from 'src/utils/errors';
-import { ILike, Repository } from 'typeorm';
+import { ILike, IsNull, Not, Repository } from 'typeorm';
 import {
   addCrispProfile,
   deleteCrispProfile,
@@ -424,7 +424,11 @@ export class UserService {
         }),
         ...(filters.partnerAdmin && {
           partnerAdmin: {
-            ...(filters.partnerAdmin && { id: filters.partnerAdmin.partnerAdminId }),
+            ...(filters.partnerAdmin && {
+              id: filters.partnerAdmin.partnerAdminId === 'IS NOT NULL'
+                ? Not(IsNull())
+                : filters.partnerAdmin.partnerAdminId
+            }),
           },
         }),
       },
