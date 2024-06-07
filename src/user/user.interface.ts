@@ -8,4 +8,5 @@ export interface IUser {
   isActive: boolean;
   crispTokenId: string;
   isSuperAdmin: boolean;
+  signUpLanguage: string;
 }

@@ -5,7 +5,6 @@ import { DataSource, DataSourceOptions } from 'typeorm';
 import { CoursePartnerEntity } from './entities/course-partner.entity';
 import { CourseUserEntity } from './entities/course-user.entity';
 import { CourseEntity } from './entities/course.entity';
-import { EmailCampaignEntity } from './entities/email-campaign.entity';
 import { EventLogEntity } from './entities/event-log.entity';
 import { FeatureEntity } from './entities/feature.entity';
 import { PartnerAccessEntity } from './entities/partner-access.entity';
@@ -74,7 +73,6 @@ export const dataSourceOptions = {
     CourseUserEntity,
     CoursePartnerEntity,
     FeatureEntity,
-    EmailCampaignEntity,
     EventLogEntity,
     SessionEntity,
     SessionUserEntity,
