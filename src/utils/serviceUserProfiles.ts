@@ -78,7 +78,6 @@ export const createServiceUserProfiles = async (
     logger.log(`Create user: updated service user profiles. User: ${email}`);
   } catch (error) {
     logger.error(`Create service user profiles error - ${error}. User: ${email}`);
-    throw error;
   }
 };
 
