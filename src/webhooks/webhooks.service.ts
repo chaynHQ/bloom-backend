@@ -1,6 +1,5 @@
 import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { createHmac } from 'crypto';
 import { SlackMessageClient } from 'src/api/slack/slack-api';
 import { CourseEntity } from 'src/entities/course.entity';
 import { EventLogEntity } from 'src/entities/event-log.entity';
@@ -360,27 +359,7 @@ export class WebhooksService {
     }
   }
 
-  async updateStory(req, data: StoryDto, signature: string | undefined) {
-    // Verify storyblok signature uses storyblok webhook secret - see https://www.storyblok.com/docs/guide/in-depth/webhooks#securing-a-webhook
-    if (!signature) {
-      const error = `Storyblok webhook error - no signature provided`;
-      this.logger.error(error);
-      throw new HttpException(error, HttpStatus.UNAUTHORIZED);
-    }
-
-    const webhookSecret = process.env.STORYBLOK_WEBHOOK_SECRET;
-
-    req.rawBody = '' + data;
-    req.setEncoding('utf8');
-
-    const bodyHmac = createHmac('sha1', webhookSecret).update(req.rawBody).digest('hex');
-
-    if (bodyHmac !== signature) {
-      const error = `Storyblok webhook error - signature mismatch`;
-      this.logger.error(error);
-      throw new HttpException(error, HttpStatus.UNAUTHORIZED);
-    }
-
+  async updateStory(data: StoryDto) {
     const action = data.action;
     const story_id = data.story_id;
 

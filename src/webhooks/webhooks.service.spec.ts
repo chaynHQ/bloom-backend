@@ -1,7 +1,6 @@
 import { createMock } from '@golevelup/ts-jest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { createHmac } from 'crypto';
 import { SlackMessageClient } from 'src/api/slack/slack-api';
 import { CoursePartnerService } from 'src/course-partner/course-partner.service';
 import { CoursePartnerEntity } from 'src/entities/course-partner.entity';
@@ -46,21 +45,6 @@ import {
 import { ILike, Repository } from 'typeorm';
 import { WebhookCreateEventLogDto } from './dto/webhook-create-event-log.dto';
 import { WebhooksService } from './webhooks.service';
-
-const webhookSecret = process.env.STORYBLOK_WEBHOOK_SECRET;
-
-const getWebhookSignature = (body) => {
-  return createHmac('sha1', webhookSecret)
-    .update('' + body)
-    .digest('hex');
-};
-const createRequestObject = (body) => {
-  return {
-    rawBody: '' + body,
-    setEncoding: () => {},
-    encoding: 'utf8',
-  };
-};
 
 // Difficult to mock classes as well as node modules.
 // This seemed the best approach
@@ -202,9 +186,7 @@ describe('WebhooksService', () => {
         text: '',
       };
 
-      return expect(
-        service.updateStory(createRequestObject(body), body, getWebhookSignature(body)),
-      ).rejects.toThrow('STORYBLOK STORY NOT FOUND');
+      return expect(service.updateStory(body)).rejects.toThrow('STORYBLOK STORY NOT FOUND');
     });
 
     it('when action is deleted, story should be set as deleted in database', async () => {
@@ -214,11 +196,7 @@ describe('WebhooksService', () => {
         text: '',
       };
 
-      const deletedStory = (await service.updateStory(
-        createRequestObject(body),
-        body,
-        getWebhookSignature(body),
-      )) as SessionEntity;
+      const deletedStory = (await service.updateStory(body)) as SessionEntity;
 
       expect(deletedStory.status).toBe(STORYBLOK_STORY_STATUS_ENUM.DELETED);
     });
@@ -230,11 +208,7 @@ describe('WebhooksService', () => {
         text: '',
       };
 
-      const unpublished = (await service.updateStory(
-        createRequestObject(body),
-        body,
-        getWebhookSignature(body),
-      )) as SessionEntity;
+      const unpublished = (await service.updateStory(body)) as SessionEntity;
 
       expect(unpublished.status).toBe(STORYBLOK_STORY_STATUS_ENUM.UNPUBLISHED);
     });
@@ -282,11 +256,7 @@ describe('WebhooksService', () => {
         text: '',
       };
 
-      const session = (await service.updateStory(
-        createRequestObject(body),
-        body,
-        getWebhookSignature(body),
-      )) as SessionEntity;
+      const session = (await service.updateStory(body)) as SessionEntity;
 
       expect(courseFindOneSpy).toHaveBeenCalledWith({
         storyblokUuid: 'anotherCourseUuId',
@@ -329,11 +299,7 @@ describe('WebhooksService', () => {
         text: '',
       };
 
-      const session = (await service.updateStory(
-        createRequestObject(body),
-        body,
-        getWebhookSignature(body),
-      )) as SessionEntity;
+      const session = (await service.updateStory(body)) as SessionEntity;
 
       expect(session).toEqual(mockSession);
       expect(courseFindOneSpy).toHaveBeenCalledWith({
@@ -392,11 +358,7 @@ describe('WebhooksService', () => {
         text: '',
       };
 
-      const session = (await service.updateStory(
-        createRequestObject(body),
-        body,
-        getWebhookSignature(body),
-      )) as SessionEntity;
+      const session = (await service.updateStory(body)) as SessionEntity;
 
       expect(session).toEqual(mockSession);
       expect(sessionSaveRepoSpy).toHaveBeenCalledWith({
@@ -430,11 +392,7 @@ describe('WebhooksService', () => {
         text: '',
       };
 
-      const course = (await service.updateStory(
-        createRequestObject(body),
-        body,
-        getWebhookSignature(body),
-      )) as CourseEntity;
+      const course = (await service.updateStory(body)) as CourseEntity;
 
       expect(course).toEqual(mockCourse);
       expect(courseFindOneRepoSpy).toHaveBeenCalledWith({

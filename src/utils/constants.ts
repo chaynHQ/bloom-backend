@@ -111,6 +111,11 @@ export const slackWebhookUrl = getEnv(process.env.SLACK_WEBHOOK_URL, 'SLACK_WEBH
 
 export const storyblokToken = getEnv(process.env.STORYBLOK_PUBLIC_TOKEN, 'STORYBLOK_PUBLIC_TOKEN');
 
+export const storyblokWebhookSecret = getEnv(
+  process.env.STORYBLOK_WEBHOOK_SECRET,
+  'STORYBLOK_WEBHOOK_SECRET',
+);
+
 export const simplybookCredentials = getEnv(
   process.env.SIMPLYBOOK_CREDENTIALS,
   'SIMPLYBOOK_CREDENTIALS',
