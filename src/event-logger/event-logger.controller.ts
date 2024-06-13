@@ -17,7 +17,7 @@ export class EventLoggerController {
   })
   @ApiBearerAuth('access-token')
   @UseGuards(FirebaseAuthGuard)
-  async complete(@Req() req: Request, @Body() event: EVENT_NAME) {
+  async createEventLog(@Req() req: Request, @Body() { event }: { event: EVENT_NAME }) {
     const now = new Date();
     return await this.eventLoggerService.createEventLog({
       userId: req['userEntity'].id,
