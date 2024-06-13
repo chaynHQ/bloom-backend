@@ -63,6 +63,7 @@ export class UserService {
       }
 
       const firebaseUser = await this.authService.createFirebaseUser(email, password);
+
       const user = await this.userRepository.save({
         ...createUserDto,
         firebaseUid: firebaseUser.uid,
