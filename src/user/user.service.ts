@@ -13,7 +13,7 @@ import {
   createServiceUserProfiles,
   updateServiceUserProfilesUser,
 } from 'src/utils/serviceUserProfiles';
-import { And, ILike, Raw, Repository } from 'typeorm';
+import { And, ILike, Raw, Repository, IsNull, Not } from 'typeorm';
 import { deleteCypressCrispProfiles } from '../api/crisp/crisp-api';
 import { AuthService } from '../auth/auth.service';
 import { PartnerAccessService, basePartnerAccess } from '../partner-access/partner-access.service';
@@ -289,7 +289,11 @@ export class UserService {
         }),
         ...(filters.partnerAdmin && {
           partnerAdmin: {
-            ...(filters.partnerAdmin && { id: filters.partnerAdmin.partnerAdminId }),
+            ...(filters.partnerAdmin && {
+              id: filters.partnerAdmin.partnerAdminId === 'IS NOT NULL'
+                ? Not(IsNull())
+                : filters.partnerAdmin.partnerAdminId
+            }),
           },
         }),
       },
