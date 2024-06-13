@@ -66,6 +66,7 @@ export class UserService {
 
       const user = await this.userRepository.save({
         ...createUserDto,
+        lastActiveAt: new Date(),
         firebaseUid: firebaseUser.uid,
       });
 
@@ -187,7 +188,7 @@ export class UserService {
     return await this.deleteUser(user);
   }
 
-  public async updateUser(updateUserDto: UpdateUserDto, { user: { id } }: GetUserDto) {
+  public async updateUser(updateUserDto: Partial<UpdateUserDto>, { user: { id } }: GetUserDto) {
     const user = await this.userRepository.findOneBy({ id });
 
     if (!user) {
@@ -200,9 +201,10 @@ export class UserService {
     };
     const updatedUser = await this.userRepository.save(newUserData);
 
-    const isNameOrLanguageUpdated =
-      user.signUpLanguage !== updateUserDto.signUpLanguage && user.name !== updateUserDto.name;
-    updateServiceUserProfilesUser(user, isNameOrLanguageUpdated, user.email);
+    const isCrispBaseUpdateRequired =
+      (user.signUpLanguage !== updateUserDto.signUpLanguage && user.name !== updateUserDto.name) ||
+      user.lastActiveAt !== updateUserDto.lastActiveAt;
+    updateServiceUserProfilesUser(user, isCrispBaseUpdateRequired, user.email);
 
     return updatedUser;
   }

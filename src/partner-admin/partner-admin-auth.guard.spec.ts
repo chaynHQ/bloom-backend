@@ -22,6 +22,7 @@ const userEntity: UserEntity = {
   partnerAccess: [],
   partnerAdmin: { id: 'partnerAdminId', active: true, partner: {} } as PartnerAdminEntity,
   isActive: true,
+  lastActiveAt: new Date(),
   courseUser: [],
   signUpLanguage: 'en',
   subscriptionUser: [],

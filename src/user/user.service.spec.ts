@@ -51,7 +51,7 @@ const createUserRepositoryDto = {
   firebaseUid: mockUserRecord.uid,
 };
 
-const updateUserDto: UpdateUserDto = {
+const updateUserDto: Partial<UpdateUserDto> = {
   name: 'new name',
   contactPermission: true,
   serviceEmailsPermission: false,

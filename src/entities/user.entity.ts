@@ -36,6 +36,9 @@ export class UserEntity extends BaseBloomEntity {
   @Column({ type: Boolean, default: true })
   isActive: boolean;
 
+  @Column({ type: 'timestamptz', nullable: true })
+  lastActiveAt: Date; // set each time user record is fetched
+
   @OneToMany(() => PartnerAccessEntity, (partnerAccess) => partnerAccess.user, { cascade: true })
   partnerAccess: PartnerAccessEntity[];
 
