@@ -1,11 +1,9 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { MailchimpClient } from 'src/api/mailchimp/mailchip-api';
 import { SlackMessageClient } from 'src/api/slack/slack-api';
 import { CoursePartnerService } from 'src/course-partner/course-partner.service';
 import { CoursePartnerEntity } from 'src/entities/course-partner.entity';
 import { CourseEntity } from 'src/entities/course.entity';
-import { EmailCampaignEntity } from 'src/entities/email-campaign.entity';
 import { EventLogEntity } from 'src/entities/event-log.entity';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { PartnerAdminEntity } from 'src/entities/partner-admin.entity';
@@ -29,7 +27,6 @@ import { WebhooksService } from './webhooks.service';
       PartnerEntity,
       TherapySessionEntity,
       PartnerAdminEntity,
-      EmailCampaignEntity,
       EventLogEntity,
     ]),
   ],
@@ -37,7 +34,6 @@ import { WebhooksService } from './webhooks.service';
     WebhooksService,
     CoursePartnerService,
     PartnerService,
-    MailchimpClient,
     SlackMessageClient,
     EventLoggerService,
   ],

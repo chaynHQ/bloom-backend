@@ -1,6 +1,12 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
+export enum SIGNUP_TYPE {
+  PUBLIC_USER = 'PUBLIC_USER',
+  PARTNER_USER_WITH_CODE = 'PARTNER_USER_WITH_CODE',
+  PARTNER_USER_WITHOUT_CODE = 'PARTNER_USER_WITHOUT_CODE',
+}
+
 export enum FEATURES {
   AUTOMATIC_ACCESS_CODE = 'AUTOMATIC_ACCESS_CODE',
 }
@@ -15,12 +21,7 @@ export enum SIMPLYBOOK_ACTION_ENUM {
   NEW_BOOKING = 'NEW_BOOKING',
   CANCELLED_BOOKING = 'CANCELLED_BOOKING',
   UPDATED_BOOKING = 'UPDATED_BOOKING',
-  COMPLETED_BOOKING = 'COMPLETED_BOOKING',
-}
-
-export enum CAMPAIGN_TYPE {
-  THERAPY_FEEDBACK = 'THERAPY_FEEDBACK',
-  IMPACT_MEASUREMENT = 'IMPACT_MEASUREMENT',
+  COMPLETED_BOOKING = 'COMPLETED_BOOKING', // currently not in use as no webhook available - could be updated in cron job
 }
 
 export enum STORYBLOK_STORY_STATUS_ENUM {
@@ -45,6 +46,11 @@ export enum PartnerAccessCodeStatusEnum {
 
 export enum WhatsappSubscriptionStatusEnum {
   ALREADY_EXISTS = 'ALREADY_EXISTS',
+}
+
+export enum COMMUNICATION_SERVICE {
+  CRISP = 'CRISP',
+  MAILCHIMP = 'MAILCHIMP',
 }
 
 const getEnv = (env: string, envName: string): string => {
@@ -105,23 +111,9 @@ export const slackWebhookUrl = getEnv(process.env.SLACK_WEBHOOK_URL, 'SLACK_WEBH
 
 export const storyblokToken = getEnv(process.env.STORYBLOK_PUBLIC_TOKEN, 'STORYBLOK_PUBLIC_TOKEN');
 
-export const mailchimpMandrillApiKey = getEnv(
-  process.env.MAILCHIMP_MANDRILL_API_KEY,
-  'MAILCHIMP_MANDRILL_API_KEY',
-);
-export const mailchimpTherapyTemplateId = getEnv(
-  process.env.MAILCHIMP_THERAPY_TEMPLATE_ID,
-  'MAILCHIMP_THERAPY_TEMPLATE_ID',
-);
-
-export const mailchimpImpactMeasurementTemplateId = getEnv(
-  process.env.MAILCHIMP_IMPACT_MEASUREMENT_TEMPLATE_ID,
-  'MAILCHIMP_IMPACT_MEASUREMENT_TEMPLATE_ID',
-);
-
-export const mailchimpTherapyFromEmail = getEnv(
-  process.env.MAILCHIMP_THERAPY_FROM_EMAIL,
-  'MAILCHIMP_THERAPY_FROM_EMAIL',
+export const storyblokWebhookSecret = getEnv(
+  process.env.STORYBLOK_WEBHOOK_SECRET,
+  'STORYBLOK_WEBHOOK_SECRET',
 );
 
 export const simplybookCredentials = getEnv(
@@ -141,4 +133,18 @@ export const respondIoCreateContactWebhook = getEnv(
 export const respondIoDeleteContactWebhook = getEnv(
   process.env.RESPOND_IO_DELETE_CONTACT_WEBHOOK,
   'RESPOND_IO_DELETE_CONTACT_WEBHOOK',
+);
+
+export const mailchimpApiKey = getEnv(process.env.MAILCHIMP_API_KEY, 'MAILCHIMP_API_KEY');
+export const mailchimpMarketingPermissionId = getEnv(
+  process.env.MAILCHIMP_MARKETING_PERMISSION_ID,
+  'MAILCHIMP_MARKETING_PERMISSION_ID',
+);
+export const mailchimpAudienceId = getEnv(
+  process.env.MAILCHIMP_AUDIENCE_ID,
+  'MAILCHIMP_AUDIENCE_ID',
+);
+export const mailchimpServerPrefix = getEnv(
+  process.env.MAILCHIMP_SERVER_PREFIX,
+  'MAILCHIMP_SERVER_PREFIX',
 );

@@ -47,20 +47,29 @@ export class UserController {
     return req['user'];
   }
 
-  // TODO - work out if this is used anywhere and delete if necessary
-  @ApiBearerAuth()
-  @Post('/delete')
+  /**
+   * This POST endpoint deviates from REST patterns.
+   * Please use `getUserByFirebaseId` above which is a GET endpoint.
+   * Do not delete this until frontend usage is migrated.
+   */
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    description:
+      'Returns user profile data with their nested partner access, partner admin, course user and session user data.',
+  })
+  @Post('/me')
   @UseGuards(FirebaseAuthGuard)
-  async deleteUserRecord(@Req() req: Request): Promise<string> {
-    return await this.userService.deleteUser(req['user'] as GetUserDto);
+  async getUserProfileByFirebaseId(@Req() req: Request): Promise<GetUserDto> {
+    return req['user'];
   }
 
   @ApiBearerAuth()
   @Delete()
   @UseGuards(FirebaseAuthGuard)
-  async deleteUser(@Req() req: Request): Promise<string> {
-    return await this.userService.deleteUser(req['user'] as GetUserDto);
+  async deleteUser(@Req() req: Request): Promise<UserEntity> {
+    return await this.userService.deleteUser(req['user'].user as UserEntity);
   }
+
   // This route must go before the Delete user route below as we want nestjs to check against this one first
   @ApiBearerAuth('access-token')
   @Delete('/cypress')
@@ -99,5 +108,13 @@ export class UserController {
       ? JSON.parse(query.searchCriteria)
       : { include: [], fields: [], limit: undefined };
     return await this.userService.getUsers(userQuery, include, fields, limit);
+  }
+
+  // Use only if users have not been added to mailchimp due to e.g. an ongoing bug
+  @ApiBearerAuth()
+  @Post('/bulk-mailchimp-upload')
+  @UseGuards(FirebaseAuthGuard)
+  async bulkUploadMailchimpProfiles() {
+    return await this.userService.bulkUploadMailchimpProfiles();
   }
 }
