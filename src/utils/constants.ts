@@ -53,17 +53,25 @@ export enum COMMUNICATION_SERVICE {
   MAILCHIMP = 'MAILCHIMP',
 }
 
+export enum ENVIRONMENTS {
+  DEVELOPMENT = 'development',
+  STAGING = 'staging',
+  PRODUCTION = 'production',
+  TESTING = 'testing',
+}
+
 const getEnv = (env: string, envName: string): string => {
   try {
-    if (!env) throw `Unable to get environemt variable ${envName}`;
+    if (!env) throw `Unable to get environment variable ${envName}`;
 
     return env;
   } catch (error) {
-    console.log(error);
+    if (nodeEnv !== ENVIRONMENTS.TESTING) console.log(error);
   }
 };
 
-export const isProduction = getEnv(process.env.NODE_ENV, 'NODE_ENV') === 'production';
+export const nodeEnv = getEnv(process.env.NODE_ENV, 'NODE_ENV');
+export const isProduction = nodeEnv === ENVIRONMENTS.PRODUCTION;
 
 export const rollbarEnv = getEnv(process.env.ROLLBAR_ENV, 'ROLLBAR_ENV');
 export const rollbarToken = getEnv(process.env.ROLLBAR_TOKEN, 'ROLLBAR_TOKEN');
