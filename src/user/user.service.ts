@@ -205,7 +205,7 @@ export class UserService {
 
     const isNameOrLanguageUpdated =
       user.signUpLanguage !== updateUserDto.signUpLanguage && user.name !== updateUserDto.name;
-    await updateServiceUserProfilesUser(user, isNameOrLanguageUpdated, user.email);
+    updateServiceUserProfilesUser(user, isNameOrLanguageUpdated, user.email);
 
     return updatedUser;
   }
