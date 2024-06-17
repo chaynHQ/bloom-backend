@@ -7,11 +7,7 @@ import {
 } from '@nestjs/common';
 import { DecodedIdToken } from 'firebase-admin/lib/auth/token-verifier';
 import { Logger } from 'src/logger/logger';
-import {
-  CREATE_USER_FIREBASE_ERROR,
-  CREATE_USER_INVALID_EMAIL,
-  CREATE_USER_WEAK_PASSWORD,
-} from 'src/utils/errors';
+import { FIREBASE_ERRORS } from 'src/utils/errors';
 import { FIREBASE } from '../firebase/firebase-factory';
 import { FirebaseServices } from '../firebase/firebase.types';
 import { UserAuthDto } from './dto/user-auth.dto';
@@ -55,27 +51,24 @@ export class AuthService {
       return firebaseUser;
     } catch (err) {
       const errorCode = err.code;
+
       if (errorCode === 'auth/invalid-email') {
         this.logger.warn(
           `Create user: user tried to create email with invalid email: ${email} - ${err}`,
         );
-        throw new HttpException(CREATE_USER_INVALID_EMAIL, HttpStatus.BAD_REQUEST);
-      }
-      if (
-        errorCode === 'auth/weak-password' ||
-        err.message.includes('The password must be a string with at least 6 characters')
-      ) {
+        throw new HttpException(FIREBASE_ERRORS.CREATE_USER_INVALID_EMAIL, HttpStatus.BAD_REQUEST);
+      } else if (errorCode === 'auth/weak-password' || errorCode === 'auth/invalid-password') {
         this.logger.warn(`Create user: user tried to create email with weak password - ${err}`);
-        throw new HttpException(CREATE_USER_WEAK_PASSWORD, HttpStatus.BAD_REQUEST);
-      }
-      if (errorCode === 'auth/email-already-in-use' && errorCode === 'auth/email-already-exists') {
-        this.logger.log(
-          `Create user: Firebase user already exists so fetching firebase user: ${email}`,
-        );
-        return await this.getFirebaseUser(email);
+        throw new HttpException(FIREBASE_ERRORS.CREATE_USER_WEAK_PASSWORD, HttpStatus.BAD_REQUEST);
+      } else if (
+        errorCode === 'auth/email-already-in-use' ||
+        errorCode === 'auth/email-already-exists'
+      ) {
+        this.logger.warn(`Create user: Firebase user already exists: ${email}`);
+        throw new HttpException(FIREBASE_ERRORS.CREATE_USER_ALREADY_EXISTS, HttpStatus.BAD_REQUEST);
       } else {
         this.logger.error(`Create user: Error creating firebase user - ${email}: ${err}`);
-        throw new HttpException(CREATE_USER_FIREBASE_ERROR, HttpStatus.BAD_REQUEST);
+        throw new HttpException(FIREBASE_ERRORS.CREATE_USER_FIREBASE_ERROR, HttpStatus.BAD_REQUEST);
       }
     }
   }
