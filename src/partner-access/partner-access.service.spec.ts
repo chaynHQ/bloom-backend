@@ -62,6 +62,8 @@ describe('PartnerAccessService', () => {
   let mockPartnerAccessRepository: DeepMocked<Repository<PartnerAccessEntity>>;
 
   beforeEach(async () => {
+    jest.clearAllMocks();
+
     mockPartnerRepository = createMock<Repository<PartnerEntity>>(mockPartnerRepositoryMethods);
     mockPartnerAccessRepository = createMock<Repository<PartnerAccessEntity>>(
       mockPartnerAccessRepositoryMethods,
@@ -138,7 +140,7 @@ describe('PartnerAccessService', () => {
         return {
           ...mockPartnerAccessEntity,
           id: 'pa1',
-          userId: mockGetUserDto.user.id,
+          userId: mockUserEntity.id,
         };
       });
       // Mocks that the accesscode already exists
@@ -150,13 +152,12 @@ describe('PartnerAccessService', () => {
 
       expect(partnerAccess).toEqual({
         ...mockPartnerAccessEntity,
-        id: 'pa1',
         userId: mockUserEntity.id,
         activatedAt: partnerAccess.activatedAt,
       });
 
       expect(profileData.updateServiceUserProfilesPartnerAccess).toHaveBeenCalledWith(
-        [partnerAccess],
+        [mockPartnerAccessEntity],
         mockUserEntity.email,
       );
     });

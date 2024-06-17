@@ -53,17 +53,26 @@ export enum COMMUNICATION_SERVICE {
   MAILCHIMP = 'MAILCHIMP',
 }
 
+export enum ENVIRONMENTS {
+  DEVELOPMENT = 'development',
+  STAGING = 'staging',
+  PRODUCTION = 'production',
+  TEST = 'test',
+}
+
 const getEnv = (env: string, envName: string): string => {
   try {
-    if (!env) throw `Unable to get environemt variable ${envName}`;
+    if (!env) throw `Unable to get environment variable ${envName}`;
 
     return env;
   } catch (error) {
-    console.log(error);
+    if (nodeEnv !== ENVIRONMENTS.TEST) console.log(error);
   }
 };
 
-export const isProduction = getEnv(process.env.NODE_ENV, 'NODE_ENV') === 'production';
+export const nodeEnv = getEnv(process.env.NODE_ENV, 'NODE_ENV');
+export const isProduction = nodeEnv === ENVIRONMENTS.PRODUCTION;
+export const frontendAppUrl = getEnv(process.env.FRONTEND_APP_URL, 'FRONTEND_APP_URL');
 
 export const rollbarEnv = getEnv(process.env.ROLLBAR_ENV, 'ROLLBAR_ENV');
 export const rollbarToken = getEnv(process.env.ROLLBAR_TOKEN, 'ROLLBAR_TOKEN');
@@ -111,10 +120,8 @@ export const slackWebhookUrl = getEnv(process.env.SLACK_WEBHOOK_URL, 'SLACK_WEBH
 
 export const storyblokToken = getEnv(process.env.STORYBLOK_PUBLIC_TOKEN, 'STORYBLOK_PUBLIC_TOKEN');
 
-export const storyblokWebhookSecret = getEnv(
-  process.env.STORYBLOK_WEBHOOK_SECRET,
-  'STORYBLOK_WEBHOOK_SECRET',
-);
+export const storyblokWebhookSecret =
+  getEnv(process.env.STORYBLOK_WEBHOOK_SECRET, 'STORYBLOK_WEBHOOK_SECRET') || '';
 
 export const simplybookCredentials = getEnv(
   process.env.SIMPLYBOOK_CREDENTIALS,

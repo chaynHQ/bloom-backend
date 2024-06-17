@@ -208,6 +208,11 @@ export const serializePartnersString = (partnerAccesses: PartnerAccessEntity[]) 
   return partnerAccesses?.map((pa) => pa.partner.name.toLowerCase()).join('; ') || '';
 };
 
+const serializeCrispPartnerSegments = (partners: PartnerEntity[]) => {
+  if (!partners.length) return ['public'];
+  return partners.map((p) => p.name.toLowerCase());
+};
+
 const serializeUserData = (user: UserEntity) => {
   const { name, signUpLanguage, contactPermission, serviceEmailsPermission } = user;
 
@@ -355,9 +360,4 @@ const serializeCourseData = (courseUser: CourseUserEntity) => {
   } as ListMemberPartial;
 
   return { crispSchema, mailchimpSchema };
-};
-
-const serializeCrispPartnerSegments = (partners: PartnerEntity[]) => {
-  if (!partners.length) return ['public'];
-  return partners.map((p) => p.name.toLowerCase());
 };
