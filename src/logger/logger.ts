@@ -1,5 +1,6 @@
 import { ConsoleLogger } from '@nestjs/common';
 import Rollbar from 'rollbar';
+import { FIREBASE_ERRORS } from 'src/utils/errors';
 import { isProduction, rollbarEnv, rollbarToken } from '../utils/constants';
 
 export class Logger extends ConsoleLogger {
@@ -36,6 +37,7 @@ export class Logger extends ConsoleLogger {
         accessToken: rollbarToken,
         captureUncaught: true,
         captureUnhandledRejections: true,
+        ignoredMessages: [...Object.values(FIREBASE_ERRORS)],
       });
     }
   }

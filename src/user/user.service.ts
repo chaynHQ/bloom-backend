@@ -9,11 +9,12 @@ import { Logger } from 'src/logger/logger';
 import { SubscriptionUserService } from 'src/subscription-user/subscription-user.service';
 import { TherapySessionService } from 'src/therapy-session/therapy-session.service';
 import { SIGNUP_TYPE } from 'src/utils/constants';
+import { FIREBASE_ERRORS } from 'src/utils/errors';
 import {
   createServiceUserProfiles,
   updateServiceUserProfilesUser,
 } from 'src/utils/serviceUserProfiles';
-import { And, ILike, Raw, Repository } from 'typeorm';
+import { And, ILike, IsNull, Not, Raw, Repository } from 'typeorm';
 import { deleteCypressCrispProfiles } from '../api/crisp/crisp-api';
 import { AuthService } from '../auth/auth.service';
 import { PartnerAccessService, basePartnerAccess } from '../partner-access/partner-access.service';
@@ -63,6 +64,7 @@ export class UserService {
       }
 
       const firebaseUser = await this.authService.createFirebaseUser(email, password);
+
       const user = await this.userRepository.save({
         ...createUserDto,
         firebaseUid: firebaseUser.uid,
@@ -97,7 +99,9 @@ export class UserService {
       });
       return userDto;
     } catch (error) {
-      this.logger.error(`Create user: Error creating user ${email}: ${error}`);
+      if (!Object.values(FIREBASE_ERRORS).includes(error)) {
+        this.logger.error(`Create user: Error creating user ${email}: ${error}`);
+      }
       throw error;
     }
   }
@@ -289,7 +293,12 @@ export class UserService {
         }),
         ...(filters.partnerAdmin && {
           partnerAdmin: {
-            ...(filters.partnerAdmin && { id: filters.partnerAdmin.partnerAdminId }),
+            ...(filters.partnerAdmin && {
+              id:
+                filters.partnerAdmin.partnerAdminId === 'IS NOT NULL'
+                  ? Not(IsNull())
+                  : filters.partnerAdmin.partnerAdminId,
+            }),
           },
         }),
       },
