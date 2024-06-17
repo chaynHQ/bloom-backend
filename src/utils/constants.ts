@@ -57,7 +57,7 @@ export enum ENVIRONMENTS {
   DEVELOPMENT = 'development',
   STAGING = 'staging',
   PRODUCTION = 'production',
-  TESTING = 'testing',
+  TEST = 'test',
 }
 
 const getEnv = (env: string, envName: string): string => {
@@ -66,7 +66,7 @@ const getEnv = (env: string, envName: string): string => {
 
     return env;
   } catch (error) {
-    if (nodeEnv !== ENVIRONMENTS.TESTING) console.log(error);
+    if (nodeEnv !== ENVIRONMENTS.TEST) console.log(error);
   }
 };
 
