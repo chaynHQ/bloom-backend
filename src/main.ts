@@ -13,6 +13,9 @@ async function bootstrap() {
 
   app.setGlobalPrefix('api');
 
+  // Starts listening for shutdown hooks
+  app.enableShutdownHooks();
+
   const options = new DocumentBuilder()
     .setTitle('Bloom backend API')
     .setDescription('Bloom backend API')
