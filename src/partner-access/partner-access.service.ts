@@ -187,9 +187,12 @@ export class PartnerAccessService {
     assignedPartnerAccess.partner = partnerAccess.partner;
 
     try {
-      const partnerAccesses = await this.partnerAccessRepository.findBy({
-        userId: user.id,
-        active: true,
+      const partnerAccesses = await this.partnerAccessRepository.find({
+        where: {
+          userId: user.id,
+          active: true,
+        },
+        relations: { partner: true },
       });
       updateServiceUserProfilesPartnerAccess(partnerAccesses, user.email);
     } catch (error) {
