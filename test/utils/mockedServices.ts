@@ -35,7 +35,6 @@ import {
   mockTherapySessionEntity,
   mockUserEntity,
   mockUserRecord,
-  partnerAccessArray,
 } from './mockData';
 import { createQueryBuilderMock } from './mockUtils';
 
@@ -209,11 +208,8 @@ export const mockPartnerAccessRepositoryMethods: PartialFuncReturn<
   findBy: async (arg) => {
     return [{ ...mockPartnerAccessEntity, ...(arg ? { ...arg } : {}) }] as PartnerAccessEntity[];
   },
-  find: async (arg) => {
-    return [
-      ...partnerAccessArray,
-      { ...mockPartnerAccessEntity, ...(arg ? { ...arg } : {}) },
-    ] as PartnerAccessEntity[];
+  find: async () => {
+    return [{ ...mockPartnerAccessEntity }] as PartnerAccessEntity[];
   },
   save: async (arg) => arg as PartnerAccessEntity,
 };
