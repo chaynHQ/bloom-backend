@@ -57,7 +57,7 @@ export enum ENVIRONMENTS {
   DEVELOPMENT = 'development',
   STAGING = 'staging',
   PRODUCTION = 'production',
-  TESTING = 'testing',
+  TEST = 'test',
 }
 
 const getEnv = (env: string, envName: string): string => {
@@ -66,12 +66,13 @@ const getEnv = (env: string, envName: string): string => {
 
     return env;
   } catch (error) {
-    if (nodeEnv !== ENVIRONMENTS.TESTING) console.log(error);
+    if (nodeEnv !== ENVIRONMENTS.TEST) console.log(error);
   }
 };
 
 export const nodeEnv = getEnv(process.env.NODE_ENV, 'NODE_ENV');
 export const isProduction = nodeEnv === ENVIRONMENTS.PRODUCTION;
+export const frontendAppUrl = getEnv(process.env.FRONTEND_APP_URL, 'FRONTEND_APP_URL');
 
 export const rollbarEnv = getEnv(process.env.ROLLBAR_ENV, 'ROLLBAR_ENV');
 export const rollbarToken = getEnv(process.env.ROLLBAR_TOKEN, 'ROLLBAR_TOKEN');
