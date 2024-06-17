@@ -8,6 +8,7 @@ import { CourseUserModule } from './course-user/course-user.module';
 import { CourseModule } from './course/course.module';
 import { EventLoggerModule } from './event-logger/event-logger.module';
 import { FeatureModule } from './feature/feature.module';
+import { HealthModule } from './health/health.module';
 import { LoggerModule } from './logger/logger.module';
 import { PartnerAccessModule } from './partner-access/partner-access.module';
 import { PartnerAdminModule } from './partner-admin/partner-admin.module';
@@ -39,6 +40,7 @@ import { WebhooksModule } from './webhooks/webhooks.module';
     FeatureModule,
     PartnerFeatureModule,
     EventLoggerModule,
+    HealthModule,
   ],
 })
 export class AppModule {}
