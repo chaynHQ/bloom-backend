@@ -44,13 +44,15 @@ export class UserController {
   @Get('/me')
   @UseGuards(FirebaseAuthGuard)
   async getUserByFirebaseId(@Req() req: Request): Promise<GetUserDto> {
-    return req['user'];
+    const user = req['user'];
+    this.userService.updateUser({ lastActiveAt: new Date() }, user);
+    return user;
   }
 
   /**
    * This POST endpoint deviates from REST patterns.
    * Please use `getUserByFirebaseId` above which is a GET endpoint.
-   * Do not delete this until frontend usage is migrated.
+   * Safe to delete function below from July 2024 - allowing for caches to clear
    */
   @ApiBearerAuth('access-token')
   @ApiOperation({

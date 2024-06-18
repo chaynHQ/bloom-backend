@@ -42,17 +42,7 @@ const createUserDto: CreateUserDto = {
   signUpLanguage: 'en',
 };
 
-const createUserRepositoryDto = {
-  email: 'user@email.com',
-  password: 'password',
-  name: 'name',
-  contactPermission: false,
-  serviceEmailsPermission: true,
-  signUpLanguage: 'en',
-  firebaseUid: mockUserRecord.uid,
-};
-
-const updateUserDto: UpdateUserDto = {
+const updateUserDto: Partial<UpdateUserDto> = {
   name: 'new name',
   contactPermission: true,
   serviceEmailsPermission: false,
@@ -123,7 +113,12 @@ describe('UserService', () => {
       const repoSaveSpy = jest.spyOn(repo, 'save');
 
       const user = await service.createUser(createUserDto);
-      expect(repoSaveSpy).toHaveBeenCalledWith(createUserRepositoryDto);
+      expect(repoSaveSpy).toHaveBeenCalledWith({
+        ...createUserDto,
+        firebaseUid: mockUserRecord.uid,
+        lastActiveAt: user.user.lastActiveAt,
+      });
+
       expect(user.user.email).toBe('user@email.com');
       expect(user.partnerAdmin).toBeNull();
       expect(user.partnerAccesses).toBeNull();
@@ -135,6 +130,7 @@ describe('UserService', () => {
         segments: ['public'],
       });
       expect(updateCrispProfile).toHaveBeenCalled();
+      expect(createMailchimpProfile).toHaveBeenCalled();
     });
 
     it('when supplied with user dto and partner access code, it should return a new partner user', async () => {
@@ -169,6 +165,7 @@ describe('UserService', () => {
       expect(updateCrispProfile).toHaveBeenCalledWith(
         {
           signed_up_at: user.user.createdAt,
+          last_active_at: (user.user.lastActiveAt as Date).toISOString(),
           marketing_permission: true,
           service_emails_permission: true,
           partners: 'bumble',
@@ -179,6 +176,7 @@ describe('UserService', () => {
         },
         'user@email.com',
       );
+      expect(createMailchimpProfile).toHaveBeenCalled();
     });
 
     it('when supplied with user dto and partner access that has already been used, it should return an error', async () => {
@@ -228,7 +226,7 @@ describe('UserService', () => {
       ]);
     });
 
-    it('should not fail on crisp api call errors', async () => {
+    it('should not fail create on crisp api call errors', async () => {
       const mocked = jest.mocked(createCrispProfile);
       mocked.mockRejectedValue(new Error('Crisp API call failed'));
 
@@ -240,7 +238,7 @@ describe('UserService', () => {
       mocked.mockReset();
     });
 
-    it('should not fail on mailchimp api call errors', async () => {
+    it('should not fail create on mailchimp api call errors', async () => {
       const mocked = jest.mocked(createMailchimpProfile);
       mocked.mockRejectedValue(new Error('Mailchimp API call failed'));
 
@@ -290,12 +288,12 @@ describe('UserService', () => {
       expect(repoSaveSpy).toHaveBeenCalled();
     });
 
-    it('should not fail on crisp api call errors', async () => {
+    it('should not fail update on crisp api call errors', async () => {
       const mocked = jest.mocked(updateCrispProfile);
       mocked.mockRejectedValue(new Error('Crisp API call failed'));
 
       const user = await service.updateUser(updateUserDto, { user: mockUserEntity });
-
+      await new Promise(process.nextTick); // wait for async funcs to resolve
       expect(mocked).toHaveBeenCalled();
       expect(user.name).toBe('new name');
       expect(user.email).toBe('user@email.com');
@@ -303,12 +301,12 @@ describe('UserService', () => {
       mocked.mockReset();
     });
 
-    it('should not fail on mailchimp api call errors', async () => {
+    it('should not fail update on mailchimp api call errors', async () => {
       const mocked = jest.mocked(updateMailchimpProfile);
       mocked.mockRejectedValue(new Error('Mailchimp API call failed'));
 
       const user = await service.updateUser(updateUserDto, { user: mockUserEntity });
-
+      await new Promise(process.nextTick); // wait for async funcs to resolve
       expect(mocked).toHaveBeenCalled();
       expect(user.name).toBe('new name');
       expect(user.email).toBe('user@email.com');

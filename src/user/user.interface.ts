@@ -6,6 +6,7 @@ export interface IUser {
   name: string;
   email: string;
   isActive: boolean;
+  lastActiveAt: Date | string;
   crispTokenId: string;
   isSuperAdmin: boolean;
   signUpLanguage: string;

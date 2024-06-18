@@ -15,6 +15,7 @@ export enum MAILCHIMP_MERGE_FIELD_TYPES {
 export interface ListMemberCustomFields {
   NAME?: string;
   SIGNUPD?: string;
+  LACTIVED?: string;
   PARTNERS?: string;
   FEATTHER?: string;
   FEATCHAT?: string;
