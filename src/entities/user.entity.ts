@@ -1,6 +1,7 @@
 import { Column, Entity, Generated, OneToMany, OneToOne, PrimaryGeneratedColumn } from 'typeorm';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
 import { PartnerAdminEntity } from '../entities/partner-admin.entity';
+import { EMAIL_REMINDERS_FREQUENCY } from '../utils/constants';
 import { BaseBloomEntity } from './base.entity';
 import { CourseUserEntity } from './course-user.entity';
 import { EventLogEntity } from './event-log.entity';
@@ -29,6 +30,9 @@ export class UserEntity extends BaseBloomEntity {
 
   @Column({ default: true })
   serviceEmailsPermission: boolean; // service emails consent - mapped to mailchimp status field
+
+  @Column({ default: EMAIL_REMINDERS_FREQUENCY.NEVER })
+  emailRemindersFrequency: EMAIL_REMINDERS_FREQUENCY;
 
   @Column({ type: Boolean, default: false })
   isSuperAdmin: boolean;

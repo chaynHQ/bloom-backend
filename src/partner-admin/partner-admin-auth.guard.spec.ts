@@ -4,6 +4,7 @@ import { DecodedIdToken } from 'firebase-admin/lib/auth/token-verifier';
 import { AuthService } from 'src/auth/auth.service';
 import { PartnerAdminEntity } from 'src/entities/partner-admin.entity';
 import { UserEntity } from 'src/entities/user.entity';
+import { EMAIL_REMINDERS_FREQUENCY } from 'src/utils/constants';
 import { Repository } from 'typeorm';
 import { createQueryBuilderMock } from '../../test/utils/mockUtils';
 import { PartnerAdminAuthGuard } from './partner-admin-auth.guard';
@@ -17,6 +18,7 @@ const userEntity: UserEntity = {
   name: 'name',
   contactPermission: false,
   serviceEmailsPermission: true,
+  emailRemindersFrequency: EMAIL_REMINDERS_FREQUENCY.TWO_MONTHS,
   isSuperAdmin: false,
   crispTokenId: '123',
   partnerAccess: [],

@@ -16,7 +16,11 @@ import {
   mockPartnerEntity,
   mockUserEntity,
 } from 'test/utils/mockData';
-import { SIMPLYBOOK_ACTION_ENUM, mailchimpMarketingPermissionId } from './constants';
+import {
+  EMAIL_REMINDERS_FREQUENCY,
+  SIMPLYBOOK_ACTION_ENUM,
+  mailchimpMarketingPermissionId,
+} from './constants';
 import {
   createMailchimpCourseMergeField,
   createServiceUserProfiles,
@@ -52,6 +56,7 @@ describe('Service user profiles', () => {
         {
           marketing_permission: mockUserEntity.contactPermission,
           service_emails_permission: mockUserEntity.serviceEmailsPermission,
+          email_reminders_frequency: EMAIL_REMINDERS_FREQUENCY.TWO_MONTHS,
           signed_up_at: createdAt,
           last_active_at: lastActiveAt,
           feature_live_chat: true,
@@ -83,6 +88,7 @@ describe('Service user profiles', () => {
           PARTNERS: '',
           THERREMAIN: 0,
           THERREDEEM: 0,
+          REMINDFREQ: EMAIL_REMINDERS_FREQUENCY.TWO_MONTHS,
         },
       });
     });
@@ -105,6 +111,7 @@ describe('Service user profiles', () => {
           signed_up_at: createdAt,
           marketing_permission: mockUserEntity.contactPermission,
           service_emails_permission: mockUserEntity.serviceEmailsPermission,
+          email_reminders_frequency: EMAIL_REMINDERS_FREQUENCY.TWO_MONTHS,
           partners: partnerName,
           last_active_at: lastActiveAt,
           feature_live_chat: mockPartnerAccessEntity.featureLiveChat,
@@ -135,6 +142,7 @@ describe('Service user profiles', () => {
           FEATTHER: String(mockPartnerAccessEntity.featureTherapy),
           THERREMAIN: mockPartnerAccessEntity.therapySessionsRemaining,
           THERREDEEM: mockPartnerAccessEntity.therapySessionsRedeemed,
+          REMINDFREQ: EMAIL_REMINDERS_FREQUENCY.TWO_MONTHS,
         },
       });
     });
@@ -157,6 +165,7 @@ describe('Service user profiles', () => {
         {
           marketing_permission: mockUserEntity.contactPermission,
           service_emails_permission: mockUserEntity.serviceEmailsPermission,
+          email_reminders_frequency: EMAIL_REMINDERS_FREQUENCY.TWO_MONTHS,
           last_active_at: lastActiveAt,
         },
         mockUserEntity.email,
@@ -173,7 +182,11 @@ describe('Service user profiles', () => {
               enabled: mockUserEntity.contactPermission,
             },
           ],
-          merge_fields: { NAME: mockUserEntity.name, LACTIVED: lastActiveAt },
+          merge_fields: {
+            NAME: mockUserEntity.name,
+            LACTIVED: lastActiveAt,
+            REMINDFREQ: EMAIL_REMINDERS_FREQUENCY.TWO_MONTHS,
+          },
         },
         mockUserEntity.email,
       );
@@ -194,6 +207,7 @@ describe('Service user profiles', () => {
           marketing_permission: false,
           service_emails_permission: false,
           last_active_at: lastActiveAt,
+          email_reminders_frequency: EMAIL_REMINDERS_FREQUENCY.TWO_MONTHS,
         },
         mockUser.email,
       );
@@ -209,7 +223,11 @@ describe('Service user profiles', () => {
               enabled: false,
             },
           ],
-          merge_fields: { NAME: mockUser.name, LACTIVED: lastActiveAt },
+          merge_fields: {
+            NAME: mockUser.name,
+            LACTIVED: lastActiveAt,
+            REMINDFREQ: EMAIL_REMINDERS_FREQUENCY.TWO_MONTHS,
+          },
         },
         mockUser.email,
       );

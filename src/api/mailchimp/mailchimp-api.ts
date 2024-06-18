@@ -59,7 +59,6 @@ export const batchCreateMailchimpProfiles = async (users: UserEntity[]) => {
       console.log('Mailchimp batch response:', batchResponse);
     }, 120000);
   } catch (error) {
-    console.log(error);
     throw new Error(`Batch create mailchimp profiles API call failed: ${error}`);
   }
 };

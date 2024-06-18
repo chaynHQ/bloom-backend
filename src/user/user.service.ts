@@ -197,7 +197,6 @@ export class UserService {
     if (!user) {
       throw new HttpException('USER NOT FOUND', HttpStatus.NOT_FOUND);
     }
-
     const newUserData: UserEntity = {
       ...user,
       ...updateUserDto,
@@ -205,8 +204,8 @@ export class UserService {
     const updatedUser = await this.userRepository.save(newUserData);
 
     const isCrispBaseUpdateRequired =
-      (user.signUpLanguage !== updateUserDto.signUpLanguage && user.name !== updateUserDto.name) ||
-      user.lastActiveAt !== updateUserDto.lastActiveAt;
+      user.signUpLanguage !== updateUserDto.signUpLanguage && user.name !== updateUserDto.name;
+
     updateServiceUserProfilesUser(user, isCrispBaseUpdateRequired, user.email);
 
     return updatedUser;
@@ -332,7 +331,6 @@ export class UserService {
       });
       const usersWithCourseUsers = users.filter((user) => user.courseUser.length > 0);
 
-      console.log(usersWithCourseUsers);
       await batchCreateMailchimpProfiles(usersWithCourseUsers);
       this.logger.log(
         `Created batch mailchimp profiles for ${usersWithCourseUsers.length} users, created before ${filterStartDate}`,
