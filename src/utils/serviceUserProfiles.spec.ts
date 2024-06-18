@@ -45,11 +45,15 @@ describe('Service user profiles', () => {
         segments: ['public'],
       });
 
+      const createdAt = mockUserEntity.createdAt.toISOString();
+      const lastActiveAt = mockUserEntity.lastActiveAt.toISOString();
+
       expect(updateCrispProfile).toHaveBeenCalledWith(
         {
           marketing_permission: mockUserEntity.contactPermission,
           service_emails_permission: mockUserEntity.serviceEmailsPermission,
-          signed_up_at: mockUserEntity.createdAt.toISOString(),
+          signed_up_at: createdAt,
+          last_active_at: lastActiveAt,
           feature_live_chat: true,
           feature_therapy: false,
           partners: '',
@@ -71,7 +75,8 @@ describe('Service user profiles', () => {
           },
         ],
         merge_fields: {
-          SIGNUPD: mockUserEntity.createdAt.toISOString(),
+          SIGNUPD: createdAt,
+          LACTIVED: lastActiveAt,
           NAME: mockUserEntity.name,
           FEATCHAT: 'true',
           FEATTHER: 'false',
@@ -86,6 +91,8 @@ describe('Service user profiles', () => {
       await createServiceUserProfiles(mockUserEntity, mockPartnerEntity, mockPartnerAccessEntity);
 
       const partnerName = mockPartnerEntity.name.toLowerCase();
+      const createdAt = mockUserEntity.createdAt.toISOString();
+      const lastActiveAt = mockUserEntity.lastActiveAt.toISOString();
 
       expect(createCrispProfile).toHaveBeenCalledWith({
         email: mockUserEntity.email,
@@ -95,10 +102,11 @@ describe('Service user profiles', () => {
 
       expect(updateCrispProfile).toHaveBeenCalledWith(
         {
-          signed_up_at: mockUserEntity.createdAt.toISOString(),
+          signed_up_at: createdAt,
           marketing_permission: mockUserEntity.contactPermission,
           service_emails_permission: mockUserEntity.serviceEmailsPermission,
           partners: partnerName,
+          last_active_at: lastActiveAt,
           feature_live_chat: mockPartnerAccessEntity.featureLiveChat,
           feature_therapy: mockPartnerAccessEntity.featureTherapy,
           therapy_sessions_remaining: mockPartnerAccessEntity.therapySessionsRemaining,
@@ -120,6 +128,7 @@ describe('Service user profiles', () => {
         ],
         merge_fields: {
           SIGNUPD: mockUserEntity.createdAt.toISOString(),
+          LACTIVED: lastActiveAt,
           NAME: mockUserEntity.name,
           PARTNERS: partnerName,
           FEATCHAT: String(mockPartnerAccessEntity.featureLiveChat),
@@ -142,10 +151,13 @@ describe('Service user profiles', () => {
     it('should update crisp and mailchimp profile user data', async () => {
       await updateServiceUserProfilesUser(mockUserEntity, false, mockUserEntity.email);
 
+      const lastActiveAt = mockUserEntity.lastActiveAt.toISOString();
+
       expect(updateCrispProfile).toHaveBeenCalledWith(
         {
           marketing_permission: mockUserEntity.contactPermission,
           service_emails_permission: mockUserEntity.serviceEmailsPermission,
+          last_active_at: lastActiveAt,
         },
         mockUserEntity.email,
       );
@@ -161,7 +173,7 @@ describe('Service user profiles', () => {
               enabled: mockUserEntity.contactPermission,
             },
           ],
-          merge_fields: { NAME: mockUserEntity.name },
+          merge_fields: { NAME: mockUserEntity.name, LACTIVED: lastActiveAt },
         },
         mockUserEntity.email,
       );
@@ -173,6 +185,7 @@ describe('Service user profiles', () => {
         contactPermission: false,
         serviceEmailsPermission: false,
       };
+      const lastActiveAt = mockUserEntity.lastActiveAt.toISOString();
 
       await updateServiceUserProfilesUser(mockUser, false, mockUser.email);
 
@@ -180,6 +193,7 @@ describe('Service user profiles', () => {
         {
           marketing_permission: false,
           service_emails_permission: false,
+          last_active_at: lastActiveAt,
         },
         mockUser.email,
       );
@@ -195,7 +209,7 @@ describe('Service user profiles', () => {
               enabled: false,
             },
           ],
-          merge_fields: { NAME: mockUser.name },
+          merge_fields: { NAME: mockUser.name, LACTIVED: lastActiveAt },
         },
         mockUser.email,
       );
