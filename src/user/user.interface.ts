@@ -1,3 +1,5 @@
+import { EMAIL_REMINDERS_FREQUENCY } from '../utils/constants';
+
 export interface IUser {
   id: string;
   createdAt: Date | string;
@@ -10,4 +12,5 @@ export interface IUser {
   crispTokenId: string;
   isSuperAdmin: boolean;
   signUpLanguage: string;
+  emailRemindersFrequency: EMAIL_REMINDERS_FREQUENCY;
 }

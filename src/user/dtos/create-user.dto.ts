@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsBoolean, IsDefined, IsEmail, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { EMAIL_REMINDERS_FREQUENCY } from '../../utils/constants';
 
 export class CreateUserDto {
   @IsString()
@@ -39,6 +40,11 @@ export class CreateUserDto {
   @IsBoolean()
   @ApiProperty({ type: Boolean })
   serviceEmailsPermission: boolean;
+
+  @IsOptional()
+  @IsString()
+  @ApiProperty({ type: String })
+  emailRemindersFrequency: EMAIL_REMINDERS_FREQUENCY;
 
   @IsOptional()
   @IsString()

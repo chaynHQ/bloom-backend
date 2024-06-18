@@ -214,13 +214,21 @@ const serializeCrispPartnerSegments = (partners: PartnerEntity[]) => {
 };
 
 const serializeUserData = (user: UserEntity) => {
-  const { name, signUpLanguage, contactPermission, serviceEmailsPermission, lastActiveAt } = user;
+  const {
+    name,
+    signUpLanguage,
+    contactPermission,
+    serviceEmailsPermission,
+    lastActiveAt,
+    emailRemindersFrequency,
+  } = user;
   const lastActiveAtString = lastActiveAt?.toISOString() || '';
 
   const crispSchema = {
     marketing_permission: contactPermission,
     service_emails_permission: serviceEmailsPermission,
     last_active_at: lastActiveAtString,
+    email_reminders_frequency: emailRemindersFrequency,
     // Name and language handled on base level profile for crisp
   };
 
@@ -234,7 +242,11 @@ const serializeUserData = (user: UserEntity) => {
       },
     ],
     language: signUpLanguage || 'en',
-    merge_fields: { NAME: name, LACTIVED: lastActiveAtString },
+    merge_fields: {
+      NAME: name,
+      LACTIVED: lastActiveAtString,
+      REMINDFREQ: emailRemindersFrequency,
+    },
   } as ListMemberPartial;
 
   return { crispSchema, mailchimpSchema };

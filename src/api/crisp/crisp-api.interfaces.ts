@@ -1,6 +1,9 @@
+import { EMAIL_REMINDERS_FREQUENCY } from '../../utils/constants';
+
 export interface CrispProfileCustomFields {
   signed_up_at?: string;
   last_active_at?: string;
+  email_reminders_frequency?: EMAIL_REMINDERS_FREQUENCY;
   language?: string;
   marketing_permission?: boolean;
   service_emails_permission?: boolean;

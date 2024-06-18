@@ -1,3 +1,5 @@
+import { EMAIL_REMINDERS_FREQUENCY } from '../../utils/constants';
+
 export enum MAILCHIMP_MERGE_FIELD_TYPES {
   TEXT = 'text',
   NUMBER = 'number',
@@ -16,6 +18,7 @@ export interface ListMemberCustomFields {
   NAME?: string;
   SIGNUPD?: string;
   LACTIVED?: string;
+  REMINDFREQ?: EMAIL_REMINDERS_FREQUENCY;
   PARTNERS?: string;
   FEATTHER?: string;
   FEATCHAT?: string;

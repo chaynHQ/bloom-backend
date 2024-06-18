@@ -37,6 +37,7 @@ export class Logger extends ConsoleLogger {
         accessToken: rollbarToken,
         captureUncaught: true,
         captureUnhandledRejections: true,
+        captureIp: 'anonymize',
         ignoredMessages: [...Object.values(FIREBASE_ERRORS)],
       });
     }

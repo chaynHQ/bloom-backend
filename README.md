@@ -186,6 +186,8 @@ To generate a new migration
 yarn migration:generate
 ```
 
+Add the new migration import into [typeorm.config.ts](./src/typeorm.config.ts)
+
 To run (apply) migrations
 
 ```bash
