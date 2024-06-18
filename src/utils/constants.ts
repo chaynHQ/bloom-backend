@@ -1,10 +1,29 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
+export enum ENVIRONMENTS {
+  DEVELOPMENT = 'development',
+  STAGING = 'staging',
+  PRODUCTION = 'production',
+  TEST = 'test',
+}
+
 export enum SIGNUP_TYPE {
   PUBLIC_USER = 'PUBLIC_USER',
   PARTNER_USER_WITH_CODE = 'PARTNER_USER_WITH_CODE',
   PARTNER_USER_WITHOUT_CODE = 'PARTNER_USER_WITHOUT_CODE',
+}
+
+export enum LANGUAGE_DEFAULT {
+  EN = 'en',
+  ES = 'es',
+}
+
+export enum EMAIL_REMINDERS_FREQUENCY {
+  TWO_WEEKS = 'TWO_WEEKS',
+  ONE_MONTH = 'ONE_MONTH',
+  TWO_MONTHS = 'TWO_MONTHS',
+  NEVER = 'NEVER',
 }
 
 export enum FEATURES {
@@ -30,11 +49,6 @@ export enum STORYBLOK_STORY_STATUS_ENUM {
   DELETED = 'deleted',
 }
 
-export enum LANGUAGE_DEFAULT {
-  EN = 'en',
-  ES = 'es',
-}
-
 export enum PartnerAccessCodeStatusEnum {
   VALID = 'VALID',
   INVALID_CODE = 'INVALID_CODE',
@@ -51,13 +65,6 @@ export enum WhatsappSubscriptionStatusEnum {
 export enum COMMUNICATION_SERVICE {
   CRISP = 'CRISP',
   MAILCHIMP = 'MAILCHIMP',
-}
-
-export enum ENVIRONMENTS {
-  DEVELOPMENT = 'development',
-  STAGING = 'staging',
-  PRODUCTION = 'production',
-  TEST = 'test',
 }
 
 const getEnv = (env: string, envName: string): string => {
@@ -120,10 +127,8 @@ export const slackWebhookUrl = getEnv(process.env.SLACK_WEBHOOK_URL, 'SLACK_WEBH
 
 export const storyblokToken = getEnv(process.env.STORYBLOK_PUBLIC_TOKEN, 'STORYBLOK_PUBLIC_TOKEN');
 
-export const storyblokWebhookSecret = getEnv(
-  process.env.STORYBLOK_WEBHOOK_SECRET,
-  'STORYBLOK_WEBHOOK_SECRET',
-);
+export const storyblokWebhookSecret =
+  getEnv(process.env.STORYBLOK_WEBHOOK_SECRET, 'STORYBLOK_WEBHOOK_SECRET') || '';
 
 export const simplybookCredentials = getEnv(
   process.env.SIMPLYBOOK_CREDENTIALS,

@@ -67,6 +67,7 @@ export class UserService {
 
       const user = await this.userRepository.save({
         ...createUserDto,
+        lastActiveAt: new Date(),
         firebaseUid: firebaseUser.uid,
       });
 
@@ -91,7 +92,7 @@ export class UserService {
         this.logger.log(`Create user: created public user in db. User: ${email}`);
       }
 
-      createServiceUserProfiles(user, partner, partnerAccess);
+      await createServiceUserProfiles(user, partner, partnerAccess);
 
       const userDto = formatUserObject({
         ...user,
@@ -190,22 +191,22 @@ export class UserService {
     return await this.deleteUser(user);
   }
 
-  public async updateUser(updateUserDto: UpdateUserDto, { user: { id } }: GetUserDto) {
+  public async updateUser(updateUserDto: Partial<UpdateUserDto>, { user: { id } }: GetUserDto) {
     const user = await this.userRepository.findOneBy({ id });
 
     if (!user) {
       throw new HttpException('USER NOT FOUND', HttpStatus.NOT_FOUND);
     }
-
     const newUserData: UserEntity = {
       ...user,
       ...updateUserDto,
     };
     const updatedUser = await this.userRepository.save(newUserData);
 
-    const isNameOrLanguageUpdated =
+    const isCrispBaseUpdateRequired =
       user.signUpLanguage !== updateUserDto.signUpLanguage && user.name !== updateUserDto.name;
-    updateServiceUserProfilesUser(user, isNameOrLanguageUpdated, user.email);
+
+    updateServiceUserProfilesUser(user, isCrispBaseUpdateRequired, user.email);
 
     return updatedUser;
   }
@@ -330,7 +331,6 @@ export class UserService {
       });
       const usersWithCourseUsers = users.filter((user) => user.courseUser.length > 0);
 
-      console.log(usersWithCourseUsers);
       await batchCreateMailchimpProfiles(usersWithCourseUsers);
       this.logger.log(
         `Created batch mailchimp profiles for ${usersWithCourseUsers.length} users, created before ${filterStartDate}`,

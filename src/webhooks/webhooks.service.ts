@@ -243,7 +243,8 @@ export class WebhooksService {
       await this.partnerAccessRepository.save(partnerAccess);
       const therapySession = await this.therapySessionRepository.save(serializedTherapySession);
 
-      updateServiceUserProfilesTherapy([...partnerAccesses, partnerAccess], user.email);
+      partnerAccess.therapySession.push(therapySession);
+      updateServiceUserProfilesTherapy(partnerAccesses, user.email);
 
       return therapySession;
     } catch (err) {
