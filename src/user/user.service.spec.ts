@@ -4,6 +4,7 @@ import { HttpException, HttpStatus } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { createCrispProfile, updateCrispProfile } from 'src/api/crisp/crisp-api';
+import { createMailchimpProfile, updateMailchimpProfile } from 'src/api/mailchimp/mailchimp-api';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { PartnerEntity } from 'src/entities/partner.entity';
 import { SubscriptionUserService } from 'src/subscription-user/subscription-user.service';
@@ -226,6 +227,30 @@ describe('UserService', () => {
         { ...partnerAccessData, therapySessions: [mockTherapySessionDto] },
       ]);
     });
+
+    it('should not fail on crisp api call errors', async () => {
+      const mocked = jest.mocked(createCrispProfile);
+      mocked.mockRejectedValue(new Error('Crisp API call failed'));
+
+      const user = await service.createUser(createUserDto);
+
+      expect(mocked).toHaveBeenCalled();
+      expect(user.user.email).toBe('user@email.com');
+
+      mocked.mockReset();
+    });
+
+    it('should not fail on mailchimp api call errors', async () => {
+      const mocked = jest.mocked(createMailchimpProfile);
+      mocked.mockRejectedValue(new Error('Mailchimp API call failed'));
+
+      const user = await service.createUser(createUserDto);
+
+      expect(mocked).toHaveBeenCalled();
+      expect(user.user.email).toBe('user@email.com');
+
+      mocked.mockReset();
+    });
   });
 
   describe('getUser', () => {
@@ -263,6 +288,32 @@ describe('UserService', () => {
 
       expect(repoSaveSpy).toHaveBeenCalledWith({ ...mockUserEntity, ...updateUserDto });
       expect(repoSaveSpy).toHaveBeenCalled();
+    });
+
+    it('should not fail on crisp api call errors', async () => {
+      const mocked = jest.mocked(updateCrispProfile);
+      mocked.mockRejectedValue(new Error('Crisp API call failed'));
+
+      const user = await service.updateUser(updateUserDto, { user: mockUserEntity });
+
+      expect(mocked).toHaveBeenCalled();
+      expect(user.name).toBe('new name');
+      expect(user.email).toBe('user@email.com');
+
+      mocked.mockReset();
+    });
+
+    it('should not fail on mailchimp api call errors', async () => {
+      const mocked = jest.mocked(updateMailchimpProfile);
+      mocked.mockRejectedValue(new Error('Mailchimp API call failed'));
+
+      const user = await service.updateUser(updateUserDto, { user: mockUserEntity });
+
+      expect(mocked).toHaveBeenCalled();
+      expect(user.name).toBe('new name');
+      expect(user.email).toBe('user@email.com');
+
+      mocked.mockReset();
     });
   });
 

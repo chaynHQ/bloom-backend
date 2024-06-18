@@ -92,7 +92,7 @@ export class UserService {
         this.logger.log(`Create user: created public user in db. User: ${email}`);
       }
 
-      createServiceUserProfiles(user, partner, partnerAccess);
+      await createServiceUserProfiles(user, partner, partnerAccess);
 
       const userDto = formatUserObject({
         ...user,
