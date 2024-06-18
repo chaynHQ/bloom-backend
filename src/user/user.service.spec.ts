@@ -9,7 +9,7 @@ import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { PartnerEntity } from 'src/entities/partner.entity';
 import { SubscriptionUserService } from 'src/subscription-user/subscription-user.service';
 import { TherapySessionService } from 'src/therapy-session/therapy-session.service';
-import { PartnerAccessCodeStatusEnum } from 'src/utils/constants';
+import { EMAIL_REMINDERS_FREQUENCY, PartnerAccessCodeStatusEnum } from 'src/utils/constants';
 import {
   mockIFirebaseUser,
   mockPartnerAccessEntity,
@@ -39,6 +39,7 @@ const createUserDto: CreateUserDto = {
   name: 'name',
   contactPermission: false,
   serviceEmailsPermission: true,
+  emailRemindersFrequency: EMAIL_REMINDERS_FREQUENCY.TWO_MONTHS,
   signUpLanguage: 'en',
 };
 
@@ -168,6 +169,7 @@ describe('UserService', () => {
           last_active_at: (user.user.lastActiveAt as Date).toISOString(),
           marketing_permission: true,
           service_emails_permission: true,
+          email_reminders_frequency: EMAIL_REMINDERS_FREQUENCY.TWO_MONTHS,
           partners: 'bumble',
           feature_live_chat: true,
           feature_therapy: true,

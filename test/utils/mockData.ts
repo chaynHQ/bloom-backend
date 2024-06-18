@@ -18,7 +18,11 @@ import { UserEntity } from 'src/entities/user.entity';
 import { EVENT_NAME } from 'src/event-logger/event-logger.interface';
 import { IFirebaseUser } from 'src/firebase/firebase-user.interface';
 import { ZapierSimplybookBodyDto } from 'src/partner-access/dtos/zapier-body.dto';
-import { SIMPLYBOOK_ACTION_ENUM, STORYBLOK_STORY_STATUS_ENUM } from 'src/utils/constants';
+import {
+  EMAIL_REMINDERS_FREQUENCY,
+  SIMPLYBOOK_ACTION_ENUM,
+  STORYBLOK_STORY_STATUS_ENUM,
+} from 'src/utils/constants';
 import { ISbResult } from 'storyblok-js-client';
 
 export const mockSessionStoryblokResult = {
@@ -138,6 +142,7 @@ export const mockUserEntity: UserEntity = {
   firebaseUid: '123',
   contactPermission: true,
   serviceEmailsPermission: true,
+  emailRemindersFrequency: EMAIL_REMINDERS_FREQUENCY.TWO_MONTHS,
   email: 'user@email.com',
   name: 'name',
   signUpLanguage: 'en',
