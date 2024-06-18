@@ -129,7 +129,15 @@ describe('Service user profiles', () => {
         },
       });
     });
+
+    it('should not propagate external api call errors', async () => {
+      const mocked = jest.mocked(createCrispProfile);
+      mocked.mockRejectedValue(new Error('Crisp API call failed'));
+      await expect(createServiceUserProfiles(mockUserEntity)).resolves.not.toThrow();
+      mocked.mockReset();
+    });
   });
+
   describe('updateServiceUserProfilesUser', () => {
     it('should update crisp and mailchimp profile user data', async () => {
       await updateServiceUserProfilesUser(mockUserEntity, false, mockUserEntity.email);
@@ -209,6 +217,15 @@ describe('Service user profiles', () => {
         mockUserEntity.email,
       );
     });
+
+    it('should not propagate external api call errors', async () => {
+      const mocked = jest.mocked(updateMailchimpProfile);
+      mocked.mockRejectedValue(new Error('Mailchimp API call failed'));
+      await expect(
+        updateServiceUserProfilesUser(mockUserEntity, false, mockUserEntity.email),
+      ).resolves.not.toThrow();
+      mocked.mockReset();
+    });
   });
 
   describe('updateServiceUserProfilesPartnerAccess', () => {
@@ -285,6 +302,15 @@ describe('Service user profiles', () => {
         },
         mockUserEntity.email,
       );
+    });
+
+    it('should not propagate external api call errors', async () => {
+      const mocked = jest.mocked(updateCrispProfile);
+      mocked.mockRejectedValue(new Error('Crisp API call failed'));
+      await expect(
+        updateServiceUserProfilesPartnerAccess([mockPartnerAccessEntity], mockUserEntity.email),
+      ).resolves.not.toThrow();
+      mocked.mockReset();
     });
   });
 
@@ -441,6 +467,18 @@ describe('Service user profiles', () => {
         mockUserEntity.email,
       );
     });
+
+    it('should not propagate external api call errors', async () => {
+      const mocked = jest.mocked(updateMailchimpProfile);
+      mocked.mockRejectedValue(new Error('Mailchimp API call failed'));
+      await expect(
+        updateServiceUserProfilesTherapy(
+          [mockPartnerAccessEntity, mockAltPartnerAccessEntity],
+          mockUserEntity.email,
+        ),
+      ).resolves.not.toThrow();
+      mocked.mockReset();
+    });
   });
 
   describe('updateServiceUserProfilesCourse', () => {
@@ -464,6 +502,15 @@ describe('Service user profiles', () => {
         },
         mockUserEntity.email,
       );
+    });
+
+    it('should not propagate external api call errors', async () => {
+      const mocked = jest.mocked(updateCrispProfile);
+      mocked.mockRejectedValue(new Error('Crisp API call failed'));
+      await expect(
+        updateServiceUserProfilesCourse(mockCourseUserEntity, mockUserEntity.email),
+      ).resolves.not.toThrow();
+      mocked.mockReset();
     });
   });
 
