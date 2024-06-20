@@ -206,7 +206,7 @@ export class UserService {
     const isCrispBaseUpdateRequired =
       user.signUpLanguage !== updateUserDto.signUpLanguage && user.name !== updateUserDto.name;
 
-    updateServiceUserProfilesUser(user, isCrispBaseUpdateRequired, user.email);
+    updateServiceUserProfilesUser(newUserData, isCrispBaseUpdateRequired, user.email);
 
     return updatedUser;
   }
