@@ -515,22 +515,11 @@ describe('UserService', () => {
   // TODO - Extend getUser tests. At the moment, this is only used by super admins
   describe('getUsers', () => {
     it('getUsers', async () => {
-      const {
-        subscriptionUser,
-        therapySession,
-        partnerAdmin,
-        partnerAccess,
-        contactPermission,
-        serviceEmailsPermission,
-        courseUser,
-        eventLog,
-        ...userBase
-      } = mockUserEntity;
       jest
         .spyOn(repo, 'find')
         .mockImplementationOnce(async () => [{ ...mockUserEntity, email: 'a@b.com' }]);
-      const users = await service.getUsers({ email: 'a@b.com' }, {}, [], 10);
-      expect(users).toEqual([{ user: { ...userBase, email: 'a@b.com' }, partnerAccesses: [] }]);
+      const users = await service.getUsers({ email: 'a@b.com' }, [], [], 10);
+      expect(users).toEqual([{ ...mockUserEntity, email: 'a@b.com' }]);
     });
   });
 });
