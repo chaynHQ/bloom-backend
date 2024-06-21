@@ -14,6 +14,7 @@ import { ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiTags } from '@nestjs
 import { Request } from 'express';
 import { UserEntity } from 'src/entities/user.entity';
 import { SuperAdminAuthGuard } from 'src/partner-admin/super-admin-auth.guard';
+import { formatUserObject } from 'src/utils/serialize';
 import { FirebaseAuthGuard } from '../firebase/firebase-auth.guard';
 import { ControllerDecorator } from '../utils/controller.decorator';
 import { CreateUserDto } from './dtos/create-user.dto';
@@ -109,7 +110,8 @@ export class UserController {
     const { include, fields, limit, ...userQuery } = query.searchCriteria
       ? JSON.parse(query.searchCriteria)
       : { include: [], fields: [], limit: undefined };
-    return await this.userService.getUsers(userQuery, include, fields, limit);
+    const users = await this.userService.getUsers(userQuery, include || [], fields, limit);
+    return users.map((u) => formatUserObject(u));
   }
 
   // Use only if users have not been added to mailchimp due to e.g. an ongoing bug

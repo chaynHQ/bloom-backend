@@ -18,7 +18,7 @@ import { And, ILike, IsNull, Not, Raw, Repository } from 'typeorm';
 import { deleteCypressCrispProfiles } from '../api/crisp/crisp-api';
 import { AuthService } from '../auth/auth.service';
 import { PartnerAccessService, basePartnerAccess } from '../partner-access/partner-access.service';
-import { formatGetUsersObject, formatUserObject } from '../utils/serialize';
+import { formatUserObject } from '../utils/serialize';
 import { generateRandomString } from '../utils/utils';
 import { CreateUserDto } from './dtos/create-user.dto';
 import { GetUserDto } from './dtos/get-user.dto';
@@ -265,20 +265,12 @@ export class UserService {
       partnerAccess?: { userId: string; featureTherapy: boolean; active: boolean };
       partnerAdmin?: { partnerAdminId: string };
     },
-    relations: {
-      partner?: boolean;
-      partnerAccess?: boolean;
-      partnerAdmin?: boolean;
-      courseUser?: boolean;
-      subscriptionUser?: boolean;
-      therapySession?: boolean;
-      eventLog?: boolean;
-    },
+    relations: string[],
     fields: Array<string>,
     limit: number,
-  ): Promise<GetUserDto[] | undefined> {
+  ): Promise<UserEntity[] | undefined> {
     const users = await this.userRepository.find({
-      relations: relations,
+      relations,
       where: {
         ...(filters.email && { email: ILike(`%${filters.email}%`) }),
         ...(filters.partnerAccess && {
@@ -305,9 +297,7 @@ export class UserService {
       },
       ...(limit && { take: limit }),
     });
-
-    const usersDto = users.map((user) => formatGetUsersObject(user));
-    return usersDto;
+    return users;
   }
 
   // Static bulk upload function to be used in specific cases
