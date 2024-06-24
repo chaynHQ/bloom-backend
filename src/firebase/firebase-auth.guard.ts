@@ -7,6 +7,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { Request } from 'express';
+import { FIREBASE_ERRORS } from 'src/utils/errors';
 import { AuthService } from '../auth/auth.service';
 import { UserService } from '../user/user.service';
 import { IFirebaseUser } from './firebase-user.interface';
@@ -32,7 +33,7 @@ export class FirebaseAuthGuard implements CanActivate {
       user = await this.authService.parseAuth(authorization);
     } catch (error) {
       if (error.code === 'auth/id-token-expired') {
-        throw new HttpException(`FirebaseAuthGuard - ${error}`, HttpStatus.UNAUTHORIZED);
+        throw new HttpException(FIREBASE_ERRORS.ID_TOKEN_EXPIRED, HttpStatus.UNAUTHORIZED);
       }
 
       throw new HttpException(

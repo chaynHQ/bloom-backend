@@ -8,6 +8,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Request } from 'express';
 import { UserEntity } from 'src/entities/user.entity';
+import { FIREBASE_ERRORS } from 'src/utils/errors';
 import { Repository } from 'typeorm';
 import { AuthService } from '../auth/auth.service';
 
@@ -31,7 +32,7 @@ export class PartnerAdminAuthGuard implements CanActivate {
       userUid = uid;
     } catch (error) {
       if (error.code === 'auth/id-token-expired') {
-        throw new HttpException(`PartnerAdminAuthGuard - ${error}`, HttpStatus.UNAUTHORIZED);
+        throw new HttpException(FIREBASE_ERRORS.ID_TOKEN_EXPIRED, HttpStatus.UNAUTHORIZED);
       }
 
       throw new HttpException(
