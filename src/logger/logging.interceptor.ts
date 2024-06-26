@@ -11,7 +11,7 @@ export class LoggingInterceptor implements NestInterceptor {
   intercept(context: ExecutionContext, next: CallHandler): Observable<void> {
     const req = context.switchToHttp().getRequest<Request>();
 
-    // @ts-ignore
+    //@ts-expect-error: userEntity is modified in authGuard
     const userId = req?.userEntity?.id;
 
     const commonMessage = `${req.method} "${req.originalUrl}" (IP address: ${req.ip}, requestUserId: ${userId})`;
