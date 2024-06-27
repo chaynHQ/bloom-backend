@@ -51,6 +51,8 @@ config();
 const configService = new ConfigService();
 
 const isProduction = configService.get('NODE_ENV') === 'production';
+const isStaging = configService.get('NODE_ENV') === 'staging';
+
 const { host, port, user, password, database } = PostgressConnectionStringParser.parse(
   configService.get('DATABASE_URL'),
 );
@@ -114,9 +116,9 @@ export const dataSourceOptions = {
     BloomBackend1718728423454,
   ],
   subscribers: [],
-  ssl: isProduction,
+  ssl: isProduction || isStaging,
   extra: {
-    ssl: isProduction ? { rejectUnauthorized: false } : null,
+    ssl: isProduction || isStaging ? { rejectUnauthorized: false } : null,
   },
 };
 
