@@ -73,6 +73,44 @@ export class AuthService {
     }
   }
 
+  public async updateFirebaseUserEmail(firebaseUid: string, newEmail: string) {
+    try {
+      const firebaseUser = await this.firebase.admin.auth().updateUser(firebaseUid, {
+        email: newEmail,
+      });
+      return firebaseUser;
+    } catch (err) {
+      const errorCode = err.code;
+
+      if (errorCode === 'auth/invalid-email') {
+        this.logger.warn({
+          error: FIREBASE_ERRORS.UPDATE_USER_INVALID_EMAIL,
+          status: HttpStatus.BAD_REQUEST,
+        });
+        throw new HttpException(FIREBASE_ERRORS.UPDATE_USER_INVALID_EMAIL, HttpStatus.BAD_REQUEST);
+      } else if (
+        errorCode === 'auth/email-already-in-use' ||
+        errorCode === 'auth/email-already-exists'
+      ) {
+        this.logger.warn({
+          error: FIREBASE_ERRORS.UPDATE_USER_ALREADY_EXISTS,
+          status: HttpStatus.BAD_REQUEST,
+        });
+        throw new HttpException(FIREBASE_ERRORS.UPDATE_USER_ALREADY_EXISTS, HttpStatus.BAD_REQUEST);
+      } else {
+        this.logger.warn({
+          error: FIREBASE_ERRORS.UPDATE_USER_FIREBASE_ERROR,
+          errorMessage: errorCode,
+          status: HttpStatus.INTERNAL_SERVER_ERROR,
+        });
+        throw new HttpException(
+          FIREBASE_ERRORS.CREATE_USER_FIREBASE_ERROR,
+          HttpStatus.INTERNAL_SERVER_ERROR,
+        );
+      }
+    }
+  }
+
   public async getFirebaseUser(email: string) {
     const firebaseUser = await this.firebase.admin.auth().getUserByEmail(email);
     return firebaseUser;
