@@ -10,6 +10,7 @@ import { SubscriptionUserService } from 'src/subscription-user/subscription-user
 import { TherapySessionService } from 'src/therapy-session/therapy-session.service';
 import { SIGNUP_TYPE } from 'src/utils/constants';
 import { FIREBASE_ERRORS } from 'src/utils/errors';
+import { FIREBASE_EVENTS } from 'src/utils/logs';
 import {
   createServiceUserProfiles,
   updateServiceUserProfilesUser,
@@ -191,12 +192,27 @@ export class UserService {
     return await this.deleteUser(user);
   }
 
-  public async updateUser(updateUserDto: Partial<UpdateUserDto>, { user: { id } }: GetUserDto) {
-    const user = await this.userRepository.findOneBy({ id });
+  public async updateUser(updateUserDto: Partial<UpdateUserDto>, userId: string) {
+    const user = await this.userRepository.findOneBy({ id: userId });
 
     if (!user) {
       throw new HttpException('USER NOT FOUND', HttpStatus.NOT_FOUND);
     }
+
+    if (updateUserDto.email) {
+      // check whether email has been updated already in firebase
+      const firebaseUser = await this.authService.getFirebaseUser(user.email);
+      if (firebaseUser.email !== updateUserDto.email) {
+        await this.authService.updateFirebaseUserEmail(user.firebaseUid, updateUserDto.email);
+        this.logger.log({ event: FIREBASE_EVENTS.UPDATE_FIREBASE_USER_EMAIL, userId: user.id });
+      } else {
+        this.logger.log({
+          event: FIREBASE_EVENTS.UPDATE_FIREBASE_EMAIL_ALREADY_UPDATED,
+          userId: user.id,
+        });
+      }
+    }
+
     const newUserData: UserEntity = {
       ...user,
       ...updateUserDto,

@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsBoolean, IsDate, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsDate, IsEmail, IsOptional, IsString } from 'class-validator';
 import { EMAIL_REMINDERS_FREQUENCY } from '../../utils/constants';
 
 export class UpdateUserDto {
@@ -32,4 +32,9 @@ export class UpdateUserDto {
   @IsOptional()
   @ApiProperty({ type: 'date' })
   lastActiveAt: Date;
+
+  @IsEmail({})
+  @IsOptional()
+  @ApiProperty({ type: 'email' })
+  email: string;
 }

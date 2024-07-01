@@ -9,8 +9,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Request } from 'express';
 import { UserEntity } from 'src/entities/user.entity';
-import { AUTH_GUARD_PARSING_ERROR, AUTH_GUARD_TOKEN_EXPIRED } from 'src/logger/constants';
-import { FIREBASE_ERRORS } from 'src/utils/errors';
+import { AUTH_GUARD_ERRORS, FIREBASE_ERRORS } from 'src/utils/errors';
 import { Repository } from 'typeorm';
 import { AuthService } from '../auth/auth.service';
 
@@ -41,14 +40,16 @@ export class SuperAdminAuthGuard implements CanActivate {
     } catch (error) {
       if (error.code === 'auth/id-token-expired') {
         this.logger.warn({
-          error: AUTH_GUARD_TOKEN_EXPIRED,
+          error: AUTH_GUARD_ERRORS.TOKEN_EXPIRED,
           errorMessage: `Authorisation failed for ${request.originalUrl}`,
+          status: HttpStatus.UNAUTHORIZED,
         });
         throw new HttpException(FIREBASE_ERRORS.ID_TOKEN_EXPIRED, HttpStatus.UNAUTHORIZED);
       }
       this.logger.warn({
-        error: AUTH_GUARD_PARSING_ERROR,
+        error: AUTH_GUARD_ERRORS.PARSING_ERROR,
         errorMessage: `Authorisation failed for ${request.originalUrl}`,
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
       });
       throw new HttpException(
         `SuperAdminAuthGuard - Error parsing firebase user: ${error}`,

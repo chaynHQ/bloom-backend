@@ -46,7 +46,7 @@ export class UserController {
   @UseGuards(FirebaseAuthGuard)
   async getUserByFirebaseId(@Req() req: Request): Promise<GetUserDto> {
     const user = req['user'];
-    this.userService.updateUser({ lastActiveAt: new Date() }, user);
+    this.userService.updateUser({ lastActiveAt: new Date() }, user.id);
     return user;
   }
 
@@ -100,7 +100,14 @@ export class UserController {
   @Patch()
   @UseGuards(FirebaseAuthGuard)
   async updateUser(@Body() updateUserDto: UpdateUserDto, @Req() req: Request) {
-    return await this.userService.updateUser(updateUserDto, req['user'] as GetUserDto);
+    return await this.userService.updateUser(updateUserDto, req['user'].user.id);
+  }
+
+  @ApiBearerAuth()
+  @Patch('/admin/:id')
+  @UseGuards(SuperAdminAuthGuard)
+  async adminUpdateUser(@Param() { id }, @Body() updateUserDto: UpdateUserDto) {
+    return await this.userService.updateUser(updateUserDto, id);
   }
 
   @ApiBearerAuth()
