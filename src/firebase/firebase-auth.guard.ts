@@ -8,13 +8,8 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { Request } from 'express';
-import {
-  AUTH_GUARD_MISSING_HEADER,
-  AUTH_GUARD_PARSING_ERROR,
-  AUTH_GUARD_TOKEN_EXPIRED,
-  AUTH_GUARD_USER_NOT_FOUND,
-} from 'src/logger/constants';
-import { FIREBASE_ERRORS } from 'src/utils/errors';
+
+import { AUTH_GUARD_ERRORS, FIREBASE_ERRORS } from 'src/utils/errors';
 import { AuthService } from '../auth/auth.service';
 import { UserService } from '../user/user.service';
 import { IFirebaseUser } from './firebase-user.interface';
@@ -35,7 +30,7 @@ export class FirebaseAuthGuard implements CanActivate {
 
     if (!authorization) {
       this.logger.warn({
-        error: AUTH_GUARD_MISSING_HEADER,
+        error: AUTH_GUARD_ERRORS.MISSING_HEADER,
         errorMessage: `FirebaseAuthGuard: Authorisation failed for ${request.originalUrl}`,
       });
       throw new UnauthorizedException('Unauthorized: missing required Authorization token');
@@ -47,14 +42,14 @@ export class FirebaseAuthGuard implements CanActivate {
     } catch (error) {
       if (error.code === 'auth/id-token-expired') {
         this.logger.warn({
-          error: AUTH_GUARD_TOKEN_EXPIRED,
+          error: AUTH_GUARD_ERRORS.TOKEN_EXPIRED,
           errorMessage: `FireabaseAuthGuard: Authorisation failed for ${request.originalUrl}`,
           status: HttpStatus.UNAUTHORIZED,
         });
         throw new HttpException(FIREBASE_ERRORS.ID_TOKEN_EXPIRED, HttpStatus.UNAUTHORIZED);
       }
       this.logger.warn({
-        error: AUTH_GUARD_PARSING_ERROR,
+        error: AUTH_GUARD_ERRORS.PARSING_ERROR,
         errorMessage: `FirebaseAuthGuard: Authorisation failed for ${request.originalUrl}`,
         status: HttpStatus.INTERNAL_SERVER_ERROR,
       });
@@ -74,7 +69,7 @@ export class FirebaseAuthGuard implements CanActivate {
     } catch (error) {
       if (error.message === 'USER NOT FOUND') {
         this.logger.warn({
-          error: AUTH_GUARD_USER_NOT_FOUND,
+          error: AUTH_GUARD_ERRORS.USER_NOT_FOUND,
           errorMessage: `FirebaseAuthGuard: Authorisation failed for ${request.originalUrl}`,
           status: HttpStatus.INTERNAL_SERVER_ERROR,
         });
