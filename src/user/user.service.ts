@@ -10,7 +10,7 @@ import { SubscriptionUserService } from 'src/subscription-user/subscription-user
 import { TherapySessionService } from 'src/therapy-session/therapy-session.service';
 import { SIGNUP_TYPE } from 'src/utils/constants';
 import { FIREBASE_ERRORS } from 'src/utils/errors';
-import { FIREBASE_EVENTS } from 'src/utils/logs';
+import { FIREBASE_EVENTS, USER_SERVICE_EVENTS } from 'src/utils/logs';
 import {
   createServiceUserProfiles,
   updateServiceUserProfilesUser,
@@ -218,6 +218,11 @@ export class UserService {
       ...updateUserDto,
     };
     const updatedUser = await this.userRepository.save(newUserData);
+    this.logger.log({
+      event: USER_SERVICE_EVENTS.USER_UPDATED,
+      userId: user.id,
+      fields: Object.keys(updateUserDto),
+    });
 
     const isCrispBaseUpdateRequired =
       user.signUpLanguage !== updateUserDto.signUpLanguage && user.name !== updateUserDto.name;

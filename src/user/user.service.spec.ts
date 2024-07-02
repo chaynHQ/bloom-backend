@@ -296,6 +296,19 @@ describe('UserService', () => {
       );
     });
 
+    it('when supplied a firebase user dto with an email that already exists, it should return an error', async () => {
+      const repoSaveSpy = jest.spyOn(repo, 'save');
+      const authServiceUpdateEmailSpy = jest
+        .spyOn(mockAuthService, 'updateFirebaseUserEmail')
+        .mockImplementationOnce(async () => {
+          throw new Error('Email already exists');
+        });
+
+      await expect(service.updateUser(updateUserDto, mockUserEntity.id)).rejects.toThrow(
+        'Email already exists',
+      );
+    });
+
     it('should not fail update on crisp api call errors', async () => {
       const mocked = jest.mocked(updateCrispProfile);
       mocked.mockRejectedValue(new Error('Crisp API call failed'));
@@ -305,7 +318,6 @@ describe('UserService', () => {
       expect(mocked).toHaveBeenCalled();
       expect(user.name).toBe(updateUserDto.name);
       expect(user.email).toBe(updateUserDto.email);
-
       mocked.mockReset();
     });
 
