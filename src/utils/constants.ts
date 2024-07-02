@@ -43,6 +43,15 @@ export enum SIMPLYBOOK_ACTION_ENUM {
   COMPLETED_BOOKING = 'COMPLETED_BOOKING', // currently not in use as no webhook available - could be updated in cron job
 }
 
+export enum FEEDBACK_TAGS_ENUM {
+  RELATABLE = 'relatable',
+  USEFUL = 'useful',
+  INSPIRING = 'inspiring',
+  TOO_LONG = 'too long',
+  TOO_COMPLICATED = 'too complicated',
+  NOT_USEFUL = 'not useful',
+}
+
 export enum STORYBLOK_STORY_STATUS_ENUM {
   PUBLISHED = 'published',
   UNPUBLISHED = 'unpublished',
