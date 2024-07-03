@@ -127,7 +127,7 @@ export class WebhooksService {
         },
       });
 
-      updateServiceUserProfilesTherapy([...partnerAccesses], user.email);
+      updateServiceUserProfilesTherapy(partnerAccesses, user.email);
 
       this.logger.log(
         `Update therapy session webhook function COMPLETED for ${action} - ${user.email} - ${booking_code} - userId ${user_id}`,
@@ -243,9 +243,17 @@ export class WebhooksService {
       await this.partnerAccessRepository.save(partnerAccess);
       const therapySession = await this.therapySessionRepository.save(serializedTherapySession);
 
-      partnerAccess.therapySession.push(therapySession);
-      updateServiceUserProfilesTherapy(partnerAccesses, user.email);
-
+      const updatedPartnerAccesses = await this.partnerAccessRepository.find({
+        where: {
+          userId: user.id,
+          active: true,
+          featureTherapy: true,
+        },
+        relations: {
+          therapySession: true,
+        },
+      });
+      updateServiceUserProfilesTherapy(updatedPartnerAccesses, user.email);
       return therapySession;
     } catch (err) {
       const error = `newPartnerAccessTherapy - error saving new therapy session and partner access - email ${user.email} userId ${user.id} - ${err}`;

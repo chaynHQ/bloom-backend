@@ -205,7 +205,9 @@ export const createCompleteMailchimpUserProfile = (user: UserEntity): ListMember
 };
 
 export const serializePartnersString = (partnerAccesses: PartnerAccessEntity[]) => {
-  return partnerAccesses?.map((pa) => pa.partner.name.toLowerCase()).join('; ') || '';
+  const partnersNames = partnerAccesses?.map((pa) => pa.partner.name.toLowerCase());
+  const partnersString = partnersNames ? [...new Set(partnersNames)].join('; ') : '';
+  return partnersString;
 };
 
 const serializeCrispPartnerSegments = (partners: PartnerEntity[]) => {
