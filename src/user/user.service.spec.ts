@@ -48,6 +48,7 @@ const updateUserDto: Partial<UpdateUserDto> = {
   contactPermission: true,
   serviceEmailsPermission: false,
   signUpLanguage: 'en',
+  email: 'newemail@chayn.co',
 };
 
 const mockSubscriptionUserServiceMethods = {};
@@ -279,27 +280,44 @@ describe('UserService', () => {
   describe('updateUser', () => {
     it('when supplied a firebase user dto, it should return a user', async () => {
       const repoSaveSpy = jest.spyOn(repo, 'save');
+      const authServiceUpdateEmailSpy = jest.spyOn(mockAuthService, 'updateFirebaseUserEmail');
 
-      const user = await service.updateUser(updateUserDto, { user: mockUserEntity });
-      expect(user.name).toBe('new name');
-      expect(user.email).toBe('user@email.com');
+      const user = await service.updateUser(updateUserDto, mockUserEntity.id);
+      expect(user.name).toBe(updateUserDto.name);
+      expect(user.email).toBe(updateUserDto.email);
       expect(user.contactPermission).toBe(true);
       expect(user.serviceEmailsPermission).toBe(false);
 
       expect(repoSaveSpy).toHaveBeenCalledWith({ ...mockUserEntity, ...updateUserDto });
       expect(repoSaveSpy).toHaveBeenCalled();
+      expect(authServiceUpdateEmailSpy).toHaveBeenCalledWith(
+        mockUserEntity.firebaseUid,
+        updateUserDto.email,
+      );
+    });
+
+    it('when supplied a firebase user dto with an email that already exists, it should return an error', async () => {
+      const repoSaveSpy = jest.spyOn(repo, 'save');
+      const authServiceUpdateEmailSpy = jest
+        .spyOn(mockAuthService, 'updateFirebaseUserEmail')
+        .mockImplementationOnce(async () => {
+          throw new Error('Email already exists');
+        });
+
+      await expect(service.updateUser(updateUserDto, mockUserEntity.id)).rejects.toThrow(
+        'Email already exists',
+      );
     });
 
     it('should not fail update on crisp api call errors', async () => {
       const mocked = jest.mocked(updateCrispProfile);
       mocked.mockRejectedValue(new Error('Crisp API call failed'));
 
-      const user = await service.updateUser(updateUserDto, { user: mockUserEntity });
+      const user = await service.updateUser(updateUserDto, mockUserEntity.id);
       await new Promise(process.nextTick); // wait for async funcs to resolve
       expect(mocked).toHaveBeenCalled();
-      expect(user.name).toBe('new name');
-      expect(user.email).toBe('user@email.com');
-
+      expect(user.name).toBe(updateUserDto.name);
+      expect(user.email).toBe(updateUserDto.email);
       mocked.mockReset();
     });
 
@@ -307,11 +325,11 @@ describe('UserService', () => {
       const mocked = jest.mocked(updateMailchimpProfile);
       mocked.mockRejectedValue(new Error('Mailchimp API call failed'));
 
-      const user = await service.updateUser(updateUserDto, { user: mockUserEntity });
+      const user = await service.updateUser(updateUserDto, mockUserEntity.id);
       await new Promise(process.nextTick); // wait for async funcs to resolve
       expect(mocked).toHaveBeenCalled();
-      expect(user.name).toBe('new name');
-      expect(user.email).toBe('user@email.com');
+      expect(user.name).toBe(updateUserDto.name);
+      expect(user.email).toBe(updateUserDto.email);
 
       mocked.mockReset();
     });
@@ -515,22 +533,11 @@ describe('UserService', () => {
   // TODO - Extend getUser tests. At the moment, this is only used by super admins
   describe('getUsers', () => {
     it('getUsers', async () => {
-      const {
-        subscriptionUser,
-        therapySession,
-        partnerAdmin,
-        partnerAccess,
-        contactPermission,
-        serviceEmailsPermission,
-        courseUser,
-        eventLog,
-        ...userBase
-      } = mockUserEntity;
       jest
         .spyOn(repo, 'find')
         .mockImplementationOnce(async () => [{ ...mockUserEntity, email: 'a@b.com' }]);
-      const users = await service.getUsers({ email: 'a@b.com' }, {}, [], 10);
-      expect(users).toEqual([{ user: { ...userBase, email: 'a@b.com' }, partnerAccesses: [] }]);
+      const users = await service.getUsers({ email: 'a@b.com' }, [], [], 10);
+      expect(users).toEqual([{ ...mockUserEntity, email: 'a@b.com' }]);
     });
   });
 });
