@@ -45,9 +45,9 @@ export class UserController {
   @Get('/me')
   @UseGuards(FirebaseAuthGuard)
   async getUserByFirebaseId(@Req() req: Request): Promise<GetUserDto> {
-    const user = req['userEntity'];
-    this.userService.updateUser({ lastActiveAt: new Date() }, user.id);
-    return user;
+    const user = req['user'];
+    this.userService.updateUser({ lastActiveAt: new Date() }, user.user.id);
+    return user as GetUserDto;
   }
 
   /**
