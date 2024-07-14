@@ -49,7 +49,7 @@ export class PartnerController {
   @UseGuards(SuperAdminAuthGuard)
   @Patch(':id')
   @ApiOperation({ description: 'Update a partner profile and makes partner active or inactive' })
-  @ApiBody({ type: DeletePartnerDto })
+  @ApiBody({ type: UpdatePartnerDto })
   async updatePartner(
     @Param() { id },
     @Body() updatePartnerDto: UpdatePartnerDto,
