@@ -5,7 +5,6 @@ import { PartnerEntity } from '../entities/partner.entity';
 import { SuperAdminAuthGuard } from '../partner-admin/super-admin-auth.guard';
 import { ControllerDecorator } from '../utils/controller.decorator';
 import { CreatePartnerDto } from './dtos/create-partner.dto';
-import { DeletePartnerDto } from './dtos/delete-partner.dto';
 import { IPartner } from './partner.interface';
 import { PartnerService } from './partner.service';
 import { UpdatePartnerDto } from './dtos/update-partner.dto';
