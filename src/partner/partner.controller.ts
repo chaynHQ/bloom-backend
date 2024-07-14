@@ -48,12 +48,12 @@ export class PartnerController {
   @ApiBearerAuth('access-token')
   @UseGuards(SuperAdminAuthGuard)
   @Patch(':id')
-  @ApiOperation({ description: 'Update a partner profile and makes partnerAccess inactive' })
+  @ApiOperation({ description: 'Update a partner profile and makes partner active or inactive' })
   @ApiBody({ type: DeletePartnerDto })
-  async deletePartner(
+  async updatePartner(
     @Param() { id },
-    @Body() deletePartnerDto: UpdatePartnerDto,
+    @Body() updatePartnerDto: UpdatePartnerDto,
   ) {
-    return this.partnerService.updatePartner(id, deletePartnerDto);
+    return this.partnerService.updatePartner(id, updatePartnerDto);
   }
 }
