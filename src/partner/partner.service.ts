@@ -7,6 +7,7 @@ import { In, Repository } from 'typeorm';
 import { PartnerEntity } from '../entities/partner.entity';
 import { CreatePartnerDto } from './dtos/create-partner.dto';
 import { DeletePartnerDto } from './dtos/delete-partner.dto';
+import { UpdatePartnerDto } from './dtos/update-partner.dto';
 
 @Injectable()
 export class PartnerService {
@@ -89,5 +90,20 @@ export class PartnerService {
     await this.partnerRepository.save(partner);
 
     return 'Successful';
+  }
+
+  async updatePartner(partnerId: string, { active }: UpdatePartnerDto){
+    const updatedPartnerResponse = await this.partnerRepository
+      .createQueryBuilder()
+      .update(PartnerEntity)
+      .set({ isActive: active })
+      .where('id = :id', { id: partnerId })
+      .returning('*')
+      .execute();
+    if (updatedPartnerResponse.raw.length > 0) {
+      return updatedPartnerResponse.raw[0];
+    } else {
+      throw new Error('Failed to update partner');
+    }
   }
 }
