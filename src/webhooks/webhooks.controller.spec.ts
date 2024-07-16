@@ -27,7 +27,7 @@ const generateMockHeaders = (body) => {
 
 const createRequestObject = (body) => {
   return {
-    rawBody: JSON.stringify(body),
+    rawBody: '' + body,
     setEncoding: () => {},
     encoding: 'utf8',
   };

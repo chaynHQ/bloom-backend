@@ -2,6 +2,7 @@ import { ConsoleLogger } from '@nestjs/common';
 import Rollbar from 'rollbar';
 import { FIREBASE_ERRORS } from 'src/utils/errors';
 import { isProduction, rollbarEnv, rollbarToken } from '../utils/constants';
+import { ErrorLog } from './utils';
 
 export class Logger extends ConsoleLogger {
   private rollbar?: Rollbar;
@@ -12,12 +13,13 @@ export class Logger extends ConsoleLogger {
     this.initialiseRollbar();
   }
 
-  error(message: string, trace?: string): void {
+  error(message: string | ErrorLog, trace?: string): void {
     if (this.rollbar) {
       this.rollbar.error(message);
     }
+    const formattedMessage = typeof message === 'string' ? message : JSON.stringify(message);
 
-    const taggedMessage = `[error] ${message}`;
+    const taggedMessage = `[error] ${formattedMessage}`;
     super.error(taggedMessage, trace);
   }
 
@@ -37,6 +39,7 @@ export class Logger extends ConsoleLogger {
         accessToken: rollbarToken,
         captureUncaught: true,
         captureUnhandledRejections: true,
+        captureIp: 'anonymize',
         ignoredMessages: [...Object.values(FIREBASE_ERRORS)],
       });
     }

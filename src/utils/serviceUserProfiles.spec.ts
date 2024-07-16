@@ -16,7 +16,11 @@ import {
   mockPartnerEntity,
   mockUserEntity,
 } from 'test/utils/mockData';
-import { SIMPLYBOOK_ACTION_ENUM, mailchimpMarketingPermissionId } from './constants';
+import {
+  EMAIL_REMINDERS_FREQUENCY,
+  SIMPLYBOOK_ACTION_ENUM,
+  mailchimpMarketingPermissionId,
+} from './constants';
 import {
   createMailchimpCourseMergeField,
   createServiceUserProfiles,
@@ -45,11 +49,16 @@ describe('Service user profiles', () => {
         segments: ['public'],
       });
 
+      const createdAt = mockUserEntity.createdAt.toISOString();
+      const lastActiveAt = mockUserEntity.lastActiveAt.toISOString();
+
       expect(updateCrispProfile).toHaveBeenCalledWith(
         {
           marketing_permission: mockUserEntity.contactPermission,
           service_emails_permission: mockUserEntity.serviceEmailsPermission,
-          signed_up_at: mockUserEntity.createdAt.toISOString(),
+          email_reminders_frequency: EMAIL_REMINDERS_FREQUENCY.TWO_MONTHS,
+          signed_up_at: createdAt,
+          last_active_at: lastActiveAt,
           feature_live_chat: true,
           feature_therapy: false,
           partners: '',
@@ -71,13 +80,15 @@ describe('Service user profiles', () => {
           },
         ],
         merge_fields: {
-          SIGNUPD: mockUserEntity.createdAt.toISOString(),
+          SIGNUPD: createdAt,
+          LACTIVED: lastActiveAt,
           NAME: mockUserEntity.name,
           FEATCHAT: 'true',
           FEATTHER: 'false',
           PARTNERS: '',
           THERREMAIN: 0,
           THERREDEEM: 0,
+          REMINDFREQ: EMAIL_REMINDERS_FREQUENCY.TWO_MONTHS,
         },
       });
     });
@@ -86,6 +97,8 @@ describe('Service user profiles', () => {
       await createServiceUserProfiles(mockUserEntity, mockPartnerEntity, mockPartnerAccessEntity);
 
       const partnerName = mockPartnerEntity.name.toLowerCase();
+      const createdAt = mockUserEntity.createdAt.toISOString();
+      const lastActiveAt = mockUserEntity.lastActiveAt.toISOString();
 
       expect(createCrispProfile).toHaveBeenCalledWith({
         email: mockUserEntity.email,
@@ -95,10 +108,12 @@ describe('Service user profiles', () => {
 
       expect(updateCrispProfile).toHaveBeenCalledWith(
         {
-          signed_up_at: mockUserEntity.createdAt.toISOString(),
+          signed_up_at: createdAt,
           marketing_permission: mockUserEntity.contactPermission,
           service_emails_permission: mockUserEntity.serviceEmailsPermission,
+          email_reminders_frequency: EMAIL_REMINDERS_FREQUENCY.TWO_MONTHS,
           partners: partnerName,
+          last_active_at: lastActiveAt,
           feature_live_chat: mockPartnerAccessEntity.featureLiveChat,
           feature_therapy: mockPartnerAccessEntity.featureTherapy,
           therapy_sessions_remaining: mockPartnerAccessEntity.therapySessionsRemaining,
@@ -120,24 +135,38 @@ describe('Service user profiles', () => {
         ],
         merge_fields: {
           SIGNUPD: mockUserEntity.createdAt.toISOString(),
+          LACTIVED: lastActiveAt,
           NAME: mockUserEntity.name,
           PARTNERS: partnerName,
           FEATCHAT: String(mockPartnerAccessEntity.featureLiveChat),
           FEATTHER: String(mockPartnerAccessEntity.featureTherapy),
           THERREMAIN: mockPartnerAccessEntity.therapySessionsRemaining,
           THERREDEEM: mockPartnerAccessEntity.therapySessionsRedeemed,
+          REMINDFREQ: EMAIL_REMINDERS_FREQUENCY.TWO_MONTHS,
         },
       });
     });
+
+    it('should not propagate external api call errors', async () => {
+      const mocked = jest.mocked(createCrispProfile);
+      mocked.mockRejectedValue(new Error('Crisp API call failed'));
+      await expect(createServiceUserProfiles(mockUserEntity)).resolves.not.toThrow();
+      mocked.mockReset();
+    });
   });
+
   describe('updateServiceUserProfilesUser', () => {
     it('should update crisp and mailchimp profile user data', async () => {
       await updateServiceUserProfilesUser(mockUserEntity, false, mockUserEntity.email);
+
+      const lastActiveAt = mockUserEntity.lastActiveAt.toISOString();
 
       expect(updateCrispProfile).toHaveBeenCalledWith(
         {
           marketing_permission: mockUserEntity.contactPermission,
           service_emails_permission: mockUserEntity.serviceEmailsPermission,
+          email_reminders_frequency: EMAIL_REMINDERS_FREQUENCY.TWO_MONTHS,
+          last_active_at: lastActiveAt,
         },
         mockUserEntity.email,
       );
@@ -153,7 +182,11 @@ describe('Service user profiles', () => {
               enabled: mockUserEntity.contactPermission,
             },
           ],
-          merge_fields: { NAME: mockUserEntity.name },
+          merge_fields: {
+            NAME: mockUserEntity.name,
+            LACTIVED: lastActiveAt,
+            REMINDFREQ: EMAIL_REMINDERS_FREQUENCY.TWO_MONTHS,
+          },
         },
         mockUserEntity.email,
       );
@@ -165,6 +198,7 @@ describe('Service user profiles', () => {
         contactPermission: false,
         serviceEmailsPermission: false,
       };
+      const lastActiveAt = mockUserEntity.lastActiveAt.toISOString();
 
       await updateServiceUserProfilesUser(mockUser, false, mockUser.email);
 
@@ -172,6 +206,8 @@ describe('Service user profiles', () => {
         {
           marketing_permission: false,
           service_emails_permission: false,
+          last_active_at: lastActiveAt,
+          email_reminders_frequency: EMAIL_REMINDERS_FREQUENCY.TWO_MONTHS,
         },
         mockUser.email,
       );
@@ -187,7 +223,11 @@ describe('Service user profiles', () => {
               enabled: false,
             },
           ],
-          merge_fields: { NAME: mockUser.name },
+          merge_fields: {
+            NAME: mockUser.name,
+            LACTIVED: lastActiveAt,
+            REMINDFREQ: EMAIL_REMINDERS_FREQUENCY.TWO_MONTHS,
+          },
         },
         mockUser.email,
       );
@@ -208,6 +248,15 @@ describe('Service user profiles', () => {
         },
         mockUserEntity.email,
       );
+    });
+
+    it('should not propagate external api call errors', async () => {
+      const mocked = jest.mocked(updateMailchimpProfile);
+      mocked.mockRejectedValue(new Error('Mailchimp API call failed'));
+      await expect(
+        updateServiceUserProfilesUser(mockUserEntity, false, mockUserEntity.email),
+      ).resolves.not.toThrow();
+      mocked.mockReset();
     });
   });
 
@@ -285,6 +334,15 @@ describe('Service user profiles', () => {
         },
         mockUserEntity.email,
       );
+    });
+
+    it('should not propagate external api call errors', async () => {
+      const mocked = jest.mocked(updateCrispProfile);
+      mocked.mockRejectedValue(new Error('Crisp API call failed'));
+      await expect(
+        updateServiceUserProfilesPartnerAccess([mockPartnerAccessEntity], mockUserEntity.email),
+      ).resolves.not.toThrow();
+      mocked.mockReset();
     });
   });
 
@@ -441,6 +499,18 @@ describe('Service user profiles', () => {
         mockUserEntity.email,
       );
     });
+
+    it('should not propagate external api call errors', async () => {
+      const mocked = jest.mocked(updateMailchimpProfile);
+      mocked.mockRejectedValue(new Error('Mailchimp API call failed'));
+      await expect(
+        updateServiceUserProfilesTherapy(
+          [mockPartnerAccessEntity, mockAltPartnerAccessEntity],
+          mockUserEntity.email,
+        ),
+      ).resolves.not.toThrow();
+      mocked.mockReset();
+    });
   });
 
   describe('updateServiceUserProfilesCourse', () => {
@@ -464,6 +534,15 @@ describe('Service user profiles', () => {
         },
         mockUserEntity.email,
       );
+    });
+
+    it('should not propagate external api call errors', async () => {
+      const mocked = jest.mocked(updateCrispProfile);
+      mocked.mockRejectedValue(new Error('Crisp API call failed'));
+      await expect(
+        updateServiceUserProfilesCourse(mockCourseUserEntity, mockUserEntity.email),
+      ).resolves.not.toThrow();
+      mocked.mockReset();
     });
   });
 

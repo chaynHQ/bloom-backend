@@ -1,3 +1,4 @@
+import { PartnerAdminEntity } from 'src/entities/partner-admin.entity';
 import { PartnerEntity } from 'src/entities/partner.entity';
 import { IPartnerFeature } from 'src/partner-feature/partner-feature.interface';
 import { IPartner } from 'src/partner/partner.interface';
@@ -38,6 +39,16 @@ export const formatCourseUserObject = (courseUser: CourseUserEntity) => {
         completed: sessionUser.completed,
       };
     }),
+  };
+};
+
+export const formatPartnerAdminObjects = (partnerAdminObject: PartnerAdminEntity) => {
+  return {
+    id: partnerAdminObject.id,
+    active: partnerAdminObject.active,
+    createdAt: partnerAdminObject.createdAt,
+    updatedAt: partnerAdminObject.updatedAt,
+    partner: partnerAdminObject.partner ? formatPartnerObject(partnerAdminObject.partner) : null,
   };
 };
 
@@ -87,21 +98,17 @@ export const formatUserObject = (userObject: UserEntity): GetUserDto => {
       email: userObject.email,
       firebaseUid: userObject.firebaseUid,
       isActive: userObject.isActive,
+      lastActiveAt: userObject.lastActiveAt,
       crispTokenId: userObject.crispTokenId,
       isSuperAdmin: userObject.isSuperAdmin,
       signUpLanguage: userObject.signUpLanguage,
+      emailRemindersFrequency: userObject.emailRemindersFrequency,
     },
     partnerAccesses: userObject.partnerAccess
       ? formatPartnerAccessObjects(userObject.partnerAccess)
       : null,
     partnerAdmin: userObject.partnerAdmin
-      ? {
-          id: userObject.partnerAdmin.id,
-          active: userObject.partnerAdmin.active,
-          createdAt: userObject.partnerAdmin.createdAt,
-          updatedAt: userObject.partnerAdmin.updatedAt,
-          partner: formatPartnerObject(userObject.partnerAdmin.partner),
-        }
+      ? formatPartnerAdminObjects(userObject.partnerAdmin)
       : null,
     courses: userObject.courseUser ? formatCourseUserObjects(userObject.courseUser) : [],
     subscriptions:
@@ -122,9 +129,11 @@ export const formatGetUsersObject = (userObject: UserEntity): GetUserDto => {
       email: userObject.email,
       firebaseUid: userObject.firebaseUid,
       isActive: userObject.isActive,
+      lastActiveAt: userObject.lastActiveAt,
       crispTokenId: userObject.crispTokenId,
       isSuperAdmin: userObject.isSuperAdmin,
       signUpLanguage: userObject.signUpLanguage,
+      emailRemindersFrequency: userObject.emailRemindersFrequency,
     },
     ...(userObject.partnerAccess
       ? {
@@ -133,6 +142,7 @@ export const formatGetUsersObject = (userObject: UserEntity): GetUserDto => {
             : null,
         }
       : {}),
+    ...(userObject.partnerAdmin ? formatPartnerAdminObjects(userObject.partnerAdmin) : {}),
   };
 };
 
