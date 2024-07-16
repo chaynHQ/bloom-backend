@@ -1,12 +1,7 @@
 import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { createHmac } from 'crypto';
-import { format, startOfDay, sub } from 'date-fns';
-import { MailchimpClient } from 'src/api/mailchimp/mailchip-api';
-import { getBookingsForDate } from 'src/api/simplybook/simplybook-api';
 import { SlackMessageClient } from 'src/api/slack/slack-api';
 import { CourseEntity } from 'src/entities/course.entity';
-import { EmailCampaignEntity } from 'src/entities/email-campaign.entity';
 import { EventLogEntity } from 'src/entities/event-log.entity';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { SessionEntity } from 'src/entities/session.entity';
@@ -16,14 +11,15 @@ import { EventLoggerService } from 'src/event-logger/event-logger.service';
 import { ZapierSimplybookBodyDto } from 'src/partner-access/dtos/zapier-body.dto';
 import { IUser } from 'src/user/user.interface';
 import { serializeZapierSimplyBookDtoToTherapySessionEntity } from 'src/utils/serialize';
-import { getYesterdaysDate } from 'src/utils/utils';
+import {
+  createMailchimpCourseMergeField,
+  updateServiceUserProfilesTherapy,
+} from 'src/utils/serviceUserProfiles';
 import { WebhookCreateEventLogDto } from 'src/webhooks/dto/webhook-create-event-log.dto';
 import StoryblokClient from 'storyblok-js-client';
-import { Between, ILike, Repository } from 'typeorm';
-import { getCrispPeopleData, updateCrispProfileData } from '../api/crisp/crisp-api';
+import { ILike, MoreThan, Repository } from 'typeorm';
 import { CoursePartnerService } from '../course-partner/course-partner.service';
 import {
-  CAMPAIGN_TYPE,
   SIMPLYBOOK_ACTION_ENUM,
   STORYBLOK_STORY_STATUS_ENUM,
   isProduction,
@@ -44,212 +40,9 @@ export class WebhooksService {
     private readonly coursePartnerService: CoursePartnerService,
     @InjectRepository(TherapySessionEntity)
     private therapySessionRepository: Repository<TherapySessionEntity>,
-    @InjectRepository(EmailCampaignEntity)
-    private emailCampaignRepository: Repository<EmailCampaignEntity>,
     private eventLoggerService: EventLoggerService,
-    private mailchimpClient: MailchimpClient,
     private slackMessageClient: SlackMessageClient,
   ) {}
-
-  async sendFirstTherapySessionFeedbackEmail() {
-    const yesterday = getYesterdaysDate();
-    const bookings = await getBookingsForDate(yesterday);
-
-    let feedbackEmailsSent = 0;
-    for (const booking of bookings) {
-      if (await this.isFirstCampaignEmail(booking.clientEmail, CAMPAIGN_TYPE.THERAPY_FEEDBACK)) {
-        let therapySession: TherapySessionEntity;
-
-        try {
-          therapySession = await this.therapySessionRepository.findOneOrFail({
-            where: {
-              bookingCode: booking.bookingCode,
-            },
-            relations: { user: true },
-          });
-        } catch (err) {
-          this.logger.error(
-            `sendFirstTherapySessionFeedbackEmail: failed to check therapySession due to error - ${err}`,
-          );
-          const emailLog = `Failed to send therapy feedback email due to no associated booking in the database. This user may have used a different email to make the booking or may not have therapy access. [email: ${
-            booking.clientEmail
-          }, session date: ${format(yesterday, 'dd/MM/yyy')}]`;
-          this.slackMessageClient.sendMessageToTherapySlackChannel(emailLog);
-          continue;
-        }
-
-        if (therapySession.user && therapySession.user.signUpLanguage !== 'en') {
-          const emailLog = `Therapy session feedback email not sent as user was not english [email: ${
-            booking.clientEmail
-          }, session date: ${format(sub(new Date(), { days: 1 }), 'dd/MM/yyyy')}]`;
-          this.logger.log(emailLog);
-          this.slackMessageClient.sendMessageToTherapySlackChannel(emailLog);
-          continue;
-        }
-
-        if (therapySession.user && therapySession.user.serviceEmailsPermission === false) {
-          const emailLog = `Therapy session feedback email not sent as user has disabled service emails [email: ${
-            booking.clientEmail
-          }, session date: ${format(sub(new Date(), { days: 1 }), 'dd/MM/yyyy')}]`;
-          this.logger.log(emailLog);
-          this.slackMessageClient.sendMessageToTherapySlackChannel(emailLog);
-          continue;
-        }
-
-        await this.mailchimpClient.sendTherapyFeedbackEmail(booking.clientEmail);
-        const emailLog = `First therapy session feedback email sent [email: ${
-          booking.clientEmail
-        }, session date: ${format(yesterday, 'dd/MM/yyy')}]`;
-        this.logger.log(emailLog);
-        this.slackMessageClient.sendMessageToTherapySlackChannel(emailLog);
-
-        await this.emailCampaignRepository.save({
-          campaignType: CAMPAIGN_TYPE.THERAPY_FEEDBACK,
-          email: booking.clientEmail,
-          emailSentDateTime: new Date(),
-        });
-
-        this.logger.log(
-          `First therapy session feedback email saved in db [email: ${
-            booking.clientEmail
-          }, session date: ${format(yesterday, 'dd/MM/yyy')}]`,
-        );
-        feedbackEmailsSent++;
-      }
-    }
-    return `First therapy session feedback emails sent to ${feedbackEmailsSent} client(s) for date: ${format(
-      sub(new Date(), { days: 1 }),
-      'dd/MM/yyyy',
-    )}`;
-  }
-
-  private async isFirstCampaignEmail(email: string, campaign: CAMPAIGN_TYPE) {
-    const matchingEntries = await this.emailCampaignRepository.findBy({
-      email: ILike(email),
-      campaignType: ILike(campaign),
-    });
-    return matchingEntries.length === 0;
-  }
-
-  async sendImpactMeasurementEmail() {
-    // Get all users created between 180 and 174 days
-    const startDate = sub(startOfDay(new Date()), { days: 180 });
-    const endDate = sub(startOfDay(new Date()), { days: 173 });
-    let users = null;
-    try {
-      // Get user from database who made an account between 180 and 173 days ago
-      users = await this.userRepository.findBy({
-        createdAt: Between(startDate, endDate),
-      });
-      this.logger.log(
-        `SendImpactMeasurementEmail - Successfully fetched ${users.length} from the database`,
-      );
-    } catch (err) {
-      this.logger.error('SendImpactMeasurementEmail - Unable to fetch users due to error', err);
-      throw new HttpException(
-        'SendImpactMeasurementEmail - Unable to fetch users',
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
-
-    // For each user, send an email asking them about impact
-    let feedbackEmailsSent = 0;
-    for (const user of users) {
-      try {
-        // Check if this is the first email send of this type
-        const isFirstEmail = await this.isFirstCampaignEmail(
-          user.email,
-          CAMPAIGN_TYPE.IMPACT_MEASUREMENT,
-        );
-        if (!isFirstEmail) {
-          // Send a warning as we shouldn't be getting into this situations
-          this.logger.warn(
-            `sendImpactMeasurementEmail: Skipping sending user Impact Measurement Email [email: ${user.email}]`,
-          );
-          continue;
-        }
-        if (user.serviceEmailsPermission === false) {
-          this.logger.log(
-            `sendImpactMeasurementEmail: Skipped sending user Impact Measurement Email - user has disabled service emails  [email: ${user.email}]`,
-          );
-          continue;
-        }
-      } catch (error) {
-        this.logger.error(
-          `sendImpactMeasurementEmail: Failed to find user in emailCampaignRepository [email: ${user.email}] - ${error}`,
-        );
-        continue;
-      }
-
-      try {
-        await this.mailchimpClient.sendImpactMeasurementEmail(user.email);
-        this.logger.log(`Impact measurement feedback email sent to [email: ${user.email}]`);
-        feedbackEmailsSent++;
-      } catch (error) {
-        this.logger.error(
-          `Failed to send Impact measurement feedback email to [email: ${user.email}]- ${error}`,
-        );
-        continue;
-      }
-      try {
-        await this.emailCampaignRepository.save({
-          campaignType: CAMPAIGN_TYPE.IMPACT_MEASUREMENT,
-          email: user.email,
-          emailSentDateTime: new Date(),
-        });
-        this.logger.log(`Impact measurement feedback email saved in db [email: ${user.email}]`);
-      } catch (err) {
-        this.logger.error(
-          `Failed to save Impact measurement feedback email in Email Campaign Repository to [email: ${user.email}]: ${err}`,
-        );
-      }
-    }
-
-    const emailLog = `Impact feedback email sent to ${feedbackEmailsSent} users who created their account between ${format(
-      startDate,
-      'dd/MM/yyyy',
-    )} - ${format(endDate, 'dd/MM/yyyy')}`;
-    this.logger.log(emailLog);
-    return emailLog;
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  renameKeys = (obj: { [x: string]: any }) => {
-    const keyValues = Object.keys(obj).map((key) => {
-      const newKey = this.addUnderscore(key);
-      return { [newKey]: obj[key] };
-    });
-    return Object.assign({}, ...keyValues);
-  };
-
-  addUnderscore = (title: string) => {
-    return title
-      .split(/(?=[A-Z])/)
-      .join('_')
-      .toLowerCase();
-  };
-
-  async updateCrispProfileTherapyData(action, email) {
-    let partnerAccessUpdateCrisp = {};
-    const crispResponse = await getCrispPeopleData(email);
-    const crispData = crispResponse.data.data.data;
-
-    if (action === SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING) {
-      partnerAccessUpdateCrisp = {
-        therapy_sessions_remaining: crispData['therapy_sessions_remaining'] - 1,
-        therapy_sessions_redeemed: crispData['therapy_sessions_redeemed'] + 1,
-      };
-    }
-
-    if (action === SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING) {
-      partnerAccessUpdateCrisp = {
-        therapy_sessions_remaining: crispData['therapy_sessions_remaining'] + 1,
-        therapy_sessions_redeemed: crispData['therapy_sessions_redeemed'] - 1,
-      };
-    }
-
-    updateCrispProfileData(partnerAccessUpdateCrisp, email);
-  }
 
   async updatePartnerAccessTherapy(
     simplyBookDto: ZapierSimplybookBodyDto,
@@ -284,6 +77,7 @@ export class WebhooksService {
     // Creating a new therapy session
     if (action === SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING) {
       const therapySession = await this.newPartnerAccessTherapy(user, simplyBookDto);
+
       this.logger.log(
         `Update therapy session webhook function COMPLETED for ${action} - ${user.email} - ${booking_code} - userId ${user_id}`,
       );
@@ -292,8 +86,6 @@ export class WebhooksService {
 
     // Updating an existing therapy session
     existingTherapySession.action = action;
-
-    this.updateCrispProfileTherapyData(action, user.email);
 
     // If the booking is cancelled, increment the therapy sessions remaining on related partner access
     if (action === SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING) {
@@ -315,10 +107,6 @@ export class WebhooksService {
       }
     }
 
-    if (action === SIMPLYBOOK_ACTION_ENUM.COMPLETED_BOOKING) {
-      existingTherapySession.completedAt = new Date();
-    }
-
     if (action === SIMPLYBOOK_ACTION_ENUM.UPDATED_BOOKING) {
       existingTherapySession.rescheduledFrom = existingTherapySession.startDateTime;
       existingTherapySession.startDateTime = new Date(simplyBookDto.start_date_time);
@@ -327,6 +115,20 @@ export class WebhooksService {
 
     try {
       const therapySession = await this.therapySessionRepository.save(existingTherapySession);
+
+      const partnerAccesses = await this.partnerAccessRepository.find({
+        where: {
+          userId: user.id,
+          active: true,
+          featureTherapy: true,
+        },
+        relations: {
+          therapySession: true,
+        },
+      });
+
+      updateServiceUserProfilesTherapy(partnerAccesses, user.email);
+
       this.logger.log(
         `Update therapy session webhook function COMPLETED for ${action} - ${user.email} - ${booking_code} - userId ${user_id}`,
       );
@@ -392,10 +194,16 @@ export class WebhooksService {
   }
 
   private async newPartnerAccessTherapy(user: IUser, simplyBookDto: ZapierSimplybookBodyDto) {
-    const partnerAccesses = await this.partnerAccessRepository.findBy({
-      userId: user.id,
-      active: true,
-      featureTherapy: true,
+    const partnerAccesses = await this.partnerAccessRepository.find({
+      where: {
+        userId: user.id,
+        active: true,
+        featureTherapy: true,
+        therapySessionsRemaining: MoreThan(0),
+      },
+      relations: {
+        therapySession: true,
+      },
     });
 
     if (!partnerAccesses.length) {
@@ -423,8 +231,6 @@ export class WebhooksService {
       throw new HttpException(error, HttpStatus.FORBIDDEN);
     }
 
-    this.updateCrispProfileTherapyData(SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING, user.email);
-
     partnerAccess.therapySessionsRemaining -= 1;
     partnerAccess.therapySessionsRedeemed += 1;
 
@@ -433,8 +239,22 @@ export class WebhooksService {
         simplyBookDto,
         partnerAccess,
       );
+
       await this.partnerAccessRepository.save(partnerAccess);
-      return await this.therapySessionRepository.save(serializedTherapySession);
+      const therapySession = await this.therapySessionRepository.save(serializedTherapySession);
+
+      const updatedPartnerAccesses = await this.partnerAccessRepository.find({
+        where: {
+          userId: user.id,
+          active: true,
+          featureTherapy: true,
+        },
+        relations: {
+          therapySession: true,
+        },
+      });
+      updateServiceUserProfilesTherapy(updatedPartnerAccesses, user.email);
+      return therapySession;
     } catch (err) {
       const error = `newPartnerAccessTherapy - error saving new therapy session and partner access - email ${user.email} userId ${user.id} - ${err}`;
       this.logger.error(error);
@@ -473,6 +293,8 @@ export class WebhooksService {
     };
     try {
       if (story.content?.component === 'Course') {
+        const courseName = story.content?.name;
+
         let course = await this.courseRepository.findOneBy({
           storyblokId: story_id,
         });
@@ -482,8 +304,10 @@ export class WebhooksService {
           course.slug = story.full_slug;
         } else {
           course = this.courseRepository.create(storyData);
+          createMailchimpCourseMergeField(courseName);
         }
-        course.name = story.content?.name;
+
+        course.name = courseName;
         course = await this.courseRepository.save(course);
 
         await this.coursePartnerService.updateCoursePartners(
@@ -534,27 +358,7 @@ export class WebhooksService {
     }
   }
 
-  async updateStory(req, data: StoryDto, signature: string | undefined) {
-    // Verify storyblok signature uses storyblok webhook secret - see https://www.storyblok.com/docs/guide/in-depth/webhooks#securing-a-webhook
-    if (!signature) {
-      const error = `Storyblok webhook error - no signature provided`;
-      this.logger.error(error);
-      throw new HttpException(error, HttpStatus.UNAUTHORIZED);
-    }
-
-    const webhookSecret = process.env.STORYBLOK_WEBHOOK_SECRET;
-
-    req.rawBody = '' + data;
-    req.setEncoding('utf8');
-
-    const bodyHmac = createHmac('sha1', webhookSecret).update(req.rawBody).digest('hex');
-
-    if (bodyHmac !== signature) {
-      const error = `Storyblok webhook error - signature mismatch`;
-      this.logger.error(error);
-      throw new HttpException(error, HttpStatus.UNAUTHORIZED);
-    }
-
+  async updateStory(data: StoryDto) {
     const action = data.action;
     const story_id = data.story_id;
 

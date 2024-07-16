@@ -1,36 +1,29 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { createCrispProfileData } from 'src/api/crisp/utils/createCrispProfileData';
+import { batchCreateMailchimpProfiles } from 'src/api/mailchimp/mailchimp-api';
+import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
+import { PartnerEntity } from 'src/entities/partner.entity';
 import { UserEntity } from 'src/entities/user.entity';
 import { IFirebaseUser } from 'src/firebase/firebase-user.interface';
 import { Logger } from 'src/logger/logger';
-import { PartnerService } from 'src/partner/partner.service';
-import { FEATURES } from 'src/utils/constants';
+import { SubscriptionUserService } from 'src/subscription-user/subscription-user.service';
+import { TherapySessionService } from 'src/therapy-session/therapy-session.service';
+import { SIGNUP_TYPE } from 'src/utils/constants';
+import { FIREBASE_ERRORS } from 'src/utils/errors';
+import { FIREBASE_EVENTS, USER_SERVICE_EVENTS } from 'src/utils/logs';
 import {
-  CREATE_USER_EMAIL_ALREADY_EXISTS,
-  CREATE_USER_INVALID_EMAIL,
-  CREATE_USER_WEAK_PASSWORD,
-} from 'src/utils/errors';
-import { ILike, Repository } from 'typeorm';
-import {
-  addCrispProfile,
-  deleteCrispProfile,
-  deleteCypressCrispProfiles,
-  updateCrispProfileData,
-} from '../api/crisp/crisp-api';
+  createServiceUserProfiles,
+  updateServiceUserProfilesUser,
+} from 'src/utils/serviceUserProfiles';
+import { And, ILike, IsNull, Not, Raw, Repository } from 'typeorm';
+import { deleteCypressCrispProfiles } from '../api/crisp/crisp-api';
 import { AuthService } from '../auth/auth.service';
-import { PartnerAccessService } from '../partner-access/partner-access.service';
-import { formatGetUsersObject, formatUserObject } from '../utils/serialize';
+import { PartnerAccessService, basePartnerAccess } from '../partner-access/partner-access.service';
+import { formatUserObject } from '../utils/serialize';
 import { generateRandomString } from '../utils/utils';
 import { CreateUserDto } from './dtos/create-user.dto';
 import { GetUserDto } from './dtos/get-user.dto';
 import { UpdateUserDto } from './dtos/update-user.dto';
-
-enum SIGNUP_TYPE {
-  PUBLIC_USER = 'PUBLIC_USER',
-  PARTNER_USER_WITH_CODE = 'PARTNER_USER_WITH_CODE',
-  PARTNER_USER_WITHOUT_CODE = 'PARTNER_USER_WITHOUT_CODE',
-}
 
 @Injectable()
 export class UserService {
@@ -39,213 +32,86 @@ export class UserService {
   constructor(
     @InjectRepository(UserEntity)
     private userRepository: Repository<UserEntity>,
-    private readonly partnerAccessService: PartnerAccessService,
-    private readonly partnerService: PartnerService,
+    @InjectRepository(PartnerAccessEntity)
+    private partnerAccessRepository: Repository<PartnerAccessEntity>,
+    @InjectRepository(PartnerEntity)
+    private partnerRepository: Repository<PartnerEntity>,
     private readonly authService: AuthService,
+    private readonly subscriptionUserService: SubscriptionUserService,
+    private readonly therapySessionService: TherapySessionService,
+    private readonly partnerAccessService: PartnerAccessService,
   ) {}
 
   public async createUser(createUserDto: CreateUserDto): Promise<GetUserDto> {
     const { email, partnerAccessCode, partnerId, password } = createUserDto;
 
-    const signUpType =
-      partnerAccessCode || partnerId
-        ? partnerAccessCode
-          ? SIGNUP_TYPE.PARTNER_USER_WITH_CODE
-          : SIGNUP_TYPE.PARTNER_USER_WITHOUT_CODE
+    const signUpType = partnerAccessCode
+      ? SIGNUP_TYPE.PARTNER_USER_WITH_CODE
+      : partnerId
+        ? SIGNUP_TYPE.PARTNER_USER_WITHOUT_CODE
         : SIGNUP_TYPE.PUBLIC_USER;
-    let firebaseUser = null;
 
     try {
-      firebaseUser = await this.authService.createFirebaseUser(email, password);
-      this.logger.log(`Create user: Firebase user created: ${email}`);
-    } catch (err) {
-      const errorCode = err.code;
-      if (errorCode === 'auth/invalid-email') {
-        this.logger.warn(
-          `Create user: user tried to create email with invalid email: ${email} - ${err}`,
-        );
-        throw new HttpException(CREATE_USER_INVALID_EMAIL, HttpStatus.BAD_REQUEST);
-      }
-      if (
-        errorCode === 'auth/weak-password' ||
-        err.message.includes('The password must be a string with at least 6 characters')
-      ) {
-        this.logger.warn(`Create user: user tried to create email with weak password - ${err}`);
-        throw new HttpException(CREATE_USER_WEAK_PASSWORD, HttpStatus.BAD_REQUEST);
-      }
-      if (errorCode !== 'auth/email-already-in-use' && errorCode !== 'auth/email-already-exists') {
-        this.logger.error(`Create user: Error creating firebase user - ${email}: ${err}`);
-        throw err;
-      } else {
-        this.logger.error(
-          `Create user: Unable to create firebase user as user already exists: ${email}`,
-        );
-        throw new HttpException(CREATE_USER_EMAIL_ALREADY_EXISTS, HttpStatus.BAD_REQUEST);
-      }
-    }
+      let partnerAccess: PartnerAccessEntity;
+      let partner: PartnerEntity;
 
-    if (!firebaseUser) {
-      this.logger.log(
-        `Create user: Firebase user already exists so fetching firebase user: ${email}`,
-      );
-
-      try {
-        firebaseUser = await this.authService.getFirebaseUser(email);
-        if (!firebaseUser) {
-          throw new Error('Create user: Unable to create firebase user or get firebase user');
-        }
-      } catch (err) {
-        this.logger.error(`Create user: getFirebaseUser error - ${email}: ${err}`);
-        throw new HttpException(err, HttpStatus.BAD_REQUEST);
-      }
-    }
-
-    let formattedUserObject: GetUserDto | null = null;
-
-    try {
       if (signUpType === SIGNUP_TYPE.PARTNER_USER_WITHOUT_CODE) {
-        formattedUserObject = await this.createPartnerUserWithoutCode(
-          createUserDto,
-          firebaseUser.uid,
+        await this.partnerAccessService.validatePartnerAutomaticAccessCode(partnerId);
+        partner = await this.partnerRepository.findOneBy({ id: partnerId });
+      }
+      if (signUpType === SIGNUP_TYPE.PARTNER_USER_WITH_CODE) {
+        partnerAccess = await this.partnerAccessService.getPartnerAccessByCode(partnerAccessCode);
+        partner = partnerAccess.partner;
+      }
+
+      const firebaseUser = await this.authService.createFirebaseUser(email, password);
+
+      const user = await this.userRepository.save({
+        ...createUserDto,
+        lastActiveAt: new Date(),
+        firebaseUid: firebaseUser.uid,
+      });
+
+      if (signUpType === SIGNUP_TYPE.PARTNER_USER_WITHOUT_CODE) {
+        // Create and assign new partner access without code
+        partnerAccess = await this.partnerAccessService.createPartnerAccess(
+          basePartnerAccess,
+          partnerId,
+          null,
+          user.id,
         );
+
         this.logger.log(`Create user: (no access code) created partner user in db. User: ${email}`);
       } else if (signUpType === SIGNUP_TYPE.PARTNER_USER_WITH_CODE) {
-        formattedUserObject = await this.createPartnerUserWithCode(createUserDto, firebaseUser.uid);
+        // Assign the existing partner access to new user
+        partnerAccess.userId = user.id;
+        partnerAccess = await this.partnerAccessRepository.save(partnerAccess);
         this.logger.log(
           `Create user: (with access code) created partner user in db. User: ${email}`,
         );
       } else {
-        formattedUserObject = await this.createPublicUser(createUserDto, firebaseUser.uid);
         this.logger.log(`Create user: created public user in db. User: ${email}`);
       }
 
-      const partnerSegment =
-        signUpType === SIGNUP_TYPE.PUBLIC_USER
-          ? 'public'
-          : formattedUserObject.partnerAccesses[0].partner.name.toLowerCase();
+      await createServiceUserProfiles(user, partner, partnerAccess);
 
-      await addCrispProfile({
-        email: formattedUserObject.user.email,
-        person: { nickname: formattedUserObject.user.name },
-        segments: [partnerSegment],
+      const userDto = formatUserObject({
+        ...user,
+        ...(partnerAccess && { partnerAccess: [{ ...partnerAccess, partner }] }),
       });
-      this.logger.log(`Create user: added crisp profile: ${email}`);
-
-      await updateCrispProfileData(
-        createCrispProfileData(
-          formattedUserObject.user,
-          SIGNUP_TYPE.PUBLIC_USER ? [] : formattedUserObject.partnerAccesses,
-        ),
-        formattedUserObject.user.email,
-      );
-      this.logger.log(`Create user: updated crisp profile ${email}`);
-
-      return formattedUserObject;
+      return userDto;
     } catch (error) {
-      this.logger.error(`Create user: Error creating user ${email}: ${error}`);
+      if (!Object.values(FIREBASE_ERRORS).includes(error)) {
+        this.logger.error(`Create user: Error creating user ${email}: ${error}`);
+      }
       throw error;
     }
   }
 
-  public async createPublicUser(
-    { name, email, contactPermission, serviceEmailsPermission, signUpLanguage }: CreateUserDto,
-    firebaseUid: string,
-  ) {
-    const createUserObject = this.userRepository.create({
-      name,
-      email,
-      firebaseUid,
-      contactPermission,
-      serviceEmailsPermission,
-      signUpLanguage,
-    });
-    const createUserResponse = await this.userRepository.save(createUserObject);
-
-    return { user: createUserResponse };
-  }
-
-  public async createPartnerUserWithoutCode(
-    {
-      name,
-      email,
-      contactPermission,
-      serviceEmailsPermission,
-      signUpLanguage,
-      partnerId,
-    }: CreateUserDto,
-    firebaseUid: string,
-  ) {
-    const partnerResponse = await this.partnerService.getPartnerWithPartnerFeaturesById(partnerId);
-    if (!partnerResponse) {
-      throw new HttpException('Invalid partnerId supplied', HttpStatus.BAD_REQUEST);
-    }
-    const automaticAccessCodePartnerFeature = partnerResponse.partnerFeature.find(
-      (pf) => pf.feature.name === FEATURES.AUTOMATIC_ACCESS_CODE,
-    );
-    if (!automaticAccessCodePartnerFeature) {
-      throw new HttpException(
-        'Partner does not have automatic access code Feature',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-    const createUserObject = this.userRepository.create({
-      name,
-      email,
-      firebaseUid,
-      contactPermission,
-      serviceEmailsPermission,
-      signUpLanguage,
-    });
-
-    const createUserResponse = await this.userRepository.save(createUserObject);
-    const partnerAccessWithPartner = await this.partnerAccessService.createAndAssignPartnerAccess(
-      partnerResponse,
-      createUserResponse.id,
-    );
-
-    return formatUserObject({
-      ...createUserResponse,
-      ...(partnerAccessWithPartner ? { partnerAccess: [partnerAccessWithPartner] } : {}),
-    });
-  }
-
-  public async createPartnerUserWithCode(
-    {
-      name,
-      email,
-      contactPermission,
-      serviceEmailsPermission,
-      signUpLanguage,
-      partnerAccessCode,
-    }: CreateUserDto,
-    firebaseUid: string,
-  ) {
-    const partnerAccess =
-      await this.partnerAccessService.getValidPartnerAccessCode(partnerAccessCode);
-
-    const createUserObject = this.userRepository.create({
-      name,
-      email,
-      firebaseUid,
-      contactPermission,
-      serviceEmailsPermission,
-      signUpLanguage,
-    });
-
-    const createUserResponse = await this.userRepository.save(createUserObject);
-
-    const partnerAccessWithPartner = await this.partnerAccessService.assignPartnerAccessOnSignup(
-      partnerAccess,
-      createUserResponse.id,
-    );
-
-    return formatUserObject({
-      ...createUserResponse,
-      ...(partnerAccessWithPartner ? { partnerAccess: [partnerAccessWithPartner] } : {}),
-    });
-  }
-
-  public async getUserByFirebaseId({ uid }: IFirebaseUser): Promise<GetUserDto | undefined> {
+  public async getUserByFirebaseId({ uid }: IFirebaseUser): Promise<{
+    userEntity: UserEntity | undefined;
+    userDto: GetUserDto | undefined;
+  }> {
     const queryResult = await this.userRepository
       .createQueryBuilder('user')
       .leftJoinAndSelect('user.partnerAccess', 'partnerAccess')
@@ -267,7 +133,7 @@ export class UserService {
       throw new HttpException('USER NOT FOUND', HttpStatus.NOT_FOUND);
     }
 
-    return formatUserObject(queryResult);
+    return { userEntity: queryResult, userDto: formatUserObject(queryResult) };
   }
 
   public async getUserById(id: string): Promise<UserEntity | undefined> {
@@ -282,63 +148,88 @@ export class UserService {
     return queryResult;
   }
 
-  public async deleteUser({ user, partnerAdmin }: GetUserDto) {
-    //Delete User From Firebase
-    await this.authService.deleteFirebaseUser(user.firebaseUid);
-
-    //Delete Crisp People Profile
-    if (!partnerAdmin) {
-      await deleteCrispProfile(user.email);
-    }
-
-    //Randomise User Data in DB
+  public async deleteUser(user: UserEntity): Promise<UserEntity> {
     const randomString = generateRandomString(20);
 
-    user.name = randomString;
-    user.email = randomString;
-    user.firebaseUid = randomString;
-    user.isActive = false;
+    try {
+      await this.authService.deleteFirebaseUser(user.firebaseUid);
+      this.logger.log(`Firebase account deleted for user with ID ${user.id}`);
+    } catch (err) {
+      // Continue to delete user, even if firebase request fails
+      this.logger.error(
+        `deleteUser - firebase error. Unable to delete user ${user.email} due to error ${err}`,
+      );
+    }
 
-    await this.userRepository.save(user);
+    try {
+      //TODO Not yet sure if deleting automatically from Crisp is the right thing to do
+      // as we don't know whether we need to manually check if there is any safeguarding concerns before we delete.
+      // const crispResponse = await deleteCrispProfile(user.email);
 
-    return 'Successful';
+      // if they have subscriptions,redact the number
+      await this.subscriptionUserService.softDeleteSubscriptionsForUser(user.id, user.email);
+      // if they have therapy sessions redact email and delete client from therapy sessions
+      await this.therapySessionService.softDeleteTherapySessions(user.id, user.email, randomString);
+
+      //Randomise User Data in DB
+      const updateUser = {
+        ...user,
+        name: randomString,
+        email: randomString,
+        isActive: false,
+      };
+      return await this.userRepository.save(updateUser);
+    } catch (error) {
+      throw new HttpException(
+        `Unable to complete deleting user, ${user.email} due to error - ${error}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 
   public async deleteUserById(id: string): Promise<UserEntity> {
-    //Delete User From Firebase
     const user = await this.getUserById(id);
-    await this.authService.deleteFirebaseUser(user.firebaseUid);
-    //Delete Crisp People Profile
-    await deleteCrispProfile(user.email);
-
-    //Randomise User Data in DB
-    const randomString = generateRandomString(20);
-    const newUser = {
-      ...user,
-      name: randomString,
-      email: `${randomString}@deletedemail.com`,
-      firebaseUid: randomString,
-      isActive: false,
-    };
-
-    await this.userRepository.save(newUser);
-
-    return newUser;
+    return await this.deleteUser(user);
   }
 
-  public async updateUser(updateUserDto: UpdateUserDto, { user: { id } }: GetUserDto) {
-    const user = await this.userRepository.findOneBy({ id });
+  public async updateUser(updateUserDto: Partial<UpdateUserDto>, userId: string) {
+    const user = await this.userRepository.findOneBy({ id: userId });
 
     if (!user) {
       throw new HttpException('USER NOT FOUND', HttpStatus.NOT_FOUND);
     }
 
-    const updatedUser: UserEntity = {
+    if (updateUserDto.email) {
+      // check whether email has been updated already in firebase
+      const firebaseUser = await this.authService.getFirebaseUser(user.email);
+      if (firebaseUser.email !== updateUserDto.email) {
+        await this.authService.updateFirebaseUserEmail(user.firebaseUid, updateUserDto.email);
+        this.logger.log({ event: FIREBASE_EVENTS.UPDATE_FIREBASE_USER_EMAIL, userId: user.id });
+      } else {
+        this.logger.log({
+          event: FIREBASE_EVENTS.UPDATE_FIREBASE_EMAIL_ALREADY_UPDATED,
+          userId: user.id,
+        });
+      }
+    }
+
+    const newUserData: UserEntity = {
       ...user,
       ...updateUserDto,
     };
+    const updatedUser = await this.userRepository.save(newUserData);
+    this.logger.log({
+      event: USER_SERVICE_EVENTS.USER_UPDATED,
+      userId: user.id,
+      fields: Object.keys(updateUserDto),
+    });
 
-    return await this.userRepository.save(updatedUser);
+    const isCrispBaseUpdateRequired =
+      user.signUpLanguage !== updateUserDto.signUpLanguage && user.name !== updateUserDto.name;
+
+    updateServiceUserProfilesUser(newUserData, isCrispBaseUpdateRequired, user.email);
+
+    return updatedUser;
   }
 
   public async deleteCypressTestUsers(clean = false): Promise<UserEntity[]> {
@@ -395,20 +286,12 @@ export class UserService {
       partnerAccess?: { userId: string; featureTherapy: boolean; active: boolean };
       partnerAdmin?: { partnerAdminId: string };
     },
-    relations: {
-      partner?: boolean;
-      partnerAccess?: boolean;
-      partnerAdmin?: boolean;
-      courseUser?: boolean;
-      subscriptionUser?: boolean;
-      therapySession?: boolean;
-      eventLog?: boolean;
-    },
+    relations: string[],
     fields: Array<string>,
     limit: number,
-  ): Promise<GetUserDto[] | undefined> {
+  ): Promise<UserEntity[] | undefined> {
     const users = await this.userRepository.find({
-      relations: relations,
+      relations,
       where: {
         ...(filters.email && { email: ILike(`%${filters.email}%`) }),
         ...(filters.partnerAccess && {
@@ -424,14 +307,47 @@ export class UserService {
         }),
         ...(filters.partnerAdmin && {
           partnerAdmin: {
-            ...(filters.partnerAdmin && { id: filters.partnerAdmin.partnerAdminId }),
+            ...(filters.partnerAdmin && {
+              id:
+                filters.partnerAdmin.partnerAdminId === 'IS NOT NULL'
+                  ? Not(IsNull())
+                  : filters.partnerAdmin.partnerAdminId,
+            }),
           },
         }),
       },
       ...(limit && { take: limit }),
     });
+    return users;
+  }
 
-    const formattedUsers = users.map((user) => formatGetUsersObject(user));
-    return formattedUsers;
+  // Static bulk upload function to be used in specific cases
+  // UPDATE THE FILTERS to the current requirements
+  public async bulkUploadMailchimpProfiles() {
+    try {
+      const filterStartDate = '2023-01-01'; // UPDATE
+      const filterEndDate = '2024-01-01'; // UPDATE
+      const users = await this.userRepository.find({
+        where: {
+          // UPDATE TO ANY FILTERS
+          createdAt: And(
+            Raw((alias) => `${alias} >= :filterStartDate`, { filterStartDate: filterStartDate }),
+            Raw((alias) => `${alias} < :filterEndDate`, { filterEndDate: filterEndDate }),
+          ),
+        },
+        relations: {
+          partnerAccess: { partner: true, therapySession: true },
+          courseUser: { course: true, sessionUser: { session: true } },
+        },
+      });
+      const usersWithCourseUsers = users.filter((user) => user.courseUser.length > 0);
+
+      await batchCreateMailchimpProfiles(usersWithCourseUsers);
+      this.logger.log(
+        `Created batch mailchimp profiles for ${usersWithCourseUsers.length} users, created before ${filterStartDate}`,
+      );
+    } catch (error) {
+      throw new Error(`Bulk upload mailchimp profiles API call failed: ${error}`);
+    }
   }
 }

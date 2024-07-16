@@ -1,3 +1,4 @@
+import { PartnerAdminEntity } from 'src/entities/partner-admin.entity';
 import { PartnerEntity } from 'src/entities/partner.entity';
 import { IPartnerFeature } from 'src/partner-feature/partner-feature.interface';
 import { IPartner } from 'src/partner/partner.interface';
@@ -41,6 +42,16 @@ export const formatCourseUserObject = (courseUser: CourseUserEntity) => {
   };
 };
 
+export const formatPartnerAdminObjects = (partnerAdminObject: PartnerAdminEntity) => {
+  return {
+    id: partnerAdminObject.id,
+    active: partnerAdminObject.active,
+    createdAt: partnerAdminObject.createdAt,
+    updatedAt: partnerAdminObject.updatedAt,
+    partner: partnerAdminObject.partner ? formatPartnerObject(partnerAdminObject.partner) : null,
+  };
+};
+
 export const formatPartnerAccessObjects = (partnerAccessObjects: PartnerAccessEntity[]) => {
   return partnerAccessObjects.map((partnerAccess) => {
     return {
@@ -55,21 +66,24 @@ export const formatPartnerAccessObjects = (partnerAccessObjects: PartnerAccessEn
       therapySessionsRemaining: partnerAccess.therapySessionsRemaining,
       therapySessionsRedeemed: partnerAccess.therapySessionsRedeemed,
       partner: partnerAccess.partner ? formatPartnerObject(partnerAccess.partner) : null,
-      therapySessions: partnerAccess.therapySession?.map((ts) => {
-        return {
-          id: ts.id,
-          action: ts.action,
-          clientTimezone: ts.clientTimezone,
-          serviceName: ts.serviceName,
-          serviceProviderName: ts.serviceProviderName,
-          serviceProviderEmail: ts.serviceProviderEmail,
-          startDateTime: ts.startDateTime,
-          endDateTime: ts.endDateTime,
-          cancelledAt: ts.cancelledAt,
-          rescheduledFrom: ts.rescheduledFrom,
-          completedAt: ts.completedAt,
-        };
-      }),
+      therapySessions:
+        partnerAccess.therapySession?.length === 0
+          ? []
+          : partnerAccess.therapySession?.map((ts) => {
+              return {
+                id: ts.id,
+                action: ts.action,
+                clientTimezone: ts.clientTimezone,
+                serviceName: ts.serviceName,
+                serviceProviderName: ts.serviceProviderName,
+                serviceProviderEmail: ts.serviceProviderEmail,
+                startDateTime: ts.startDateTime,
+                endDateTime: ts.endDateTime,
+                cancelledAt: ts.cancelledAt,
+                rescheduledFrom: ts.rescheduledFrom,
+                completedAt: ts.completedAt,
+              };
+            }),
     };
   });
 };
@@ -84,19 +98,17 @@ export const formatUserObject = (userObject: UserEntity): GetUserDto => {
       email: userObject.email,
       firebaseUid: userObject.firebaseUid,
       isActive: userObject.isActive,
+      lastActiveAt: userObject.lastActiveAt,
       crispTokenId: userObject.crispTokenId,
       isSuperAdmin: userObject.isSuperAdmin,
+      signUpLanguage: userObject.signUpLanguage,
+      emailRemindersFrequency: userObject.emailRemindersFrequency,
     },
     partnerAccesses: userObject.partnerAccess
       ? formatPartnerAccessObjects(userObject.partnerAccess)
       : null,
     partnerAdmin: userObject.partnerAdmin
-      ? {
-          id: userObject.partnerAdmin.id,
-          createdAt: userObject.partnerAdmin.createdAt,
-          updatedAt: userObject.partnerAdmin.updatedAt,
-          partner: formatPartnerObject(userObject.partnerAdmin.partner),
-        }
+      ? formatPartnerAdminObjects(userObject.partnerAdmin)
       : null,
     courses: userObject.courseUser ? formatCourseUserObjects(userObject.courseUser) : [],
     subscriptions:
@@ -117,8 +129,11 @@ export const formatGetUsersObject = (userObject: UserEntity): GetUserDto => {
       email: userObject.email,
       firebaseUid: userObject.firebaseUid,
       isActive: userObject.isActive,
+      lastActiveAt: userObject.lastActiveAt,
       crispTokenId: userObject.crispTokenId,
       isSuperAdmin: userObject.isSuperAdmin,
+      signUpLanguage: userObject.signUpLanguage,
+      emailRemindersFrequency: userObject.emailRemindersFrequency,
     },
     ...(userObject.partnerAccess
       ? {
@@ -127,6 +142,7 @@ export const formatGetUsersObject = (userObject: UserEntity): GetUserDto => {
             : null,
         }
       : {}),
+    ...(userObject.partnerAdmin ? formatPartnerAdminObjects(userObject.partnerAdmin) : {}),
   };
 };
 

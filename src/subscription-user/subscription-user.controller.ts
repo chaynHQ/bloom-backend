@@ -44,7 +44,8 @@ export class SubscriptionUserController {
     @Body() updateSubscriptionsDto: UpdateSubscriptionUserDto,
   ): Promise<ISubscriptionUser | undefined> {
     return this.subscriptionUserService.cancelWhatsappSubscription(
-      req['user'],
+      req['user'].user.id,
+      req['user'].user.email,
       updateSubscriptionsDto,
       id,
     );

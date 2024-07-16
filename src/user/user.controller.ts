@@ -14,6 +14,7 @@ import { ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiTags } from '@nestjs
 import { Request } from 'express';
 import { UserEntity } from 'src/entities/user.entity';
 import { SuperAdminAuthGuard } from 'src/partner-admin/super-admin-auth.guard';
+import { formatUserObject } from 'src/utils/serialize';
 import { FirebaseAuthGuard } from '../firebase/firebase-auth.guard';
 import { ControllerDecorator } from '../utils/controller.decorator';
 import { CreateUserDto } from './dtos/create-user.dto';
@@ -44,13 +45,15 @@ export class UserController {
   @Get('/me')
   @UseGuards(FirebaseAuthGuard)
   async getUserByFirebaseId(@Req() req: Request): Promise<GetUserDto> {
-    return req['user'];
+    const user = req['user'];
+    this.userService.updateUser({ lastActiveAt: new Date() }, user.user.id);
+    return user as GetUserDto;
   }
 
   /**
    * This POST endpoint deviates from REST patterns.
    * Please use `getUserByFirebaseId` above which is a GET endpoint.
-   * Do not delete this until frontend usage is migrated.
+   * Safe to delete function below from July 2024 - allowing for caches to clear
    */
   @ApiBearerAuth('access-token')
   @ApiOperation({
@@ -63,20 +66,13 @@ export class UserController {
     return req['user'];
   }
 
-  // TODO - work out if this is used anywhere and delete if necessary
-  @ApiBearerAuth()
-  @Post('/delete')
-  @UseGuards(FirebaseAuthGuard)
-  async deleteUserRecord(@Req() req: Request): Promise<string> {
-    return await this.userService.deleteUser(req['user'] as GetUserDto);
-  }
-
   @ApiBearerAuth()
   @Delete()
   @UseGuards(FirebaseAuthGuard)
-  async deleteUser(@Req() req: Request): Promise<string> {
-    return await this.userService.deleteUser(req['user'] as GetUserDto);
+  async deleteUser(@Req() req: Request): Promise<UserEntity> {
+    return await this.userService.deleteUser(req['user'].user as UserEntity);
   }
+
   // This route must go before the Delete user route below as we want nestjs to check against this one first
   @ApiBearerAuth('access-token')
   @Delete('/cypress')
@@ -104,7 +100,14 @@ export class UserController {
   @Patch()
   @UseGuards(FirebaseAuthGuard)
   async updateUser(@Body() updateUserDto: UpdateUserDto, @Req() req: Request) {
-    return await this.userService.updateUser(updateUserDto, req['user'] as GetUserDto);
+    return await this.userService.updateUser(updateUserDto, req['user'].user.id);
+  }
+
+  @ApiBearerAuth()
+  @Patch('/admin/:id')
+  @UseGuards(SuperAdminAuthGuard)
+  async adminUpdateUser(@Param() { id }, @Body() updateUserDto: UpdateUserDto) {
+    return await this.userService.updateUser(updateUserDto, id);
   }
 
   @ApiBearerAuth()
@@ -114,6 +117,15 @@ export class UserController {
     const { include, fields, limit, ...userQuery } = query.searchCriteria
       ? JSON.parse(query.searchCriteria)
       : { include: [], fields: [], limit: undefined };
-    return await this.userService.getUsers(userQuery, include, fields, limit);
+    const users = await this.userService.getUsers(userQuery, include || [], fields, limit);
+    return users.map((u) => formatUserObject(u));
+  }
+
+  // Use only if users have not been added to mailchimp due to e.g. an ongoing bug
+  @ApiBearerAuth()
+  @Post('/bulk-mailchimp-upload')
+  @UseGuards(FirebaseAuthGuard)
+  async bulkUploadMailchimpProfiles() {
+    return await this.userService.bulkUploadMailchimpProfiles();
   }
 }

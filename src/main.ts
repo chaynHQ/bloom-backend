@@ -9,9 +9,12 @@ import { ExceptionsFilter } from './utils/exceptions.filter';
 
 async function bootstrap() {
   const PORT = process.env.PORT || 35001;
-  const app = await NestFactory.create(AppModule, { cors: true });
+  const app = await NestFactory.create(AppModule, { cors: true, rawBody: true });
 
   app.setGlobalPrefix('api');
+
+  // Starts listening for shutdown hooks
+  app.enableShutdownHooks();
 
   const options = new DocumentBuilder()
     .setTitle('Bloom backend API')

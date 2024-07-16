@@ -6,6 +6,7 @@ export interface IPartnerAdmin {
   updatedAt?: Date | string;
   userId?: string;
   partnerId?: string;
+  active?: boolean;
 }
 
 export interface IPartnerAdminWithPartner extends IPartnerAdmin {
