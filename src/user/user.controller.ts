@@ -50,22 +50,6 @@ export class UserController {
     return user as GetUserDto;
   }
 
-  /**
-   * This POST endpoint deviates from REST patterns.
-   * Please use `getUserByFirebaseId` above which is a GET endpoint.
-   * Safe to delete function below from July 2024 - allowing for caches to clear
-   */
-  @ApiBearerAuth('access-token')
-  @ApiOperation({
-    description:
-      'Returns user profile data with their nested partner access, partner admin, course user and session user data.',
-  })
-  @Post('/me')
-  @UseGuards(FirebaseAuthGuard)
-  async getUserProfileByFirebaseId(@Req() req: Request): Promise<GetUserDto> {
-    return req['user'];
-  }
-
   @ApiBearerAuth()
   @Delete()
   @UseGuards(FirebaseAuthGuard)
