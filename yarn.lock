@@ -5478,7 +5478,7 @@ neo-async@^2.6.2:
   resolved "https://registry.yarnpkg.com/neo-async/-/neo-async-2.6.2.tgz#b4aafb93e3aeb2d8174ca53cf163ab7d7308305f"
   integrity sha512-Yd3UES5mWCSqR+qNT93S3UoYUkqAZ9lLg8a7g9rimsWmYGK8cVToA4/sF3RrshdyV3sAGMXVUmpMYOw+dLpOuw==
 
-newrelic@^11.15.0:
+newrelic@^11.17.0:
   version "11.17.0"
   resolved "https://registry.yarnpkg.com/newrelic/-/newrelic-11.17.0.tgz#10dcf25c162968235c4d4ab764b3dd4833b34599"
   integrity sha512-gI5FGsfvHyGLUW/+q3op1SsF8jisW5wV+NVOoxV9J58GOEEsP1B4/9D5jyL3iiL5QO1REeWtK5n15d2OsiYAIg==

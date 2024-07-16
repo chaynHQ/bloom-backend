@@ -83,11 +83,18 @@ export class PartnerAdminService {
     if (!partnerAdminResponse) {
       throw new HttpException('Partner admin does not exist', HttpStatus.BAD_REQUEST);
     }
-    return this.partnerAdminRepository
+    const updatedPartnerAdminResponse = await this.partnerAdminRepository
       .createQueryBuilder('partner_admin')
       .update(PartnerAdminEntity)
       .set({ active: updatePartnerAdminDto.active })
       .where('partnerAdminId = :partnerAdminId', { partnerAdminId })
-      .returning('*');
+      .returning('*')
+      .execute();
+
+    if (updatedPartnerAdminResponse.raw.length > 0) {
+      return updatedPartnerAdminResponse.raw[0];
+    } else {
+      throw new Error('Failed to update partner admin');
+    }
   }
 }

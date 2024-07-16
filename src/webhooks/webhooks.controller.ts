@@ -54,8 +54,6 @@ export class WebhooksController {
       this.logger.error(error);
       throw new HttpException(error, HttpStatus.UNAUTHORIZED);
     }
-
-    req.rawBody = '' + data;
     req.setEncoding('utf8');
 
     const bodyHmac = createHmac('sha1', storyblokWebhookSecret).update(req.rawBody).digest('hex');
