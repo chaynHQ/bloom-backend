@@ -1,25 +1,20 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { batchCreateMailchimpProfiles } from 'src/api/mailchimp/mailchimp-api';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { PartnerEntity } from 'src/entities/partner.entity';
 import { UserEntity } from 'src/entities/user.entity';
 import { IFirebaseUser } from 'src/firebase/firebase-user.interface';
 import { Logger } from 'src/logger/logger';
+import { ServiceUserProfilesService } from 'src/service-user-profiles/service-user-profiles.service';
 import { SubscriptionUserService } from 'src/subscription-user/subscription-user.service';
 import { TherapySessionService } from 'src/therapy-session/therapy-session.service';
 import { SIGNUP_TYPE } from 'src/utils/constants';
 import { FIREBASE_ERRORS } from 'src/utils/errors';
 import { FIREBASE_EVENTS, USER_SERVICE_EVENTS } from 'src/utils/logs';
-import {
-  createServiceUserProfiles,
-  updateServiceUserEmailAndProfiles,
-  updateServiceUserProfilesUser,
-} from 'src/utils/serviceUserProfiles';
-import { And, ILike, IsNull, Not, Raw, Repository } from 'typeorm';
+import { ILike, IsNull, Not, Repository } from 'typeorm';
 import { deleteCypressCrispProfiles } from '../api/crisp/crisp-api';
 import { AuthService } from '../auth/auth.service';
-import { PartnerAccessService, basePartnerAccess } from '../partner-access/partner-access.service';
+import { basePartnerAccess, PartnerAccessService } from '../partner-access/partner-access.service';
 import { formatUserObject } from '../utils/serialize';
 import { generateRandomString } from '../utils/utils';
 import { CreateUserDto } from './dtos/create-user.dto';
@@ -41,6 +36,7 @@ export class UserService {
     private readonly subscriptionUserService: SubscriptionUserService,
     private readonly therapySessionService: TherapySessionService,
     private readonly partnerAccessService: PartnerAccessService,
+    private readonly serviceUserProfilesService: ServiceUserProfilesService,
   ) {}
 
   public async createUser(createUserDto: CreateUserDto): Promise<GetUserDto> {
@@ -94,7 +90,7 @@ export class UserService {
         this.logger.log(`Create user: created public user in db. User: ${email}`);
       }
 
-      await createServiceUserProfiles(user, partner, partnerAccess);
+      await this.serviceUserProfilesService.createServiceUserProfiles(user, partner, partnerAccess);
 
       const userDto = formatUserObject({
         ...user,
@@ -225,12 +221,22 @@ export class UserService {
       fields: Object.keys(updateUserDto),
     });
 
-    if (updateUserDto.email && user.email !== updateUserDto.email) {
-      updateServiceUserEmailAndProfiles(newUserData, user.email);
+    if (
+      Object.keys(updateUserDto).length === 1 &&
+      !!updateUserDto.lastActiveAt &&
+      updateUserDto.lastActiveAt.getDate() === user.lastActiveAt.getDate()
+    ) {
+      // Do nothing, prevent unnecessay updates to service profiles when last active date is same date
+    } else if (updateUserDto.email && user.email !== updateUserDto.email) {
+      this.serviceUserProfilesService.updateServiceUserEmailAndProfiles(newUserData, user.email);
     } else {
       const isCrispBaseUpdateRequired =
         user.signUpLanguage !== updateUserDto.signUpLanguage && user.name !== updateUserDto.name;
-      updateServiceUserProfilesUser(newUserData, isCrispBaseUpdateRequired, user.email);
+      this.serviceUserProfilesService.updateServiceUserProfilesUser(
+        newUserData,
+        isCrispBaseUpdateRequired,
+        user.email,
+      );
     }
 
     return updatedUser;
@@ -323,35 +329,5 @@ export class UserService {
       ...(limit && { take: limit }),
     });
     return users;
-  }
-
-  // Static bulk upload function to be used in specific cases
-  // UPDATE THE FILTERS to the current requirements
-  public async bulkUploadMailchimpProfiles() {
-    try {
-      const filterStartDate = '2023-01-01'; // UPDATE
-      const filterEndDate = '2024-01-01'; // UPDATE
-      const users = await this.userRepository.find({
-        where: {
-          // UPDATE TO ANY FILTERS
-          createdAt: And(
-            Raw((alias) => `${alias} >= :filterStartDate`, { filterStartDate: filterStartDate }),
-            Raw((alias) => `${alias} < :filterEndDate`, { filterEndDate: filterEndDate }),
-          ),
-        },
-        relations: {
-          partnerAccess: { partner: true, therapySession: true },
-          courseUser: { course: true, sessionUser: { session: true } },
-        },
-      });
-      const usersWithCourseUsers = users.filter((user) => user.courseUser.length > 0);
-
-      await batchCreateMailchimpProfiles(usersWithCourseUsers);
-      this.logger.log(
-        `Created batch mailchimp profiles for ${usersWithCourseUsers.length} users, created before ${filterStartDate}`,
-      );
-    } catch (error) {
-      throw new Error(`Bulk upload mailchimp profiles API call failed: ${error}`);
-    }
   }
 }

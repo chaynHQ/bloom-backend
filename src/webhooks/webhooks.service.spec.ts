@@ -15,8 +15,8 @@ import { UserEntity } from 'src/entities/user.entity';
 import { EVENT_NAME } from 'src/event-logger/event-logger.interface';
 import { EventLoggerService } from 'src/event-logger/event-logger.service';
 import { PartnerService } from 'src/partner/partner.service';
+import { createMailchimpCourseMergeField } from 'src/service-user-profiles/service-user-profiles.service';
 import { SIMPLYBOOK_ACTION_ENUM, STORYBLOK_STORY_STATUS_ENUM } from 'src/utils/constants';
-import { createMailchimpCourseMergeField } from 'src/utils/serviceUserProfiles';
 import StoryblokClient from 'storyblok-js-client';
 import {
   mockCourse,

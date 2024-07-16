@@ -17,11 +17,6 @@ import {
   mockUserEntity,
 } from 'test/utils/mockData';
 import {
-  EMAIL_REMINDERS_FREQUENCY,
-  SIMPLYBOOK_ACTION_ENUM,
-  mailchimpMarketingPermissionId,
-} from './constants';
-import {
   createMailchimpCourseMergeField,
   createServiceUserProfiles,
   serializePartnersString,
@@ -31,7 +26,12 @@ import {
   updateServiceUserProfilesPartnerAccess,
   updateServiceUserProfilesTherapy,
   updateServiceUserProfilesUser,
-} from './serviceUserProfiles';
+} from '../service-user-profiles/service-user-profiles.service';
+import {
+  EMAIL_REMINDERS_FREQUENCY,
+  SIMPLYBOOK_ACTION_ENUM,
+  mailchimpMarketingPermissionId,
+} from './constants';
 
 jest.mock('src/api/crisp/crisp-api');
 jest.mock('src/api/mailchimp/mailchimp-api');

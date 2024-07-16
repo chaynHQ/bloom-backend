@@ -5,8 +5,8 @@ import { sub } from 'date-fns';
 import * as crispApi from 'src/api/crisp/crisp-api';
 import * as mailchimpApi from 'src/api/mailchimp/mailchimp-api';
 import { PartnerEntity } from 'src/entities/partner.entity';
+import * as profileData from 'src/service-user-profiles/service-user-profiles.service';
 import { GetUserDto } from 'src/user/dtos/get-user.dto';
-import * as profileData from 'src/utils/serviceUserProfiles';
 import {
   mockPartnerAccessEntity,
   mockPartnerAccessEntityBase,
