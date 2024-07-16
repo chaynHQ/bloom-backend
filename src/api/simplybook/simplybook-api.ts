@@ -98,6 +98,29 @@ export const deleteClient: (clientId: string) => Promise<string> = async (client
   }
 };
 
+export const updateSimplybookClient = async (clientId: string, clientData: { email?: string }) => {
+  const token = await getAuthToken();
+  try {
+    const bookingsResponse = await axios.patch(`${SIMPLYBOOK_API_BASE_URL}/client/${clientId}`, {
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Company-Login': simplybookCompanyName,
+        'X-Token': `${token}`,
+      },
+      body: clientData,
+    });
+    LOGGER.log({ event: 'UPDATE_SIMPLYBOOK_CLIENT', fields: [Object.keys(clientData)] });
+    return bookingsResponse.data.data;
+  } catch (error) {
+    LOGGER.error({
+      error: 'SIMPLYBOOK_CLIENT_UPDATE_ERROR',
+      status: error.status,
+      errorMessage: error.message,
+    });
+    handleError(`Failed to edit client ${clientId} from Simplybook.`, error);
+  }
+};
+
 const handleError = (error, message: string) => {
   LOGGER.error(message, error);
   throw new Error(`${message}: ${error})`);

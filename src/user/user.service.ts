@@ -13,6 +13,7 @@ import { FIREBASE_ERRORS } from 'src/utils/errors';
 import { FIREBASE_EVENTS, USER_SERVICE_EVENTS } from 'src/utils/logs';
 import {
   createServiceUserProfiles,
+  updateServiceUserEmailAndProfiles,
   updateServiceUserProfilesUser,
 } from 'src/utils/serviceUserProfiles';
 import { And, ILike, IsNull, Not, Raw, Repository } from 'typeorm';
@@ -199,7 +200,7 @@ export class UserService {
       throw new HttpException('USER NOT FOUND', HttpStatus.NOT_FOUND);
     }
 
-    if (updateUserDto.email) {
+    if (updateUserDto.email && user.email !== updateUserDto.email) {
       // check whether email has been updated already in firebase
       const firebaseUser = await this.authService.getFirebaseUser(user.email);
       if (firebaseUser.email !== updateUserDto.email) {
@@ -224,10 +225,13 @@ export class UserService {
       fields: Object.keys(updateUserDto),
     });
 
-    const isCrispBaseUpdateRequired =
-      user.signUpLanguage !== updateUserDto.signUpLanguage && user.name !== updateUserDto.name;
-
-    updateServiceUserProfilesUser(newUserData, isCrispBaseUpdateRequired, user.email);
+    if (updateUserDto.email && user.email !== updateUserDto.email) {
+      updateServiceUserEmailAndProfiles(newUserData, user.email);
+    } else {
+      const isCrispBaseUpdateRequired =
+        user.signUpLanguage !== updateUserDto.signUpLanguage && user.name !== updateUserDto.name;
+      updateServiceUserProfilesUser(newUserData, isCrispBaseUpdateRequired, user.email);
+    }
 
     return updatedUser;
   }

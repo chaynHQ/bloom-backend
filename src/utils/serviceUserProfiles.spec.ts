@@ -25,6 +25,8 @@ import {
   createMailchimpCourseMergeField,
   createServiceUserProfiles,
   serializePartnersString,
+  serializeUserData,
+  updateServiceUserEmailAndProfiles,
   updateServiceUserProfilesCourse,
   updateServiceUserProfilesPartnerAccess,
   updateServiceUserProfilesTherapy,
@@ -562,6 +564,47 @@ describe('Service user profiles', () => {
         'C_FCN_S',
         'text',
       );
+    });
+  });
+  describe('updateServiceUserEmailAndProfiles', () => {
+    it("should update the user's email in crisp and mailchimp", async () => {
+      const oldEmail = mockUserEntity.email;
+      const newEmail = 'newemail@test.com';
+      await updateServiceUserEmailAndProfiles({ ...mockUserEntity, email: newEmail }, oldEmail);
+      const serialisedMockUserData = serializeUserData(mockUserEntity);
+      expect(updateCrispProfileBase).toHaveBeenCalledWith(
+        { email: newEmail, person: { locales: ['en'], nickname: 'name' } },
+        oldEmail,
+      );
+      expect(updateCrispProfile).toHaveBeenCalledWith(
+        { ...serialisedMockUserData.crispSchema },
+        newEmail,
+      );
+      expect(updateMailchimpProfile).toHaveBeenCalledWith(
+        { ...serialisedMockUserData.mailchimpSchema, email_address: newEmail },
+        oldEmail,
+      );
+    });
+    it('should not throw if request to Mailchimp API call fails', async () => {
+      const mocked = jest.mocked(updateMailchimpProfile);
+      mocked.mockRejectedValue(new Error('Mailchimp API call failed'));
+      const oldEmail = mockUserEntity.email;
+      const newEmail = 'newemail@test.com';
+
+      await expect(
+        updateServiceUserEmailAndProfiles({ ...mockUserEntity, email: newEmail }, oldEmail),
+      ).resolves.not.toThrow();
+      mocked.mockReset();
+    });
+    it('should not throw if request to Crisp API call  fails', async () => {
+      const mocked = jest.mocked(updateCrispProfileBase);
+      mocked.mockRejectedValue(new Error('Crisp API call failed'));
+      const oldEmail = mockUserEntity.email;
+      const newEmail = 'newemail@test.com';
+      await expect(
+        updateServiceUserEmailAndProfiles({ ...mockUserEntity, email: newEmail }, oldEmail),
+      ).resolves.not.toThrow();
+      mocked.mockReset();
     });
   });
 });
