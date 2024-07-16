@@ -14,6 +14,7 @@ import { ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiTags } from '@nestjs
 import { Request } from 'express';
 import { UserEntity } from 'src/entities/user.entity';
 import { SuperAdminAuthGuard } from 'src/partner-admin/super-admin-auth.guard';
+import { formatUserObject } from 'src/utils/serialize';
 import { FirebaseAuthGuard } from '../firebase/firebase-auth.guard';
 import { ControllerDecorator } from '../utils/controller.decorator';
 import { CreateUserDto } from './dtos/create-user.dto';
@@ -44,7 +45,9 @@ export class UserController {
   @Get('/me')
   @UseGuards(FirebaseAuthGuard)
   async getUserByFirebaseId(@Req() req: Request): Promise<GetUserDto> {
-    return req['user'];
+    const user = req['user'];
+    this.userService.updateUser({ lastActiveAt: new Date() }, user.user.id);
+    return user as GetUserDto;
   }
 
   @ApiBearerAuth()
@@ -81,7 +84,14 @@ export class UserController {
   @Patch()
   @UseGuards(FirebaseAuthGuard)
   async updateUser(@Body() updateUserDto: UpdateUserDto, @Req() req: Request) {
-    return await this.userService.updateUser(updateUserDto, req['user'] as GetUserDto);
+    return await this.userService.updateUser(updateUserDto, req['user'].user.id);
+  }
+
+  @ApiBearerAuth()
+  @Patch('/admin/:id')
+  @UseGuards(SuperAdminAuthGuard)
+  async adminUpdateUser(@Param() { id }, @Body() updateUserDto: UpdateUserDto) {
+    return await this.userService.updateUser(updateUserDto, id);
   }
 
   @ApiBearerAuth()
@@ -91,7 +101,8 @@ export class UserController {
     const { include, fields, limit, ...userQuery } = query.searchCriteria
       ? JSON.parse(query.searchCriteria)
       : { include: [], fields: [], limit: undefined };
-    return await this.userService.getUsers(userQuery, include, fields, limit);
+    const users = await this.userService.getUsers(userQuery, include || [], fields, limit);
+    return users.map((u) => formatUserObject(u));
   }
 
   // Use only if users have not been added to mailchimp due to e.g. an ongoing bug

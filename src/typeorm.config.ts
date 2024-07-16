@@ -11,6 +11,7 @@ import { PartnerAccessEntity } from './entities/partner-access.entity';
 import { PartnerAdminEntity } from './entities/partner-admin.entity';
 import { PartnerFeatureEntity } from './entities/partner-feature.entity';
 import { PartnerEntity } from './entities/partner.entity';
+import { SessionFeedbackEntity } from './entities/session-feedback.entity';
 import { SessionUserEntity } from './entities/session-user.entity';
 import { SessionEntity } from './entities/session.entity';
 import { SubscriptionUserEntity } from './entities/subscription-user.entity';
@@ -44,11 +45,16 @@ import { bloomBackend1696994943309 } from './migrations/1696994943309-bloom-back
 import { bloomBackend1697818259254 } from './migrations/1697818259254-bloom-backend';
 import { bloomBackend1698136145516 } from './migrations/1698136145516-bloom-backend';
 import { bloomBackend1706174260018 } from './migrations/1706174260018-bloom-backend';
+import { BloomBackend1718300621138 } from './migrations/1718300621138-bloom-backend';
+import { BloomBackend1718728423454 } from './migrations/1718728423454-bloom-backend';
+import { BloomBackend1719668310816 } from './migrations/1719668310816-bloom-backend';
 
 config();
 const configService = new ConfigService();
 
 const isProduction = configService.get('NODE_ENV') === 'production';
+const isStaging = configService.get('NODE_ENV') === 'staging';
+
 const { host, port, user, password, database } = PostgressConnectionStringParser.parse(
   configService.get('DATABASE_URL'),
 );
@@ -79,6 +85,7 @@ export const dataSourceOptions = {
     SubscriptionEntity,
     SubscriptionUserEntity,
     TherapySessionEntity,
+    SessionFeedbackEntity,
   ],
   migrations: [
     bloomBackend1637704119795,
@@ -108,11 +115,14 @@ export const dataSourceOptions = {
     bloomBackend1697818259254,
     bloomBackend1698136145516,
     bloomBackend1706174260018,
+    BloomBackend1718300621138,
+    BloomBackend1718728423454,
+    BloomBackend1719668310816,
   ],
   subscribers: [],
-  ssl: isProduction,
+  ssl: isProduction || isStaging,
   extra: {
-    ssl: isProduction ? { rejectUnauthorized: false } : null,
+    ssl: isProduction || isStaging ? { rejectUnauthorized: false } : null,
   },
 };
 

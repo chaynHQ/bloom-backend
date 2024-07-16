@@ -4,15 +4,19 @@ import {
   HttpException,
   HttpStatus,
   Injectable,
+  Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Request } from 'express';
 import { UserEntity } from 'src/entities/user.entity';
+import { AUTH_GUARD_ERRORS, FIREBASE_ERRORS } from 'src/utils/errors';
 import { Repository } from 'typeorm';
 import { AuthService } from '../auth/auth.service';
 
 @Injectable()
 export class SuperAdminAuthGuard implements CanActivate {
+  private readonly logger = new Logger('SuperAdminAuthGuard');
+
   constructor(
     private authService: AuthService,
     @InjectRepository(UserEntity) private userRepository: Repository<UserEntity>,
@@ -35,9 +39,18 @@ export class SuperAdminAuthGuard implements CanActivate {
       userUid = uid;
     } catch (error) {
       if (error.code === 'auth/id-token-expired') {
-        throw new HttpException(`SuperAdminAuthGuard - ${error}`, HttpStatus.UNAUTHORIZED);
+        this.logger.warn({
+          error: AUTH_GUARD_ERRORS.TOKEN_EXPIRED,
+          errorMessage: `Authorisation failed for ${request.originalUrl}`,
+          status: HttpStatus.UNAUTHORIZED,
+        });
+        throw new HttpException(FIREBASE_ERRORS.ID_TOKEN_EXPIRED, HttpStatus.UNAUTHORIZED);
       }
-
+      this.logger.warn({
+        error: AUTH_GUARD_ERRORS.PARSING_ERROR,
+        errorMessage: `Authorisation failed for ${request.originalUrl}`,
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+      });
       throw new HttpException(
         `SuperAdminAuthGuard - Error parsing firebase user: ${error}`,
         HttpStatus.INTERNAL_SERVER_ERROR,
@@ -45,7 +58,7 @@ export class SuperAdminAuthGuard implements CanActivate {
     }
     try {
       const user = await this.userRepository.findOneBy({ firebaseUid: userUid });
-
+      request['userEntity'] = user;
       return !!user.isSuperAdmin && user.email.indexOf('@chayn.co') !== -1;
     } catch (error) {
       throw new HttpException(

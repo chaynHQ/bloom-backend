@@ -3,6 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { sub } from 'date-fns';
 import * as crispApi from 'src/api/crisp/crisp-api';
+import * as mailchimpApi from 'src/api/mailchimp/mailchimp-api';
 import { PartnerEntity } from 'src/entities/partner.entity';
 import { GetUserDto } from 'src/user/dtos/get-user.dto';
 import * as profileData from 'src/utils/serviceUserProfiles';
@@ -46,11 +47,12 @@ jest.mock('src/api/crisp/crisp-api', () => ({
   getCrispProfileData: jest.fn(),
   updateCrispProfileBase: jest.fn(),
   updateCrispProfile: jest.fn(),
-  updateServiceUserProfilesPartnerAccess: jest.fn(),
 }));
 
-jest.mock('src/utils/serviceUserProfiles', () => ({
-  updateServiceUserProfilesPartnerAccess: jest.fn(),
+jest.mock('src/api/mailchimp/mailchimp-api', () => ({
+  createMailchimpMergeField: jest.fn(),
+  createMailchimpProfile: jest.fn(),
+  updateMailchimpProfile: jest.fn(),
 }));
 
 describe('PartnerAccessService', () => {
@@ -60,6 +62,8 @@ describe('PartnerAccessService', () => {
   let mockPartnerAccessRepository: DeepMocked<Repository<PartnerAccessEntity>>;
 
   beforeEach(async () => {
+    jest.clearAllMocks();
+
     mockPartnerRepository = createMock<Repository<PartnerEntity>>(mockPartnerRepositoryMethods);
     mockPartnerAccessRepository = createMock<Repository<PartnerAccessEntity>>(
       mockPartnerAccessRepositoryMethods,
@@ -136,23 +140,24 @@ describe('PartnerAccessService', () => {
         return {
           ...mockPartnerAccessEntity,
           id: 'pa1',
-          userId: mockGetUserDto.user.id,
+          userId: mockUserEntity.id,
         };
       });
       // Mocks that the accesscode already exists
       jest.spyOn(repo, 'findOne').mockResolvedValueOnce(mockPartnerAccessEntity);
+      // Observer on the service user profiles method
+      jest.spyOn(profileData, 'updateServiceUserProfilesPartnerAccess');
 
       const partnerAccess = await service.assignPartnerAccess(mockUserEntity, '123456');
 
       expect(partnerAccess).toEqual({
         ...mockPartnerAccessEntity,
-        id: 'pa1',
         userId: mockUserEntity.id,
         activatedAt: partnerAccess.activatedAt,
       });
 
       expect(profileData.updateServiceUserProfilesPartnerAccess).toHaveBeenCalledWith(
-        [partnerAccess],
+        [mockPartnerAccessEntity],
         mockUserEntity.email,
       );
     });
@@ -162,6 +167,23 @@ describe('PartnerAccessService', () => {
       jest.spyOn(repo, 'findOne').mockResolvedValueOnce(mockPartnerAccessEntity);
 
       jest.spyOn(crispApi, 'updateCrispProfile').mockImplementationOnce(async () => {
+        throw new Error('Test throw');
+      });
+
+      const partnerAccess = await service.assignPartnerAccess(mockUserEntity, '123456');
+
+      expect(partnerAccess).toEqual({
+        ...mockPartnerAccessEntity,
+        userId: mockUserEntity.id,
+        activatedAt: partnerAccess.activatedAt,
+      });
+    });
+
+    it('should assign partner access even if mailchimp profile api fails', async () => {
+      // Mocks that the accesscode already exists
+      jest.spyOn(repo, 'findOne').mockResolvedValueOnce(mockPartnerAccessEntity);
+
+      jest.spyOn(mailchimpApi, 'updateMailchimpProfile').mockImplementationOnce(async () => {
         throw new Error('Test throw');
       });
 
