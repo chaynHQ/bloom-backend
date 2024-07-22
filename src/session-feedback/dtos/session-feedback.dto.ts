@@ -6,11 +6,6 @@ export class SessionFeedbackDto {
   @IsNotEmpty()
   @IsString()
   @ApiProperty({ type: String })
-  sessionFeedbackId: string;
-
-  @IsNotEmpty()
-  @IsString()
-  @ApiProperty({ type: String })
   sessionId: string;
 
   @IsNotEmpty()
