@@ -14,6 +14,7 @@ import { PartnerAccessModule } from './partner-access/partner-access.module';
 import { PartnerAdminModule } from './partner-admin/partner-admin.module';
 import { PartnerFeatureModule } from './partner-feature/partner-feature.module';
 import { PartnerModule } from './partner/partner.module';
+import { SessionFeedbackModule } from './session-feedback/session-feedback.module';
 import { SessionUserModule } from './session-user/session-user.module';
 import { SessionModule } from './session/session.module';
 import { SubscriptionUserModule } from './subscription-user/subscription-user.module';
@@ -35,6 +36,7 @@ import { WebhooksModule } from './webhooks/webhooks.module';
     CourseModule,
     CourseUserModule,
     SessionUserModule,
+    SessionFeedbackModule,
     CoursePartnerModule,
     SubscriptionUserModule,
     FeatureModule,
