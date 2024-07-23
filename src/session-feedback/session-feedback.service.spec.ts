@@ -2,6 +2,7 @@ import { createMock, DeepMocked } from '@golevelup/ts-jest';
 import { HttpException, HttpStatus } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { SlackMessageClient } from 'src/api/slack/slack-api';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { PartnerEntity } from 'src/entities/partner.entity';
 import { SessionFeedbackEntity } from 'src/entities/session-feedback.entity';
@@ -34,6 +35,7 @@ describe('SessionFeedbackService', () => {
   let mockTherapySessionRepository: DeepMocked<Repository<TherapySessionEntity>>;
   let mockSessionFeedbackRepository: DeepMocked<Repository<SessionFeedbackEntity>>;
   let mockSessionService: DeepMocked<SessionService>;
+  let mockSlackMessageClient: DeepMocked<SlackMessageClient>;
 
   beforeEach(async () => {
     mockPartnerAccessRepository = createMock<Repository<PartnerAccessEntity>>();
@@ -45,6 +47,7 @@ describe('SessionFeedbackService', () => {
     mockTherapySessionRepository = createMock<Repository<TherapySessionEntity>>();
     mockSessionFeedbackRepository = createMock<Repository<SessionFeedbackEntity>>();
     mockSessionService = createMock<SessionService>();
+    mockSlackMessageClient = createMock<SlackMessageClient>();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -85,6 +88,7 @@ describe('SessionFeedbackService', () => {
           provide: SessionService,
           useValue: mockSessionService,
         },
+        { provide: SlackMessageClient, useValue: mockSlackMessageClient },
       ],
     }).compile();
 
@@ -96,13 +100,15 @@ describe('SessionFeedbackService', () => {
   });
   describe('createSessionFeedback', () => {
     it('when session id exists should return dto', async () => {
-      jest.spyOn(mockSessionService, 'getSession').mockResolvedValueOnce(mockSessionEntity);
+      jest
+        .spyOn(mockSessionService, 'getSessionAndCourse')
+        .mockResolvedValueOnce(mockSessionEntity);
       const response = await service.createSessionFeedback(sessionFeedbackDto);
 
       expect(response).toMatchObject(sessionFeedbackDto);
     });
     it('when session id does not exist should throw exception', async () => {
-      jest.spyOn(mockSessionService, 'getSession').mockResolvedValueOnce(null);
+      jest.spyOn(mockSessionService, 'getSessionAndCourse').mockResolvedValueOnce(null);
 
       await expect(service.createSessionFeedback(sessionFeedbackDto)).rejects.toThrow(
         new HttpException('SESSION NOT FOUND', HttpStatus.NOT_FOUND),
