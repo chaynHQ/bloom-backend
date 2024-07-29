@@ -43,6 +43,9 @@ export class UserEntity extends BaseBloomEntity {
   @Column({ type: 'timestamptz', nullable: true })
   lastActiveAt: Date; // set each time user record is fetched
 
+  @Column({ type: 'timestamptz', nullable: true })
+  deletedAt: Date; // set when the deleteUser method is called
+
   @OneToMany(() => PartnerAccessEntity, (partnerAccess) => partnerAccess.user, { cascade: true })
   partnerAccess: PartnerAccessEntity[];
 
