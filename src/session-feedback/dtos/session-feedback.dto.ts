@@ -17,7 +17,6 @@ export class SessionFeedbackDto {
   })
   feedbackTags: FEEDBACK_TAGS_ENUM;
 
-  @IsNotEmpty()
   @IsString()
   @ApiProperty({ type: String })
   feedbackDescription: string;
