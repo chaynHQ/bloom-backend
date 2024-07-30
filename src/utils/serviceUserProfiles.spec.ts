@@ -1,3 +1,6 @@
+import { createMock } from '@golevelup/ts-jest';
+import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
 import {
   createCrispProfile,
   updateCrispProfile,
@@ -9,6 +12,7 @@ import {
   updateMailchimpProfile,
 } from 'src/api/mailchimp/mailchimp-api';
 import { UserEntity } from 'src/entities/user.entity';
+import { ServiceUserProfilesService } from 'src/service-user-profiles/service-user-profiles.service';
 import {
   mockAltPartnerAccessEntity,
   mockCourseUserEntity,
@@ -16,17 +20,8 @@ import {
   mockPartnerEntity,
   mockUserEntity,
 } from 'test/utils/mockData';
-import {
-  createMailchimpCourseMergeField,
-  createServiceUserProfiles,
-  serializePartnersString,
-  serializeUserData,
-  updateServiceUserEmailAndProfiles,
-  updateServiceUserProfilesCourse,
-  updateServiceUserProfilesPartnerAccess,
-  updateServiceUserProfilesTherapy,
-  updateServiceUserProfilesUser,
-} from '../service-user-profiles/service-user-profiles.service';
+import { mockUserRepositoryMethods } from 'test/utils/mockedServices';
+import { Repository } from 'typeorm';
 import {
   EMAIL_REMINDERS_FREQUENCY,
   SIMPLYBOOK_ACTION_ENUM,
@@ -37,13 +32,30 @@ jest.mock('src/api/crisp/crisp-api');
 jest.mock('src/api/mailchimp/mailchimp-api');
 
 describe('Service user profiles', () => {
+  let service: ServiceUserProfilesService;
+  const mockedUserRepository = createMock<Repository<UserEntity>>(mockUserRepositoryMethods);
+
   beforeEach(async () => {
-    jest.clearAllMocks();
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        ServiceUserProfilesService,
+        {
+          provide: getRepositoryToken(UserEntity),
+          useValue: mockedUserRepository,
+        },
+      ],
+    }).compile();
+
+    service = module.get<ServiceUserProfilesService>(ServiceUserProfilesService);
+  });
+
+  it('should be defined', () => {
+    expect(service).toBeDefined();
   });
 
   describe('createServiceUserProfiles', () => {
     it('should create crisp and mailchimp profiles for a public user', async () => {
-      await createServiceUserProfiles(mockUserEntity);
+      await service.createServiceUserProfiles(mockUserEntity);
 
       expect(createCrispProfile).toHaveBeenCalledWith({
         email: mockUserEntity.email,
@@ -96,7 +108,11 @@ describe('Service user profiles', () => {
     });
 
     it('should create crisp and mailchimp profiles for a partner user', async () => {
-      await createServiceUserProfiles(mockUserEntity, mockPartnerEntity, mockPartnerAccessEntity);
+      await service.createServiceUserProfiles(
+        mockUserEntity,
+        mockPartnerEntity,
+        mockPartnerAccessEntity,
+      );
 
       const partnerName = mockPartnerEntity.name.toLowerCase();
       const createdAt = mockUserEntity.createdAt.toISOString();
@@ -152,14 +168,14 @@ describe('Service user profiles', () => {
     it('should not propagate external api call errors', async () => {
       const mocked = jest.mocked(createCrispProfile);
       mocked.mockRejectedValue(new Error('Crisp API call failed'));
-      await expect(createServiceUserProfiles(mockUserEntity)).resolves.not.toThrow();
+      await expect(service.createServiceUserProfiles(mockUserEntity)).resolves.not.toThrow();
       mocked.mockReset();
     });
   });
 
   describe('updateServiceUserProfilesUser', () => {
     it('should update crisp and mailchimp profile user data', async () => {
-      await updateServiceUserProfilesUser(mockUserEntity, false, mockUserEntity.email);
+      await service.updateServiceUserProfilesUser(mockUserEntity, false, mockUserEntity.email);
 
       const lastActiveAt = mockUserEntity.lastActiveAt.toISOString();
 
@@ -202,7 +218,7 @@ describe('Service user profiles', () => {
       };
       const lastActiveAt = mockUserEntity.lastActiveAt.toISOString();
 
-      await updateServiceUserProfilesUser(mockUser, false, mockUser.email);
+      await service.updateServiceUserProfilesUser(mockUser, false, mockUser.email);
 
       expect(updateCrispProfile).toHaveBeenCalledWith(
         {
@@ -236,7 +252,7 @@ describe('Service user profiles', () => {
     });
 
     it('should additionally call crisp base profile update if required', async () => {
-      await updateServiceUserProfilesUser(mockUserEntity, true, mockUserEntity.email);
+      await service.updateServiceUserProfilesUser(mockUserEntity, true, mockUserEntity.email);
 
       expect(updateCrispProfile).toHaveBeenCalled();
       expect(updateMailchimpProfile).toHaveBeenCalled();
@@ -256,7 +272,7 @@ describe('Service user profiles', () => {
       const mocked = jest.mocked(updateMailchimpProfile);
       mocked.mockRejectedValue(new Error('Mailchimp API call failed'));
       await expect(
-        updateServiceUserProfilesUser(mockUserEntity, false, mockUserEntity.email),
+        service.updateServiceUserProfilesUser(mockUserEntity, false, mockUserEntity.email),
       ).resolves.not.toThrow();
       mocked.mockReset();
     });
@@ -264,7 +280,10 @@ describe('Service user profiles', () => {
 
   describe('updateServiceUserProfilesPartnerAccess', () => {
     it('should update crisp and mailchimp profile partner access data', async () => {
-      await updateServiceUserProfilesPartnerAccess([mockPartnerAccessEntity], mockUserEntity.email);
+      await service.updateServiceUserProfilesPartnerAccess(
+        [mockPartnerAccessEntity],
+        mockUserEntity.email,
+      );
 
       const partnerString = mockPartnerAccessEntity.partner.name.toLowerCase();
 
@@ -302,9 +321,9 @@ describe('Service user profiles', () => {
 
     it('should update crisp and mailchimp profile multiple partner accesses data', async () => {
       const partnerAccesses = [mockPartnerAccessEntity, mockAltPartnerAccessEntity];
-      await updateServiceUserProfilesPartnerAccess(partnerAccesses, mockUserEntity.email);
+      await service.updateServiceUserProfilesPartnerAccess(partnerAccesses, mockUserEntity.email);
 
-      const partnerString = serializePartnersString(partnerAccesses);
+      const partnerString = service.serializePartnersString(partnerAccesses);
 
       expect(updateCrispProfileBase).toHaveBeenCalledWith(
         {
@@ -342,7 +361,10 @@ describe('Service user profiles', () => {
       const mocked = jest.mocked(updateCrispProfile);
       mocked.mockRejectedValue(new Error('Crisp API call failed'));
       await expect(
-        updateServiceUserProfilesPartnerAccess([mockPartnerAccessEntity], mockUserEntity.email),
+        service.updateServiceUserProfilesPartnerAccess(
+          [mockPartnerAccessEntity],
+          mockUserEntity.email,
+        ),
       ).resolves.not.toThrow();
       mocked.mockReset();
     });
@@ -360,7 +382,7 @@ describe('Service user profiles', () => {
         },
       ];
 
-      await updateServiceUserProfilesTherapy(partnerAccesses, mockUserEntity.email);
+      await service.updateServiceUserProfilesTherapy(partnerAccesses, mockUserEntity.email);
 
       const firstTherapySessionAt = therapySession.startDateTime.toISOString();
       const nextTherapySessionAt = therapySession.startDateTime.toISOString();
@@ -394,7 +416,7 @@ describe('Service user profiles', () => {
     it('should update crisp and mailchimp profile combined therapy data for new booking', async () => {
       const partnerAccesses = [mockPartnerAccessEntity, mockAltPartnerAccessEntity];
 
-      await updateServiceUserProfilesTherapy(partnerAccesses, mockUserEntity.email);
+      await service.updateServiceUserProfilesTherapy(partnerAccesses, mockUserEntity.email);
 
       const firstTherapySessionAt =
         mockPartnerAccessEntity.therapySession[0].startDateTime.toISOString();
@@ -431,7 +453,7 @@ describe('Service user profiles', () => {
     it('should update crisp and mailchimp profile combined therapy data for updated booking', async () => {
       const partnerAccesses = [mockPartnerAccessEntity, mockAltPartnerAccessEntity];
 
-      await updateServiceUserProfilesTherapy(partnerAccesses, mockUserEntity.email);
+      await service.updateServiceUserProfilesTherapy(partnerAccesses, mockUserEntity.email);
 
       const firstTherapySessionAt =
         mockPartnerAccessEntity.therapySession[0].startDateTime.toISOString();
@@ -470,7 +492,7 @@ describe('Service user profiles', () => {
         SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING;
       const partnerAccesses = [mockPartnerAccessEntity, mockAltPartnerAccessEntity];
 
-      await updateServiceUserProfilesTherapy(partnerAccesses, mockUserEntity.email);
+      await service.updateServiceUserProfilesTherapy(partnerAccesses, mockUserEntity.email);
 
       const firstTherapySessionAt =
         mockPartnerAccessEntity.therapySession[0].startDateTime.toISOString();
@@ -506,7 +528,7 @@ describe('Service user profiles', () => {
       const mocked = jest.mocked(updateMailchimpProfile);
       mocked.mockRejectedValue(new Error('Mailchimp API call failed'));
       await expect(
-        updateServiceUserProfilesTherapy(
+        service.updateServiceUserProfilesTherapy(
           [mockPartnerAccessEntity, mockAltPartnerAccessEntity],
           mockUserEntity.email,
         ),
@@ -517,7 +539,7 @@ describe('Service user profiles', () => {
 
   describe('updateServiceUserProfilesCourse', () => {
     it('should update crisp and mailchimp profile course data', async () => {
-      await updateServiceUserProfilesCourse(mockCourseUserEntity, mockUserEntity.email);
+      await service.updateServiceUserProfilesCourse(mockCourseUserEntity, mockUserEntity.email);
 
       expect(updateCrispProfile).toHaveBeenCalledWith(
         {
@@ -542,7 +564,7 @@ describe('Service user profiles', () => {
       const mocked = jest.mocked(updateCrispProfile);
       mocked.mockRejectedValue(new Error('Crisp API call failed'));
       await expect(
-        updateServiceUserProfilesCourse(mockCourseUserEntity, mockUserEntity.email),
+        service.updateServiceUserProfilesCourse(mockCourseUserEntity, mockUserEntity.email),
       ).resolves.not.toThrow();
       mocked.mockReset();
     });
@@ -550,7 +572,7 @@ describe('Service user profiles', () => {
 
   describe('createMailchimpCourseMergeField', () => {
     it('should create mailchimp course merge field', async () => {
-      await createMailchimpCourseMergeField('Full course name');
+      await service.createMailchimpCourseMergeField('Full course name');
 
       expect(createMailchimpMergeField).toHaveBeenNthCalledWith(
         1,
@@ -570,8 +592,11 @@ describe('Service user profiles', () => {
     it("should update the user's email in crisp and mailchimp", async () => {
       const oldEmail = mockUserEntity.email;
       const newEmail = 'newemail@test.com';
-      await updateServiceUserEmailAndProfiles({ ...mockUserEntity, email: newEmail }, oldEmail);
-      const serialisedMockUserData = serializeUserData(mockUserEntity);
+      await service.updateServiceUserEmailAndProfiles(
+        { ...mockUserEntity, email: newEmail },
+        oldEmail,
+      );
+      const serialisedMockUserData = service.serializeUserData(mockUserEntity);
       expect(updateCrispProfileBase).toHaveBeenCalledWith(
         { email: newEmail, person: { locales: ['en'], nickname: 'name' } },
         oldEmail,
@@ -592,7 +617,7 @@ describe('Service user profiles', () => {
       const newEmail = 'newemail@test.com';
 
       await expect(
-        updateServiceUserEmailAndProfiles({ ...mockUserEntity, email: newEmail }, oldEmail),
+        service.updateServiceUserEmailAndProfiles({ ...mockUserEntity, email: newEmail }, oldEmail),
       ).resolves.not.toThrow();
       mocked.mockReset();
     });
@@ -602,7 +627,7 @@ describe('Service user profiles', () => {
       const oldEmail = mockUserEntity.email;
       const newEmail = 'newemail@test.com';
       await expect(
-        updateServiceUserEmailAndProfiles({ ...mockUserEntity, email: newEmail }, oldEmail),
+        service.updateServiceUserEmailAndProfiles({ ...mockUserEntity, email: newEmail }, oldEmail),
       ).resolves.not.toThrow();
       mocked.mockReset();
     });

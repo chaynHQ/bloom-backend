@@ -15,7 +15,7 @@ import { UserEntity } from 'src/entities/user.entity';
 import { EVENT_NAME } from 'src/event-logger/event-logger.interface';
 import { EventLoggerService } from 'src/event-logger/event-logger.service';
 import { PartnerService } from 'src/partner/partner.service';
-import { createMailchimpCourseMergeField } from 'src/service-user-profiles/service-user-profiles.service';
+import { ServiceUserProfilesService } from 'src/service-user-profiles/service-user-profiles.service';
 import { SIMPLYBOOK_ACTION_ENUM, STORYBLOK_STORY_STATUS_ENUM } from 'src/utils/constants';
 import StoryblokClient from 'storyblok-js-client';
 import {
@@ -71,7 +71,6 @@ jest.mock('src/api/simplybook/simplybook-api', () => {
   };
 });
 jest.mock('src/api/crisp/crisp-api');
-jest.mock('src/utils/serviceUserProfiles');
 
 describe('WebhooksService', () => {
   let service: WebhooksService;
@@ -103,6 +102,7 @@ describe('WebhooksService', () => {
   const mockedPartnerAdminRepository = createMock<Repository<PartnerAdminEntity>>(
     mockPartnerAdminRepositoryMethods,
   );
+  const mockedServiceUserProfilesService = createMock<ServiceUserProfilesService>();
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -144,6 +144,10 @@ describe('WebhooksService', () => {
         {
           provide: getRepositoryToken(EventLogEntity),
           useValue: mockedEventLogRepository,
+        },
+        {
+          provide: ServiceUserProfilesService,
+          useValue: mockedServiceUserProfilesService,
         },
         {
           provide: CoursePartnerService,
@@ -408,7 +412,9 @@ describe('WebhooksService', () => {
       });
 
       expect(courseSaveRepoSpy).toHaveBeenCalledWith(mockCourse);
-      expect(createMailchimpCourseMergeField).toHaveBeenCalledWith(mockCourse.name);
+      expect(mockedServiceUserProfilesService.createMailchimpCourseMergeField).toHaveBeenCalledWith(
+        mockCourse.name,
+      );
       courseFindOneRepoSpy.mockClear();
       courseCreateRepoSpy.mockClear();
       courseSaveRepoSpy.mockClear();

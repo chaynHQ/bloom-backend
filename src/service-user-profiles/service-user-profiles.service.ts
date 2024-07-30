@@ -109,6 +109,7 @@ export class ServiceUserProfilesService {
       const userData = this.serializeUserData(user);
       await updateCrispProfile(userData.crispSchema, email);
       await updateMailchimpProfile(userData.mailchimpSchema, email);
+      logger.log(`Updated service user profiles user. Email: ${email}`);
     } catch (error) {
       if (error.toString() === 'Error: Not found') {
         // mailchimp account not found, create one
