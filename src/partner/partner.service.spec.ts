@@ -9,6 +9,7 @@ import { PartnerAdminEntity } from '../entities/partner-admin.entity';
 import { UserEntity } from '../entities/user.entity';
 import { mockPartnerRepositoryMethods } from '../../test/utils/mockedServices';
 import { mockPartnerEntity } from '../../test/utils/mockData';
+import { createQueryBuilderMock } from '../../test/utils/mockUtils';
 
 const createPartnerDto = {
   name: mockPartnerEntity.name,
@@ -59,4 +60,29 @@ describe('PartnerService', () => {
       await expect(service.createPartner(createPartnerDto)).rejects.toThrow();
     })
   });
+
+  describe('updatePartner', () => {
+    it('when supplied with correct data should return new partner', async () => {
+      jest.spyOn(mockPartnerRepository, 'createQueryBuilder').mockImplementationOnce(
+        createQueryBuilderMock({
+          execute: jest
+            .fn()
+            .mockResolvedValue({raw: [{ ...mockPartnerEntity, active: false }]})
+        }) as never, // TODO resolve this typescript issue
+      );
+
+      const response = await service.updatePartner(mockPartnerEntity.id, { active: false });
+      expect(response).toMatchObject({ ...mockPartnerEntity, active: false });
+    })
+
+    it('when supplied with incorrect partnerName should throw', async () => {
+      jest.spyOn(mockPartnerRepository, 'createQueryBuilder').mockImplementationOnce(() => {
+        throw new Error('Error unable to update');
+      })
+
+      await expect(
+        service.updatePartner(mockPartnerEntity.id, { active: false })
+      ).rejects.toThrow('Error unable to update');
+    })
+  })
 });

@@ -25,4 +25,23 @@ export class SlackMessageClient {
       return err;
     }
   }
+
+  public async sendMessageToBloomUserChannel(text: string): Promise<AxiosResponse | string> {
+    if (!isProduction) return; // only send messages in production environment
+
+    try {
+      const response = await apiCall({
+        url: process.env.SLACK_BLOOM_USERS_WEBHOOK_URL,
+        type: 'post',
+        data: {
+          text: text,
+        },
+      });
+      this.logger.log({ event: 'SESSION_FEEDBACK_SLACK_MESSAGE_SENT' });
+      return response;
+    } catch (err) {
+      this.logger.error('Unable to sendMessageToBloomUserSlackChannel', err);
+      return err;
+    }
+  }
 }

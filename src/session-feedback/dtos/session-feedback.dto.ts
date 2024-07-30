@@ -6,11 +6,6 @@ export class SessionFeedbackDto {
   @IsNotEmpty()
   @IsString()
   @ApiProperty({ type: String })
-  sessionFeedbackId: string;
-
-  @IsNotEmpty()
-  @IsString()
-  @ApiProperty({ type: String })
   sessionId: string;
 
   @IsNotEmpty()
@@ -22,7 +17,6 @@ export class SessionFeedbackDto {
   })
   feedbackTags: FEEDBACK_TAGS_ENUM;
 
-  @IsNotEmpty()
   @IsString()
   @ApiProperty({ type: String })
   feedbackDescription: string;
