@@ -135,6 +135,7 @@ export const mockUserEntity: UserEntity = {
   lastActiveAt: new Date(),
   createdAt: new Date(),
   updatedAt: new Date(),
+  deletedAt: null,
   partnerAccess: [],
   partnerAdmin: null,
   courseUser: [],
