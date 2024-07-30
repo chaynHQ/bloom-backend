@@ -91,24 +91,35 @@ export class ServiceUserProfilesService {
   async updateServiceUserProfilesUser(
     user: UserEntity,
     isCrispBaseUpdateRequired: boolean,
-    email: string,
+    isEmailUpdateRequired: boolean,
+    existingEmail: string,
   ) {
+    const email = isEmailUpdateRequired ? user.email : existingEmail;
+
     try {
       if (isCrispBaseUpdateRequired) {
         // Extra call required to update crisp "base" profile when name or sign up language is changed
         await updateCrispProfileBase(
           {
+            ...(isEmailUpdateRequired && { email: email }),
             person: {
               nickname: user.name,
               locales: [user.signUpLanguage || 'en'],
             },
           },
-          email,
+          existingEmail,
         );
       }
+
       const userData = this.serializeUserData(user);
       await updateCrispProfile(userData.crispSchema, email);
-      await updateMailchimpProfile(userData.mailchimpSchema, email);
+      await updateMailchimpProfile(
+        {
+          ...userData.mailchimpSchema,
+          ...(isEmailUpdateRequired && { email_address: email }),
+        },
+        existingEmail,
+      );
       logger.log(`Updated service user profiles user. Email: ${email}`);
     } catch (error) {
       if (error.toString() === 'Error: Not found') {
@@ -123,32 +134,6 @@ export class ServiceUserProfilesService {
         this.createCompleteMailchimpUserProfile(userWithRelations);
         logger.log(`Created and updated service user profiles user. Email: ${email}`);
       }
-      logger.error(`Update service user profiles user error - ${error}`);
-    }
-  }
-
-  async updateServiceUserEmailAndProfiles(user: UserEntity, email: string) {
-    try {
-      await updateCrispProfileBase(
-        {
-          email: user.email,
-          person: {
-            nickname: user.name,
-            locales: [user.signUpLanguage || 'en'],
-          },
-        },
-        email,
-      );
-      logger.log({ event: 'UPDATE_CRISP_PROFILE_BASE', userId: user.id });
-      const userData = this.serializeUserData(user);
-      await updateCrispProfile(userData.crispSchema, user.email);
-      logger.log({ event: 'UPDATE_CRISP_PROFILE', userId: user.id });
-      await updateMailchimpProfile(
-        { ...userData.mailchimpSchema, email_address: user.email },
-        email,
-      );
-      logger.log({ event: 'UPDATE_MAILCHIMP_PROFILE', userId: user.id });
-    } catch (error) {
       logger.error(`Update service user profiles user error - ${error}`);
     }
   }

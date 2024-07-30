@@ -221,20 +221,23 @@ export class UserService {
       fields: Object.keys(updateUserDto),
     });
 
+    const isEmailUpdateRequired = updateUserDto.email && user.email !== updateUserDto.email;
+
     if (
       Object.keys(updateUserDto).length === 1 &&
       !!updateUserDto.lastActiveAt &&
       updateUserDto.lastActiveAt.getDate() === user.lastActiveAt.getDate()
     ) {
       // Do nothing, prevent unnecessay updates to service profiles when last active date is same date
-    } else if (updateUserDto.email && user.email !== updateUserDto.email) {
-      this.serviceUserProfilesService.updateServiceUserEmailAndProfiles(newUserData, user.email);
     } else {
       const isCrispBaseUpdateRequired =
-        user.signUpLanguage !== updateUserDto.signUpLanguage && user.name !== updateUserDto.name;
+        isEmailUpdateRequired ||
+        user.signUpLanguage !== updateUserDto.signUpLanguage ||
+        user.name !== updateUserDto.name;
       this.serviceUserProfilesService.updateServiceUserProfilesUser(
         newUserData,
         isCrispBaseUpdateRequired,
+        isEmailUpdateRequired,
         user.email,
       );
     }

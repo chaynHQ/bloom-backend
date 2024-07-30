@@ -26,7 +26,7 @@ import {
   EMAIL_REMINDERS_FREQUENCY,
   SIMPLYBOOK_ACTION_ENUM,
   mailchimpMarketingPermissionId,
-} from './constants';
+} from '../utils/constants';
 
 jest.mock('src/api/crisp/crisp-api');
 jest.mock('src/api/mailchimp/mailchimp-api');
@@ -36,6 +36,7 @@ describe('Service user profiles', () => {
   const mockedUserRepository = createMock<Repository<UserEntity>>(mockUserRepositoryMethods);
 
   beforeEach(async () => {
+    jest.clearAllMocks();
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ServiceUserProfilesService,
@@ -175,10 +176,16 @@ describe('Service user profiles', () => {
 
   describe('updateServiceUserProfilesUser', () => {
     it('should update crisp and mailchimp profile user data', async () => {
-      await service.updateServiceUserProfilesUser(mockUserEntity, false, mockUserEntity.email);
+      await service.updateServiceUserProfilesUser(
+        mockUserEntity,
+        false,
+        false,
+        mockUserEntity.email,
+      );
 
       const lastActiveAt = mockUserEntity.lastActiveAt.toISOString();
 
+      expect(updateCrispProfile).toHaveBeenCalledTimes(1);
       expect(updateCrispProfile).toHaveBeenCalledWith(
         {
           marketing_permission: mockUserEntity.contactPermission,
@@ -189,6 +196,7 @@ describe('Service user profiles', () => {
         mockUserEntity.email,
       );
 
+      expect(updateMailchimpProfile).toHaveBeenCalledTimes(1);
       expect(updateMailchimpProfile).toHaveBeenCalledWith(
         {
           language: mockUserEntity.signUpLanguage,
@@ -218,7 +226,7 @@ describe('Service user profiles', () => {
       };
       const lastActiveAt = mockUserEntity.lastActiveAt.toISOString();
 
-      await service.updateServiceUserProfilesUser(mockUser, false, mockUser.email);
+      await service.updateServiceUserProfilesUser(mockUser, false, false, mockUser.email);
 
       expect(updateCrispProfile).toHaveBeenCalledWith(
         {
@@ -252,7 +260,12 @@ describe('Service user profiles', () => {
     });
 
     it('should additionally call crisp base profile update if required', async () => {
-      await service.updateServiceUserProfilesUser(mockUserEntity, true, mockUserEntity.email);
+      await service.updateServiceUserProfilesUser(
+        mockUserEntity,
+        true,
+        false,
+        mockUserEntity.email,
+      );
 
       expect(updateCrispProfile).toHaveBeenCalled();
       expect(updateMailchimpProfile).toHaveBeenCalled();
@@ -268,11 +281,41 @@ describe('Service user profiles', () => {
       );
     });
 
+    it("should update the user's email in crisp and mailchimp", async () => {
+      const oldEmail = mockUserEntity.email;
+      const newEmail = 'newemail@test.com';
+      await service.updateServiceUserProfilesUser(
+        { ...mockUserEntity, email: newEmail },
+        true,
+        true,
+        oldEmail,
+      );
+      const serialisedMockUserData = service.serializeUserData(mockUserEntity);
+      expect(updateCrispProfileBase).toHaveBeenCalledWith(
+        { email: newEmail, person: { locales: ['en'], nickname: 'name' } },
+        oldEmail,
+      );
+      expect(updateCrispProfile).toHaveBeenCalledTimes(1);
+      expect(updateCrispProfile).toHaveBeenCalledWith(
+        {
+          email_reminders_frequency: EMAIL_REMINDERS_FREQUENCY.TWO_MONTHS,
+          last_active_at: mockUserEntity.lastActiveAt.toISOString(),
+          marketing_permission: true,
+          service_emails_permission: true,
+        },
+        newEmail,
+      );
+      expect(updateMailchimpProfile).toHaveBeenCalledWith(
+        { ...serialisedMockUserData.mailchimpSchema, email_address: newEmail },
+        oldEmail,
+      );
+    });
+
     it('should not propagate external api call errors', async () => {
       const mocked = jest.mocked(updateMailchimpProfile);
       mocked.mockRejectedValue(new Error('Mailchimp API call failed'));
       await expect(
-        service.updateServiceUserProfilesUser(mockUserEntity, false, mockUserEntity.email),
+        service.updateServiceUserProfilesUser(mockUserEntity, false, false, mockUserEntity.email),
       ).resolves.not.toThrow();
       mocked.mockReset();
     });
@@ -586,50 +629,6 @@ describe('Service user profiles', () => {
         'C_FCN_S',
         'text',
       );
-    });
-  });
-  describe('updateServiceUserEmailAndProfiles', () => {
-    it("should update the user's email in crisp and mailchimp", async () => {
-      const oldEmail = mockUserEntity.email;
-      const newEmail = 'newemail@test.com';
-      await service.updateServiceUserEmailAndProfiles(
-        { ...mockUserEntity, email: newEmail },
-        oldEmail,
-      );
-      const serialisedMockUserData = service.serializeUserData(mockUserEntity);
-      expect(updateCrispProfileBase).toHaveBeenCalledWith(
-        { email: newEmail, person: { locales: ['en'], nickname: 'name' } },
-        oldEmail,
-      );
-      expect(updateCrispProfile).toHaveBeenCalledWith(
-        { ...serialisedMockUserData.crispSchema },
-        newEmail,
-      );
-      expect(updateMailchimpProfile).toHaveBeenCalledWith(
-        { ...serialisedMockUserData.mailchimpSchema, email_address: newEmail },
-        oldEmail,
-      );
-    });
-    it('should not throw if request to Mailchimp API call fails', async () => {
-      const mocked = jest.mocked(updateMailchimpProfile);
-      mocked.mockRejectedValue(new Error('Mailchimp API call failed'));
-      const oldEmail = mockUserEntity.email;
-      const newEmail = 'newemail@test.com';
-
-      await expect(
-        service.updateServiceUserEmailAndProfiles({ ...mockUserEntity, email: newEmail }, oldEmail),
-      ).resolves.not.toThrow();
-      mocked.mockReset();
-    });
-    it('should not throw if request to Crisp API call  fails', async () => {
-      const mocked = jest.mocked(updateCrispProfileBase);
-      mocked.mockRejectedValue(new Error('Crisp API call failed'));
-      const oldEmail = mockUserEntity.email;
-      const newEmail = 'newemail@test.com';
-      await expect(
-        service.updateServiceUserEmailAndProfiles({ ...mockUserEntity, email: newEmail }, oldEmail),
-      ).resolves.not.toThrow();
-      mocked.mockReset();
     });
   });
 });
