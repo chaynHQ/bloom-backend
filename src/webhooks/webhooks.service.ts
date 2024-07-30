@@ -9,20 +9,17 @@ import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
 import { UserEntity } from 'src/entities/user.entity';
 import { EventLoggerService } from 'src/event-logger/event-logger.service';
 import { ZapierSimplybookBodyDto } from 'src/partner-access/dtos/zapier-body.dto';
+import { ServiceUserProfilesService } from 'src/service-user-profiles/service-user-profiles.service';
 import { IUser } from 'src/user/user.interface';
 import { serializeZapierSimplyBookDtoToTherapySessionEntity } from 'src/utils/serialize';
-import {
-  createMailchimpCourseMergeField,
-  updateServiceUserProfilesTherapy,
-} from 'src/utils/serviceUserProfiles';
 import { WebhookCreateEventLogDto } from 'src/webhooks/dto/webhook-create-event-log.dto';
 import StoryblokClient from 'storyblok-js-client';
 import { ILike, MoreThan, Repository } from 'typeorm';
 import { CoursePartnerService } from '../course-partner/course-partner.service';
 import {
+  isProduction,
   SIMPLYBOOK_ACTION_ENUM,
   STORYBLOK_STORY_STATUS_ENUM,
-  isProduction,
   storyblokToken,
 } from '../utils/constants';
 import { StoryDto } from './dto/story.dto';
@@ -41,6 +38,7 @@ export class WebhooksService {
     @InjectRepository(TherapySessionEntity)
     private therapySessionRepository: Repository<TherapySessionEntity>,
     private eventLoggerService: EventLoggerService,
+    private serviceUserProfilesService: ServiceUserProfilesService,
     private slackMessageClient: SlackMessageClient,
   ) {}
 
@@ -127,7 +125,7 @@ export class WebhooksService {
         },
       });
 
-      updateServiceUserProfilesTherapy(partnerAccesses, user.email);
+      this.serviceUserProfilesService.updateServiceUserProfilesTherapy(partnerAccesses, user.email);
 
       this.logger.log(
         `Update therapy session webhook function COMPLETED for ${action} - ${user.email} - ${booking_code} - userId ${user_id}`,
@@ -253,7 +251,10 @@ export class WebhooksService {
           therapySession: true,
         },
       });
-      updateServiceUserProfilesTherapy(updatedPartnerAccesses, user.email);
+      this.serviceUserProfilesService.updateServiceUserProfilesTherapy(
+        updatedPartnerAccesses,
+        user.email,
+      );
       return therapySession;
     } catch (err) {
       const error = `newPartnerAccessTherapy - error saving new therapy session and partner access - email ${user.email} userId ${user.id} - ${err}`;
@@ -304,7 +305,7 @@ export class WebhooksService {
           course.slug = story.full_slug;
         } else {
           course = this.courseRepository.create(storyData);
-          createMailchimpCourseMergeField(courseName);
+          this.serviceUserProfilesService.createMailchimpCourseMergeField(courseName);
         }
 
         course.name = courseName;
