@@ -12,6 +12,7 @@ import { SubscriptionEntity } from 'src/entities/subscription.entity';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
 import { UserEntity } from 'src/entities/user.entity';
 import { PartnerService } from 'src/partner/partner.service';
+import { ServiceUserProfilesService } from 'src/service-user-profiles/service-user-profiles.service';
 import { SubscriptionUserService } from 'src/subscription-user/subscription-user.service';
 import { SubscriptionService } from 'src/subscription/subscription.service';
 import { TherapySessionService } from 'src/therapy-session/therapy-session.service';
@@ -38,6 +39,7 @@ import { FIREBASE, firebaseFactory } from './firebase-factory';
     PartnerAccessService,
     CourseUserService,
     PartnerService,
+    ServiceUserProfilesService,
     SubscriptionUserService,
     SubscriptionService,
     TherapySessionService,

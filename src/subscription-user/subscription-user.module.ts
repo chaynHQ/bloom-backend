@@ -9,6 +9,7 @@ import { SubscriptionEntity } from 'src/entities/subscription.entity';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
 import { UserEntity } from 'src/entities/user.entity';
 import { PartnerService } from 'src/partner/partner.service';
+import { ServiceUserProfilesService } from 'src/service-user-profiles/service-user-profiles.service';
 import { TherapySessionService } from 'src/therapy-session/therapy-session.service';
 import { ZapierWebhookClient } from '../api/zapier/zapier-webhook-client';
 import { FirebaseModule } from '../firebase/firebase.module';
@@ -37,6 +38,7 @@ import { SubscriptionUserService } from './subscription-user.service';
     SubscriptionService,
     UserService,
     PartnerAccessService,
+    ServiceUserProfilesService,
     ZapierWebhookClient,
     PartnerService,
     TherapySessionService,

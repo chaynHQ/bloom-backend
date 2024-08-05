@@ -13,6 +13,7 @@ import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
 import { UserEntity } from 'src/entities/user.entity';
 import { EventLoggerService } from 'src/event-logger/event-logger.service';
 import { PartnerService } from 'src/partner/partner.service';
+import { ServiceUserProfilesService } from 'src/service-user-profiles/service-user-profiles.service';
 import { WebhooksController } from './webhooks.controller';
 import { WebhooksService } from './webhooks.service';
 
@@ -34,6 +35,7 @@ import { WebhooksService } from './webhooks.service';
     WebhooksService,
     CoursePartnerService,
     PartnerService,
+    ServiceUserProfilesService,
     SlackMessageClient,
     EventLoggerService,
   ],

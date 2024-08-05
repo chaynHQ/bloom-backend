@@ -5,7 +5,7 @@ import _ from 'lodash';
 import { PartnerEntity } from 'src/entities/partner.entity';
 import { UserEntity } from 'src/entities/user.entity';
 import { Logger } from 'src/logger/logger';
-import { updateServiceUserProfilesPartnerAccess } from 'src/utils/serviceUserProfiles';
+import { ServiceUserProfilesService } from 'src/service-user-profiles/service-user-profiles.service';
 import { Repository } from 'typeorm';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
 import { FEATURES, PartnerAccessCodeStatusEnum } from '../utils/constants';
@@ -29,6 +29,7 @@ export class PartnerAccessService {
     private partnerAccessRepository: Repository<PartnerAccessEntity>,
     @InjectRepository(PartnerEntity)
     private partnerRepository: Repository<PartnerEntity>,
+    private readonly serviceUserProfilesService: ServiceUserProfilesService,
   ) {}
 
   async createPartnerAccess(
@@ -194,7 +195,10 @@ export class PartnerAccessService {
         },
         relations: { partner: true },
       });
-      updateServiceUserProfilesPartnerAccess(partnerAccesses, user.email);
+      this.serviceUserProfilesService.updateServiceUserProfilesPartnerAccess(
+        partnerAccesses,
+        user.email,
+      );
     } catch (error) {
       this.logger.error(
         `Error: Unable to update crisp profile for ${user.email}. Error: ${error.message} `,

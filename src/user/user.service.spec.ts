@@ -7,6 +7,7 @@ import { createCrispProfile, updateCrispProfile } from 'src/api/crisp/crisp-api'
 import { createMailchimpProfile, updateMailchimpProfile } from 'src/api/mailchimp/mailchimp-api';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { PartnerEntity } from 'src/entities/partner.entity';
+import { ServiceUserProfilesService } from 'src/service-user-profiles/service-user-profiles.service';
 import { SubscriptionUserService } from 'src/subscription-user/subscription-user.service';
 import { TherapySessionService } from 'src/therapy-session/therapy-session.service';
 import { EMAIL_REMINDERS_FREQUENCY, PartnerAccessCodeStatusEnum } from 'src/utils/constants';
@@ -99,6 +100,7 @@ describe('UserService', () => {
         },
         { provide: SubscriptionUserService, useValue: mockSubscriptionUserService },
         { provide: TherapySessionService, useValue: mockTherapySessionService },
+        ServiceUserProfilesService,
       ],
     }).compile();
 

@@ -1,8 +1,6 @@
 import mailchimp from '@mailchimp/mailchimp_marketing';
 import { createHash } from 'crypto';
-import { UserEntity } from 'src/entities/user.entity';
 import { mailchimpApiKey, mailchimpAudienceId, mailchimpServerPrefix } from 'src/utils/constants';
-import { createCompleteMailchimpUserProfile } from 'src/utils/serviceUserProfiles';
 import {
   ListMember,
   ListMemberPartial,
@@ -34,17 +32,18 @@ export const createMailchimpProfile = async (
   }
 };
 
-export const batchCreateMailchimpProfiles = async (users: UserEntity[]) => {
+export const batchCreateMailchimpProfiles = async (
+  userProfiles: Partial<UpdateListMemberRequest>[],
+) => {
   try {
     const operations = [];
 
-    users.forEach((user) => {
-      const profileData = createCompleteMailchimpUserProfile(user);
+    userProfiles.forEach((userProfile, index) => {
       operations.push({
         method: 'POST',
         path: `/lists/${mailchimpAudienceId}/members`,
-        operation_id: user.id,
-        body: JSON.stringify(profileData),
+        operation_id: index,
+        body: JSON.stringify(userProfile),
       });
     });
 

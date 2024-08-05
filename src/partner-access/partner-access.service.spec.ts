@@ -5,8 +5,8 @@ import { sub } from 'date-fns';
 import * as crispApi from 'src/api/crisp/crisp-api';
 import * as mailchimpApi from 'src/api/mailchimp/mailchimp-api';
 import { PartnerEntity } from 'src/entities/partner.entity';
+import { ServiceUserProfilesService } from 'src/service-user-profiles/service-user-profiles.service';
 import { GetUserDto } from 'src/user/dtos/get-user.dto';
-import * as profileData from 'src/utils/serviceUserProfiles';
 import {
   mockPartnerAccessEntity,
   mockPartnerAccessEntityBase,
@@ -60,6 +60,7 @@ describe('PartnerAccessService', () => {
   let repo: Repository<PartnerAccessEntity>;
   let mockPartnerRepository: DeepMocked<Repository<PartnerEntity>>;
   let mockPartnerAccessRepository: DeepMocked<Repository<PartnerAccessEntity>>;
+  let mockServiceUserProfilesService: DeepMocked<ServiceUserProfilesService>;
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -68,6 +69,7 @@ describe('PartnerAccessService', () => {
     mockPartnerAccessRepository = createMock<Repository<PartnerAccessEntity>>(
       mockPartnerAccessRepositoryMethods,
     );
+    mockServiceUserProfilesService = createMock<ServiceUserProfilesService>();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -80,6 +82,7 @@ describe('PartnerAccessService', () => {
           provide: getRepositoryToken(PartnerEntity),
           useValue: mockPartnerRepository,
         },
+        { provide: ServiceUserProfilesService, useValue: mockServiceUserProfilesService },
       ],
     }).compile();
 
@@ -145,8 +148,6 @@ describe('PartnerAccessService', () => {
       });
       // Mocks that the accesscode already exists
       jest.spyOn(repo, 'findOne').mockResolvedValueOnce(mockPartnerAccessEntity);
-      // Observer on the service user profiles method
-      jest.spyOn(profileData, 'updateServiceUserProfilesPartnerAccess');
 
       const partnerAccess = await service.assignPartnerAccess(mockUserEntity, '123456');
 
@@ -156,10 +157,9 @@ describe('PartnerAccessService', () => {
         activatedAt: partnerAccess.activatedAt,
       });
 
-      expect(profileData.updateServiceUserProfilesPartnerAccess).toHaveBeenCalledWith(
-        [mockPartnerAccessEntity],
-        mockUserEntity.email,
-      );
+      expect(
+        mockServiceUserProfilesService.updateServiceUserProfilesPartnerAccess,
+      ).toHaveBeenCalledWith([mockPartnerAccessEntity], mockUserEntity.email);
     });
 
     it('should assign partner access even if crisp profile api fails', async () => {

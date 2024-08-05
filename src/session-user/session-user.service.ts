@@ -2,17 +2,15 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import _ from 'lodash';
 import { UserEntity } from 'src/entities/user.entity';
-import { updateServiceUserProfilesCourse } from 'src/utils/serviceUserProfiles';
+import { ServiceUserProfilesService } from 'src/service-user-profiles/service-user-profiles.service';
 import { Repository } from 'typeorm';
 import { CourseUserService } from '../course-user/course-user.service';
-import { CourseService } from '../course/course.service';
 import { CourseUserEntity } from '../entities/course-user.entity';
 import { CourseEntity } from '../entities/course.entity';
 import { SessionUserEntity } from '../entities/session-user.entity';
 import { Logger } from '../logger/logger';
 import { SessionService } from '../session/session.service';
 import { GetUserDto } from '../user/dtos/get-user.dto';
-import { UserService } from '../user/user.service';
 import { STORYBLOK_STORY_STATUS_ENUM } from '../utils/constants';
 import { formatCourseUserObject, formatCourseUserObjects } from '../utils/serialize';
 import { SessionUserDto } from './dtos/session-user.dto';
@@ -29,9 +27,8 @@ export class SessionUserService {
     private courseRepository: Repository<CourseEntity>,
     @InjectRepository(UserEntity) private userRepository: Repository<UserEntity>,
     private readonly courseUserService: CourseUserService,
-    private readonly userService: UserService,
     private readonly sessionService: SessionService,
-    private readonly courseService: CourseService,
+    private serviceUserProfilesService: ServiceUserProfilesService,
   ) {}
 
   private async checkCourseIsComplete(
@@ -129,7 +126,7 @@ export class SessionUserService {
       courseId,
     });
 
-    updateServiceUserProfilesCourse(updatedCourseUser, user.email);
+    this.serviceUserProfilesService.updateServiceUserProfilesCourse(updatedCourseUser, user.email);
 
     return formatCourseUserObject(updatedCourseUser);
   }
@@ -203,7 +200,7 @@ export class SessionUserService {
     courseUser.course = course;
     const formattedResponse = formatCourseUserObjects([courseUser])[0];
 
-    updateServiceUserProfilesCourse(courseUser, user.email);
+    this.serviceUserProfilesService.updateServiceUserProfilesCourse(courseUser, user.email);
 
     return formattedResponse;
   }
