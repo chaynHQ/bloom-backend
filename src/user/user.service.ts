@@ -133,7 +133,10 @@ export class UserService {
     return { userEntity: queryResult, userDto: formatUserObject(queryResult) };
   }
 
-  public async getUserProfile(id: string): Promise<UserEntity> {
+  public async getUserProfile(id: string): Promise<{
+    userEntity: UserEntity | undefined;
+    userDto: GetUserDto | undefined;
+  }> {
     const queryResult = await this.userRepository
       .createQueryBuilder('user')
       .leftJoinAndSelect('user.partnerAccess', 'partnerAccess')
@@ -155,7 +158,7 @@ export class UserService {
       throw new HttpException('USER NOT FOUND', HttpStatus.NOT_FOUND);
     }
 
-    return queryResult
+    return { userEntity: queryResult, userDto: formatUserObject(queryResult) };
   }
 
   public async getUserById(id: string): Promise<UserEntity | undefined> {
