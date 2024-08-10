@@ -137,7 +137,6 @@ export class UserService {
   }
 
   public async getUserProfile(id: string): Promise<UserEntity> {
-    console.log('getUserProfile id', id)
     const queryResult = await this.userRepository
       .createQueryBuilder('user')
       .leftJoinAndSelect('user.partnerAccess', 'partnerAccess')
@@ -155,7 +154,6 @@ export class UserService {
       .where('user.id = :id', { id })
       .getOne();
 
-    console.log('queryResult', queryResult)
     if (!queryResult) {
       throw new HttpException('USER NOT FOUND', HttpStatus.NOT_FOUND);
     }
