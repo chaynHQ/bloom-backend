@@ -50,22 +50,6 @@ export class UserController {
     return user as GetUserDto;
   }
 
-  /**
-   * This POST endpoint deviates from REST patterns.
-   * Please use `getUserByFirebaseId` above which is a GET endpoint.
-   * Safe to delete function below from July 2024 - allowing for caches to clear
-   */
-  @ApiBearerAuth('access-token')
-  @ApiOperation({
-    description:
-      'Returns user profile data with their nested partner access, partner admin, course user and session user data.',
-  })
-  @Post('/me')
-  @UseGuards(FirebaseAuthGuard)
-  async getUserProfileByFirebaseId(@Req() req: Request): Promise<UserEntity> {
-    return await this.userService.getUserProfile(req['userEntity'].id);
-  }
-
   @ApiBearerAuth()
   @Delete()
   @UseGuards(FirebaseAuthGuard)
@@ -119,13 +103,5 @@ export class UserController {
       : { include: [], fields: [], limit: undefined };
     const users = await this.userService.getUsers(userQuery, include || [], fields, limit);
     return users.map((u) => formatUserObject(u));
-  }
-
-  // Use only if users have not been added to mailchimp due to e.g. an ongoing bug
-  @ApiBearerAuth()
-  @Post('/bulk-mailchimp-upload')
-  @UseGuards(FirebaseAuthGuard)
-  async bulkUploadMailchimpProfiles() {
-    return await this.userService.bulkUploadMailchimpProfiles();
   }
 }

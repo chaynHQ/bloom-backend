@@ -55,9 +55,11 @@ Chayn team members usually respond within 3 business days.
 
 Chayn is open to all kinds of contributions, such as:
 
-- additional software tests
-- code of any kind (enhancements, new features, maintenance)
-- no-code (documenation, translations) \*see spam policy below for accepted documentation changes.
+- additional software tests / test coverage
+- dependency updates *check Dependabot pull requests 
+- code (requested features, bug fixes, quality enhancements, maintenance help)
+- accessibility and language support.
+- no-code (documentation, translations) \*see spam policy below for accepted documentation changes.
 
 # Chayn's Spam Contribution Policy 🚫
 
@@ -135,7 +137,7 @@ We suggest starting with issues labeled `good first issue` or `complexity: begin
 
 ### Issue Limit Policies
 
-**To ensure we give a fair opportunity to everyone, Chayn maintainers may limit the number of issues you can be assigned.** This allows us to manage our open-source contributions at a sustainble pace and ensure there are always open issues for everyone.
+**To ensure we give a fair opportunity to everyone, Chayn maintainers may limit the number of issues you can be assigned.** This allows us to manage our open-source contributions at a sustainable pace and ensure there are always open issues for everyone.
 
 - **Only 1 issue of a specific complexity level in a single repository may be assigned to a contributor at a time.** To be assigned another, you must complete or close your previous issue. For example, a contributor can have 1 beginner issue, 1 intermediate issue, and 1 complex issue open in a single repository at a time. But they cannot have 3 beginner issues open, or 2 intermediate issues open at once in a single repository.
 - **Issues may be capped at any time** and for any reason, such as reserving for events like volunteer programs or Hacktoberfest. 

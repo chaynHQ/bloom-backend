@@ -1,13 +1,13 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { formatPartnerObject } from 'src/utils/serialize';
 import { PartnerEntity } from '../entities/partner.entity';
 import { SuperAdminAuthGuard } from '../partner-admin/super-admin-auth.guard';
 import { ControllerDecorator } from '../utils/controller.decorator';
 import { CreatePartnerDto } from './dtos/create-partner.dto';
-import { DeletePartnerDto } from './dtos/delete-partner.dto';
 import { IPartner } from './partner.interface';
 import { PartnerService } from './partner.service';
+import { UpdatePartnerDto } from './dtos/update-partner.dto';
 
 @ApiTags('Partner')
 @ControllerDecorator()
@@ -46,10 +46,13 @@ export class PartnerController {
 
   @ApiBearerAuth('access-token')
   @UseGuards(SuperAdminAuthGuard)
-  @Post('delete')
-  @ApiOperation({ description: 'Deletes a partner profile and makes partnerAccess inactive' })
-  @ApiBody({ type: DeletePartnerDto })
-  async deletePartner(@Body() deletePartnerDto: DeletePartnerDto) {
-    return this.partnerService.deletePartner(deletePartnerDto);
+  @Patch(':id')
+  @ApiOperation({ description: 'Update a partner profile and makes partner active or inactive' })
+  @ApiBody({ type: UpdatePartnerDto })
+  async updatePartner(
+    @Param() { id },
+    @Body() updatePartnerDto: UpdatePartnerDto,
+  ) {
+    return this.partnerService.updatePartner(id, updatePartnerDto);
   }
 }
