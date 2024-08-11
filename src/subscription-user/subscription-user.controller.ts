@@ -5,7 +5,7 @@ import { UserEntity } from 'src/entities/user.entity';
 import { FirebaseAuthGuard } from '../firebase/firebase-auth.guard';
 import { ControllerDecorator } from '../utils/controller.decorator';
 import { CreateSubscriptionUserDto } from './dto/create-subscription-user.dto';
-import { GetSubscriptionUserDto, GetSubscriptionUsersDto } from './dto/get-subscription-user.dto';
+import { GetSubscriptionUserDto } from './dto/get-subscription-user.dto';
 import { UpdateSubscriptionUserDto } from './dto/update-subscription-user.dto';
 import { ISubscriptionUser } from './subscription-user.interface';
 import { SubscriptionUserService } from './subscription-user.service';
@@ -22,7 +22,7 @@ export class SubscriptionUserController {
     description: 'Returns all the subscriptions of the authenticated user.',
   })
   @UseGuards(FirebaseAuthGuard)
-  async getUserSubscriptions(@Req() req: Request): Promise<GetSubscriptionUsersDto[]> {
+  async getUserSubscriptions(@Req() req: Request): Promise<GetSubscriptionUserDto[]> {
     const user = req['userEntity'] as UserEntity;
     const userId = user.id;
 
@@ -40,10 +40,7 @@ export class SubscriptionUserController {
       return dto;
     });
 
-    const result = new GetSubscriptionUsersDto();
-    result.subscriptions = subscriptionDtos;
-
-    return [result];
+    return subscriptionDtos;
   }
 
   @Post('/whatsapp')
