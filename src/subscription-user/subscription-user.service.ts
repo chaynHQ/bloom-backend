@@ -153,4 +153,15 @@ export class SubscriptionUserService {
       );
     }
   }
+
+  async getSubscriptions(userId: string): Promise<SubscriptionUserEntity[]> {
+    const userSubscriptions = await this.subscriptionUserRepository.find({
+      where: { userId: userId },
+      relations: ['subscription'],
+    });
+
+    this.logger.log(`User ${userId} has ${userSubscriptions.length} subscriptions`);
+
+    return userSubscriptions;
+  }
 }
