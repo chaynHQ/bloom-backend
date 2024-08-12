@@ -155,13 +155,17 @@ export class SubscriptionUserService {
   }
 
   async getSubscriptions(userId: string): Promise<SubscriptionUserEntity[]> {
-    const userSubscriptions = await this.subscriptionUserRepository.find({
-      where: { userId: userId },
-      relations: ['subscription'],
-    });
+    try {
+      const userSubscriptions = await this.subscriptionUserRepository.find({
+        where: { userId: userId },
+        relations: ['subscription'],
+      });
 
-    this.logger.log(`User ${userId} has ${userSubscriptions.length} subscriptions`);
+      this.logger.log(`User ${userId} has ${userSubscriptions.length} subscriptions`);
 
-    return userSubscriptions;
+      return userSubscriptions;
+    } catch (err) {
+      throw new HttpException(`getSubscriptions error - ${err}`, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
   }
 }
