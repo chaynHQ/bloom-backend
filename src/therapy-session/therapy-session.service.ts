@@ -36,7 +36,7 @@ export class TherapySessionService {
       });
 
     await this.slackMessageClient.sendMessageToTherapySlackChannel(
-      `User has requested to be deleted - please delete user with emails ${userEmail + emails.join(', ')} from Simplybook, Crisp and from Mailchimp`,
+      `User has been deleted from bloom - please remove the accounts associated with ${userEmail + emails.join(', ')} from Simplybook, Crisp and from Mailchimp`,
     );
 
     // redact email from therapy sessions
