@@ -17,6 +17,7 @@ import { SuperAdminAuthGuard } from 'src/partner-admin/super-admin-auth.guard';
 import { formatUserObject } from 'src/utils/serialize';
 import { FirebaseAuthGuard } from '../firebase/firebase-auth.guard';
 import { ControllerDecorator } from '../utils/controller.decorator';
+import { AdminUpdateUserDto } from './dtos/admin-update-user.dto';
 import { CreateUserDto } from './dtos/create-user.dto';
 import { GetUserDto } from './dtos/get-user.dto';
 import { UpdateUserDto } from './dtos/update-user.dto';
@@ -84,14 +85,15 @@ export class UserController {
   @Patch()
   @UseGuards(FirebaseAuthGuard)
   async updateUser(@Body() updateUserDto: UpdateUserDto, @Req() req: Request) {
+    console.log('>>>>', updateUserDto);
     return await this.userService.updateUser(updateUserDto, req['user'].user.id);
   }
 
   @ApiBearerAuth()
   @Patch('/admin/:id')
   @UseGuards(SuperAdminAuthGuard)
-  async adminUpdateUser(@Param() { id }, @Body() updateUserDto: UpdateUserDto) {
-    return await this.userService.updateUser(updateUserDto, id);
+  async adminUpdateUser(@Param() { id }, @Body() adminUpdateUserDto: AdminUpdateUserDto) {
+    return await this.userService.adminUpdateUser(adminUpdateUserDto, id);
   }
 
   @ApiBearerAuth()
@@ -103,13 +105,5 @@ export class UserController {
       : { include: [], fields: [], limit: undefined };
     const users = await this.userService.getUsers(userQuery, include || [], fields, limit);
     return users.map((u) => formatUserObject(u));
-  }
-
-  // Use only if users have not been added to mailchimp due to e.g. an ongoing bug
-  @ApiBearerAuth()
-  @Post('/bulk-mailchimp-upload')
-  @UseGuards(SuperAdminAuthGuard)
-  async bulkUploadMailchimpProfiles() {
-    return await this.userService.bulkUploadMailchimpProfiles();
   }
 }
