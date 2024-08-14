@@ -85,7 +85,6 @@ export class UserController {
   @Patch()
   @UseGuards(FirebaseAuthGuard)
   async updateUser(@Body() updateUserDto: UpdateUserDto, @Req() req: Request) {
-    console.log('>>>>', updateUserDto);
     return await this.userService.updateUser(updateUserDto, req['user'].user.id);
   }
 
