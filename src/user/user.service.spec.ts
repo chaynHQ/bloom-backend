@@ -30,6 +30,7 @@ import { createQueryBuilderMock } from '../../test/utils/mockUtils';
 import { AuthService } from '../auth/auth.service';
 import { UserEntity } from '../entities/user.entity';
 import { PartnerAccessService } from '../partner-access/partner-access.service';
+import { AdminUpdateUserDto } from './dtos/admin-update-user.dto';
 import { CreateUserDto } from './dtos/create-user.dto';
 import { UpdateUserDto } from './dtos/update-user.dto';
 import { UserService } from './user.service';
@@ -540,6 +541,21 @@ describe('UserService', () => {
         .mockImplementationOnce(async () => [{ ...mockUserEntity, email: 'a@b.com' }]);
       const users = await service.getUsers({ email: 'a@b.com' }, [], [], 10);
       expect(users).toEqual([{ ...mockUserEntity, email: 'a@b.com' }]);
+    });
+  });
+
+  describe('adminUpdateUser', () => {
+    it("should update user's superAdmin status", async () => {
+      const user = mockUserEntity;
+      const userSaveSpy = jest.spyOn(repo, 'save').mockImplementationOnce(async () => {
+        return user;
+      });
+      const updatedUser = await service.adminUpdateUser(
+        { isSuperAdmin: true } as AdminUpdateUserDto,
+        user.id,
+      );
+      expect(updatedUser).toHaveProperty('isSuperAdmin', true);
+      expect(userSaveSpy).toHaveBeenCalled();
     });
   });
 });

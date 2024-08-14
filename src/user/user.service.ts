@@ -17,6 +17,7 @@ import { AuthService } from '../auth/auth.service';
 import { basePartnerAccess, PartnerAccessService } from '../partner-access/partner-access.service';
 import { formatUserObject } from '../utils/serialize';
 import { generateRandomString } from '../utils/utils';
+import { AdminUpdateUserDto } from './dtos/admin-update-user.dto';
 import { CreateUserDto } from './dtos/create-user.dto';
 import { GetUserDto } from './dtos/get-user.dto';
 import { UpdateUserDto } from './dtos/update-user.dto';
@@ -243,6 +244,28 @@ export class UserService {
     }
 
     return updatedUser;
+  }
+
+  public async adminUpdateUser(updateUserDto: Partial<AdminUpdateUserDto>, userId: string) {
+    const { isSuperAdmin, ...updateUserDtoWithoutSuperAdmin } = updateUserDto;
+
+    await this.updateUser(updateUserDtoWithoutSuperAdmin, userId);
+
+    if (typeof isSuperAdmin !== 'undefined') {
+      const user = await this.userRepository.findOneBy({ id: userId });
+      if (user.isSuperAdmin !== isSuperAdmin) {
+        const updatedUser = await this.userRepository.save({
+          ...user,
+          isSuperAdmin,
+        });
+        this.logger.log({
+          event: USER_SERVICE_EVENTS.USER_UPDATED,
+          userId: user.id,
+          fields: ['isSuperAdmin'],
+        });
+        return updatedUser;
+      }
+    }
   }
 
   public async deleteCypressTestUsers(clean = false): Promise<UserEntity[]> {
