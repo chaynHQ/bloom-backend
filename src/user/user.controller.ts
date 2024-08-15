@@ -45,8 +45,9 @@ export class UserController {
   @Get('/me')
   @UseGuards(FirebaseAuthGuard)
   async getUserByFirebaseId(@Req() req: Request): Promise<GetUserDto> {
-    await this.userService.updateUser({ lastActiveAt: new Date() }, req['userEntity'].id);
-    return (await this.userService.getUserProfile(req['userEntity'].id)).userDto;
+    const user = req['userEntity'];
+    this.userService.updateUser({ lastActiveAt: new Date() }, user.id);
+    return formatUserObject(user);
   }
 
   @ApiBearerAuth()
@@ -82,7 +83,7 @@ export class UserController {
   @ApiBearerAuth()
   @Patch()
   @UseGuards(FirebaseAuthGuard)
-  async updateUser(@Body() updateUserDto: UpdateUserDto, @Req() req: Request) {
+  async updateUser(@Body() updateUserDto: UpdateUserDto, @Req() req: Request): Promise<UserEntity> {
     return await this.userService.updateUser(updateUserDto, req['userEntity'].id);
   }
 
