@@ -1,5 +1,6 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { deleteMailchimpProfile } from 'src/api/mailchimp/mailchimp-api';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { PartnerEntity } from 'src/entities/partner.entity';
 import { UserEntity } from 'src/entities/user.entity';
@@ -12,7 +13,7 @@ import { SIGNUP_TYPE } from 'src/utils/constants';
 import { FIREBASE_ERRORS } from 'src/utils/errors';
 import { FIREBASE_EVENTS, USER_SERVICE_EVENTS } from 'src/utils/logs';
 import { ILike, IsNull, Not, Repository } from 'typeorm';
-import { deleteCypressCrispProfiles } from '../api/crisp/crisp-api';
+import { deleteCrispProfile, deleteCypressCrispProfiles } from '../api/crisp/crisp-api';
 import { AuthService } from '../auth/auth.service';
 import { basePartnerAccess, PartnerAccessService } from '../partner-access/partner-access.service';
 import { formatUserObject } from '../utils/serialize';
@@ -268,30 +269,74 @@ export class UserService {
     }
   }
 
-  public async deleteCypressTestUsers(clean = false): Promise<UserEntity[]> {
-    let deletedUsers: UserEntity[] = [];
-    try {
-      const queryResult = await this.userRepository
-        .createQueryBuilder('user')
-        .select()
-        .where('user.name LIKE :searchTerm', { searchTerm: `%Cypress test%` })
-        .getMany();
+  // Function to hard delete users in batches, required to clean up e.g. cypress test accounts
+  // Deleted users in batches of 10 per 1 second, due to firebase rate limiting
+  public async batchDeleteUsers(users) {
+    const BATCH_SIZE = 10; // Users to delete per second
+    const INTERVAL = 100; // Interval between batches in milliseconds
 
-      deletedUsers = await Promise.all(
-        queryResult.map(async (user) => {
+    const deletedUsers: UserEntity[] = [];
+    let startIndex = 0;
+
+    while (startIndex < users.length) {
+      const batch = users.slice(startIndex, startIndex + BATCH_SIZE);
+
+      await Promise.all(
+        batch.map(async (user) => {
           try {
-            // TODO: replace me - temporarily disabled due to too many tests accounts to delete, causing 429 errors on crisp API
-            // once crisp test users have been cleared using the clean function, and there are <50 test users in crisp, this can be replaced
-            // await deleteCrispProfile(user.email);
-            await this.authService.deleteFirebaseUser(user.firebaseUid);
-            await this.userRepository.delete(user);
-            return user;
+            await deleteCrispProfile(user.email);
           } catch (error) {
-            await this.userRepository.delete(user);
-            throw error;
+            this.logger.warn(
+              `deleteCypressTestUsers - unable to delete crisp profile for user ${user.id}`,
+              error,
+            );
+          }
+          try {
+            await deleteMailchimpProfile(user.email);
+          } catch (error) {
+            this.logger.warn(
+              `deleteCypressTestUsers - unable to delete mailchimp profile for user ${user.id}`,
+              error,
+            );
+          }
+          try {
+            await this.authService.deleteFirebaseUser(user.firebaseUid);
+          } catch (error) {
+            this.logger.warn(
+              `deleteCypressTestUsers - unable to delete firebase profile for user ${user.id}`,
+              error,
+            );
+          }
+          try {
+            await this.userRepository.delete(user.id);
+            deletedUsers.push(user);
+          } catch (error) {
+            this.logger.error(
+              `deleteCypressTestUsers - Unable to delete db record for user ${user.id}`,
+              error,
+            );
           }
         }),
       );
+
+      startIndex += BATCH_SIZE;
+      await new Promise((resolve) => setTimeout(resolve, INTERVAL)); // Wait before processing next batch
+    }
+
+    this.logger.log(`deleteCypressTestUsers - successfully deleted ${deletedUsers.length} users`);
+    return deletedUsers;
+  }
+
+  public async deleteCypressTestUsers(clean = false): Promise<UserEntity[]> {
+    let deletedUsers: UserEntity[];
+    try {
+      const queryResult = await this.userRepository.find({
+        where: {
+          email: ILike('%cypresstestemail+%'),
+        },
+      });
+
+      deletedUsers = await this.batchDeleteUsers(queryResult);
     } catch (error) {
       // If this fails we don't want to break cypress tests but we want to be alerted
       this.logger.error(`deleteCypressTestUsers - Unable to delete all cypress users`, error);
@@ -312,7 +357,6 @@ export class UserService {
       this.logger.error(`deleteCypressTestUsers - Unable to clean all cypress users`, error);
     }
 
-    this.logger.log(`deleteCypressTestUsers - Successfully deleted ${deletedUsers.length} users`);
     return deletedUsers;
   }
 
