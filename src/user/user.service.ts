@@ -9,7 +9,7 @@ import { Logger } from 'src/logger/logger';
 import { ServiceUserProfilesService } from 'src/service-user-profiles/service-user-profiles.service';
 import { SubscriptionUserService } from 'src/subscription-user/subscription-user.service';
 import { TherapySessionService } from 'src/therapy-session/therapy-session.service';
-import { SIGNUP_TYPE } from 'src/utils/constants';
+import { isProduction, SIGNUP_TYPE } from 'src/utils/constants';
 import { FIREBASE_ERRORS } from 'src/utils/errors';
 import { FIREBASE_EVENTS, USER_SERVICE_EVENTS } from 'src/utils/logs';
 import { ILike, IsNull, Not, Repository } from 'typeorm';
@@ -327,16 +327,33 @@ export class UserService {
     return deletedUsers;
   }
 
+  public async bulkDeleteUsers(): Promise<UserEntity[]> {
+    if (isProduction) {
+      throw new Error('Bulk delete cannot be performed on production database');
+    }
+
+    let deletedUsers: UserEntity[];
+
+    try {
+      const users = await this.userRepository.find();
+
+      deletedUsers = await this.batchDeleteUsers(users);
+    } catch (error) {
+      this.logger.error(`deleteFilteredUsers - Unable to delete all users`, error);
+    }
+    return deletedUsers;
+  }
+
   public async deleteCypressTestUsers(clean = false): Promise<UserEntity[]> {
     let deletedUsers: UserEntity[];
     try {
-      const queryResult = await this.userRepository.find({
+      const users = await this.userRepository.find({
         where: {
           email: ILike('%cypresstestemail+%'),
         },
       });
 
-      deletedUsers = await this.batchDeleteUsers(queryResult);
+      deletedUsers = await this.batchDeleteUsers(users);
     } catch (error) {
       // If this fails we don't want to break cypress tests but we want to be alerted
       this.logger.error(`deleteCypressTestUsers - Unable to delete all cypress users`, error);
