@@ -58,13 +58,6 @@ export class UserController {
     return await this.userService.deleteUser(req['user'].user as UserEntity);
   }
 
-  @ApiBearerAuth('access-token')
-  @Delete('/bulk-delete')
-  @UseGuards(SuperAdminAuthGuard)
-  async bulkDeleteUsers(): Promise<UserEntity[]> {
-    return await this.userService.bulkDeleteUsers();
-  }
-
   // This route must go before the Delete user route below as we want nestjs to check against this one first
   @ApiBearerAuth('access-token')
   @Delete('/cypress')
