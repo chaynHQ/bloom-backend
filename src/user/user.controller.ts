@@ -17,6 +17,7 @@ import { SuperAdminAuthGuard } from 'src/partner-admin/super-admin-auth.guard';
 import { formatUserObject } from 'src/utils/serialize';
 import { FirebaseAuthGuard } from '../firebase/firebase-auth.guard';
 import { ControllerDecorator } from '../utils/controller.decorator';
+import { AdminUpdateUserDto } from './dtos/admin-update-user.dto';
 import { CreateUserDto } from './dtos/create-user.dto';
 import { GetUserDto } from './dtos/get-user.dto';
 import { UpdateUserDto } from './dtos/update-user.dto';
@@ -90,8 +91,8 @@ export class UserController {
   @ApiBearerAuth()
   @Patch('/admin/:id')
   @UseGuards(SuperAdminAuthGuard)
-  async adminUpdateUser(@Param() { id }, @Body() updateUserDto: UpdateUserDto) {
-    return await this.userService.updateUser(updateUserDto, id);
+  async adminUpdateUser(@Param() { id }, @Body() adminUpdateUserDto: AdminUpdateUserDto) {
+    return await this.userService.adminUpdateUser(adminUpdateUserDto, id);
   }
 
   @ApiBearerAuth()

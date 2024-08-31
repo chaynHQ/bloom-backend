@@ -57,7 +57,7 @@ export class SuperAdminAuthGuard implements CanActivate {
       );
     }
     try {
-      const user = await this.userRepository.findOneBy({ firebaseUid: userUid });
+      const user = await this.userRepository.findOneByOrFail({ firebaseUid: userUid });
       request['userEntity'] = user;
       return !!user.isSuperAdmin && user.email.indexOf('@chayn.co') !== -1;
     } catch (error) {

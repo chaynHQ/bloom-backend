@@ -1,5 +1,4 @@
 import { AxiosResponse } from 'axios';
-import { Logger } from '../../logger/logger';
 import { crispToken, crispWebsiteId } from '../../utils/constants';
 import apiCall from '../apiCalls';
 import {
@@ -17,8 +16,6 @@ const headers = {
   'X-Crisp-Tier': 'plugin',
   '-ContentType': 'application/json',
 };
-
-const logger = new Logger('UserService');
 
 export const createCrispProfile = async (
   newPeopleProfile: CrispProfileBase,
@@ -105,7 +102,7 @@ export const deleteCrispProfile = async (email: string) => {
       headers,
     });
   } catch (error) {
-    logger.error(`Delete crisp profile API call failed: ${error}`);
+    throw new Error(`Delete crisp profile API call failed: ${error}`);
   }
 };
 
