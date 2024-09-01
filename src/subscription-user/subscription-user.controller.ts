@@ -2,6 +2,7 @@ import { Body, Controller, Get, Param, Patch, Post, Req, UseGuards } from '@nest
 import { ApiBearerAuth, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { Request } from 'express';
 import { UserEntity } from 'src/entities/user.entity';
+import { mapToSubscriptionUserDtos } from 'src/utils/serialize';
 import { FirebaseAuthGuard } from '../firebase/firebase-auth.guard';
 import { ControllerDecorator } from '../utils/controller.decorator';
 import { CreateSubscriptionUserDto } from './dto/create-subscription-user.dto';
@@ -16,7 +17,7 @@ import { SubscriptionUserService } from './subscription-user.service';
 export class SubscriptionUserController {
   constructor(private readonly subscriptionUserService: SubscriptionUserService) {}
 
-  @Get('/subscription_user')
+  @Get('/')
   @ApiBearerAuth('access-token')
   @ApiOperation({
     description: 'Returns all the subscriptions of the authenticated user.',
@@ -28,17 +29,7 @@ export class SubscriptionUserController {
 
     const userSubscriptions = await this.subscriptionUserService.getSubscriptions(userId);
 
-    const subscriptionDtos = userSubscriptions.map((subscriptionUser) => {
-      const dto = new GetSubscriptionUserDto();
-      dto.id = subscriptionUser.id;
-      dto.subscriptionId = subscriptionUser.subscription.id;
-      dto.subscriptionName = subscriptionUser.subscription.name;
-      dto.subscriptionInfo = subscriptionUser.subscription.info;
-      dto.createdAt = subscriptionUser.createdAt;
-      dto.cancelledAt = subscriptionUser.cancelledAt;
-      dto.subscriptionInfo = subscriptionUser.subscriptionInfo;
-      return dto;
-    });
+    const subscriptionDtos = mapToSubscriptionUserDtos(userSubscriptions);
 
     return subscriptionDtos;
   }

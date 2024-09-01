@@ -2,6 +2,7 @@ import { PartnerAdminEntity } from 'src/entities/partner-admin.entity';
 import { PartnerEntity } from 'src/entities/partner.entity';
 import { IPartnerFeature } from 'src/partner-feature/partner-feature.interface';
 import { IPartner } from 'src/partner/partner.interface';
+import { GetSubscriptionUserDto } from 'src/subscription-user/dto/get-subscription-user.dto';
 import { CourseUserEntity } from '../entities/course-user.entity';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
 import { SubscriptionUserEntity } from '../entities/subscription-user.entity';
@@ -202,4 +203,20 @@ export const formatSubscriptionObject = (
     createdAt: userSubscription.createdAt,
     cancelledAt: userSubscription.cancelledAt,
   };
+};
+
+export const mapToSubscriptionUserDtos = (
+  userSubscriptions: SubscriptionUserEntity[],
+): GetSubscriptionUserDto[] => {
+  return userSubscriptions.map((subscriptionUser) => {
+    const dto = new GetSubscriptionUserDto();
+    dto.id = subscriptionUser.id;
+    dto.subscriptionId = subscriptionUser.subscription.id;
+    dto.subscriptionName = subscriptionUser.subscription.name;
+    dto.subscriptionInfo = subscriptionUser.subscription.info;
+    dto.createdAt = subscriptionUser.createdAt;
+    dto.cancelledAt = subscriptionUser.cancelledAt;
+    dto.subscriptionInfo = subscriptionUser.subscriptionInfo;
+    return dto;
+  });
 };
