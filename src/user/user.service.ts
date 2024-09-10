@@ -135,6 +135,34 @@ export class UserService {
     return { userEntity: queryResult, userDto: formatUserObject(queryResult) };
   }
 
+  public async getUserProfile(id: string): Promise<{
+    userEntity: UserEntity | undefined;
+    userDto: GetUserDto | undefined;
+  }> {
+    const queryResult = await this.userRepository
+      .createQueryBuilder('user')
+      .leftJoinAndSelect('user.partnerAccess', 'partnerAccess')
+      .leftJoinAndSelect('user.partnerAdmin', 'partnerAdmin')
+      .leftJoinAndSelect('partnerAccess.therapySession', 'therapySession')
+      .leftJoinAndSelect('partnerAccess.partner', 'partner')
+      .leftJoinAndSelect('partnerAccess.partner', 'partnerAccessPartner')
+      .leftJoinAndSelect('partnerAdmin.partner', 'partnerAdminPartner')
+      .leftJoinAndSelect('user.courseUser', 'courseUser')
+      .leftJoinAndSelect('courseUser.course', 'course')
+      .leftJoinAndSelect('courseUser.sessionUser', 'sessionUser')
+      .leftJoinAndSelect('sessionUser.session', 'session')
+      .leftJoinAndSelect('user.subscriptionUser', 'subscriptionUser')
+      .leftJoinAndSelect('subscriptionUser.subscription', 'subscription')
+      .where('user.id = :id', { id })
+      .getOne();
+
+    if (!queryResult) {
+      throw new HttpException('USER NOT FOUND', HttpStatus.NOT_FOUND);
+    }
+
+    return { userEntity: queryResult, userDto: formatUserObject(queryResult) };
+  }
+
   public async getUserById(id: string): Promise<UserEntity | undefined> {
     const queryResult = await this.userRepository
       .createQueryBuilder('user')
