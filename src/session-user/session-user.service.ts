@@ -10,7 +10,6 @@ import { CourseEntity } from '../entities/course.entity';
 import { SessionUserEntity } from '../entities/session-user.entity';
 import { Logger } from '../logger/logger';
 import { SessionService } from '../session/session.service';
-import { GetUserDto } from '../user/dtos/get-user.dto';
 import { STORYBLOK_STORY_STATUS_ENUM } from '../utils/constants';
 import { formatCourseUserObject, formatCourseUserObjects } from '../utils/serialize';
 import { SessionUserDto } from './dtos/session-user.dto';
@@ -86,7 +85,7 @@ export class SessionUserService {
     });
   }
 
-  public async createSessionUser({ user }: GetUserDto, { storyblokId }: UpdateSessionUserDto) {
+  public async createSessionUser(user: UserEntity, { storyblokId }: UpdateSessionUserDto) {
     const session = await this.sessionService.getSessionByStoryblokId(storyblokId);
 
     if (!session) {
@@ -132,7 +131,7 @@ export class SessionUserService {
   }
 
   public async setSessionUserCompleted(
-    { user }: GetUserDto,
+    user : UserEntity,
     { storyblokId }: UpdateSessionUserDto,
     completed: boolean,
   ) {

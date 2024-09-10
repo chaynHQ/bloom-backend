@@ -46,7 +46,7 @@ export class SubscriptionUserController {
     @Body() createSubscriptionUserDto: CreateSubscriptionUserDto,
   ): Promise<ISubscriptionUser | undefined> {
     return await this.subscriptionUserService.createWhatsappSubscription(
-      req['user'],
+      req['userEntity'] as UserEntity,
       createSubscriptionUserDto,
     );
   }
@@ -64,8 +64,8 @@ export class SubscriptionUserController {
     @Body() updateSubscriptionsDto: UpdateSubscriptionUserDto,
   ): Promise<ISubscriptionUser | undefined> {
     return this.subscriptionUserService.cancelWhatsappSubscription(
-      req['user'].user.id,
-      req['user'].user.email,
+      req['userEntity'].id,
+      req['userEntity'].email,
       updateSubscriptionsDto,
       id,
     );
