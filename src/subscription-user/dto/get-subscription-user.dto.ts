@@ -37,10 +37,3 @@ export class GetSubscriptionUserDto {
   @IsOptional()
   cancelledAt: Date | null;
 }
-
-export class GetSubscriptionUsersDto {
-  @ApiProperty({ type: [GetSubscriptionUserDto] })
-  @Type(() => GetSubscriptionUserDto)
-  @Expose()
-  subscriptions: GetSubscriptionUserDto[];
-}
