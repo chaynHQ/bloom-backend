@@ -111,22 +111,9 @@ export class UserService {
     userEntity: UserEntity | undefined;
     userDto: GetUserDto | undefined;
   }> {
-    const queryResult = await this.userRepository
-      .createQueryBuilder('user')
-      .leftJoinAndSelect('user.partnerAccess', 'partnerAccess')
-      .leftJoinAndSelect('user.partnerAdmin', 'partnerAdmin')
-      .leftJoinAndSelect('partnerAccess.therapySession', 'therapySession')
-      .leftJoinAndSelect('partnerAccess.partner', 'partner')
-      .leftJoinAndSelect('partnerAccess.partner', 'partnerAccessPartner')
-      .leftJoinAndSelect('partnerAdmin.partner', 'partnerAdminPartner')
-      .leftJoinAndSelect('user.courseUser', 'courseUser')
-      .leftJoinAndSelect('courseUser.course', 'course')
-      .leftJoinAndSelect('courseUser.sessionUser', 'sessionUser')
-      .leftJoinAndSelect('sessionUser.session', 'session')
-      .leftJoinAndSelect('user.subscriptionUser', 'subscriptionUser')
-      .leftJoinAndSelect('subscriptionUser.subscription', 'subscription')
-      .where('user.firebaseUid = :uid', { uid })
-      .getOne();
+    const queryResult = await this.userRepository.findOneBy({
+      firebaseUid: uid,
+    });
 
     if (!queryResult) {
       throw new HttpException('USER NOT FOUND', HttpStatus.NOT_FOUND);
