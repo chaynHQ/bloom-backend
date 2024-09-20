@@ -816,10 +816,10 @@
   resolved "https://registry.yarnpkg.com/@firebase/webchannel-wrapper/-/webchannel-wrapper-1.0.0.tgz#a0e11b39fa3ef56ed5333bf321f581037aeda033"
   integrity sha512-zuWxyfXNbsKbm96HhXzainONPFqRcoZblQ++e9cAIGUuHfl2cFSBzW01jtesqWG/lqaUyX3H8O1y9oWboGNQBA==
 
-"@golevelup/ts-jest@^0.5.0":
-  version "0.5.0"
-  resolved "https://registry.yarnpkg.com/@golevelup/ts-jest/-/ts-jest-0.5.0.tgz#051b8ad2727598f1da0f26ff47e00f48cdc8d1b3"
-  integrity sha512-UniUNOBraDD8vf6QNUPkpWMzhUXBtw40nCHekgBlaHy2p99MDV0aYLp4ZXifiyPOsFmg4BZQGs60lF6EpV7JpA==
+"@golevelup/ts-jest@^0.5.5":
+  version "0.5.5"
+  resolved "https://registry.yarnpkg.com/@golevelup/ts-jest/-/ts-jest-0.5.5.tgz#d2b28fd9022df3199272bc547f1dacd5fca4c5e3"
+  integrity sha512-x1kAFZ6ADPpwl6rauyJY6uP3OdTXA+BHb2S6nK/dpQcoAyC1gAPlb7kBTFfzvxm8yaoIieaR/638kVZSK6GxtQ==
 
 "@google-cloud/firestore@^7.7.0":
   version "7.9.0"
