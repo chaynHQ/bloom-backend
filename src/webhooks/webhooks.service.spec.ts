@@ -608,7 +608,7 @@ describe('WebhooksService', () => {
           ...{ action: SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING },
         }),
       ).rejects.toThrow(
-        'newPartnerAccessTherapy - no partner therapy access - email user@email.com userId userId2',
+        'createNewTherapySession - no partner therapy access - email user@email.com userId userId2',
       );
     });
 

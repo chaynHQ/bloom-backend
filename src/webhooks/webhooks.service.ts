@@ -48,7 +48,7 @@ export class WebhooksService {
     const { action, booking_code, user_id, client_email } = simplyBookDto;
 
     this.logger.log(
-      `Update therapy session webhook function STARTED for ${action} - ${client_email} - ${booking_code} - userId ${user_id}`,
+      `UpdatePartnerAccessTherapy STARTED for ${action} - ${client_email} - ${booking_code} - userId ${user_id}`,
     );
 
     // Retrieve existing therapy session record for this booking
@@ -58,14 +58,12 @@ export class WebhooksService {
     });
 
     if (action !== SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING && !existingTherapySession) {
-      const error = `UpdatePartnerAccessTherapy - existing therapy session not found for user ${client_email} booking code ${booking_code}`;
-      this.logger.error(error);
+      const error = `UpdatePartnerAccessTherapy - failed to update ${action} action: existing therapy session not found for user ${client_email} booking code ${booking_code}`;
       throw new HttpException(error, HttpStatus.BAD_REQUEST);
     }
 
     if (action === SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING && existingTherapySession && isProduction) {
       const error = `UpdatePartnerAccessTherapy - therapy session already exists for ${client_email} booking code ${booking_code}, preventing duplicate NEW_BOOKING action`;
-      this.logger.error(error);
       throw new HttpException(error, HttpStatus.FOUND);
     }
 
@@ -74,10 +72,10 @@ export class WebhooksService {
 
     // Creating a new therapy session
     if (action === SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING) {
-      const therapySession = await this.newPartnerAccessTherapy(user, simplyBookDto);
+      const therapySession = await this.createNewTherapySession(user, simplyBookDto);
 
       this.logger.log(
-        `Update therapy session webhook function COMPLETED for ${action} - ${user.email} - ${booking_code} - userId ${user_id}`,
+        `UpdatePartnerAccessTherapy COMPLETED for ${action} - ${user.email} - ${booking_code} - userId ${user_id}`,
       );
       return therapySession;
     }
@@ -128,7 +126,7 @@ export class WebhooksService {
       this.serviceUserProfilesService.updateServiceUserProfilesTherapy(partnerAccesses, user.email);
 
       this.logger.log(
-        `Update therapy session webhook function COMPLETED for ${action} - ${user.email} - ${booking_code} - userId ${user_id}`,
+        `UpdatePartnerAccessTherapy COMPLETED for ${action} - ${user.email} - ${booking_code} - userId ${user_id}`,
       );
       return therapySession;
     } catch (err) {
@@ -139,59 +137,52 @@ export class WebhooksService {
   }
 
   private async getSimplyBookTherapyUser(userId: string, client_email: string): Promise<IUser> {
-    if (!userId) {
+    let user: IUser | null = null;
+
+    if (userId) {
+      user = await this.userRepository.findOneBy({
+        id: userId,
+      });
+    }
+
+    if (!userId || !user) {
       // No userId sent in the webhook - likely due to user clicking simplybook link from email instead of in-app widget
       // Try to find a user associated to this email
       try {
-        // Check for previous therapy sessions associated to the email
+        // Check for previous therapy sessions associated to the email - we check this first because a user could be using an alternative email for therapy
         const previousTherapySession = await this.therapySessionRepository.findOneBy({
           clientEmail: ILike(client_email),
         });
 
         if (previousTherapySession?.userId) {
-          userId = previousTherapySession.userId;
-        } else {
-          // No previous therapy sessions, try matching email with user
-          const user = await this.userRepository.findOneBy({
+          user = await this.userRepository.findOneBy({
+            id: previousTherapySession.userId,
+          });
+        }
+        // No previous therapy sessions, try matching email with user
+        if (!previousTherapySession?.userId) {
+          user = await this.userRepository.findOneBy({
             email: ILike(client_email),
           });
-          if (user?.id) {
-            userId = user.id;
-          }
+        }
+        if (!user) {
+          // No user record found for userId, throw error
+          await this.slackMessageClient.sendMessageToTherapySlackChannel(
+            `Unknown user made a therapy booking with email ${client_email}, userID ${userId} 🚨`,
+          );
+          const error = `UpdatePartnerAccessTherapy - user not found for client_email ${client_email} and ${userId ? 'and provided userId ' + userId : 'no userId provided or found'}`;
+          throw new HttpException(error, HttpStatus.BAD_REQUEST);
         }
       } catch (err) {
-        const error = `UpdatePartnerAccessTherapy - error finding user in therapyRepository or userRepository with email ${client_email} - ${err}`;
-        this.logger.error(error);
+        const error = `UpdatePartnerAccessTherapy - error finding user in therapyRepository or userRepository with email and ${client_email} ${userId ? 'provided userId ' + userId : 'no userId provided'}: ${err}`;
         throw new HttpException(error, HttpStatus.INTERNAL_SERVER_ERROR);
       }
-      if (!userId) {
-        // All searches tried and failed, throw 404/400 error
-        const error = `UpdatePartnerAccessTherapy - user not found for email ${client_email} and no userId provided or found`;
-        this.logger.error(error);
-        throw new HttpException(error, HttpStatus.BAD_REQUEST);
-      }
     }
 
-    try {
-      // userId available, find and return user record
-      const user = await this.userRepository.findOneBy({ id: userId });
-      if (user) return user;
-
-      // No user record found for userId, throw error
-      await this.slackMessageClient.sendMessageToTherapySlackChannel(
-        `Unknown user made a therapy booking with email ${client_email}, userID ${userId} 🚨`,
-      );
-      const error = `UpdatePartnerAccessTherapy - user not found for userID ${userId}, with origin client_email ${client_email}`;
-      this.logger.error(error);
-      throw new HttpException(error, HttpStatus.BAD_REQUEST);
-    } catch (err) {
-      const error = `UpdatePartnerAccessTherapy - error finding user with userID ${userId} and origin client_email ${client_email} - ${err}`;
-      this.logger.error(error);
-      throw new HttpException(error, HttpStatus.INTERNAL_SERVER_ERROR);
-    }
+    return user;
   }
 
-  private async newPartnerAccessTherapy(user: IUser, simplyBookDto: ZapierSimplybookBodyDto) {
+  private async createNewTherapySession(user: IUser, simplyBookDto: ZapierSimplybookBodyDto) {
     const partnerAccesses = await this.partnerAccessRepository.find({
       where: {
         userId: user.id,
@@ -208,8 +199,8 @@ export class WebhooksService {
       await this.slackMessageClient.sendMessageToTherapySlackChannel(
         `User booked therapy with no partner therapy access, please email user ${user.email} to confirm the booking has not been made and fix the account access`,
       );
-      const error = `newPartnerAccessTherapy - no partner therapy access - email ${user.email} userId ${user.id}`;
-      this.logger.error(error);
+      // TODO: cancel therapy booking and send email
+      const error = `createNewTherapySession - no partner therapy access - email ${user.email} userId ${user.id}`;
       throw new HttpException(error, HttpStatus.FORBIDDEN);
     }
 
@@ -224,7 +215,7 @@ export class WebhooksService {
       await this.slackMessageClient.sendMessageToTherapySlackChannel(
         `User booked therapy with no therapy sessions remaining, please email user ${user.email} to confirm the booking has not been made`,
       );
-      const error = `newPartnerAccessTherapy - user has partner therapy access but has 0 therapy sessions remaining - email ${user.email} userId ${user.id}`;
+      const error = `createNewTherapySession - user has partner therapy access but has 0 therapy sessions remaining - email ${user.email} userId ${user.id}`;
       this.logger.error(error);
       throw new HttpException(error, HttpStatus.FORBIDDEN);
     }
@@ -257,7 +248,7 @@ export class WebhooksService {
       );
       return therapySession;
     } catch (err) {
-      const error = `newPartnerAccessTherapy - error saving new therapy session and partner access - email ${user.email} userId ${user.id} - ${err}`;
+      const error = `createNewTherapySession - error saving new therapy session and partner access - email ${user.email} userId ${user.id} - ${err}`;
       this.logger.error(error);
       throw new HttpException(error, HttpStatus.INTERNAL_SERVER_ERROR);
     }
