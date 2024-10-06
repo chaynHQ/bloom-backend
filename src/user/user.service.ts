@@ -191,6 +191,7 @@ export class UserService {
         name: randomString,
         email: randomString,
         isActive: false,
+        deletedAt: new Date(),
       };
       return await this.userRepository.save(updateUser);
     } catch (error) {
