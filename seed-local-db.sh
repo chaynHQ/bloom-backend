@@ -1,14 +1,10 @@
 #!/usr/bin/env bash
 
-#Create Time Stamp
-DATE=`date "+%Y%m%d"`
-
-TIMESTAMP=`date "+%Y%m%d-%H%M%S"`
-
-set -e
-
 #Backup Remote database
-curl `heroku pg:backups public-url --app bloom-backend-staging` > bloom_$TIMESTAMP.dump
+heroku pg:backups:capture --app bloom-backend-staging
+heroku pg:backups:download --app bloom-backend-staging
 
 #Load backup into local database
-docker exec -i bloom-local-db pg_restore -U postgres -d bloom < bloom_$TIMESTAMP.dump
+docker exec -i bloom-local-db pg_restore -U postgres -d bloom < latest.dump
+
+rm latest.dump
