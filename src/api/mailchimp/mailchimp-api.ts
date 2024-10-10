@@ -1,12 +1,15 @@
 import mailchimp from '@mailchimp/mailchimp_marketing';
 import { createHash } from 'crypto';
 import { mailchimpApiKey, mailchimpAudienceId, mailchimpServerPrefix } from 'src/utils/constants';
+import { Logger } from '../../logger/logger';
 import {
   ListMember,
   ListMemberPartial,
   MAILCHIMP_MERGE_FIELD_TYPES,
   UpdateListMemberRequest,
 } from './mailchimp-api.interfaces';
+
+const logger = new Logger('MailchimpAPI');
 
 mailchimp.setConfig({
   apiKey: mailchimpApiKey,
@@ -107,7 +110,7 @@ export const deleteMailchimpProfile = async (email: string) => {
   try {
     return await mailchimp.lists.deleteListMember(mailchimpAudienceId, getEmailMD5Hash(email));
   } catch (error) {
-    throw new Error(`Delete mailchimp profile API call failed: ${error}`);
+    logger.warn(`Delete mailchimp profile API call failed: ${error}`);
   }
 };
 

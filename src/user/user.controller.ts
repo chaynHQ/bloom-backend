@@ -46,16 +46,16 @@ export class UserController {
   @Get('/me')
   @UseGuards(FirebaseAuthGuard)
   async getUserByFirebaseId(@Req() req: Request): Promise<GetUserDto> {
-    const user = req['user'];
-    this.userService.updateUser({ lastActiveAt: new Date() }, user.user.id);
-    return user as GetUserDto;
+    const user = req['userEntity'];
+    this.userService.updateUser({ lastActiveAt: new Date() }, user.id);
+    return (await this.userService.getUserProfile(user.id)).userDto;
   }
 
   @ApiBearerAuth()
   @Delete()
   @UseGuards(FirebaseAuthGuard)
   async deleteUser(@Req() req: Request): Promise<UserEntity> {
-    return await this.userService.deleteUser(req['user'].user as UserEntity);
+    return await this.userService.deleteUser(req['userEntity']);
   }
 
   // This route must go before the Delete user route below as we want nestjs to check against this one first
@@ -84,9 +84,8 @@ export class UserController {
   @ApiBearerAuth()
   @Patch()
   @UseGuards(FirebaseAuthGuard)
-  async updateUser(@Body() updateUserDto: UpdateUserDto, @Req() req: Request) {
-    console.log('>>>>', updateUserDto);
-    return await this.userService.updateUser(updateUserDto, req['user'].user.id);
+  async updateUser(@Body() updateUserDto: UpdateUserDto, @Req() req: Request): Promise<UserEntity> {
+    return await this.userService.updateUser(updateUserDto, req['userEntity'].id);
   }
 
   @ApiBearerAuth()
