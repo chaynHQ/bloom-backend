@@ -1,5 +1,7 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import Crisp from 'crisp-api';
+import { sendMailchimpUserEvent } from 'src/api/mailchimp/mailchimp-api';
+import { MAILCHIMP_CUSTOM_EVENTS } from 'src/api/mailchimp/mailchimp-api.interfaces';
 import { EventLoggerService } from 'src/event-logger/event-logger.service';
 import { crispPluginId, crispPluginKey } from 'src/utils/constants';
 import { EVENT_NAME } from './crisp.interface';
@@ -15,15 +17,26 @@ export class CrispService implements OnModuleInit {
   }
 
   async handleCrispEvent(message: CrispEventDto, eventName: EVENT_NAME) {
-    const sessionMetaData = await CrispClient.website.getConversationMetas(
-      message.website_id,
-      message.session_id,
-    );
-    this.eventLoggerService.createEventLog({
-      email: sessionMetaData.email,
-      event: eventName,
-      date: new Date(),
-    });
+    try {
+      const sessionMetaData = await CrispClient.website.getConversationMetas(
+        message.website_id,
+        message.session_id,
+      );
+      await this.eventLoggerService.createEventLog({
+        email: sessionMetaData.email,
+        event: eventName,
+        date: new Date(),
+      });
+
+      if (eventName === EVENT_NAME.CHAT_MESSAGE_RECEIVED) {
+        sendMailchimpUserEvent(
+          sessionMetaData.email,
+          MAILCHIMP_CUSTOM_EVENTS.CRISP_MESSAGE_RECEIVED,
+        );
+      }
+    } catch (error) {
+      throw new Error(`Failed to handle crisp event for ${eventName}: ${error}`);
+    }
   }
 
   onModuleInit() {
