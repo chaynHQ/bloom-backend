@@ -5,15 +5,12 @@ import { SlackMessageClient } from 'src/api/slack/slack-api';
 import { CoursePartnerService } from 'src/course-partner/course-partner.service';
 import { CoursePartnerEntity } from 'src/entities/course-partner.entity';
 import { CourseEntity } from 'src/entities/course.entity';
-import { EventLogEntity } from 'src/entities/event-log.entity';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { PartnerAdminEntity } from 'src/entities/partner-admin.entity';
 import { PartnerEntity } from 'src/entities/partner.entity';
 import { SessionEntity } from 'src/entities/session.entity';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
 import { UserEntity } from 'src/entities/user.entity';
-import { EVENT_NAME } from 'src/event-logger/event-logger.interface';
-import { EventLoggerService } from 'src/event-logger/event-logger.service';
 import { PartnerService } from 'src/partner/partner.service';
 import { ServiceUserProfilesService } from 'src/service-user-profiles/service-user-profiles.service';
 import { SIMPLYBOOK_ACTION_ENUM, STORYBLOK_STORY_STATUS_ENUM } from 'src/utils/constants';
@@ -32,8 +29,6 @@ import {
   mockCoursePartnerRepositoryMethods,
   mockCoursePartnerServiceMethods,
   mockCourseRepositoryMethods,
-  mockEventLoggerRepositoryMethods,
-  mockEventLoggerServiceMethods,
   mockPartnerAccessRepositoryMethods,
   mockPartnerAdminRepositoryMethods,
   mockPartnerRepositoryMethods,
@@ -43,7 +38,6 @@ import {
   mockUserRepositoryMethods,
 } from 'test/utils/mockedServices';
 import { ILike, Repository } from 'typeorm';
-import { WebhookCreateEventLogDto } from './dto/webhook-create-event-log.dto';
 import { WebhooksService } from './webhooks.service';
 
 // Difficult to mock classes as well as node modules.
@@ -88,10 +82,6 @@ describe('WebhooksService', () => {
   const mockedSlackMessageClient = createMock<SlackMessageClient>(mockSlackMessageClientMethods);
   const mockedPartnerAccessRepository = createMock<Repository<PartnerAccessEntity>>(
     mockPartnerAccessRepositoryMethods,
-  );
-  const mockedEventLoggerService = createMock<EventLoggerService>(mockEventLoggerServiceMethods);
-  const mockedEventLogRepository = createMock<Repository<EventLogEntity>>(
-    mockEventLoggerRepositoryMethods,
   );
   const mockedPartnerRepository = createMock<Repository<PartnerEntity>>(
     mockPartnerRepositoryMethods,
@@ -142,10 +132,6 @@ describe('WebhooksService', () => {
           useValue: mockedPartnerAdminRepository,
         },
         {
-          provide: getRepositoryToken(EventLogEntity),
-          useValue: mockedEventLogRepository,
-        },
-        {
           provide: ServiceUserProfilesService,
           useValue: mockedServiceUserProfilesService,
         },
@@ -153,7 +139,6 @@ describe('WebhooksService', () => {
           provide: CoursePartnerService,
           useValue: mockedCoursePartnerService,
         },
-        { provide: EventLoggerService, useValue: mockedEventLoggerService },
         {
           provide: SlackMessageClient,
           useValue: mockedSlackMessageClient,
@@ -691,52 +676,6 @@ describe('WebhooksService', () => {
         }),
       ).resolves.toHaveProperty('action', SIMPLYBOOK_ACTION_ENUM.UPDATED_BOOKING);
       expect(therapySessionFindOneSpy).toHaveBeenCalled();
-    });
-  });
-
-  describe('createEventLog', () => {
-    it('should create an eventLog if DTO is correct', async () => {
-      const eventDto: WebhookCreateEventLogDto = {
-        event: EVENT_NAME.CHAT_MESSAGE_SENT,
-        date: new Date(2000, 1, 1),
-        email: 'a@b.com',
-      };
-      const log = await service.createEventLog(eventDto);
-
-      expect(log).toEqual({
-        date: new Date(2000, 1, 1),
-        event: 'CHAT_MESSAGE_SENT',
-        id: 'eventLogId1ß',
-        userId: 'userId1',
-      });
-    });
-    it('should throw 404 if email is not related to a user is incorrect', async () => {
-      const eventDto: WebhookCreateEventLogDto = {
-        event: EVENT_NAME.CHAT_MESSAGE_SENT,
-        date: new Date(2000, 1, 1),
-        email: 'a@b.com',
-      };
-      jest.spyOn(mockedUserRepository, 'findOneBy').mockImplementationOnce(async () => {
-        return null;
-      });
-
-      await expect(service.createEventLog(eventDto)).rejects.toThrow(
-        `createEventLog webhook failed - no user attached to email a@b.com`,
-      );
-    });
-    it('should throw 500 if failed to create user', async () => {
-      const eventDto: WebhookCreateEventLogDto = {
-        event: EVENT_NAME.CHAT_MESSAGE_SENT,
-        date: new Date(2000, 1, 1),
-        email: 'a@b.com',
-      };
-      jest.spyOn(mockedEventLoggerService, 'createEventLog').mockImplementationOnce(async () => {
-        throw new Error('Unable to create event log error');
-      });
-
-      await expect(service.createEventLog(eventDto)).rejects.toThrow(
-        `Unable to create event log error`,
-      );
     });
   });
 });
