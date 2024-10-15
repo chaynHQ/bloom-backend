@@ -1,6 +1,7 @@
 import { createMock, DeepMocked } from '@golevelup/ts-jest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { CrispService } from 'src/crisp/crisp.service';
 import { EventLogEntity } from 'src/entities/event-log.entity';
 import { UserEntity } from 'src/entities/user.entity';
 import {
@@ -14,12 +15,14 @@ import { EventLoggerService } from './event-logger.service';
 describe('EventLoggerService', () => {
   let service: EventLoggerService;
   let mockEventLoggerRepository: DeepMocked<Repository<EventLogEntity>>;
+  let mockCrispService: DeepMocked<CrispService>;
 
   beforeEach(async () => {
     mockEventLoggerRepository = createMock<Repository<EventLogEntity>>(
       mockEventLoggerRepositoryMethods,
     );
     const mockedUserRepository = createMock<Repository<UserEntity>>(mockUserRepositoryMethods);
+    mockCrispService = createMock<CrispService>();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -32,6 +35,7 @@ describe('EventLoggerService', () => {
           provide: getRepositoryToken(UserEntity),
           useValue: mockedUserRepository,
         },
+        { provide: CrispService, useValue: mockCrispService },
       ],
     }).compile();
 

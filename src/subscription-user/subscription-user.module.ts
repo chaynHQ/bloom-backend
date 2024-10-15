@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { SlackMessageClient } from 'src/api/slack/slack-api';
+import { CrispService } from 'src/crisp/crisp.service';
+import { EventLogEntity } from 'src/entities/event-log.entity';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { PartnerAdminEntity } from 'src/entities/partner-admin.entity';
 import { PartnerEntity } from 'src/entities/partner.entity';
@@ -8,6 +10,7 @@ import { SubscriptionUserEntity } from 'src/entities/subscription-user.entity';
 import { SubscriptionEntity } from 'src/entities/subscription.entity';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
 import { UserEntity } from 'src/entities/user.entity';
+import { EventLoggerService } from 'src/event-logger/event-logger.service';
 import { PartnerService } from 'src/partner/partner.service';
 import { ServiceUserProfilesService } from 'src/service-user-profiles/service-user-profiles.service';
 import { TherapySessionService } from 'src/therapy-session/therapy-session.service';
@@ -29,6 +32,7 @@ import { SubscriptionUserService } from './subscription-user.service';
       PartnerEntity,
       PartnerAdminEntity,
       TherapySessionEntity,
+      EventLogEntity,
     ]),
     FirebaseModule,
   ],
@@ -40,6 +44,8 @@ import { SubscriptionUserService } from './subscription-user.service';
     PartnerAccessService,
     ServiceUserProfilesService,
     ZapierWebhookClient,
+    CrispService,
+    EventLoggerService,
     PartnerService,
     TherapySessionService,
     SlackMessageClient,

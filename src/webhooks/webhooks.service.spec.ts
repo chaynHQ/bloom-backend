@@ -3,14 +3,17 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { SlackMessageClient } from 'src/api/slack/slack-api';
 import { CoursePartnerService } from 'src/course-partner/course-partner.service';
+import { CrispService } from 'src/crisp/crisp.service';
 import { CoursePartnerEntity } from 'src/entities/course-partner.entity';
 import { CourseEntity } from 'src/entities/course.entity';
+import { EventLogEntity } from 'src/entities/event-log.entity';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { PartnerAdminEntity } from 'src/entities/partner-admin.entity';
 import { PartnerEntity } from 'src/entities/partner.entity';
 import { SessionEntity } from 'src/entities/session.entity';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
 import { UserEntity } from 'src/entities/user.entity';
+import { EventLoggerService } from 'src/event-logger/event-logger.service';
 import { PartnerService } from 'src/partner/partner.service';
 import { ServiceUserProfilesService } from 'src/service-user-profiles/service-user-profiles.service';
 import { SIMPLYBOOK_ACTION_ENUM, STORYBLOK_STORY_STATUS_ENUM } from 'src/utils/constants';
@@ -29,6 +32,7 @@ import {
   mockCoursePartnerRepositoryMethods,
   mockCoursePartnerServiceMethods,
   mockCourseRepositoryMethods,
+  mockEventLoggerRepositoryMethods,
   mockPartnerAccessRepositoryMethods,
   mockPartnerAdminRepositoryMethods,
   mockPartnerRepositoryMethods,
@@ -64,7 +68,6 @@ jest.mock('src/api/simplybook/simplybook-api', () => {
     },
   };
 });
-jest.mock('src/api/crisp/crisp-api');
 
 describe('WebhooksService', () => {
   let service: WebhooksService;
@@ -93,6 +96,11 @@ describe('WebhooksService', () => {
     mockPartnerAdminRepositoryMethods,
   );
   const mockedServiceUserProfilesService = createMock<ServiceUserProfilesService>();
+  const mockCrispService = createMock<CrispService>();
+  const mockEventLoggerService = createMock<EventLoggerService>();
+  const mockEventLogRepository = createMock<Repository<EventLogEntity>>(
+    mockEventLoggerRepositoryMethods,
+  );
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -144,6 +152,12 @@ describe('WebhooksService', () => {
           useValue: mockedSlackMessageClient,
         },
         PartnerService,
+        {
+          provide: getRepositoryToken(EventLogEntity),
+          useValue: mockEventLogRepository,
+        },
+        { provide: CrispService, useValue: mockCrispService },
+        { provide: EventLoggerService, useValue: mockEventLoggerService },
       ],
     }).compile();
 

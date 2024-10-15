@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsDefined, IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
-import { CrispProfileCustomFields } from '../../api/crisp/crisp-api.interfaces';
+import { IsBoolean, IsDefined, IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
+import { CrispProfileCustomFields } from '../crisp.interface';
 
 export interface CrispUserData extends CrispProfileCustomFields {
   email: string;
@@ -60,6 +60,9 @@ export class CrispEventDto {
   @IsOptional()
   @IsString()
   full_slug?: string;
+
+  @IsBoolean()
+  stamped: boolean;
 
   user: CrispUserData;
 }

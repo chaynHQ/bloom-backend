@@ -3,7 +3,9 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { SlackMessageClient } from 'src/api/slack/slack-api';
 import { ZapierWebhookClient } from 'src/api/zapier/zapier-webhook-client';
 import { CourseUserService } from 'src/course-user/course-user.service';
+import { CrispService } from 'src/crisp/crisp.service';
 import { CourseUserEntity } from 'src/entities/course-user.entity';
+import { EventLogEntity } from 'src/entities/event-log.entity';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { PartnerAdminEntity } from 'src/entities/partner-admin.entity';
 import { PartnerEntity } from 'src/entities/partner.entity';
@@ -11,6 +13,7 @@ import { SubscriptionUserEntity } from 'src/entities/subscription-user.entity';
 import { SubscriptionEntity } from 'src/entities/subscription.entity';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
 import { UserEntity } from 'src/entities/user.entity';
+import { EventLoggerService } from 'src/event-logger/event-logger.service';
 import { PartnerService } from 'src/partner/partner.service';
 import { ServiceUserProfilesService } from 'src/service-user-profiles/service-user-profiles.service';
 import { SubscriptionUserService } from 'src/subscription-user/subscription-user.service';
@@ -33,6 +36,7 @@ import { PartnerAccessService } from './partner-access.service';
       SubscriptionUserEntity,
       TherapySessionEntity,
       SubscriptionEntity,
+      EventLogEntity,
     ]),
     FirebaseModule,
   ],
@@ -47,6 +51,8 @@ import { PartnerAccessService } from './partner-access.service';
     SubscriptionUserService,
     SubscriptionService,
     TherapySessionService,
+    CrispService,
+    EventLoggerService,
     ZapierWebhookClient,
     SlackMessageClient,
   ],

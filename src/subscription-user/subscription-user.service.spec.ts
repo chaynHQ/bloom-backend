@@ -2,7 +2,10 @@ import { DeepMocked, createMock } from '@golevelup/ts-jest/lib/mocks';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { ZapierWebhookClient } from 'src/api/zapier/zapier-webhook-client';
+import { CrispService } from 'src/crisp/crisp.service';
+import { EventLogEntity } from 'src/entities/event-log.entity';
 import { SubscriptionUserEntity } from 'src/entities/subscription-user.entity';
+import { EventLoggerService } from 'src/event-logger/event-logger.service';
 import { SubscriptionService } from 'src/subscription/subscription.service';
 import { mockSubscriptionUserEntity, mockUserEntity } from 'test/utils/mockData';
 import {
@@ -15,15 +18,20 @@ import { SubscriptionUserService } from './subscription-user.service';
 describe('SubscriptionUserService', () => {
   let service: SubscriptionUserService;
   let mockedSubscriptionUserRepository: DeepMocked<Repository<SubscriptionUserEntity>>;
-
   let mockSubscriptionService: DeepMocked<SubscriptionService>;
   const mockedZapierWebhookClient = createMock<ZapierWebhookClient>(mockZapierWebhookClientMethods);
+  let mockCrispService: DeepMocked<CrispService>;
+  let mockEventLoggerService: DeepMocked<EventLoggerService>;
+  let mockEventLogRepository: DeepMocked<Repository<EventLogEntity>>;
 
   beforeEach(async () => {
     mockedSubscriptionUserRepository = createMock<Repository<SubscriptionUserEntity>>(
       mockSubscriptionUserRepositoryMethods,
     );
     mockSubscriptionService = createMock<SubscriptionService>(mockSubscriptionService);
+    mockCrispService = createMock<CrispService>();
+    mockEventLoggerService = createMock<EventLoggerService>();
+    mockEventLogRepository = createMock<Repository<EventLogEntity>>(mockEventLogRepository);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -40,6 +48,12 @@ describe('SubscriptionUserService', () => {
           provide: ZapierWebhookClient,
           useValue: mockedZapierWebhookClient,
         },
+        {
+          provide: getRepositoryToken(EventLogEntity),
+          useValue: mockEventLogRepository,
+        },
+        { provide: CrispService, useValue: mockCrispService },
+        { provide: EventLoggerService, useValue: mockEventLoggerService },
       ],
     }).compile();
 
