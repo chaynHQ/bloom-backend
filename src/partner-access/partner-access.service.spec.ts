@@ -2,9 +2,11 @@ import { createMock, DeepMocked } from '@golevelup/ts-jest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { sub } from 'date-fns';
-import * as crispApi from 'src/api/crisp/crisp-api';
 import * as mailchimpApi from 'src/api/mailchimp/mailchimp-api';
+import { CrispService } from 'src/crisp/crisp.service';
+import { EventLogEntity } from 'src/entities/event-log.entity';
 import { PartnerEntity } from 'src/entities/partner.entity';
+import { EventLoggerService } from 'src/event-logger/event-logger.service';
 import { ServiceUserProfilesService } from 'src/service-user-profiles/service-user-profiles.service';
 import { GetUserDto } from 'src/user/dtos/get-user.dto';
 import {
@@ -43,17 +45,12 @@ const mockGetUserDto = {
   therapySessions: [],
 } as GetUserDto;
 
-jest.mock('src/api/crisp/crisp-api', () => ({
-  getCrispProfileData: jest.fn(),
-  updateCrispProfileBase: jest.fn(),
-  updateCrispProfile: jest.fn(),
-}));
-
 jest.mock('src/api/mailchimp/mailchimp-api', () => ({
   createMailchimpMergeField: jest.fn(),
   createMailchimpProfile: jest.fn(),
   updateMailchimpProfile: jest.fn(),
 }));
+const mockCrispServiceMethods = {};
 
 describe('PartnerAccessService', () => {
   let service: PartnerAccessService;
@@ -61,6 +58,9 @@ describe('PartnerAccessService', () => {
   let mockPartnerRepository: DeepMocked<Repository<PartnerEntity>>;
   let mockPartnerAccessRepository: DeepMocked<Repository<PartnerAccessEntity>>;
   let mockServiceUserProfilesService: DeepMocked<ServiceUserProfilesService>;
+  let mockCrispService: DeepMocked<CrispService>;
+  let mockEventLoggerService: DeepMocked<EventLoggerService>;
+  let mockEventLogRepository: DeepMocked<Repository<EventLogEntity>>;
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -70,6 +70,9 @@ describe('PartnerAccessService', () => {
       mockPartnerAccessRepositoryMethods,
     );
     mockServiceUserProfilesService = createMock<ServiceUserProfilesService>();
+    mockCrispService = createMock<CrispService>(mockCrispServiceMethods);
+    mockEventLoggerService = createMock<EventLoggerService>();
+    mockEventLogRepository = createMock<Repository<EventLogEntity>>(mockEventLogRepository);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -82,7 +85,13 @@ describe('PartnerAccessService', () => {
           provide: getRepositoryToken(PartnerEntity),
           useValue: mockPartnerRepository,
         },
+        {
+          provide: getRepositoryToken(EventLogEntity),
+          useValue: mockEventLogRepository,
+        },
         { provide: ServiceUserProfilesService, useValue: mockServiceUserProfilesService },
+        { provide: CrispService, useValue: mockCrispService },
+        { provide: EventLoggerService, useValue: mockEventLoggerService },
       ],
     }).compile();
 
@@ -166,7 +175,7 @@ describe('PartnerAccessService', () => {
       // Mocks that the accesscode already exists
       jest.spyOn(repo, 'findOne').mockResolvedValueOnce(mockPartnerAccessEntity);
 
-      jest.spyOn(crispApi, 'updateCrispProfile').mockImplementationOnce(async () => {
+      jest.spyOn(mockCrispService, 'updateCrispPeopleData').mockImplementationOnce(async () => {
         throw new Error('Test throw');
       });
 

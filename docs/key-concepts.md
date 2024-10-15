@@ -18,7 +18,7 @@ User authentication is handled by [Firebase Auth](https://firebase.google.com/do
 
 Crisp is the messaging platform used to message the Chayn team in relation to bloom course content or other queries and support. For public users, this 1-1 chat feature is available on _live_ courses only. For partner users, This 1-1 chat feature is available to users with a `PartnerAccess` that has 1-1 chat enabled.
 
-Users who have access to 1-1 chat also have a profile on Crisp that reflects data from our database regarding their partners, access and course progress. See [crisp-api.ts](src/api/crisp/crisp-api.ts)
+Users who have access to 1-1 chat also have a profile on Crisp that reflects data from our database regarding their partners, access and course progress. See [crisp.service.ts](src/crisp/crisp.service.ts)
 
 ### Reporting
 

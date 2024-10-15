@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { SlackMessageClient } from 'src/api/slack/slack-api';
 import { ZapierWebhookClient } from 'src/api/zapier/zapier-webhook-client';
+import { CrispService } from 'src/crisp/crisp.service';
+import { EventLogEntity } from 'src/entities/event-log.entity';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { PartnerEntity } from 'src/entities/partner.entity';
 import { SessionFeedbackEntity } from 'src/entities/session-feedback.entity';
@@ -10,6 +12,7 @@ import { SubscriptionUserEntity } from 'src/entities/subscription-user.entity';
 import { SubscriptionEntity } from 'src/entities/subscription.entity';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
 import { UserEntity } from 'src/entities/user.entity';
+import { EventLoggerService } from 'src/event-logger/event-logger.service';
 import { PartnerAccessService } from 'src/partner-access/partner-access.service';
 import { ServiceUserProfilesService } from 'src/service-user-profiles/service-user-profiles.service';
 import { SessionService } from 'src/session/session.service';
@@ -31,6 +34,7 @@ import { SessionFeedbackService } from './session-feedback.service';
       SubscriptionUserEntity,
       SubscriptionEntity,
       TherapySessionEntity,
+      EventLogEntity,
     ]),
   ],
   controllers: [SessionFeedbackController],
@@ -43,6 +47,8 @@ import { SessionFeedbackService } from './session-feedback.service';
     SubscriptionService,
     PartnerAccessService,
     TherapySessionService,
+    CrispService,
+    EventLoggerService,
     ZapierWebhookClient,
     SlackMessageClient,
   ],

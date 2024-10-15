@@ -14,6 +14,10 @@ export enum MAILCHIMP_MERGE_FIELD_TYPES {
   ZIP = 'zip',
 }
 
+export enum MAILCHIMP_CUSTOM_EVENTS {
+  CRISP_MESSAGE_RECEIVED = 'CRISP_MESSAGE_RECEIVED',
+}
+
 export interface ListMemberCustomFields {
   NAME?: string;
   SIGNUPD?: string;

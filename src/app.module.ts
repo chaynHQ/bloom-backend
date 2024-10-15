@@ -6,6 +6,7 @@ import { AuthModule } from './auth/auth.module';
 import { CoursePartnerModule } from './course-partner/course-partner.module';
 import { CourseUserModule } from './course-user/course-user.module';
 import { CourseModule } from './course/course.module';
+import { CrispModule } from './crisp/crisp.module';
 import { EventLoggerModule } from './event-logger/event-logger.module';
 import { FeatureModule } from './feature/feature.module';
 import { HealthModule } from './health/health.module';
@@ -43,6 +44,7 @@ import { WebhooksModule } from './webhooks/webhooks.module';
     PartnerFeatureModule,
     EventLoggerModule,
     HealthModule,
+    CrispModule,
   ],
 })
 export class AppModule {}
