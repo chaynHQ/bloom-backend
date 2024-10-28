@@ -61,4 +61,24 @@ describe('SubscriptionUserService', () => {
       ]);
     });
   });
+
+  describe('getUserSubscriptions', () => {
+    it('should return a list of subscriptions for the given userId', async () => {
+      const result = await service.getSubscriptions(mockUserEntity.id);
+
+      expect(result).toMatchObject([mockSubscriptionUserEntity]);
+    });
+
+    it('should return an empty array if the user has no subscriptions', async () => {
+      mockedSubscriptionUserRepository.find.mockResolvedValueOnce([]);
+
+      const result = await service.getSubscriptions(mockUserEntity.id);
+
+      expect(result).toEqual([]);
+      expect(mockedSubscriptionUserRepository.find).toHaveBeenCalledWith({
+        where: { userId: mockUserEntity.id },
+        relations: ['subscription'],
+      });
+    });
+  });
 });

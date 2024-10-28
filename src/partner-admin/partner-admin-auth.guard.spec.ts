@@ -11,6 +11,7 @@ import { PartnerAdminAuthGuard } from './partner-admin-auth.guard';
 
 const userEntity: UserEntity = {
   updatedAt: null,
+  deletedAt: null,
   createdAt: new Date(),
   firebaseUid: '123',
   id: 'userid',
