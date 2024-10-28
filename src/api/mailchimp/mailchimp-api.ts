@@ -5,6 +5,7 @@ import { Logger } from '../../logger/logger';
 import {
   ListMember,
   ListMemberPartial,
+  MAILCHIMP_CUSTOM_EVENTS,
   MAILCHIMP_MERGE_FIELD_TYPES,
   UpdateListMemberRequest,
 } from './mailchimp-api.interfaces';
@@ -126,5 +127,15 @@ export const deleteCypressMailchimpProfiles = async () => {
     });
   } catch (error) {
     throw new Error(`Delete cypress mailchimp profiles API call failed: ${error}`);
+  }
+};
+
+export const sendMailchimpUserEvent = async (email: string, event: MAILCHIMP_CUSTOM_EVENTS) => {
+  try {
+    await mailchimp.lists.createListMemberEvent(mailchimpAudienceId, getEmailMD5Hash(email), {
+      name: event,
+    });
+  } catch (error) {
+    throw new Error(`Send mailchimp user event failed: ${error}`);
   }
 };

@@ -3,6 +3,8 @@ import { HttpException, HttpStatus } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { SlackMessageClient } from 'src/api/slack/slack-api';
+import { CrispService } from 'src/crisp/crisp.service';
+import { EventLogEntity } from 'src/entities/event-log.entity';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { PartnerEntity } from 'src/entities/partner.entity';
 import { SessionFeedbackEntity } from 'src/entities/session-feedback.entity';
@@ -11,6 +13,7 @@ import { SubscriptionUserEntity } from 'src/entities/subscription-user.entity';
 import { SubscriptionEntity } from 'src/entities/subscription.entity';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
 import { UserEntity } from 'src/entities/user.entity';
+import { EventLoggerService } from 'src/event-logger/event-logger.service';
 import { SessionFeedbackService } from 'src/session-feedback/session-feedback.service';
 import { SessionService } from 'src/session/session.service';
 import { FEEDBACK_TAGS_ENUM } from 'src/utils/constants';
@@ -36,6 +39,9 @@ describe('SessionFeedbackService', () => {
   let mockSessionFeedbackRepository: DeepMocked<Repository<SessionFeedbackEntity>>;
   let mockSessionService: DeepMocked<SessionService>;
   let mockSlackMessageClient: DeepMocked<SlackMessageClient>;
+  let mockCrispService: DeepMocked<CrispService>;
+  let mockEventLoggerService: DeepMocked<EventLoggerService>;
+  let mockEventLogRepository: DeepMocked<Repository<EventLogEntity>>;
 
   beforeEach(async () => {
     mockPartnerAccessRepository = createMock<Repository<PartnerAccessEntity>>();
@@ -48,6 +54,9 @@ describe('SessionFeedbackService', () => {
     mockSessionFeedbackRepository = createMock<Repository<SessionFeedbackEntity>>();
     mockSessionService = createMock<SessionService>();
     mockSlackMessageClient = createMock<SlackMessageClient>();
+    mockCrispService = createMock<CrispService>();
+    mockEventLoggerService = createMock<EventLoggerService>();
+    mockEventLogRepository = createMock<Repository<EventLogEntity>>(mockEventLogRepository);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -89,6 +98,12 @@ describe('SessionFeedbackService', () => {
           useValue: mockSessionService,
         },
         { provide: SlackMessageClient, useValue: mockSlackMessageClient },
+        {
+          provide: getRepositoryToken(EventLogEntity),
+          useValue: mockEventLogRepository,
+        },
+        { provide: CrispService, useValue: mockCrispService },
+        { provide: EventLoggerService, useValue: mockEventLoggerService },
       ],
     }).compile();
 

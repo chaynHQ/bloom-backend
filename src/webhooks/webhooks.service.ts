@@ -2,17 +2,14 @@ import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { SlackMessageClient } from 'src/api/slack/slack-api';
 import { CourseEntity } from 'src/entities/course.entity';
-import { EventLogEntity } from 'src/entities/event-log.entity';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { SessionEntity } from 'src/entities/session.entity';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
 import { UserEntity } from 'src/entities/user.entity';
-import { EventLoggerService } from 'src/event-logger/event-logger.service';
 import { ZapierSimplybookBodyDto } from 'src/partner-access/dtos/zapier-body.dto';
 import { ServiceUserProfilesService } from 'src/service-user-profiles/service-user-profiles.service';
 import { IUser } from 'src/user/user.interface';
 import { serializeZapierSimplyBookDtoToTherapySessionEntity } from 'src/utils/serialize';
-import { WebhookCreateEventLogDto } from 'src/webhooks/dto/webhook-create-event-log.dto';
 import StoryblokClient from 'storyblok-js-client';
 import { ILike, MoreThan, Repository } from 'typeorm';
 import { CoursePartnerService } from '../course-partner/course-partner.service';
@@ -37,7 +34,6 @@ export class WebhooksService {
     private readonly coursePartnerService: CoursePartnerService,
     @InjectRepository(TherapySessionEntity)
     private therapySessionRepository: Repository<TherapySessionEntity>,
-    private eventLoggerService: EventLoggerService,
     private serviceUserProfilesService: ServiceUserProfilesService,
     private slackMessageClient: SlackMessageClient,
   ) {}
@@ -392,32 +388,6 @@ export class WebhooksService {
         this.logger.log(`Storyblok session ${action} success - ${session.name}`);
         return session;
       }
-    }
-  }
-
-  async createEventLog(createEventDto: WebhookCreateEventLogDto): Promise<EventLogEntity> {
-    if (!createEventDto.email && !createEventDto.userId) {
-      const error = `createEventLog webhook failed - neither user email or userId was provided`;
-      this.logger.error(error);
-      throw new HttpException(error, HttpStatus.BAD_REQUEST);
-    }
-
-    // Only fetch user object if the userId is not provided
-    const user = createEventDto.userId
-      ? undefined
-      : await this.userRepository.findOneBy({ email: ILike(createEventDto.email) });
-
-    if (user || createEventDto.userId) {
-      const event = await this.eventLoggerService.createEventLog({
-        userId: createEventDto.userId || user.id,
-        event: createEventDto.event,
-        date: createEventDto.date,
-      });
-      return event;
-    } else {
-      const error = `createEventLog webhook failed - no user attached to email ${createEventDto.email}`;
-      this.logger.error(error);
-      throw new HttpException(error, HttpStatus.NOT_FOUND);
     }
   }
 }

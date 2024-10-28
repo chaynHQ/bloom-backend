@@ -1,6 +1,7 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { deleteMailchimpProfile } from 'src/api/mailchimp/mailchimp-api';
+import { CrispService } from 'src/crisp/crisp.service';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { PartnerEntity } from 'src/entities/partner.entity';
 import { UserEntity } from 'src/entities/user.entity';
@@ -13,7 +14,6 @@ import { SIGNUP_TYPE } from 'src/utils/constants';
 import { FIREBASE_ERRORS } from 'src/utils/errors';
 import { FIREBASE_EVENTS, USER_SERVICE_EVENTS } from 'src/utils/logs';
 import { ILike, IsNull, Not, Repository } from 'typeorm';
-import { deleteCrispProfile, deleteCypressCrispProfiles } from '../api/crisp/crisp-api';
 import { AuthService } from '../auth/auth.service';
 import { basePartnerAccess, PartnerAccessService } from '../partner-access/partner-access.service';
 import { formatUserObject } from '../utils/serialize';
@@ -39,6 +39,7 @@ export class UserService {
     private readonly therapySessionService: TherapySessionService,
     private readonly partnerAccessService: PartnerAccessService,
     private readonly serviceUserProfilesService: ServiceUserProfilesService,
+    private readonly crispService: CrispService,
   ) {}
 
   public async createUser(createUserDto: CreateUserDto): Promise<GetUserDto> {
@@ -300,7 +301,7 @@ export class UserService {
       await Promise.all(
         batch.map(async (user) => {
           try {
-            await deleteCrispProfile(user.email);
+            await this.crispService.deleteCrispProfile(user.email);
           } catch (error) {
             this.logger.warn(
               `deleteCypressTestUsers - unable to delete crisp profile for user ${user.id}`,
@@ -366,7 +367,7 @@ export class UserService {
         await this.authService.deleteCypressFirebaseUsers();
 
         // Delete all remaining crisp accounts
-        await deleteCypressCrispProfiles();
+        await this.crispService.deleteCypressCrispProfiles();
       }
     } catch (error) {
       // If this fails we don't want to break cypress tests but we want to be alerted
