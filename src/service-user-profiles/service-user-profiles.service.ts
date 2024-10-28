@@ -133,7 +133,7 @@ export class ServiceUserProfilesService {
         this.createCompleteMailchimpUserProfile(userWithRelations);
         logger.log(`Created and updated service user profiles user. Email: ${email}`);
       }
-      logger.error(`Update service user profiles user error - ${error}`);
+      logger.error(`Update service user profiles user error - ${JSON.stringify(error)}`);
     }
   }
 

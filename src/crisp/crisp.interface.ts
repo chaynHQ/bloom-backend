@@ -45,8 +45,8 @@ export interface CrispProfileCustomFields {
 export interface CrispProfileBase {
   email?: string;
   person?: {
-    nickname: string;
-    locales: string[];
+    nickname?: string;
+    locales?: string[];
   };
   segments?: string[];
   notepad?: string;
