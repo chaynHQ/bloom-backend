@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { SuperAdminAuthGuard } from 'src/partner-admin/super-admin-auth.guard';
 import { CrispService } from './crisp.service';
@@ -8,9 +8,15 @@ import { CrispService } from './crisp.service';
 export class CrispController {
   constructor(private readonly crispService: CrispService) {}
 
-  @Get('/analytics-message-origin')
+  @Get('/conversations')
   @UseGuards(SuperAdminAuthGuard)
-  async getCrispMessageOriginAnalytics() {
-    return this.crispService.getCrispMessageOriginAnalytics();
+  async getAllConversationSessionIds() {
+    return this.crispService.getAllConversationSessionIds();
+  }
+
+  @Post('/analytics-message-origin')
+  @UseGuards(SuperAdminAuthGuard)
+  async getCrispMessageOriginAnalytics(@Body() sessionIds: string[]) {
+    return this.crispService.getCrispMessageOriginAnalytics(sessionIds);
   }
 }
