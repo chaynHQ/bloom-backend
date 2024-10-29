@@ -139,4 +139,40 @@ export class CrispService {
       throw new Error(`Delete cypress crisp profiles API call failed: ${error}`);
     }
   }
+
+  async getCrispMessageOriginAnalytics() {
+    const messageSentEvents = await this.eventLoggerService.getMessageSentEventLogs();
+    const userEmails = [...new Set(messageSentEvents.flatMap((event) => event.user.email))];
+
+    let totalEmailOrigin = 0;
+    let totalChatOrigin = 0;
+
+    for (const userEmail of userEmails) {
+      const conversations = await CrispClient.website.listPeopleConversations(
+        crispWebsiteId,
+        userEmail,
+      );
+
+      for (const conversation of conversations) {
+        const messages = await CrispClient.website.getMessagesInConversation(
+          crispWebsiteId,
+          conversation,
+        );
+
+        for (const message of messages) {
+          if (message.from === 'user') {
+            if (message.origin === 'chat') totalChatOrigin++;
+            if (message.origin === 'email') totalEmailOrigin++;
+          }
+        }
+      }
+    }
+    const totalMessages = totalEmailOrigin + totalChatOrigin;
+    const chatPercentage =
+      totalMessages === 0 ? 0 : Math.round((totalChatOrigin / totalMessages) * 100);
+    const emailPercentage =
+      totalMessages === 0 ? 0 : Math.round((totalEmailOrigin / totalMessages) * 100);
+
+    return `Crisp message origin report: ${totalChatOrigin} (${chatPercentage}%) chat origin, ${totalEmailOrigin} (${emailPercentage}%) email origin`;
+  }
 }
