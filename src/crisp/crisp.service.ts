@@ -1,7 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import Crisp from 'crisp-api';
-import { sendMailchimpUserEvent } from 'src/api/mailchimp/mailchimp-api';
-import { MAILCHIMP_CUSTOM_EVENTS } from 'src/api/mailchimp/mailchimp-api.interfaces';
 import { EventLoggerService } from 'src/event-logger/event-logger.service';
 import { crispPluginId, crispPluginKey, crispWebsiteId } from 'src/utils/constants';
 import {
@@ -15,7 +13,6 @@ import {
 import { CrispEventDto } from './dtos/crisp.dto';
 
 const CrispClient = new Crisp();
-const logger = new Logger('CrispLogger');
 
 @Injectable()
 export class CrispService {
@@ -25,6 +22,16 @@ export class CrispService {
 
   async handleCrispEvent(message: CrispEventDto, eventName: EVENT_NAME) {
     try {
+      if (
+        eventName === EVENT_NAME.CHAT_MESSAGE_RECEIVED &&
+        typeof message.content !== 'string' &&
+        'namespace' in message.content
+      ) {
+        // When a conversation is resolved on crisp, the message:received event is fired with
+        // message.content.namespace = "state:resolved"
+        // Prevent our events being logged for conversation resolved events
+        return;
+      }
       const sessionMetaData = await CrispClient.website.getConversationMetas(
         message.website_id,
         message.session_id,
@@ -34,14 +41,6 @@ export class CrispService {
         event: eventName,
         date: new Date(),
       });
-
-      if (eventName === EVENT_NAME.CHAT_MESSAGE_RECEIVED) {
-        sendMailchimpUserEvent(
-          sessionMetaData.email,
-          MAILCHIMP_CUSTOM_EVENTS.CRISP_MESSAGE_RECEIVED,
-        );
-        logger.log('Crisp service: CRISP_MESSAGE_RECEIVED event sent to mailchimp');
-      }
     } catch (error) {
       throw new Error(`Failed to handle crisp event for ${eventName}: ${error}`);
     }
