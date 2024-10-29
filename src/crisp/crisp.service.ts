@@ -140,37 +140,50 @@ export class CrispService {
     }
   }
 
-  async getCrispMessageOriginAnalytics() {
+  // Supports getCrispMessageOriginAnalytics by splitting out logic to get all session IDs
+  // Combining the logic into one request causes a request timeout as it takes >30 seconds
+  async getAllConversationSessionIds() {
     const messageSentEvents = await this.eventLoggerService.getMessageSentEventLogs();
     const userEmails = [...new Set(messageSentEvents.flatMap((event) => event.user.email))];
-
-    let totalEmailOrigin = 0;
-    let totalChatOrigin = 0;
-
+    const sessionIds: string[] = [];
     for (const userEmail of userEmails) {
       try {
         const conversations = await CrispClient.website.listPeopleConversations(
           crispWebsiteId,
           userEmail,
         );
-
-        for (const conversation of conversations) {
-          const messages = await CrispClient.website.getMessagesInConversation(
-            crispWebsiteId,
-            conversation,
-          );
-
-          for (const message of messages) {
-            if (message.from === 'user') {
-              if (message.origin === 'chat') totalChatOrigin++;
-              if (message.origin === 'email') totalEmailOrigin++;
-            }
-          }
-        }
+        sessionIds.push(...conversations);
       } catch (error) {
         // skip
         console.log(error);
       }
+    }
+    return sessionIds;
+  }
+
+  // Returns an analytics string containing the number/percentage of crisp messages
+  // sent by email vs within the chat widget
+  async getCrispMessageOriginAnalytics(sessionIds) {
+    let totalEmailOrigin = 0;
+    let totalChatOrigin = 0;
+
+    try {
+      for (const sessionId of sessionIds) {
+        const messages = await CrispClient.website.getMessagesInConversation(
+          crispWebsiteId,
+          sessionId,
+        );
+
+        for (const message of messages) {
+          if (message.from === 'user') {
+            if (message.origin === 'chat') totalChatOrigin++;
+            if (message.origin === 'email') totalEmailOrigin++;
+          }
+        }
+      }
+    } catch (error) {
+      // skip
+      console.log(error);
     }
     const totalMessages = totalEmailOrigin + totalChatOrigin;
     const chatPercentage =
@@ -178,6 +191,6 @@ export class CrispService {
     const emailPercentage =
       totalMessages === 0 ? 0 : Math.round((totalEmailOrigin / totalMessages) * 100);
 
-    return `Crisp message origin report: ${totalChatOrigin} (${chatPercentage}%) chat origin, ${totalEmailOrigin} (${emailPercentage}%) email origin`;
+    return `Crisp message origin report: ${totalChatOrigin} (${chatPercentage}%) chat widget origin, ${totalEmailOrigin} (${emailPercentage}%) email origin`;
   }
 }
