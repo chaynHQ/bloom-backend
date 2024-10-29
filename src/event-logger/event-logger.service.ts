@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { EventLogEntity } from 'src/entities/event-log.entity';
 import { UserEntity } from 'src/entities/user.entity';
 import { Repository } from 'typeorm';
-import { ICreateEventLog } from './event-logger.interface';
+import { EVENT_NAME, ICreateEventLog } from './event-logger.interface';
 
 const logger = new Logger('EventLogger');
 
@@ -18,6 +18,13 @@ export class EventLoggerService {
 
   async getEventLog(id: string): Promise<EventLogEntity> {
     return await this.eventLoggerRepository.findOneBy({ id });
+  }
+
+  async getMessageSentEventLogs(): Promise<EventLogEntity[]> {
+    return await this.eventLoggerRepository.find({
+      where: { event: EVENT_NAME.CHAT_MESSAGE_SENT },
+      relations: { user: true },
+    });
   }
 
   async createEventLog({ email, userId, event, date }: ICreateEventLog) {
