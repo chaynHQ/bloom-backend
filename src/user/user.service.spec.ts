@@ -3,10 +3,12 @@ import { createMock, DeepMocked } from '@golevelup/ts-jest';
 import { HttpException, HttpStatus } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { createCrispProfile, updateCrispProfile } from 'src/api/crisp/crisp-api';
 import { createMailchimpProfile, updateMailchimpProfile } from 'src/api/mailchimp/mailchimp-api';
+import { CrispService } from 'src/crisp/crisp.service';
+import { EventLogEntity } from 'src/entities/event-log.entity';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { PartnerEntity } from 'src/entities/partner.entity';
+import { EventLoggerService } from 'src/event-logger/event-logger.service';
 import { ServiceUserProfilesService } from 'src/service-user-profiles/service-user-profiles.service';
 import { SubscriptionUserService } from 'src/subscription-user/subscription-user.service';
 import { TherapySessionService } from 'src/therapy-session/therapy-session.service';
@@ -55,8 +57,8 @@ const updateUserDto: Partial<UpdateUserDto> = {
 
 const mockSubscriptionUserServiceMethods = {};
 const mockTherapySessionServiceMethods = {};
+const mockCrispServiceMethods = {};
 
-jest.mock('src/api/crisp/crisp-api');
 jest.mock('src/api/mailchimp/mailchimp-api');
 
 describe('UserService', () => {
@@ -66,6 +68,9 @@ describe('UserService', () => {
   let mockPartnerAccessService: DeepMocked<PartnerAccessService>;
   let mockSubscriptionUserService: DeepMocked<SubscriptionUserService>;
   let mockTherapySessionService: DeepMocked<TherapySessionService>;
+  let mockCrispService: DeepMocked<CrispService>;
+  let mockEventLoggerService: DeepMocked<EventLoggerService>;
+  let mockEventLogRepository: DeepMocked<Repository<EventLogEntity>>;
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -75,6 +80,9 @@ describe('UserService', () => {
       mockSubscriptionUserServiceMethods,
     );
     mockTherapySessionService = createMock<TherapySessionService>(mockTherapySessionServiceMethods);
+    mockCrispService = createMock<CrispService>(mockCrispServiceMethods);
+    mockEventLoggerService = createMock<EventLoggerService>();
+    mockEventLogRepository = createMock<Repository<EventLogEntity>>(mockEventLogRepository);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -102,6 +110,12 @@ describe('UserService', () => {
         { provide: SubscriptionUserService, useValue: mockSubscriptionUserService },
         { provide: TherapySessionService, useValue: mockTherapySessionService },
         ServiceUserProfilesService,
+        {
+          provide: getRepositoryToken(EventLogEntity),
+          useValue: mockEventLogRepository,
+        },
+        { provide: CrispService, useValue: mockCrispService },
+        { provide: EventLoggerService, useValue: mockEventLoggerService },
       ],
     }).compile();
 
@@ -129,12 +143,12 @@ describe('UserService', () => {
       expect(user.partnerAccesses).toBeNull();
 
       // Test services user profiles are created
-      expect(createCrispProfile).toHaveBeenCalledWith({
+      expect(mockCrispService.createCrispProfile).toHaveBeenCalledWith({
         email: user.user.email,
         person: { nickname: user.user.name, locales: [user.user.signUpLanguage] },
         segments: ['public'],
       });
-      expect(updateCrispProfile).toHaveBeenCalled();
+      expect(mockCrispService.updateCrispPeopleData).toHaveBeenCalled();
       expect(createMailchimpProfile).toHaveBeenCalled();
     });
 
@@ -162,12 +176,12 @@ describe('UserService', () => {
       ]);
 
       // Test services user profiles are created
-      expect(createCrispProfile).toHaveBeenCalledWith({
+      expect(mockCrispService.createCrispProfile).toHaveBeenCalledWith({
         email: user.user.email,
         person: { nickname: 'name', locales: ['en'] },
         segments: ['bumble'],
       });
-      expect(updateCrispProfile).toHaveBeenCalledWith(
+      expect(mockCrispService.updateCrispPeopleData).toHaveBeenCalledWith(
         {
           signed_up_at: user.user.createdAt,
           last_active_at: (user.user.lastActiveAt as Date).toISOString(),
@@ -233,7 +247,7 @@ describe('UserService', () => {
     });
 
     it('should not fail create on crisp api call errors', async () => {
-      const mocked = jest.mocked(createCrispProfile);
+      const mocked = jest.mocked(mockCrispService.createCrispProfile);
       mocked.mockRejectedValue(new Error('Crisp API call failed'));
 
       const user = await service.createUser(createUserDto);
@@ -313,7 +327,7 @@ describe('UserService', () => {
     });
 
     it('should not fail update on crisp api call errors', async () => {
-      const mocked = jest.mocked(updateCrispProfile);
+      const mocked = jest.mocked(mockCrispService.updateCrispPeopleData);
       mocked.mockRejectedValue(new Error('Crisp API call failed'));
 
       const user = await service.updateUser(updateUserDto, mockUserEntity.id);

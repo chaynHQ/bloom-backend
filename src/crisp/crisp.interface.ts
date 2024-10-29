@@ -1,4 +1,17 @@
-import { EMAIL_REMINDERS_FREQUENCY } from '../../utils/constants';
+import { EMAIL_REMINDERS_FREQUENCY } from 'src/utils/constants';
+
+export enum EVENT_NAME {
+  CHAT_MESSAGE_SENT = 'CHAT_MESSAGE_SENT',
+  CHAT_MESSAGE_RECEIVED = 'CHAT_MESSAGE_RECEIVED',
+  LOGGED_IN = 'LOGGED_IN',
+  LOGGED_OUT = 'LOGGED_OUT',
+}
+
+export interface ICreateEventLog {
+  date: Date | string;
+  event: EVENT_NAME;
+  userId: string;
+}
 
 export interface CrispProfileCustomFields {
   signed_up_at?: string;
@@ -32,8 +45,8 @@ export interface CrispProfileCustomFields {
 export interface CrispProfileBase {
   email?: string;
   person?: {
-    nickname: string;
-    locales: string[];
+    nickname?: string;
+    locales?: string[];
   };
   segments?: string[];
   notepad?: string;
