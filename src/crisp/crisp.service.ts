@@ -148,23 +148,28 @@ export class CrispService {
     let totalChatOrigin = 0;
 
     for (const userEmail of userEmails) {
-      const conversations = await CrispClient.website.listPeopleConversations(
-        crispWebsiteId,
-        userEmail,
-      );
-
-      for (const conversation of conversations) {
-        const messages = await CrispClient.website.getMessagesInConversation(
+      try {
+        const conversations = await CrispClient.website.listPeopleConversations(
           crispWebsiteId,
-          conversation,
+          userEmail,
         );
 
-        for (const message of messages) {
-          if (message.from === 'user') {
-            if (message.origin === 'chat') totalChatOrigin++;
-            if (message.origin === 'email') totalEmailOrigin++;
+        for (const conversation of conversations) {
+          const messages = await CrispClient.website.getMessagesInConversation(
+            crispWebsiteId,
+            conversation,
+          );
+
+          for (const message of messages) {
+            if (message.from === 'user') {
+              if (message.origin === 'chat') totalChatOrigin++;
+              if (message.origin === 'email') totalEmailOrigin++;
+            }
           }
         }
+      } catch (error) {
+        // skip
+        console.log(error);
       }
     }
     const totalMessages = totalEmailOrigin + totalChatOrigin;
