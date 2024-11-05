@@ -1,11 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
-  createCrispProfile,
-  updateCrispProfile,
-  updateCrispProfileBase,
-} from 'src/api/crisp/crisp-api';
-import {
   batchCreateMailchimpProfiles,
   createMailchimpMergeField,
   createMailchimpProfile,
@@ -15,6 +10,7 @@ import {
   ListMemberPartial,
   MAILCHIMP_MERGE_FIELD_TYPES,
 } from 'src/api/mailchimp/mailchimp-api.interfaces';
+import { CrispService } from 'src/crisp/crisp.service';
 import { CourseUserEntity } from 'src/entities/course-user.entity';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { PartnerEntity } from 'src/entities/partner.entity';
@@ -37,7 +33,10 @@ const logger = new Logger('ServiceUserProfiles');
 
 @Injectable()
 export class ServiceUserProfilesService {
-  constructor(@InjectRepository(UserEntity) private userRepository: Repository<UserEntity>) {}
+  constructor(
+    @InjectRepository(UserEntity) private userRepository: Repository<UserEntity>,
+    private crispService: CrispService,
+  ) {}
 
   async createServiceUserProfiles(
     user: UserEntity,
@@ -52,7 +51,7 @@ export class ServiceUserProfilesService {
         partnerAccess ? [{ ...partnerAccess, partner }] : [],
       );
 
-      await createCrispProfile({
+      await this.crispService.createCrispProfile({
         email: email,
         person: { nickname: user.name, locales: [user.signUpLanguage || 'en'] },
         segments: this.serializeCrispPartnerSegments(partner ? [partner] : []),
@@ -60,7 +59,7 @@ export class ServiceUserProfilesService {
 
       const userSignedUpAt = user.createdAt?.toISOString();
 
-      await updateCrispProfile(
+      await this.crispService.updateCrispPeopleData(
         {
           signed_up_at: userSignedUpAt,
           ...userData.crispSchema,
@@ -99,7 +98,7 @@ export class ServiceUserProfilesService {
     try {
       if (isCrispBaseUpdateRequired) {
         // Extra call required to update crisp "base" profile when name or sign up language is changed
-        await updateCrispProfileBase(
+        await this.crispService.updateCrispProfileBase(
           {
             ...(isEmailUpdateRequired && { email: email }),
             person: {
@@ -112,7 +111,7 @@ export class ServiceUserProfilesService {
       }
 
       const userData = this.serializeUserData(user);
-      await updateCrispProfile(userData.crispSchema, email);
+      await this.crispService.updateCrispPeopleData(userData.crispSchema, email);
       await updateMailchimpProfile(
         {
           ...userData.mailchimpSchema,
@@ -134,7 +133,7 @@ export class ServiceUserProfilesService {
         this.createCompleteMailchimpUserProfile(userWithRelations);
         logger.log(`Created and updated service user profiles user. Email: ${email}`);
       }
-      logger.error(`Update service user profiles user error - ${error}`);
+      logger.error(`Update service user profiles user error - ${JSON.stringify(error)}`);
     }
   }
 
@@ -144,7 +143,7 @@ export class ServiceUserProfilesService {
   ) {
     try {
       const partners = partnerAccesses.map((pa) => pa.partner);
-      await updateCrispProfileBase(
+      await this.crispService.updateCrispProfileBase(
         {
           segments: this.serializeCrispPartnerSegments(partners),
         },
@@ -152,7 +151,7 @@ export class ServiceUserProfilesService {
       );
 
       const partnerAccessData = this.serializePartnerAccessData(partnerAccesses);
-      await updateCrispProfile(partnerAccessData.crispSchema, email);
+      await this.crispService.updateCrispPeopleData(partnerAccessData.crispSchema, email);
       await updateMailchimpProfile(partnerAccessData.mailchimpSchema, email);
     } catch (error) {
       logger.error(`Update service user profiles partner access error - ${error}`);
@@ -162,7 +161,7 @@ export class ServiceUserProfilesService {
   async updateServiceUserProfilesTherapy(partnerAccesses: PartnerAccessEntity[], email) {
     try {
       const therapyData = this.serializeTherapyData(partnerAccesses);
-      await updateCrispProfile(therapyData.crispSchema, email);
+      await this.crispService.updateCrispPeopleData(therapyData.crispSchema, email);
       await updateMailchimpProfile(therapyData.mailchimpSchema, email);
     } catch (error) {
       logger.error(`Update service user profiles therapy error - ${error}`);
@@ -172,7 +171,7 @@ export class ServiceUserProfilesService {
   async updateServiceUserProfilesCourse(courseUser: CourseUserEntity, email: string) {
     try {
       const courseData = this.serializeCourseData(courseUser);
-      await updateCrispProfile(courseData.crispSchema, email);
+      await this.crispService.updateCrispPeopleData(courseData.crispSchema, email);
       await updateMailchimpProfile(courseData.mailchimpSchema, email);
     } catch (error) {
       logger.error(`Update service user profiles course error - ${error}`);
