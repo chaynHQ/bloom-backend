@@ -113,10 +113,6 @@ export const formatUserObject = (userObject: UserEntity): GetUserDto => {
       ? formatPartnerAdminObjects(userObject.partnerAdmin)
       : null,
     courses: userObject.courseUser ? formatCourseUserObjects(userObject.courseUser) : [],
-    subscriptions:
-      userObject.subscriptionUser && userObject.subscriptionUser.length > 0
-        ? formatSubscriptionObjects(userObject.subscriptionUser)
-        : [],
   };
 };
 
@@ -186,12 +182,6 @@ export const serializeZapierSimplyBookDtoToTherapySessionEntity = (
     partnerAccessId: partnerAccess.id,
     userId: partnerAccess.userId,
   };
-};
-
-export const formatSubscriptionObjects = (
-  userSubscriptions: SubscriptionUserEntity[],
-): ISubscriptionUser[] => {
-  return userSubscriptions.map((userSubscription) => formatSubscriptionObject(userSubscription));
 };
 
 export const formatSubscriptionObject = (
