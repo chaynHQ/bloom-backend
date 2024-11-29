@@ -52,6 +52,11 @@ export enum FEEDBACK_TAGS_ENUM {
   NOT_USEFUL = 'not useful',
 }
 
+export enum RESOURCE_TYPE_ENUM {
+  SHORT = 'short',
+  CONVERSATION = 'conversation',
+}
+
 export enum STORYBLOK_STORY_STATUS_ENUM {
   PUBLISHED = 'published',
   UNPUBLISHED = 'unpublished',

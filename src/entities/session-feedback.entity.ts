@@ -10,7 +10,7 @@ export class SessionFeedbackEntity extends BaseBloomEntity {
 
   @Column()
   sessionId: string;
-  @ManyToOne(() => SessionEntity, (sessionEntity) => sessionEntity.sessionUser, {
+  @ManyToOne(() => SessionEntity, (sessionEntity) => sessionEntity.sessionFeedback, {
     onDelete: 'CASCADE',
   })
   @JoinTable({ name: 'session', joinColumn: { name: 'sessionId' } })

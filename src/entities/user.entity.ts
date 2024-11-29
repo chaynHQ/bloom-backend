@@ -5,6 +5,7 @@ import { EMAIL_REMINDERS_FREQUENCY } from '../utils/constants';
 import { BaseBloomEntity } from './base.entity';
 import { CourseUserEntity } from './course-user.entity';
 import { EventLogEntity } from './event-log.entity';
+import { ResourceUserEntity } from './resource-user.entity';
 import { SubscriptionUserEntity } from './subscription-user.entity';
 import { TherapySessionEntity } from './therapy-session.entity';
 
@@ -65,6 +66,11 @@ export class UserEntity extends BaseBloomEntity {
 
   @OneToMany(() => EventLogEntity, (eventLog) => eventLog.user, { cascade: true })
   eventLog: EventLogEntity[];
+
+  @OneToMany(() => ResourceUserEntity, (resourceUser) => resourceUser.user, {
+    cascade: true,
+  })
+  resourceUser: ResourceUserEntity[];
 
   @Column({ unique: true })
   @Generated('uuid')
