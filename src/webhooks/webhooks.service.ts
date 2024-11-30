@@ -7,6 +7,7 @@ import { SessionEntity } from 'src/entities/session.entity';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
 import { UserEntity } from 'src/entities/user.entity';
 import { ZapierSimplybookBodyDto } from 'src/partner-access/dtos/zapier-body.dto';
+import { ResourceService } from 'src/resource/resource.service';
 import { ServiceUserProfilesService } from 'src/service-user-profiles/service-user-profiles.service';
 import { IUser } from 'src/user/user.interface';
 import { serializeZapierSimplyBookDtoToTherapySessionEntity } from 'src/utils/serialize';
@@ -35,6 +36,7 @@ export class WebhooksService {
     @InjectRepository(TherapySessionEntity)
     private therapySessionRepository: Repository<TherapySessionEntity>,
     private serviceUserProfilesService: ServiceUserProfilesService,
+    private resourceService: ResourceService,
     private slackMessageClient: SlackMessageClient,
   ) {}
 
@@ -346,6 +348,11 @@ export class WebhooksService {
         session = await this.sessionRepository.save(newSession);
         this.logger.log(`Storyblok session ${action} success - ${session.name}`);
         return session;
+      } else if (
+        story.content?.component === 'Shorts' ||
+        story.content?.component === 'Conversations'
+      ) {
+        this.resourceService.createResourceFromStoryData(story);
       }
       return undefined; // New story wasn't a course or session story, ignore
     } catch (err) {
@@ -358,6 +365,8 @@ export class WebhooksService {
   async updateStory(data: StoryDto) {
     const action = data.action;
     const story_id = data.story_id;
+
+    console.log(data);
 
     this.logger.log(`Storyblok story ${action} request - ${story_id}`);
 
