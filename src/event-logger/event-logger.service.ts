@@ -51,12 +51,7 @@ export class EventLoggerService {
         userId = user.id;
       }
 
-      const eventLog = await this.eventLoggerRepository.create({
-        userId,
-        event,
-        date,
-      });
-      const eventLogRecord = this.eventLoggerRepository.save(eventLog);
+      const eventLogRecord = this.eventLoggerRepository.save({ userId, event, date });
       return eventLogRecord;
     } catch (err) {
       throw new HttpException(

@@ -168,7 +168,7 @@ describe('WebhooksService', () => {
     expect(service).toBeDefined();
   });
 
-  describe('updateStory', () => {
+  describe('handleStoryUpdated', () => {
     it('when story does not exist, it returns with a 404', async () => {
       // unfortunately it is mega hard to mock classes that are also node modules and this was
       // the only solution i got working
@@ -189,7 +189,7 @@ describe('WebhooksService', () => {
         text: '',
       };
 
-      return expect(service.updateStory(body)).rejects.toThrow('STORYBLOK STORY NOT FOUND');
+      return expect(service.handleStoryUpdated(body)).rejects.toThrow('STORYBLOK STORY NOT FOUND');
     });
 
     it('when action is deleted, story should be set as deleted in database', async () => {
@@ -199,7 +199,7 @@ describe('WebhooksService', () => {
         text: '',
       };
 
-      const deletedStory = (await service.updateStory(body)) as SessionEntity;
+      const deletedStory = (await service.handleStoryUpdated(body)) as SessionEntity;
 
       expect(deletedStory.status).toBe(STORYBLOK_STORY_STATUS_ENUM.DELETED);
     });
@@ -211,7 +211,7 @@ describe('WebhooksService', () => {
         text: '',
       };
 
-      const unpublished = (await service.updateStory(body)) as SessionEntity;
+      const unpublished = (await service.handleStoryUpdated(body)) as SessionEntity;
 
       expect(unpublished.status).toBe(STORYBLOK_STORY_STATUS_ENUM.UNPUBLISHED);
     });
@@ -259,7 +259,7 @@ describe('WebhooksService', () => {
         text: '',
       };
 
-      const session = (await service.updateStory(body)) as SessionEntity;
+      const session = (await service.handleStoryUpdated(body)) as SessionEntity;
 
       expect(courseFindOneSpy).toHaveBeenCalledWith({
         storyblokUuid: 'anotherCourseUuId',
@@ -302,7 +302,7 @@ describe('WebhooksService', () => {
         text: '',
       };
 
-      const session = (await service.updateStory(body)) as SessionEntity;
+      const session = (await service.handleStoryUpdated(body)) as SessionEntity;
 
       expect(session).toEqual(mockSession);
       expect(courseFindOneSpy).toHaveBeenCalledWith({
@@ -361,7 +361,7 @@ describe('WebhooksService', () => {
         text: '',
       };
 
-      const session = (await service.updateStory(body)) as SessionEntity;
+      const session = (await service.handleStoryUpdated(body)) as SessionEntity;
 
       expect(session).toEqual(mockSession);
       expect(sessionSaveRepoSpy).toHaveBeenCalledWith({
@@ -395,7 +395,7 @@ describe('WebhooksService', () => {
         text: '',
       };
 
-      const course = (await service.updateStory(body)) as CourseEntity;
+      const course = (await service.handleStoryUpdated(body)) as CourseEntity;
 
       expect(course).toEqual(mockCourse);
       expect(courseFindOneRepoSpy).toHaveBeenCalledWith({

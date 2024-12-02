@@ -22,7 +22,6 @@ export class ResourceFeedbackService {
       throw new HttpException('RESOURCE NOT FOUND', HttpStatus.NOT_FOUND);
     }
 
-    const feedback = this.resourceFeedbackRepository.create(createResourceFeedbackDto);
-    return this.resourceFeedbackRepository.save(feedback);
+    return this.resourceFeedbackRepository.save(createResourceFeedbackDto);
   }
 }

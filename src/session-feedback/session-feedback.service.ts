@@ -25,8 +25,7 @@ export class SessionFeedbackService {
       throw new HttpException('SESSION NOT FOUND', HttpStatus.NOT_FOUND);
     }
 
-    const sessionFeedbackObject = this.sessionFeedbackRepository.create(sessionFeedbackDto);
-    await this.sessionFeedbackRepository.save(sessionFeedbackObject);
+    await this.sessionFeedbackRepository.save(sessionFeedbackDto);
     this.sendSlackSessionFeedback(sessionFeedbackDto, session);
 
     return sessionFeedbackDto;

@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { SlackMessageClient } from 'src/api/slack/slack-api';
 import { CourseEntity } from 'src/entities/course.entity';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
+import { ResourceEntity } from 'src/entities/resource.entity';
 import { SessionEntity } from 'src/entities/session.entity';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
 import { UserEntity } from 'src/entities/user.entity';
@@ -11,16 +12,18 @@ import { ResourceService } from 'src/resource/resource.service';
 import { ServiceUserProfilesService } from 'src/service-user-profiles/service-user-profiles.service';
 import { IUser } from 'src/user/user.interface';
 import { serializeZapierSimplyBookDtoToTherapySessionEntity } from 'src/utils/serialize';
-import StoryblokClient from 'storyblok-js-client';
+import StoryblokClient, { ISbStoryData } from 'storyblok-js-client';
 import { ILike, MoreThan, Repository } from 'typeorm';
 import { CoursePartnerService } from '../course-partner/course-partner.service';
 import {
   isProduction,
+  RESOURCE_CATEGORIES,
   SIMPLYBOOK_ACTION_ENUM,
+  STORYBLOK_PAGE_COMPONENTS,
   STORYBLOK_STORY_STATUS_ENUM,
   storyblokToken,
 } from '../utils/constants';
-import { StoryDto } from './dto/story.dto';
+import { StoryWebhookDto } from './dto/story.dto';
 
 @Injectable()
 export class WebhooksService {
@@ -32,6 +35,7 @@ export class WebhooksService {
     @InjectRepository(UserEntity) private userRepository: Repository<UserEntity>,
     @InjectRepository(CourseEntity) private courseRepository: Repository<CourseEntity>,
     @InjectRepository(SessionEntity) private sessionRepository: Repository<SessionEntity>,
+    @InjectRepository(ResourceEntity) private resourceRepository: Repository<ResourceEntity>,
     private readonly coursePartnerService: CoursePartnerService,
     @InjectRepository(TherapySessionEntity)
     private therapySessionRepository: Repository<TherapySessionEntity>,
@@ -261,8 +265,145 @@ export class WebhooksService {
     }
   }
 
-  private async createNewStory(story_id: number, action: STORYBLOK_STORY_STATUS_ENUM) {
-    let story;
+  private async updateOrCreateStory(storyData: ISbStoryData, status: STORYBLOK_STORY_STATUS_ENUM) {
+    const storyPageComponent = storyData.content.component as STORYBLOK_PAGE_COMPONENTS;
+
+    const updatedStoryData = {
+      name: storyData.name,
+      slug: storyData.full_slug,
+      status: status,
+    }; // fields to update on existing and new stories
+
+    const newStoryData = {
+      storyblokId: storyData.id,
+      storyblokUuid: storyData.uuid,
+      ...updatedStoryData,
+    }; // includes storyblok id and uuid for new stories only
+
+    try {
+      if (
+        storyPageComponent === STORYBLOK_PAGE_COMPONENTS.RESOURCE_SHORT_VIDEO ||
+        storyPageComponent === STORYBLOK_PAGE_COMPONENTS.RESOURCE_CONVERSATION
+      ) {
+        const resourceCategory =
+          storyPageComponent === STORYBLOK_PAGE_COMPONENTS.RESOURCE_SHORT_VIDEO
+            ? RESOURCE_CATEGORIES.SHORT_VIDEO
+            : RESOURCE_CATEGORIES.CONVERSATION;
+
+        const existingResource = await this.resourceRepository.findOneBy({
+          storyblokUuid: storyData.uuid,
+        });
+        const data = existingResource
+          ? { ...existingResource, ...updatedStoryData }
+          : { ...newStoryData, category: resourceCategory };
+
+        const resource = await this.resourceRepository.save(data);
+        this.logger.log(`Storyblok resource ${status} success - ${resource.name}`);
+        return resource;
+      }
+
+      if (storyPageComponent === STORYBLOK_PAGE_COMPONENTS.COURSE) {
+        const existingCourse = await this.courseRepository.findOneBy({
+          storyblokId: storyData.id,
+        });
+        const data = existingCourse
+          ? { ...existingCourse, ...updatedStoryData }
+          : { ...newStoryData };
+
+        const course = await this.courseRepository.save(data);
+
+        if (!existingCourse)
+          // new course, add mailchimp course field
+          this.serviceUserProfilesService.createMailchimpCourseMergeField(updatedStoryData.name);
+
+        await this.coursePartnerService.updateCoursePartners(
+          storyData.content?.included_for_partners,
+          course.id,
+        );
+        this.logger.log(`Storyblok course ${status} success - ${course.name}`);
+        return course;
+      }
+
+      if (
+        storyPageComponent === STORYBLOK_PAGE_COMPONENTS.SESSION ||
+        storyPageComponent === STORYBLOK_PAGE_COMPONENTS.SESSION_IBA
+      ) {
+        const course = await this.courseRepository.findOneByOrFail({
+          storyblokUuid: storyData.content.course,
+        });
+
+        const existingSession = await this.sessionRepository.findOneBy({
+          storyblokId: storyData.id,
+        });
+        const data = existingSession
+          ? { ...existingSession, ...updatedStoryData, courseId: course.id }
+          : { ...newStoryData, courseId: course.id };
+
+        const session = await this.sessionRepository.save(data);
+        this.logger.log(`Storyblok session ${status} success - ${session.name}`);
+        return session;
+      }
+      return undefined; // Story wasn't a course, session or resource story. No sync or updates completed
+    } catch (err) {
+      const error = `Storyblok webhook failed - error updating or creating ${status} ${storyPageComponent} story record ${storyData.id} - ${err}`;
+      this.logger.error(error);
+      throw new HttpException(error, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  async updateDeletedStory(story_id: number) {
+    const status = STORYBLOK_STORY_STATUS_ENUM.DELETED;
+
+    // Story is deleted so cant be fetched from storyblok to get story type
+    // Try to find course with matching story_id first
+    let course = await this.courseRepository.findOneBy({
+      storyblokId: story_id,
+    });
+
+    if (course) {
+      course = await this.courseRepository.save({ ...course, status });
+      this.logger.log(`Storyblok course ${status} success - ${course.name}`);
+      return course;
+    }
+    // No course found, try finding session instead
+    let session = await this.sessionRepository.findOneBy({
+      storyblokId: story_id,
+    });
+
+    if (session) {
+      session = await this.sessionRepository.save({ ...session, status });
+      this.logger.log(`Storyblok session ${status} success - ${session.name}`);
+      return session;
+    }
+
+    // No session found, try finding resource instead
+    let resource = await this.resourceRepository.findOneBy({
+      storyblokId: story_id,
+    });
+
+    if (resource) {
+      resource = await this.resourceRepository.save({ ...resource, status });
+      this.logger.log(`Storyblok session ${status} success - ${resource.name}`);
+      return resource;
+    }
+  }
+
+  // Handle Storyblok story status change (published, unpublished, moved, deleted)
+  // Triggered by a webhook, this function handles updating our database records to sync with storyblok story data
+  async handleStoryUpdated(data: StoryWebhookDto) {
+    const status = data.action;
+    const story_id = data.story_id;
+
+    this.logger.log(`Storyblok story ${status} request - ${story_id}`);
+
+    if (status === STORYBLOK_STORY_STATUS_ENUM.DELETED) {
+      this.updateDeletedStory(story_id);
+      return;
+    }
+
+    // Story was either published, unpublished, or moved
+    // First get story data from storyblok
+    let story: ISbStoryData;
 
     const Storyblok = new StoryblokClient({
       accessToken: storyblokToken,
@@ -275,7 +416,7 @@ export class WebhooksService {
     try {
       const response = await Storyblok.get(`cdn/stories/${story_id}`);
       if (response?.data?.story) {
-        story = response.data.story;
+        story = response.data.story as ISbStoryData;
       }
     } catch (err) {
       const error = `Storyblok webhook failed - error getting story from storyblok - ${err}`;
@@ -283,120 +424,7 @@ export class WebhooksService {
       throw new HttpException(error, HttpStatus.NOT_FOUND);
     }
 
-    const storyData = {
-      name: story.name,
-      slug: story.full_slug,
-      status: action,
-      storyblokId: story_id,
-      storyblokUuid: story.uuid,
-    };
-    try {
-      if (story.content?.component === 'Course') {
-        const courseName = story.content?.name;
-
-        let course = await this.courseRepository.findOneBy({
-          storyblokId: story_id,
-        });
-
-        if (course) {
-          course.status = action;
-          course.slug = story.full_slug;
-        } else {
-          course = this.courseRepository.create(storyData);
-          this.serviceUserProfilesService.createMailchimpCourseMergeField(courseName);
-        }
-
-        course.name = courseName;
-        course = await this.courseRepository.save(course);
-
-        await this.coursePartnerService.updateCoursePartners(
-          story.content?.included_for_partners,
-          course.id,
-        );
-
-        this.logger.log(`Storyblok course ${action} success - ${course.name}`);
-        return course;
-      } else if (
-        story.content?.component === 'Session' ||
-        story.content?.component === 'session_iba'
-      ) {
-        const course = await this.courseRepository.findOneBy({
-          storyblokUuid: story.content.course,
-        });
-
-        if (!course.id) {
-          const error = `Storyblok webhook failed - course not found for session story`;
-          this.logger.error(error);
-          throw new HttpException(error, HttpStatus.NOT_FOUND);
-        }
-
-        let session = await this.sessionRepository.findOneBy({
-          storyblokId: story_id,
-        });
-
-        const newSession = session
-          ? {
-              ...session,
-              status: action,
-              slug: story.full_slug,
-              name: story.name,
-              course: course,
-              courseId: course.id,
-            }
-          : this.sessionRepository.create({ ...storyData, ...{ courseId: course.id } });
-
-        session = await this.sessionRepository.save(newSession);
-        this.logger.log(`Storyblok session ${action} success - ${session.name}`);
-        return session;
-      } else if (
-        story.content?.component === 'Shorts' ||
-        story.content?.component === 'Conversations'
-      ) {
-        this.resourceService.createResourceFromStoryData(story);
-      }
-      return undefined; // New story wasn't a course or session story, ignore
-    } catch (err) {
-      const error = `Storyblok webhook failed - error creating new ${story.content?.component} record - ${err}`;
-      this.logger.error(error);
-      throw new HttpException(error, HttpStatus.INTERNAL_SERVER_ERROR);
-    }
-  }
-
-  async updateStory(data: StoryDto) {
-    const action = data.action;
-    const story_id = data.story_id;
-
-    console.log(data);
-
-    this.logger.log(`Storyblok story ${action} request - ${story_id}`);
-
-    if (action === STORYBLOK_STORY_STATUS_ENUM.PUBLISHED) {
-      return this.createNewStory(story_id, action);
-    }
-
-    // Story was unpublished or deleted so cant be fetched from storyblok to get story type (Course or Session)
-    // Try to find course with matching story_id first
-    let course = await this.courseRepository.findOneBy({
-      storyblokId: story_id,
-    });
-
-    if (course) {
-      course.status = action;
-      course = await this.courseRepository.save(course);
-      this.logger.log(`Storyblok course ${action} success - ${course.name}`);
-      return course;
-    } else if (!course) {
-      // No course found, try finding session instead
-      let session = await this.sessionRepository.findOneBy({
-        storyblokId: story_id,
-      });
-
-      if (session) {
-        session.status = action;
-        session = await this.sessionRepository.save(session);
-        this.logger.log(`Storyblok session ${action} success - ${session.name}`);
-        return session;
-      }
-    }
+    // Create or update the resource/course/session record in our database
+    return this.updateOrCreateStory(story, status);
   }
 }

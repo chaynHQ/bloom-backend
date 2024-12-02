@@ -13,8 +13,7 @@ export class ResourceUserService {
   ) {}
 
   create(createResourceUserDto: CreateResourceUserDto) {
-    const newResourceUser = this.resourceUserRepository.create(createResourceUserDto);
-    return this.resourceUserRepository.save(newResourceUser);
+    return this.resourceUserRepository.save(createResourceUserDto);
   }
 
   update(id: string, updateResourceUserDto: UpdateResourceUserDto) {

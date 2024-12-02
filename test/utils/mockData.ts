@@ -392,7 +392,7 @@ export const mockSubscriptionUserEntity = {
   subscription: mockSubscriptionEntity,
 } as SubscriptionUserEntity;
 
-export const mockStoryDto = {
+export const mockStoryWebhookDto = {
   text: 'string',
   action: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
   story_id: 1,
