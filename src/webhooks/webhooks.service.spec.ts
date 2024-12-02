@@ -10,6 +10,7 @@ import { EventLogEntity } from 'src/entities/event-log.entity';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { PartnerAdminEntity } from 'src/entities/partner-admin.entity';
 import { PartnerEntity } from 'src/entities/partner.entity';
+import { ResourceEntity } from 'src/entities/resource.entity';
 import { SessionEntity } from 'src/entities/session.entity';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
 import { UserEntity } from 'src/entities/user.entity';
@@ -78,6 +79,7 @@ describe('WebhooksService', () => {
   const mockedCoursePartnerService = createMock<CoursePartnerService>(
     mockCoursePartnerServiceMethods,
   );
+  const mockedResourceRepository = createMock<Repository<ResourceEntity>>();
   const mockedUserRepository = createMock<Repository<UserEntity>>(mockUserRepositoryMethods);
   const mockedTherapySessionRepository = createMock<Repository<TherapySessionEntity>>(
     mockTherapySessionRepositoryMethods,
@@ -114,6 +116,10 @@ describe('WebhooksService', () => {
         {
           provide: getRepositoryToken(UserEntity),
           useValue: mockedUserRepository,
+        },
+        {
+          provide: getRepositoryToken(ResourceEntity),
+          useValue: mockedResourceRepository,
         },
         {
           provide: getRepositoryToken(CourseEntity),
