@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
-import { RESOURCE_TYPE_ENUM, STORYBLOK_STORY_STATUS_ENUM } from 'src/utils/constants';
+import { RESOURCE_CATEGORIES, STORYBLOK_STORY_STATUS_ENUM } from 'src/utils/constants';
 
 export class CreateResourceDto {
   @IsNotEmpty()
@@ -19,9 +19,9 @@ export class CreateResourceDto {
   status?: STORYBLOK_STORY_STATUS_ENUM;
 
   @IsOptional()
-  @IsEnum(RESOURCE_TYPE_ENUM)
-  @ApiProperty({ enum: RESOURCE_TYPE_ENUM, type: String, required: false })
-  category: RESOURCE_TYPE_ENUM;
+  @IsEnum(RESOURCE_CATEGORIES)
+  @ApiProperty({ enum: RESOURCE_CATEGORIES, type: String, required: false })
+  category: RESOURCE_CATEGORIES;
 
   @IsOptional()
   @IsString()

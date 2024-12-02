@@ -107,6 +107,7 @@ export const mockSession: SessionEntity = {
   updatedAt: new Date(100),
   courseId: 'courseId1',
   course: { ...mockCourse },
+  sessionFeedback: [],
 };
 
 export const mockIFirebaseUser: IFirebaseUser = {
@@ -149,6 +150,7 @@ export const mockUserEntity: UserEntity = {
   signUpLanguage: 'en',
   subscriptionUser: [],
   therapySession: [],
+  resourceUser: [],
   eventLog: [],
 };
 
