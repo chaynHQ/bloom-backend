@@ -8,7 +8,6 @@ import { SessionEntity } from 'src/entities/session.entity';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
 import { UserEntity } from 'src/entities/user.entity';
 import { ZapierSimplybookBodyDto } from 'src/partner-access/dtos/zapier-body.dto';
-import { ResourceService } from 'src/resource/resource.service';
 import { ServiceUserProfilesService } from 'src/service-user-profiles/service-user-profiles.service';
 import { IUser } from 'src/user/user.interface';
 import { serializeZapierSimplyBookDtoToTherapySessionEntity } from 'src/utils/serialize';
@@ -40,7 +39,6 @@ export class WebhooksService {
     @InjectRepository(TherapySessionEntity)
     private therapySessionRepository: Repository<TherapySessionEntity>,
     private serviceUserProfilesService: ServiceUserProfilesService,
-    private resourceService: ResourceService,
     private slackMessageClient: SlackMessageClient,
   ) {}
 
