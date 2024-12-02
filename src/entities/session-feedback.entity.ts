@@ -1,4 +1,4 @@
-import { Column, Entity, JoinTable, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 import { FEEDBACK_TAGS_ENUM } from '../utils/constants';
 import { BaseBloomEntity } from './base.entity';
 import { SessionEntity } from './session.entity';
@@ -8,12 +8,9 @@ export class SessionFeedbackEntity extends BaseBloomEntity {
   @PrimaryGeneratedColumn('uuid', { name: 'sessionFeedbackId' })
   sessionFeedbackId: string;
 
-  @Column()
-  sessionId: string;
   @ManyToOne(() => SessionEntity, (sessionEntity) => sessionEntity.sessionFeedback, {
     onDelete: 'CASCADE',
   })
-  @JoinTable({ name: 'session', joinColumn: { name: 'sessionId' } })
   session: SessionEntity;
 
   @Column()

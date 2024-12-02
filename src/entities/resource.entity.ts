@@ -1,5 +1,5 @@
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
-import { RESOURCE_TYPE_ENUM, STORYBLOK_STORY_STATUS_ENUM } from '../utils/constants';
+import { RESOURCE_CATEGORIES, STORYBLOK_STORY_STATUS_ENUM } from '../utils/constants';
 import { BaseBloomEntity } from './base.entity';
 import { ResourceFeedbackEntity } from './resource-feedback.entity';
 import { ResourceUserEntity } from './resource-user.entity';
@@ -23,13 +23,17 @@ export class ResourceEntity extends BaseBloomEntity {
   @Column({
     nullable: false,
   })
-  category: RESOURCE_TYPE_ENUM;
+  category: RESOURCE_CATEGORIES;
 
   @Column({
     unique: true,
-    nullable: true,
   })
   storyblokUuid: string;
+
+  @Column({
+    unique: true,
+  })
+  storyblokId: number;
 
   @OneToMany(() => ResourceUserEntity, (resourceUserEntity) => resourceUserEntity.resource, {
     cascade: true,

@@ -56,6 +56,11 @@ export class UserEntity extends BaseBloomEntity {
   @OneToMany(() => CourseUserEntity, (courseUser) => courseUser.user, { cascade: true })
   courseUser: CourseUserEntity[];
 
+  @OneToMany(() => ResourceUserEntity, (resourceUser) => resourceUser.user, {
+    cascade: true,
+  })
+  resourceUser: ResourceUserEntity[];
+
   @OneToMany(() => SubscriptionUserEntity, (subscriptionUser) => subscriptionUser.user, {
     cascade: true,
   })
@@ -66,11 +71,6 @@ export class UserEntity extends BaseBloomEntity {
 
   @OneToMany(() => EventLogEntity, (eventLog) => eventLog.user, { cascade: true })
   eventLog: EventLogEntity[];
-
-  @OneToMany(() => ResourceUserEntity, (resourceUser) => resourceUser.user, {
-    cascade: true,
-  })
-  resourceUser: ResourceUserEntity[];
 
   @Column({ unique: true })
   @Generated('uuid')
