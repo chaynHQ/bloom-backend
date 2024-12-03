@@ -480,7 +480,7 @@ describe('WebhooksService', () => {
       expect(deletedResource.status).toBe(STORYBLOK_STORY_STATUS_ENUM.DELETED);
     });
 
-    it.skip('should handle a new resource', async () => {
+    it('should handle a new resource', async () => {
       const resourceSaveRepoSpy = jest.spyOn(mockedResourceRepository, 'save');
       const resourceFindOneRepoSpy = jest
         .spyOn(mockedResourceRepository, 'findOneBy')
@@ -523,7 +523,7 @@ describe('WebhooksService', () => {
       resourceFindOneRepoSpy.mockClear();
     });
 
-    it.skip('should handle updating an existing resource', async () => {
+    it('should handle updating an existing resource', async () => {
       const resourceSaveRepoSpy = jest.spyOn(mockedResourceRepository, 'save');
       const resourceFindOneRepoSpy = jest
         .spyOn(mockedResourceRepository, 'findOneBy')
