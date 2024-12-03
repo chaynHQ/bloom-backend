@@ -43,6 +43,7 @@ import {
   mockPartnerAccessRepositoryMethods,
   mockPartnerAdminRepositoryMethods,
   mockPartnerRepositoryMethods,
+  mockResourceRepositoryMethods,
   mockSessionRepositoryMethods,
   mockSlackMessageClientMethods,
   mockTherapySessionRepositoryMethods,
@@ -85,7 +86,9 @@ describe('WebhooksService', () => {
   const mockedCoursePartnerService = createMock<CoursePartnerService>(
     mockCoursePartnerServiceMethods,
   );
-  const mockedResourceRepository = createMock<Repository<ResourceEntity>>();
+  const mockedResourceRepository = createMock<Repository<ResourceEntity>>(
+    mockResourceRepositoryMethods,
+  );
   const mockedUserRepository = createMock<Repository<UserEntity>>(mockUserRepositoryMethods);
   const mockedTherapySessionRepository = createMock<Repository<TherapySessionEntity>>(
     mockTherapySessionRepositoryMethods,
