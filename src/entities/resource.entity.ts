@@ -27,11 +27,13 @@ export class ResourceEntity extends BaseBloomEntity {
 
   @Column({
     unique: true,
+    nullable: true,
   })
   storyblokUuid: string;
 
   @Column({
     unique: true,
+    nullable: true,
   })
   storyblokId: number;
 

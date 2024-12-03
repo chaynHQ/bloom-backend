@@ -395,8 +395,7 @@ export class WebhooksService {
     this.logger.log(`Storyblok story ${status} request - ${story_id}`);
 
     if (status === STORYBLOK_STORY_STATUS_ENUM.DELETED) {
-      this.updateDeletedStory(story_id);
-      return;
+      return this.updateDeletedStory(story_id);
     }
 
     // Story was either published, unpublished, or moved
