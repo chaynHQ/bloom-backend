@@ -28,6 +28,7 @@ import {
   mockCourseStoryblokResult,
   mockPartnerAccessEntity,
   mockResource,
+  mockResource2,
   mockResourceStoryblokResult,
   mockSession,
   mockSessionStoryblokResult,
@@ -519,7 +520,7 @@ describe('WebhooksService', () => {
       expect(resource).toEqual(expectedResponse);
       expect(resourceSaveRepoSpy).toHaveBeenCalledWith(expectedResponse);
       expect(resourceFindOneRepoSpy).toHaveBeenCalledWith({
-        storyblokUuid: mockResourceStoryblokResult.data.story.id,
+        storyblokUuid: mockResourceStoryblokResult.data.story.uuid,
       });
 
       resourceSaveRepoSpy.mockClear();
@@ -530,7 +531,7 @@ describe('WebhooksService', () => {
       const resourceSaveRepoSpy = jest.spyOn(mockedResourceRepository, 'save');
       const resourceFindOneRepoSpy = jest
         .spyOn(mockedResourceRepository, 'findOneBy')
-        .mockImplementationOnce(async () => mockResource);
+        .mockImplementationOnce(async () => mockResource2);
 
       const updatedMockResourceStoryblokResult = { ...mockResourceStoryblokResult };
       const newName = 'New resource name';
@@ -568,7 +569,7 @@ describe('WebhooksService', () => {
       expect(updatedResource).toEqual(expectedResponse);
       expect(resourceSaveRepoSpy).toHaveBeenCalled();
       expect(resourceFindOneRepoSpy).toHaveBeenCalledWith({
-        storyblokUuid: mockResourceStoryblokResult.data.story.id,
+        storyblokUuid: mockResourceStoryblokResult.data.story.uuid,
       });
 
       resourceSaveRepoSpy.mockClear();
