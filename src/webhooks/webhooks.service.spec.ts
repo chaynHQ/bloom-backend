@@ -556,6 +556,7 @@ describe('WebhooksService', () => {
       };
 
       const expectedResponse = {
+        ...mockResource2,
         storyblokId: mockResourceStoryblokResult.data.story.id,
         storyblokUuid: mockResourceStoryblokResult.data.story.uuid,
         status: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
