@@ -263,7 +263,10 @@ export class WebhooksService {
     }
   }
 
-  private async updateOrCreateStory(storyData: ISbStoryData, status: STORYBLOK_STORY_STATUS_ENUM) {
+  private async updateOrCreateStoryData(
+    storyData: ISbStoryData,
+    status: STORYBLOK_STORY_STATUS_ENUM,
+  ) {
     const storyPageComponent = storyData.content.component as STORYBLOK_PAGE_COMPONENTS;
 
     const updatedStoryData = {
@@ -349,9 +352,7 @@ export class WebhooksService {
     }
   }
 
-  async updateDeletedStory(story_id: number) {
-    const status = STORYBLOK_STORY_STATUS_ENUM.DELETED;
-
+  async updateInactiveStoryStatus(story_id: number, status: STORYBLOK_STORY_STATUS_ENUM) {
     // Story is deleted so cant be fetched from storyblok to get story type
     // Try to find course with matching story_id first
     let course = await this.courseRepository.findOneBy({
@@ -394,12 +395,16 @@ export class WebhooksService {
 
     this.logger.log(`Storyblok story ${status} request - ${story_id}`);
 
-    if (status === STORYBLOK_STORY_STATUS_ENUM.DELETED) {
-      return this.updateDeletedStory(story_id);
+    if (
+      status === STORYBLOK_STORY_STATUS_ENUM.UNPUBLISHED ||
+      status === STORYBLOK_STORY_STATUS_ENUM.DELETED
+    ) {
+      // Story can't be retrieved from storyblok so we just update the status of existing records
+      return this.updateInactiveStoryStatus(story_id, status);
     }
 
-    // Story was either published, unpublished, or moved
-    // First get story data from storyblok
+    // Story was either published or moved
+    // Retrieve the story data from storyblok before handling the update/create
     let story: ISbStoryData;
 
     const Storyblok = new StoryblokClient({
@@ -422,6 +427,6 @@ export class WebhooksService {
     }
 
     // Create or update the resource/course/session record in our database
-    return this.updateOrCreateStory(story, status);
+    return this.updateOrCreateStoryData(story, status);
   }
 }
