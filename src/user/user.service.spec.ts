@@ -547,6 +547,75 @@ describe('UserService', () => {
     });
   });
 
+  describe('getUserProfile', () => {
+  it('should return user entity and user DTO when user is found', async () => {
+    const mockUserEntity = new UserEntity();
+    mockUserEntity.id = 'userId1';
+    mockUserEntity.email = 'user@email.com';
+    mockUserEntity.name = 'name';
+    mockUserEntity.createdAt = new Date('2024-11-19T19:18:51.796Z');
+    mockUserEntity.updatedAt = new Date('2024-11-19T19:18:51.796Z');
+    mockUserEntity.lastActiveAt = new Date('2024-11-19T19:18:51.796Z');
+    mockUserEntity.isActive = true;
+    mockUserEntity.isSuperAdmin = false;
+    mockUserEntity.signUpLanguage = 'en';
+    mockUserEntity.emailRemindersFrequency = EMAIL_REMINDERS_FREQUENCY.TWO_MONTHS;
+    mockUserEntity.firebaseUid = '123';
+    mockUserEntity.crispTokenId = '123';
+    mockUserEntity.serviceEmailsPermission = true;
+    mockUserEntity.contactPermission = true;
+    mockUserEntity.deletedAt = null;
+    mockUserEntity.courseUser = [];
+    mockUserEntity.partnerAccess = [];
+    mockUserEntity.partnerAdmin = null;
+    mockUserEntity.subscriptionUser = [];
+    mockUserEntity.therapySession = [];
+    mockUserEntity.eventLog = [];
+
+    const mockUserDto = {
+      user: {
+        id: 'userId1',
+        email: 'user@email.com',
+        name: 'name',
+        createdAt: new Date('2024-11-19T19:18:51.796Z'),
+        updatedAt: new Date('2024-11-19T19:18:51.796Z'),
+        lastActiveAt: new Date('2024-11-19T19:18:51.796Z'),
+        isActive: true,
+        isSuperAdmin: false,
+        signUpLanguage: 'en',
+        emailRemindersFrequency: 'TWO_MONTHS',
+        firebaseUid: '123',
+        crispTokenId: '123',
+        deletedAt: null,
+      },
+      partnerAccesses: [],
+      partnerAdmin: null,
+      courses: [],
+    };
+
+    jest.spyOn(repo, 'createQueryBuilder').mockReturnValue({
+      leftJoinAndSelect: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      getOne: jest.fn().mockResolvedValue(mockUserEntity),
+    } as any);
+
+    const result = await service.getUserProfile('userId1');
+    expect(result).toEqual({ userEntity: mockUserEntity, userDto: mockUserDto });
+  });
+
+  it('should throw HttpException when user is not found', async () => {
+    jest.spyOn(repo, 'createQueryBuilder').mockReturnValue({
+      leftJoinAndSelect: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      getOne: jest.fn().mockResolvedValue(undefined),
+    } as any);
+
+    await expect(service.getUserProfile('userId1')).rejects.toThrow(
+      new HttpException('USER NOT FOUND', HttpStatus.NOT_FOUND),
+    );
+  });
+});
+
   // TODO - Extend getUser tests. At the moment, this is only used by super admins
   describe('getUsers', () => {
     it('getUsers', async () => {
