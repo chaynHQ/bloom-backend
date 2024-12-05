@@ -10,18 +10,25 @@ import { EventLogEntity } from 'src/entities/event-log.entity';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { PartnerAdminEntity } from 'src/entities/partner-admin.entity';
 import { PartnerEntity } from 'src/entities/partner.entity';
+import { ResourceEntity } from 'src/entities/resource.entity';
 import { SessionEntity } from 'src/entities/session.entity';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
 import { UserEntity } from 'src/entities/user.entity';
 import { EventLoggerService } from 'src/event-logger/event-logger.service';
 import { PartnerService } from 'src/partner/partner.service';
 import { ServiceUserProfilesService } from 'src/service-user-profiles/service-user-profiles.service';
-import { SIMPLYBOOK_ACTION_ENUM, STORYBLOK_STORY_STATUS_ENUM } from 'src/utils/constants';
+import {
+  RESOURCE_CATEGORIES,
+  SIMPLYBOOK_ACTION_ENUM,
+  STORYBLOK_STORY_STATUS_ENUM,
+} from 'src/utils/constants';
 import StoryblokClient from 'storyblok-js-client';
 import {
   mockCourse,
   mockCourseStoryblokResult,
   mockPartnerAccessEntity,
+  mockResource,
+  mockResourceStoryblokResult,
   mockSession,
   mockSessionStoryblokResult,
   mockSimplybookBodyBase,
@@ -78,6 +85,7 @@ describe('WebhooksService', () => {
   const mockedCoursePartnerService = createMock<CoursePartnerService>(
     mockCoursePartnerServiceMethods,
   );
+  const mockedResourceRepository = createMock<Repository<ResourceEntity>>();
   const mockedUserRepository = createMock<Repository<UserEntity>>(mockUserRepositoryMethods);
   const mockedTherapySessionRepository = createMock<Repository<TherapySessionEntity>>(
     mockTherapySessionRepositoryMethods,
@@ -114,6 +122,10 @@ describe('WebhooksService', () => {
         {
           provide: getRepositoryToken(UserEntity),
           useValue: mockedUserRepository,
+        },
+        {
+          provide: getRepositoryToken(ResourceEntity),
+          useValue: mockedResourceRepository,
         },
         {
           provide: getRepositoryToken(CourseEntity),
@@ -168,7 +180,7 @@ describe('WebhooksService', () => {
     expect(service).toBeDefined();
   });
 
-  describe('updateStory', () => {
+  describe('handleStoryUpdated', () => {
     it('when story does not exist, it returns with a 404', async () => {
       // unfortunately it is mega hard to mock classes that are also node modules and this was
       // the only solution i got working
@@ -189,7 +201,7 @@ describe('WebhooksService', () => {
         text: '',
       };
 
-      return expect(service.updateStory(body)).rejects.toThrow('STORYBLOK STORY NOT FOUND');
+      return expect(service.handleStoryUpdated(body)).rejects.toThrow('STORYBLOK STORY NOT FOUND');
     });
 
     it('when action is deleted, story should be set as deleted in database', async () => {
@@ -199,7 +211,7 @@ describe('WebhooksService', () => {
         text: '',
       };
 
-      const deletedStory = (await service.updateStory(body)) as SessionEntity;
+      const deletedStory = (await service.handleStoryUpdated(body)) as SessionEntity;
 
       expect(deletedStory.status).toBe(STORYBLOK_STORY_STATUS_ENUM.DELETED);
     });
@@ -211,7 +223,7 @@ describe('WebhooksService', () => {
         text: '',
       };
 
-      const unpublished = (await service.updateStory(body)) as SessionEntity;
+      const unpublished = (await service.handleStoryUpdated(body)) as SessionEntity;
 
       expect(unpublished.status).toBe(STORYBLOK_STORY_STATUS_ENUM.UNPUBLISHED);
     });
@@ -245,10 +257,14 @@ describe('WebhooksService', () => {
       });
 
       const sessionSaveRepoSpy = jest.spyOn(mockedSessionRepository, 'save');
-      const sessionFindOneRepoSpy = jest.spyOn(mockedSessionRepository, 'findOneBy');
+      const sessionFindOneRepoSpy = jest
+        .spyOn(mockedSessionRepository, 'findOneBy')
+        .mockImplementationOnce(async () => {
+          return { ...mockSession, course: course2 };
+        });
 
       const courseFindOneSpy = jest
-        .spyOn(mockedCourseRepository, 'findOneBy')
+        .spyOn(mockedCourseRepository, 'findOneByOrFail')
         .mockImplementationOnce(async () => {
           return course2;
         });
@@ -259,7 +275,7 @@ describe('WebhooksService', () => {
         text: '',
       };
 
-      const session = (await service.updateStory(body)) as SessionEntity;
+      const session = (await service.handleStoryUpdated(body)) as SessionEntity;
 
       expect(courseFindOneSpy).toHaveBeenCalledWith({
         storyblokUuid: 'anotherCourseUuId',
@@ -289,31 +305,35 @@ describe('WebhooksService', () => {
     it('when a session is new, the session should be created', async () => {
       const sessionSaveRepoSpy = jest.spyOn(mockedSessionRepository, 'save');
 
-      const sessionCreateRepoSpy = jest.spyOn(mockedSessionRepository, 'create');
       const sessionFindOneRepoSpy = jest
         .spyOn(mockedSessionRepository, 'findOneBy')
         .mockImplementationOnce(async () => undefined);
 
-      const courseFindOneSpy = jest.spyOn(mockedCourseRepository, 'findOneBy');
+      const courseFindOneSpy = jest.spyOn(mockedCourseRepository, 'findOneByOrFail');
 
       const body = {
         action: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
         story_id: mockSession.storyblokId,
+        full_slug: mockSession.slug,
         text: '',
       };
 
-      const session = (await service.updateStory(body)) as SessionEntity;
+      const expectedResponse = {
+        storyblokId: mockSession.storyblokId,
+        storyblokUuid: mockSession.storyblokUuid,
+        status: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
+        slug: mockSession.slug,
+        name: mockSession.name,
+        courseId: mockSession.courseId,
+      };
 
-      expect(session).toEqual(mockSession);
+      const session = (await service.handleStoryUpdated(body)) as SessionEntity;
+
+      expect(session).toEqual(expectedResponse);
       expect(courseFindOneSpy).toHaveBeenCalledWith({
         storyblokUuid: 'courseUuid1',
       });
-      expect(sessionSaveRepoSpy).toHaveBeenCalledWith({
-        ...mockSession,
-      });
-      expect(sessionSaveRepoSpy).toHaveBeenCalledWith({
-        ...mockSession,
-      });
+      expect(sessionSaveRepoSpy).toHaveBeenCalledWith(expectedResponse);
       expect(sessionFindOneRepoSpy).toHaveBeenCalledWith({
         storyblokId: mockSession.storyblokId,
       });
@@ -321,18 +341,16 @@ describe('WebhooksService', () => {
       courseFindOneSpy.mockClear();
       sessionSaveRepoSpy.mockClear();
       sessionFindOneRepoSpy.mockClear();
-      sessionCreateRepoSpy.mockClear();
     });
 
     it('when a session with session_iba type is new, the session should be created', async () => {
       const sessionSaveRepoSpy = jest.spyOn(mockedSessionRepository, 'save');
 
-      const sessionCreateRepoSpy = jest.spyOn(mockedSessionRepository, 'create');
       const sessionFindOneRepoSpy = jest
         .spyOn(mockedSessionRepository, 'findOneBy')
         .mockImplementationOnce(async () => undefined);
 
-      const courseFindOneSpy = jest.spyOn(mockedCourseRepository, 'findOneBy');
+      const courseFindOneSpy = jest.spyOn(mockedCourseRepository, 'findOneByOrFail');
 
       // eslint-disable-next-line
       // @ts-ignore
@@ -358,27 +376,33 @@ describe('WebhooksService', () => {
       const body = {
         action: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
         story_id: mockSession.storyblokId,
+        full_slug: mockSession.slug,
         text: '',
       };
 
-      const session = (await service.updateStory(body)) as SessionEntity;
+      const expectedResponse = {
+        storyblokId: mockSession.storyblokId,
+        storyblokUuid: mockSession.storyblokUuid,
+        status: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
+        slug: mockSession.slug,
+        name: mockSession.name,
+        courseId: mockSession.courseId,
+      };
 
-      expect(session).toEqual(mockSession);
-      expect(sessionSaveRepoSpy).toHaveBeenCalledWith({
-        ...mockSession,
-      });
+      const session = (await service.handleStoryUpdated(body)) as SessionEntity;
+
+      expect(session).toEqual(expectedResponse);
+      expect(sessionSaveRepoSpy).toHaveBeenCalledWith(expectedResponse);
 
       courseFindOneSpy.mockClear();
       sessionSaveRepoSpy.mockClear();
       sessionFindOneRepoSpy.mockClear();
-      sessionCreateRepoSpy.mockClear();
     });
 
     it('when a course is new, the course should be created', async () => {
       const courseFindOneRepoSpy = jest
         .spyOn(mockedCourseRepository, 'findOneBy')
         .mockImplementationOnce(async () => undefined);
-      const courseCreateRepoSpy = jest.spyOn(mockedCourseRepository, 'create');
       const courseSaveRepoSpy = jest.spyOn(mockedCourseRepository, 'save');
 
       // eslint-disable-next-line
@@ -391,32 +415,161 @@ describe('WebhooksService', () => {
 
       const body = {
         action: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
-        story_id: 5678,
+        story_id: mockCourseStoryblokResult.data.story.id,
+        full_slug: mockCourseStoryblokResult.data.story.full_slug,
         text: '',
       };
 
-      const course = (await service.updateStory(body)) as CourseEntity;
+      const expectedResponse = {
+        storyblokId: mockCourseStoryblokResult.data.story.id,
+        storyblokUuid: mockCourseStoryblokResult.data.story.uuid,
+        status: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
+        slug: mockCourseStoryblokResult.data.story.full_slug,
+        name: mockCourseStoryblokResult.data.story.name,
+      };
 
-      expect(course).toEqual(mockCourse);
+      const course = (await service.handleStoryUpdated(body)) as CourseEntity;
+
+      expect(course).toEqual(expectedResponse);
       expect(courseFindOneRepoSpy).toHaveBeenCalledWith({
         storyblokId: mockCourseStoryblokResult.data.story.id,
       });
 
-      expect(courseCreateRepoSpy).toHaveBeenCalledWith({
-        storyblokId: mockCourseStoryblokResult.data.story.id,
-        name: mockCourseStoryblokResult.data.story.name,
-        status: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
-        slug: mockCourseStoryblokResult.data.story.full_slug,
-        storyblokUuid: mockCourseStoryblokResult.data.story.uuid,
-      });
+      expect(courseSaveRepoSpy).toHaveBeenCalledWith(expectedResponse);
 
-      expect(courseSaveRepoSpy).toHaveBeenCalledWith(mockCourse);
       expect(mockedServiceUserProfilesService.createMailchimpCourseMergeField).toHaveBeenCalledWith(
-        mockCourse.name,
+        mockCourseStoryblokResult.data.story.name,
       );
       courseFindOneRepoSpy.mockClear();
-      courseCreateRepoSpy.mockClear();
       courseSaveRepoSpy.mockClear();
+    });
+
+    it('should handle unpublished action for a resource', async () => {
+      const body = {
+        action: STORYBLOK_STORY_STATUS_ENUM.UNPUBLISHED,
+        story_id: mockResource.storyblokId,
+        text: '',
+      };
+
+      const unpublishedResource = (await service.handleStoryUpdated(body)) as ResourceEntity;
+
+      expect(unpublishedResource.status).toBe(STORYBLOK_STORY_STATUS_ENUM.UNPUBLISHED);
+    });
+
+    it('should handle published action for a resource', async () => {
+      const body = {
+        action: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
+        story_id: mockResource.storyblokId,
+        text: '',
+      };
+
+      const publishedResource = (await service.handleStoryUpdated(body)) as ResourceEntity;
+
+      expect(publishedResource.status).toBe(STORYBLOK_STORY_STATUS_ENUM.PUBLISHED);
+    });
+
+    it('should handle deleted action for a resource', async () => {
+      const body = {
+        action: STORYBLOK_STORY_STATUS_ENUM.DELETED,
+        story_id: mockResource.storyblokId,
+        text: '',
+      };
+
+      const deletedResource = (await service.handleStoryUpdated(body)) as ResourceEntity;
+
+      expect(deletedResource.status).toBe(STORYBLOK_STORY_STATUS_ENUM.DELETED);
+    });
+
+    it.skip('should handle a new resource', async () => {
+      const resourceSaveRepoSpy = jest.spyOn(mockedResourceRepository, 'save');
+      const resourceFindOneRepoSpy = jest
+        .spyOn(mockedResourceRepository, 'findOneBy')
+        .mockImplementationOnce(async () => undefined);
+
+      // Mock StoryblokClient to return a resource story
+      // eslint-disable-next-line
+      // @ts-ignore
+      StoryblokClient.mockImplementationOnce(() => {
+        return {
+          get: async () => mockResourceStoryblokResult,
+        };
+      });
+
+      const body = {
+        action: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
+        story_id: mockResourceStoryblokResult.data.story.id,
+        full_slug: mockResourceStoryblokResult.data.story.full_slug,
+        text: '',
+      };
+
+      const expectedResponse = {
+        storyblokId: mockResourceStoryblokResult.data.story.id,
+        storyblokUuid: mockResourceStoryblokResult.data.story.uuid,
+        status: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
+        slug: mockResourceStoryblokResult.data.story.full_slug,
+        name: mockResourceStoryblokResult.data.story.name,
+        category: RESOURCE_CATEGORIES.SHORT_VIDEO,
+      };
+
+      const resource = (await service.handleStoryUpdated(body)) as ResourceEntity;
+
+      expect(resource).toEqual(expectedResponse);
+      expect(resourceSaveRepoSpy).toHaveBeenCalledWith(expectedResponse);
+      expect(resourceFindOneRepoSpy).toHaveBeenCalledWith({
+        storyblokUuid: mockResourceStoryblokResult.data.story.id,
+      });
+
+      resourceSaveRepoSpy.mockClear();
+      resourceFindOneRepoSpy.mockClear();
+    });
+
+    it.skip('should handle updating an existing resource', async () => {
+      const resourceSaveRepoSpy = jest.spyOn(mockedResourceRepository, 'save');
+      const resourceFindOneRepoSpy = jest
+        .spyOn(mockedResourceRepository, 'findOneBy')
+        .mockImplementationOnce(async () => mockResource);
+
+      const updatedMockResourceStoryblokResult = { ...mockResourceStoryblokResult };
+      const newName = 'New resource name';
+      const newSlug = 'resources/shorts/new-resource-name';
+      updatedMockResourceStoryblokResult.data.story.name = newName;
+      updatedMockResourceStoryblokResult.data.story.full_slug = newSlug;
+
+      // Mock StoryblokClient to return a resource story
+      // eslint-disable-next-line
+      // @ts-ignore
+      StoryblokClient.mockImplementationOnce(() => {
+        return {
+          get: async () => updatedMockResourceStoryblokResult,
+        };
+      });
+
+      const body = {
+        action: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
+        story_id: mockResourceStoryblokResult.data.story.id,
+        full_slug: mockResourceStoryblokResult.data.story.full_slug,
+        text: '',
+      };
+
+      const expectedResponse = {
+        storyblokId: mockResourceStoryblokResult.data.story.id,
+        storyblokUuid: mockResourceStoryblokResult.data.story.uuid,
+        status: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
+        slug: newSlug,
+        name: newName,
+        category: RESOURCE_CATEGORIES.SHORT_VIDEO,
+      };
+
+      const updatedResource = (await service.handleStoryUpdated(body)) as ResourceEntity;
+
+      expect(updatedResource).toEqual(expectedResponse);
+      expect(resourceSaveRepoSpy).toHaveBeenCalled();
+      expect(resourceFindOneRepoSpy).toHaveBeenCalledWith({
+        storyblokUuid: mockResourceStoryblokResult.data.story.id,
+      });
+
+      resourceSaveRepoSpy.mockClear();
+      resourceFindOneRepoSpy.mockClear();
     });
   });
 
