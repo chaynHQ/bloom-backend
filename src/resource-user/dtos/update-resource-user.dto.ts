@@ -1,7 +1,9 @@
-import { IsDate, IsOptional } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
+import { IsDefined, IsNotEmpty } from 'class-validator';
 
 export class UpdateResourceUserDto {
-  @IsOptional()
-  @IsDate()
-  completedAt?: Date;
+  @IsNotEmpty()
+  @IsDefined()
+  @ApiProperty({ type: Number })
+  storyblokId: number;
 }

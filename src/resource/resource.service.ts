@@ -20,4 +20,7 @@ export class ResourceService {
   async create(createResourceDto: CreateResourceDto): Promise<ResourceEntity> {
     return this.resourceRepository.save(createResourceDto);
   }
+  async getResourceByStoryblokId(storyblokId: number): Promise<ResourceEntity> {
+    return await this.resourceRepository.findOneBy({ storyblokId: storyblokId });
+  }
 }

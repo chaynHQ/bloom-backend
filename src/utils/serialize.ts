@@ -1,5 +1,6 @@
 import { PartnerAdminEntity } from 'src/entities/partner-admin.entity';
 import { PartnerEntity } from 'src/entities/partner.entity';
+import { ResourceUserEntity } from 'src/entities/resource-user.entity';
 import { IPartnerFeature } from 'src/partner-feature/partner-feature.interface';
 import { IPartner } from 'src/partner/partner.interface';
 import { GetSubscriptionUserDto } from 'src/subscription-user/dto/get-subscription-user.dto';
@@ -41,6 +42,22 @@ export const formatCourseUserObject = (courseUser: CourseUserEntity) => {
       };
     }),
   };
+};
+
+export const formatResourceUserObject = (resourceUsers: ResourceUserEntity[]) => {
+  return resourceUsers.map((resourceUser) => {
+    return {
+      id: resourceUser.resource.id,
+      createdAt: resourceUser.createdAt,
+      updatedAt: resourceUser.updatedAt,
+      name: resourceUser.resource.name,
+      slug: resourceUser.resource.slug,
+      status: resourceUser.resource.status,
+      storyblokId: resourceUser.resource.storyblokId,
+      storyblokUuid: resourceUser.resource.storyblokUuid,
+      completed: !!resourceUser.completedAt, // convert to boolean from data populated
+    };
+  });
 };
 
 export const formatPartnerAdminObjects = (partnerAdminObject: PartnerAdminEntity) => {
@@ -113,6 +130,7 @@ export const formatUserObject = (userObject: UserEntity): GetUserDto => {
       ? formatPartnerAdminObjects(userObject.partnerAdmin)
       : null,
     courses: userObject.courseUser ? formatCourseUserObjects(userObject.courseUser) : [],
+    resources: userObject.resourceUser ? formatResourceUserObject(userObject.resourceUser) : [],
     subscriptions:
       userObject.subscriptionUser && userObject.subscriptionUser.length > 0
         ? formatSubscriptionObjects(userObject.subscriptionUser)
