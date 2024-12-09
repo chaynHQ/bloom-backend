@@ -1,4 +1,4 @@
-import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, JoinTable, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 import { BaseBloomEntity } from './base.entity';
 import { ResourceEntity } from './resource.entity';
 import { UserEntity } from './user.entity';
@@ -16,8 +16,10 @@ export class ResourceUserEntity extends BaseBloomEntity {
   @ManyToOne(() => ResourceEntity, (resourceEntity) => resourceEntity.resourceUser, {
     onDelete: 'CASCADE',
   })
+  @JoinTable({ name: 'resource', joinColumn: { name: 'resourceId' } })
   resource: ResourceEntity;
 
   @ManyToOne(() => UserEntity, (userEntity) => userEntity.resourceUser, { onDelete: 'CASCADE' })
+  @JoinTable({ name: 'user', joinColumn: { name: 'userId' } })
   user: UserEntity;
 }

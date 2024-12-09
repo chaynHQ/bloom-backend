@@ -1,8 +1,11 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ResourceUserEntity } from 'src/entities/resource-user.entity';
+import { UserEntity } from 'src/entities/user.entity';
+import { ResourceService } from 'src/resource/resource.service';
+import { formatResourceUserObject } from 'src/utils/serialize';
 import { Repository } from 'typeorm';
-import { CreateResourceUserDto } from './dtos/create-resource-user.dto';
+import { ResourceUserDto } from './dtos/resource-user.dto';
 import { UpdateResourceUserDto } from './dtos/update-resource-user.dto';
 
 @Injectable()
@@ -10,21 +13,85 @@ export class ResourceUserService {
   constructor(
     @InjectRepository(ResourceUserEntity)
     private resourceUserRepository: Repository<ResourceUserEntity>,
+    private resourceService: ResourceService,
   ) {}
 
-  create(createResourceUserDto: CreateResourceUserDto) {
-    return this.resourceUserRepository.save(createResourceUserDto);
+  private async getResourceUser({
+    resourceId,
+    userId,
+  }: ResourceUserDto): Promise<ResourceUserEntity> {
+    return await this.resourceUserRepository
+      .createQueryBuilder('resource_user')
+      .leftJoinAndSelect('resource_user.resource', 'resource')
+      .where('resource_user.userId = :userId', { userId })
+      .andWhere('resource_user.resourceId = :resourceId', { resourceId })
+      .getOne();
   }
 
-  update(id: string, updateResourceUserDto: UpdateResourceUserDto) {
-    const resourceUser = this.resourceUserRepository.findOne({ where: { id } });
+  async createResourceUserRecord({
+    resourceId,
+    userId,
+  }: ResourceUserDto): Promise<ResourceUserEntity> {
+    return await this.resourceUserRepository.save({
+      resourceId,
+      userId,
+      completedAt: null,
+    });
+  }
 
-    if (!resourceUser) {
-      throw new HttpException('RESOURCE USER NOT FOUND', HttpStatus.NOT_FOUND);
+  public async createResourceUser(user: UserEntity, { storyblokId }: UpdateResourceUserDto) {
+    const resource = await this.resourceService.getResourceByStoryblokId(storyblokId);
+
+    if (!resource) {
+      throw new HttpException('RESOURCE NOT FOUND', HttpStatus.NOT_FOUND);
     }
 
-    const updatedResourceUser = { ...resourceUser, ...updateResourceUserDto };
+    let resourceUser = await this.getResourceUser({
+      resourceId: resource.id,
+      userId: user.id,
+    });
 
-    return this.resourceUserRepository.save(updatedResourceUser);
+    if (!resourceUser) {
+      resourceUser = await this.createResourceUserRecord({
+        resourceId: resource.id,
+        userId: user.id,
+      });
+    }
+
+    return formatResourceUserObject([{ ...resourceUser, resource }])[0];
+  }
+
+  public async setResourceUserCompleted(
+    user: UserEntity,
+    { storyblokId }: UpdateResourceUserDto,
+    completed: boolean,
+  ) {
+    const resource = await this.resourceService.getResourceByStoryblokId(storyblokId);
+
+    if (!resource) {
+      throw new HttpException(
+        `Resource not found for storyblok id: ${storyblokId}`,
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    let resourceUser = await this.getResourceUser({
+      resourceId: resource.id,
+      userId: user.id,
+    });
+
+    if (resourceUser) {
+      await this.resourceUserRepository.save({
+        ...resourceUser,
+        completedAt: completed ? new Date() : null,
+      });
+    } else {
+      resourceUser = await this.createResourceUserRecord({
+        resourceId: resource.id,
+        userId: user.id,
+      });
+    }
+
+    return formatResourceUserObject([{ ...resourceUser, resource }])[0];
   }
 }

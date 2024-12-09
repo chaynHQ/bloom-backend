@@ -1,4 +1,4 @@
-import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, JoinTable, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 import { FEEDBACK_TAGS_ENUM } from '../utils/constants';
 import { BaseBloomEntity } from './base.entity';
 import { ResourceEntity } from './resource.entity';
@@ -14,6 +14,7 @@ export class ResourceFeedbackEntity extends BaseBloomEntity {
   @ManyToOne(() => ResourceEntity, (resourceEntity) => resourceEntity.resourceFeedback, {
     onDelete: 'CASCADE',
   })
+  @JoinTable({ name: 'resource', joinColumn: { name: 'resourceId' } })
   resource: ResourceEntity;
 
   @Column()
