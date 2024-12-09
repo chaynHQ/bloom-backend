@@ -9,11 +9,13 @@ import { EventLogEntity } from 'src/entities/event-log.entity';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { PartnerAdminEntity } from 'src/entities/partner-admin.entity';
 import { PartnerEntity } from 'src/entities/partner.entity';
+import { ResourceEntity } from 'src/entities/resource.entity';
 import { SessionEntity } from 'src/entities/session.entity';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
 import { UserEntity } from 'src/entities/user.entity';
 import { EventLoggerService } from 'src/event-logger/event-logger.service';
 import { PartnerService } from 'src/partner/partner.service';
+import { ResourceService } from 'src/resource/resource.service';
 import { ServiceUserProfilesService } from 'src/service-user-profiles/service-user-profiles.service';
 import { WebhooksController } from './webhooks.controller';
 import { WebhooksService } from './webhooks.service';
@@ -30,6 +32,7 @@ import { WebhooksService } from './webhooks.service';
       TherapySessionEntity,
       PartnerAdminEntity,
       EventLogEntity,
+      ResourceEntity,
     ]),
   ],
   providers: [
@@ -40,6 +43,7 @@ import { WebhooksService } from './webhooks.service';
     SlackMessageClient,
     CrispService,
     EventLoggerService,
+    ResourceService,
   ],
   controllers: [WebhooksController],
 })

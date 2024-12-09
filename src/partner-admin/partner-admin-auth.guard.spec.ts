@@ -30,6 +30,7 @@ const userEntity: UserEntity = {
   signUpLanguage: 'en',
   subscriptionUser: [],
   therapySession: [],
+  resourceUser: [],
   eventLog: [],
 };
 describe('PartnerAdminAuthGuard', () => {
