@@ -90,7 +90,7 @@ export const mockResourceStoryblokResult = {
       created_at: '2022-05-05T11:29:10.888Z',
       published_at: '2022-05-19T16:32:44.502Z',
       id: 98765,
-      uuid: 'resourceUuid',
+      uuid: 'resourceUuid2',
       content: {
         _uid: '23456',
         name: 'Resource name 2',
@@ -138,13 +138,27 @@ export const mockResource: ResourceEntity = {
   resourceUser: [],
   id: 'resourceId1',
   storyblokId: 123456,
-  storyblokUuid: 'resourceStoryblokUuid1',
+  storyblokUuid: 'resourceUuid1',
   slug: 'resources/shorts/resource-name',
   status: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
   name: 'Resource name',
   category: RESOURCE_CATEGORIES.SHORT_VIDEO,
   createdAt: new Date(100),
   updatedAt: new Date(100),
+  resourceFeedback: [],
+};
+
+export const mockResource2: ResourceEntity = {
+  id: 'resourceId2',
+  storyblokId: 98765,
+  storyblokUuid: 'resourceUuid2',
+  slug: 'resources/shorts/resource-name',
+  status: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
+  name: 'Resource name 2',
+  category: RESOURCE_CATEGORIES.SHORT_VIDEO,
+  createdAt: new Date(100),
+  updatedAt: new Date(100),
+  resourceUser: [],
   resourceFeedback: [],
 };
 
