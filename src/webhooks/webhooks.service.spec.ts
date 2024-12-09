@@ -28,6 +28,7 @@ import {
   mockCourseStoryblokResult,
   mockPartnerAccessEntity,
   mockResource,
+  mockResource2,
   mockResourceStoryblokResult,
   mockSession,
   mockSessionStoryblokResult,
@@ -43,6 +44,7 @@ import {
   mockPartnerAccessRepositoryMethods,
   mockPartnerAdminRepositoryMethods,
   mockPartnerRepositoryMethods,
+  mockResourceRepositoryMethods,
   mockSessionRepositoryMethods,
   mockSlackMessageClientMethods,
   mockTherapySessionRepositoryMethods,
@@ -85,7 +87,9 @@ describe('WebhooksService', () => {
   const mockedCoursePartnerService = createMock<CoursePartnerService>(
     mockCoursePartnerServiceMethods,
   );
-  const mockedResourceRepository = createMock<Repository<ResourceEntity>>();
+  const mockedResourceRepository = createMock<Repository<ResourceEntity>>(
+    mockResourceRepositoryMethods,
+  );
   const mockedUserRepository = createMock<Repository<UserEntity>>(mockUserRepositoryMethods);
   const mockedTherapySessionRepository = createMock<Repository<TherapySessionEntity>>(
     mockTherapySessionRepositoryMethods,
@@ -480,7 +484,7 @@ describe('WebhooksService', () => {
       expect(deletedResource.status).toBe(STORYBLOK_STORY_STATUS_ENUM.DELETED);
     });
 
-    it.skip('should handle a new resource', async () => {
+    it('should handle a new resource', async () => {
       const resourceSaveRepoSpy = jest.spyOn(mockedResourceRepository, 'save');
       const resourceFindOneRepoSpy = jest
         .spyOn(mockedResourceRepository, 'findOneBy')
@@ -516,18 +520,18 @@ describe('WebhooksService', () => {
       expect(resource).toEqual(expectedResponse);
       expect(resourceSaveRepoSpy).toHaveBeenCalledWith(expectedResponse);
       expect(resourceFindOneRepoSpy).toHaveBeenCalledWith({
-        storyblokUuid: mockResourceStoryblokResult.data.story.id,
+        storyblokUuid: mockResourceStoryblokResult.data.story.uuid,
       });
 
       resourceSaveRepoSpy.mockClear();
       resourceFindOneRepoSpy.mockClear();
     });
 
-    it.skip('should handle updating an existing resource', async () => {
+    it('should handle updating an existing resource', async () => {
       const resourceSaveRepoSpy = jest.spyOn(mockedResourceRepository, 'save');
       const resourceFindOneRepoSpy = jest
         .spyOn(mockedResourceRepository, 'findOneBy')
-        .mockImplementationOnce(async () => mockResource);
+        .mockImplementationOnce(async () => mockResource2);
 
       const updatedMockResourceStoryblokResult = { ...mockResourceStoryblokResult };
       const newName = 'New resource name';
@@ -552,6 +556,7 @@ describe('WebhooksService', () => {
       };
 
       const expectedResponse = {
+        ...mockResource2,
         storyblokId: mockResourceStoryblokResult.data.story.id,
         storyblokUuid: mockResourceStoryblokResult.data.story.uuid,
         status: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
@@ -565,7 +570,7 @@ describe('WebhooksService', () => {
       expect(updatedResource).toEqual(expectedResponse);
       expect(resourceSaveRepoSpy).toHaveBeenCalled();
       expect(resourceFindOneRepoSpy).toHaveBeenCalledWith({
-        storyblokUuid: mockResourceStoryblokResult.data.story.id,
+        storyblokUuid: mockResourceStoryblokResult.data.story.uuid,
       });
 
       resourceSaveRepoSpy.mockClear();
