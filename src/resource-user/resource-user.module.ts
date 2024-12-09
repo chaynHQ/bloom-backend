@@ -18,6 +18,7 @@ import { UserEntity } from 'src/entities/user.entity';
 import { EventLoggerService } from 'src/event-logger/event-logger.service';
 import { PartnerAccessService } from 'src/partner-access/partner-access.service';
 import { PartnerService } from 'src/partner/partner.service';
+import { ResourceService } from 'src/resource/resource.service';
 import { ServiceUserProfilesService } from 'src/service-user-profiles/service-user-profiles.service';
 import { SubscriptionUserService } from 'src/subscription-user/subscription-user.service';
 import { SubscriptionService } from 'src/subscription/subscription.service';
@@ -46,6 +47,7 @@ import { ResourceUserService } from './resource-user.service';
   ],
   controllers: [ResourceUserController],
   providers: [
+    ResourceService,
     ResourceUserService,
     UserService,
     PartnerAccessService,
