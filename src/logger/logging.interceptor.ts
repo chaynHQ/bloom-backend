@@ -14,7 +14,7 @@ export class LoggingInterceptor implements NestInterceptor {
     //@ts-expect-error: userEntity is modified in authGuard
     const userId = req?.userEntity?.id;
 
-    const commonMessage = `${req.method} "${req.originalUrl}" (IP address: ${req.ip}, requestUserId: ${userId})`;
+    const commonMessage = `${req.method} "${req.originalUrl}" (requestUserId: ${userId})`;
 
     this.logger.log(`Started ${commonMessage}`);
 

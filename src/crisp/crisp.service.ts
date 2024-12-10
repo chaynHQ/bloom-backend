@@ -122,7 +122,7 @@ export class CrispService {
 
   async deleteCypressCrispProfiles() {
     try {
-      const profiles = CrispClient.website.listPeopleProfiles(
+      const profiles = await CrispClient.website.listPeopleProfiles(
         crispWebsiteId,
         undefined,
         undefined,
@@ -132,8 +132,10 @@ export class CrispService {
         'cypresstestemail+',
       );
 
-      profiles.data.data.forEach(async (profile) => {
-        CrispClient.website.removePeopleProfile(crispWebsiteId, profile.email);
+      console.log(`Deleting ${profiles.length} crisp profiles`);
+
+      profiles?.forEach(async (profile) => {
+        await CrispClient.website.removePeopleProfile(crispWebsiteId, profile.email);
       });
     } catch (error) {
       throw new Error(`Delete cypress crisp profiles API call failed: ${error}`);

@@ -19,6 +19,29 @@ export enum LANGUAGE_DEFAULT {
   ES = 'es',
 }
 
+export enum RESOURCE_CATEGORIES {
+  SHORT_VIDEO = 'short_video',
+  CONVERSATION = 'conversation',
+}
+
+export enum STORYBLOK_PAGE_COMPONENTS {
+  COURSE = 'Course',
+  SESSION = 'Session',
+  SESSION_IBA = 'session_iba',
+  RESOURCE_SHORT_VIDEO = 'resource_short_video',
+  RESOURCE_CONVERSATION = 'resource_conversation',
+  MEET_THE_TEAM = 'meet_the_team',
+  WELCOME = 'Welcome',
+  PAGE = 'page',
+}
+
+export enum STORYBLOK_STORY_STATUS_ENUM {
+  PUBLISHED = 'published',
+  UNPUBLISHED = 'unpublished',
+  DELETED = 'deleted',
+  MOVED = 'moved',
+}
+
 export enum EMAIL_REMINDERS_FREQUENCY {
   TWO_WEEKS = 'TWO_WEEKS',
   ONE_MONTH = 'ONE_MONTH',
@@ -50,12 +73,6 @@ export enum FEEDBACK_TAGS_ENUM {
   TOO_LONG = 'too long',
   TOO_COMPLICATED = 'too complicated',
   NOT_USEFUL = 'not useful',
-}
-
-export enum STORYBLOK_STORY_STATUS_ENUM {
-  PUBLISHED = 'published',
-  UNPUBLISHED = 'unpublished',
-  DELETED = 'deleted',
 }
 
 export enum PartnerAccessCodeStatusEnum {

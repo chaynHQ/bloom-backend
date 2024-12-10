@@ -20,7 +20,6 @@ export class SessionUserEntity extends BaseBloomEntity {
   @ManyToOne(() => SessionEntity, (sessionEntity) => sessionEntity.sessionUser, {
     onDelete: 'CASCADE',
   })
-  @JoinTable({ name: 'session', joinColumn: { name: 'sessionId' } })
   session: SessionEntity;
 
   @Column()
