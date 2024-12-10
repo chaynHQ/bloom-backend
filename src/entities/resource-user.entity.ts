@@ -13,12 +13,16 @@ export class ResourceUserEntity extends BaseBloomEntity {
   @Column({ type: 'date', nullable: true })
   completedAt: Date;
 
+  @Column()
+  resourceId: string;
   @ManyToOne(() => ResourceEntity, (resourceEntity) => resourceEntity.resourceUser, {
     onDelete: 'CASCADE',
   })
   @JoinTable({ name: 'resource', joinColumn: { name: 'resourceId' } })
   resource: ResourceEntity;
 
+  @Column()
+  userId: string;
   @ManyToOne(() => UserEntity, (userEntity) => userEntity.resourceUser, { onDelete: 'CASCADE' })
   @JoinTable({ name: 'user', joinColumn: { name: 'userId' } })
   user: UserEntity;
