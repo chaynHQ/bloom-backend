@@ -26,6 +26,8 @@ import {
   mockPartnerAccessRepositoryMethods,
   mockPartnerRepositoryMethods,
   mockUserRepositoryMethodsFactory,
+  mockClsService,
+  mockUserRepositoryMethods,
 } from 'test/utils/mockedServices';
 import { Repository } from 'typeorm';
 import { createQueryBuilderMock } from '../../test/utils/mockUtils';
@@ -36,6 +38,7 @@ import { AdminUpdateUserDto } from './dtos/admin-update-user.dto';
 import { CreateUserDto } from './dtos/create-user.dto';
 import { UpdateUserDto } from './dtos/update-user.dto';
 import { UserService } from './user.service';
+import {Logger} from '../logger/logger';
 
 const createUserDto: CreateUserDto = {
   email: 'user@email.com',
@@ -120,6 +123,8 @@ describe('UserService', () => {
     }).compile();
 
     service = module.get<UserService>(UserService);
+    const logger = (service as any).logger as Logger;
+    (logger as any).cls = mockClsService;
     repo = module.get<Repository<UserEntity>>(getRepositoryToken(UserEntity));
   });
 
