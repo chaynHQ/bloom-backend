@@ -5,6 +5,11 @@ import { isProduction, rollbarEnv, rollbarToken } from '../utils/constants';
 import { ErrorLog } from './utils';
 import { ClsService } from 'nestjs-cls';
 
+interface LogMessage {
+  event: string;
+  userId: string;
+  fields?: string[];
+}
 
 export class Logger extends ConsoleLogger {
   private rollbar?: Rollbar;
@@ -17,22 +22,24 @@ export class Logger extends ConsoleLogger {
     this.initialiseRollbar();
   }
 
-  log(message: string): void {
+  log(message: string | LogMessage): void {
+    const formattedMessage = typeof message === 'string' ? message : JSON.stringify(message);
     const requestId = this.cls.getId();
-    const decoratedMessage = `[Request ID: ${requestId}] ${message}`;
+    const sessionId = this.cls.get('sessionId');
+    const decoratedMessage = `[Request ID: ${requestId}, Session ID: ${sessionId}] ${formattedMessage}`;
     super.log(decoratedMessage);
   }
 
   error(message: string | ErrorLog, trace?: string): void {
+    if (this.rollbar) {
+      this.rollbar.error(message);
+    }
+    const formattedMessage = typeof message === 'string' ? message : JSON.stringify(message);
     const requestId = this.cls.getId();
     const sessionId = this.cls.get('sessionId');
-    const decoratedMessage = `[Request ID: ${requestId}, Session ID: ${sessionId}] ${message}`;
-    if (this.rollbar) {
-      this.rollbar.error(decoratedMessage);
-    }
-    const formattedMessage = typeof decoratedMessage === 'string' ? decoratedMessage : JSON.stringify(message);
+    const decoratedMessage = `[Request ID: ${requestId}, Session ID: ${sessionId}] ${formattedMessage}`;
 
-    const taggedMessage = `[error] ${formattedMessage}`;
+    const taggedMessage = `[error] ${decoratedMessage}`;
     super.error(taggedMessage, trace);
   }
 
