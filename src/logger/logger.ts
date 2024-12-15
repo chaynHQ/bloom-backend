@@ -1,9 +1,9 @@
-import { ConsoleLogger, Inject } from '@nestjs/common';
+import { ConsoleLogger } from '@nestjs/common';
 import Rollbar from 'rollbar';
 import { FIREBASE_ERRORS } from 'src/utils/errors';
 import { isProduction, rollbarEnv, rollbarToken } from '../utils/constants';
 import { ErrorLog } from './utils';
-import { ClsService } from 'nestjs-cls';
+import { ClsService, ClsServiceManager } from 'nestjs-cls';
 
 interface LogMessage {
   event: string;
@@ -13,12 +13,11 @@ interface LogMessage {
 
 export class Logger extends ConsoleLogger {
   private rollbar?: Rollbar;
-
-  @Inject
-  (ClsService) private readonly cls: ClsService;
+  private cls: ClsService;
 
   constructor(context?: string, isTimestampEnabled?) {
     super(context, isTimestampEnabled);
+    this.cls = ClsServiceManager.getClsService();
     this.initialiseRollbar();
   }
 
@@ -28,6 +27,7 @@ export class Logger extends ConsoleLogger {
     const sessionId = this.cls.get('sessionId');
     const decoratedMessage = `[Request ID: ${requestId}, Session ID: ${sessionId}] ${formattedMessage}`;
     super.log(decoratedMessage);
+
   }
 
   error(message: string | ErrorLog, trace?: string): void {
