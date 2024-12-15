@@ -1,4 +1,4 @@
-import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, JoinTable, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { RESOURCE_CATEGORIES, STORYBLOK_STORY_STATUS_ENUM } from '../utils/constants';
 import { BaseBloomEntity } from './base.entity';
 import { ResourceFeedbackEntity } from './resource-feedback.entity';
@@ -40,6 +40,7 @@ export class ResourceEntity extends BaseBloomEntity {
   @OneToMany(() => ResourceUserEntity, (resourceUserEntity) => resourceUserEntity.resource, {
     cascade: true,
   })
+  @JoinTable({ name: 'resourceUser', joinColumn: { name: 'resourceUserId' } })
   resourceUser: ResourceUserEntity[];
 
   @OneToMany(
@@ -49,5 +50,6 @@ export class ResourceEntity extends BaseBloomEntity {
       cascade: true,
     },
   )
+  @JoinTable({ name: 'resourceFeedback', joinColumn: { name: 'resourceFeedbackId' } })
   resourceFeedback: ResourceFeedbackEntity[];
 }

@@ -142,6 +142,8 @@ export class UserService {
       .leftJoinAndSelect('courseUser.course', 'course')
       .leftJoinAndSelect('courseUser.sessionUser', 'sessionUser')
       .leftJoinAndSelect('sessionUser.session', 'session')
+      .leftJoinAndSelect('user.resourceUser', 'resourceUser')
+      .leftJoinAndSelect('resourceUser.resource', 'resource')
       .leftJoinAndSelect('user.subscriptionUser', 'subscriptionUser')
       .leftJoinAndSelect('subscriptionUser.subscription', 'subscription')
       .where('user.id = :id', { id })

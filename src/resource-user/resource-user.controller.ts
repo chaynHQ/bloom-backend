@@ -1,47 +1,61 @@
-import {
-  Body,
-  Controller,
-  HttpException,
-  Param,
-  Patch,
-  Post,
-  Req,
-  UseGuards,
-} from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
-import { FirebaseAuthGuard } from 'src/firebase/firebase-auth.guard';
-import { CreateResourceUserDto } from './dtos/create-resource-user.dto';
+import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Request } from 'express';
+import { ControllerDecorator } from 'src/utils/controller.decorator';
+import { UserEntity } from '../entities/user.entity';
+import { FirebaseAuthGuard } from '../firebase/firebase-auth.guard';
 import { UpdateResourceUserDto } from './dtos/update-resource-user.dto';
 import { ResourceUserService } from './resource-user.service';
 
-@Controller('v1/resource-user')
+@ApiTags('Resource User')
+@ControllerDecorator()
+@Controller('/v1/resource-user')
 export class ResourceUserController {
   constructor(private readonly resourceUserService: ResourceUserService) {}
 
   @Post()
   @ApiBearerAuth('access-token')
   @ApiOperation({
-    description: 'Updates resource_user table',
+    description:
+      'Stores relationship between a `User` and `Resource` records, once a user has started a resource.',
   })
   @UseGuards(FirebaseAuthGuard)
-  create(@Req() req: Request, @Body() createResourceUserDto: CreateResourceUserDto) {
-    if (req['userEntity'].id !== createResourceUserDto.userId) {
-      throw new HttpException('Unauthorized', 401);
-    }
-    return this.resourceUserService.create(createResourceUserDto);
+  async createResourceUser(
+    @Req() req: Request,
+    @Body() createResourceUserDto: UpdateResourceUserDto,
+  ) {
+    return await this.resourceUserService.createResourceUser(
+      req['userEntity'] as UserEntity,
+      createResourceUserDto,
+    );
   }
 
-  @Patch(':id')
-  @ApiBearerAuth('access-token')
+  @Post('/complete')
   @ApiOperation({
-    description: 'Updates resource_user table',
+    description: 'Updates a users resources progress to completed',
   })
+  @ApiBearerAuth('access-token')
   @UseGuards(FirebaseAuthGuard)
-  update(
-    @Req() req: Request,
-    @Param('id') id: string,
-    @Body() updateResourceUserDto: UpdateResourceUserDto,
-  ) {
-    return this.resourceUserService.update(id, updateResourceUserDto);
+  async complete(@Req() req: Request, @Body() updateResourceUserDto: UpdateResourceUserDto) {
+    return await this.resourceUserService.setResourceUserCompleted(
+      req['userEntity'] as UserEntity,
+      updateResourceUserDto,
+      true,
+    );
+  }
+
+  @Post('/incomplete')
+  @ApiOperation({
+    description:
+      'Updates a users resources progress to incomplete, undoing a previous complete action',
+  })
+  @ApiBearerAuth('access-token')
+  @UseGuards(FirebaseAuthGuard)
+  async incomplete(@Req() req: Request, @Body() updateResourceUserDto: UpdateResourceUserDto) {
+    return await this.resourceUserService.setResourceUserCompleted(
+      req['userEntity'] as UserEntity,
+      updateResourceUserDto,
+      false,
+    );
   }
 }
