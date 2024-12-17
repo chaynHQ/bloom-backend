@@ -1,6 +1,9 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { deleteMailchimpProfile } from 'src/api/mailchimp/mailchimp-api';
+import {
+  deleteCypressMailchimpProfiles,
+  deleteMailchimpProfile,
+} from 'src/api/mailchimp/mailchimp-api';
 import { CrispService } from 'src/crisp/crisp.service';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { PartnerEntity } from 'src/entities/partner.entity';
@@ -139,6 +142,8 @@ export class UserService {
       .leftJoinAndSelect('courseUser.course', 'course')
       .leftJoinAndSelect('courseUser.sessionUser', 'sessionUser')
       .leftJoinAndSelect('sessionUser.session', 'session')
+      .leftJoinAndSelect('user.resourceUser', 'resourceUser')
+      .leftJoinAndSelect('resourceUser.resource', 'resource')
       .leftJoinAndSelect('user.subscriptionUser', 'subscriptionUser')
       .leftJoinAndSelect('subscriptionUser.subscription', 'subscription')
       .where('user.id = :id', { id })
@@ -365,6 +370,9 @@ export class UserService {
       if (clean) {
         // Delete all remaining cypress firebase users (e.g. from failed user creations)
         await this.authService.deleteCypressFirebaseUsers();
+
+        // Delete all remaining crisp accounts
+        await deleteCypressMailchimpProfiles();
 
         // Delete all remaining crisp accounts
         await this.crispService.deleteCypressCrispProfiles();

@@ -2,7 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { IsDefined, IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
 import { STORYBLOK_STORY_STATUS_ENUM } from '../../utils/constants';
 
-export class StoryDto {
+export class StoryWebhookDto {
   @IsOptional()
   @IsString()
   text: string;

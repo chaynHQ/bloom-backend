@@ -9,6 +9,7 @@ import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { PartnerAdminEntity } from 'src/entities/partner-admin.entity';
 import { PartnerFeatureEntity } from 'src/entities/partner-feature.entity';
 import { PartnerEntity } from 'src/entities/partner.entity';
+import { ResourceEntity } from 'src/entities/resource.entity';
 import { SessionUserEntity } from 'src/entities/session-user.entity';
 import { SessionEntity } from 'src/entities/session.entity';
 import { SubscriptionUserEntity } from 'src/entities/subscription-user.entity';
@@ -20,6 +21,7 @@ import { IFirebaseUser } from 'src/firebase/firebase-user.interface';
 import { ZapierSimplybookBodyDto } from 'src/partner-access/dtos/zapier-body.dto';
 import {
   EMAIL_REMINDERS_FREQUENCY,
+  RESOURCE_CATEGORIES,
   SIMPLYBOOK_ACTION_ENUM,
   STORYBLOK_STORY_STATUS_ENUM,
 } from 'src/utils/constants';
@@ -81,6 +83,28 @@ export const mockCourseStoryblokResult = {
   headers: undefined,
 } as ISbResult;
 
+export const mockResourceStoryblokResult = {
+  data: {
+    story: {
+      name: 'Resource name 2',
+      created_at: '2022-05-05T11:29:10.888Z',
+      published_at: '2022-05-19T16:32:44.502Z',
+      id: 98765,
+      uuid: 'resourceUuid2',
+      content: {
+        _uid: '23456',
+        name: 'Resource name 2',
+        component: 'resource_short_video',
+      },
+      slug: 'resource-name',
+      full_slug: 'resources/shorts/resource-name',
+    },
+  },
+  perPage: 1,
+  total: 1,
+  headers: undefined,
+} as ISbResult;
+
 export const mockCourse: CourseEntity = {
   coursePartner: [],
   courseUser: [],
@@ -107,6 +131,35 @@ export const mockSession: SessionEntity = {
   updatedAt: new Date(100),
   courseId: 'courseId1',
   course: { ...mockCourse },
+  sessionFeedback: [],
+};
+
+export const mockResource: ResourceEntity = {
+  resourceUser: [],
+  id: 'resourceId1',
+  storyblokId: 123456,
+  storyblokUuid: 'resourceUuid1',
+  slug: 'resources/shorts/resource-name',
+  status: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
+  name: 'Resource name',
+  category: RESOURCE_CATEGORIES.SHORT_VIDEO,
+  createdAt: new Date(100),
+  updatedAt: new Date(100),
+  resourceFeedback: [],
+};
+
+export const mockResource2: ResourceEntity = {
+  id: 'resourceId2',
+  storyblokId: 98765,
+  storyblokUuid: 'resourceUuid2',
+  slug: 'resources/shorts/resource-name',
+  status: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
+  name: 'Resource name 2',
+  category: RESOURCE_CATEGORIES.SHORT_VIDEO,
+  createdAt: new Date(100),
+  updatedAt: new Date(100),
+  resourceUser: [],
+  resourceFeedback: [],
 };
 
 export const mockIFirebaseUser: IFirebaseUser = {
@@ -149,6 +202,7 @@ export const mockUserEntity: UserEntity = {
   signUpLanguage: 'en',
   subscriptionUser: [],
   therapySession: [],
+  resourceUser: [],
   eventLog: [],
 };
 
@@ -392,7 +446,7 @@ export const mockSubscriptionUserEntity = {
   subscription: mockSubscriptionEntity,
 } as SubscriptionUserEntity;
 
-export const mockStoryDto = {
+export const mockStoryWebhookDto = {
   text: 'string',
   action: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
   story_id: 1,
