@@ -81,7 +81,7 @@ export class ResourceUserService {
     });
 
     if (resourceUser) {
-      await this.resourceUserRepository.save({
+      resourceUser = await this.resourceUserRepository.save({
         ...resourceUser,
         completedAt: completed ? new Date() : null,
       });
