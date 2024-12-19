@@ -3,14 +3,31 @@ import Rollbar from 'rollbar';
 import { FIREBASE_ERRORS } from 'src/utils/errors';
 import { isProduction, rollbarEnv, rollbarToken } from '../utils/constants';
 import { ErrorLog } from './utils';
+import { ClsService, ClsServiceManager } from 'nestjs-cls';
+
+interface LogMessage {
+  event: string;
+  userId: string;
+  fields?: string[];
+}
 
 export class Logger extends ConsoleLogger {
   private rollbar?: Rollbar;
+  private cls: ClsService;
 
   constructor(context?: string, isTimestampEnabled?) {
     super(context, isTimestampEnabled);
-
+    this.cls = ClsServiceManager.getClsService();
     this.initialiseRollbar();
+  }
+
+  log(message: string | LogMessage): void {
+    const formattedMessage = typeof message === 'string' ? message : JSON.stringify(message);
+    const requestId = this.cls.getId();
+    const sessionId = this.cls.get('sessionId');
+    const decoratedMessage = `[Request ID: ${requestId}, Session ID: ${sessionId}] ${formattedMessage}`;
+    super.log(decoratedMessage);
+
   }
 
   error(message: string | ErrorLog, trace?: string): void {
@@ -18,8 +35,11 @@ export class Logger extends ConsoleLogger {
       this.rollbar.error(message);
     }
     const formattedMessage = typeof message === 'string' ? message : JSON.stringify(message);
+    const requestId = this.cls.getId();
+    const sessionId = this.cls.get('sessionId');
+    const decoratedMessage = `[Request ID: ${requestId}, Session ID: ${sessionId}] ${formattedMessage}`;
 
-    const taggedMessage = `[error] ${formattedMessage}`;
+    const taggedMessage = `[error] ${decoratedMessage}`;
     super.error(taggedMessage, trace);
   }
 

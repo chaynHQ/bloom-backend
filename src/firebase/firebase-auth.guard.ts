@@ -8,11 +8,13 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { Request } from 'express';
-
 import { AUTH_GUARD_ERRORS, FIREBASE_ERRORS } from 'src/utils/errors';
 import { AuthService } from '../auth/auth.service';
 import { UserService } from '../user/user.service';
 import { IFirebaseUser } from './firebase-user.interface';
+import { ClsService } from 'nestjs-cls';
+import { DecodedIdToken } from 'firebase-admin/lib/auth/token-verifier';
+import * as crypto from 'crypto';
 
 @Injectable()
 export class FirebaseAuthGuard implements CanActivate {
@@ -21,6 +23,7 @@ export class FirebaseAuthGuard implements CanActivate {
   constructor(
     private authService: AuthService,
     private userService: UserService,
+    private cls : ClsService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -84,6 +87,15 @@ export class FirebaseAuthGuard implements CanActivate {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
+    this.setSessionId(user);
     return true;
+  }
+
+
+  private setSessionId(user :  DecodedIdToken) {
+    const uid = user.uid;
+    const authTime = user.auth_time;
+    const sessionId: string = crypto.createHash('sha256').update(`${uid}-${authTime}`).digest('hex');
+    this.cls.set('sessionId', sessionId);
   }
 }

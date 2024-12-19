@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { DeepMocked, createMock } from '@golevelup/ts-jest/lib/mocks';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
@@ -9,11 +10,13 @@ import { EventLoggerService } from 'src/event-logger/event-logger.service';
 import { SubscriptionService } from 'src/subscription/subscription.service';
 import { mockSubscriptionUserEntity, mockUserEntity } from 'test/utils/mockData';
 import {
+  mockClsService,
   mockSubscriptionUserRepositoryMethods,
   mockZapierWebhookClientMethods,
 } from 'test/utils/mockedServices';
 import { Repository } from 'typeorm/repository/Repository';
 import { SubscriptionUserService } from './subscription-user.service';
+import { Logger } from '@nestjs/common';
 
 describe('SubscriptionUserService', () => {
   let service: SubscriptionUserService;
@@ -58,6 +61,8 @@ describe('SubscriptionUserService', () => {
     }).compile();
 
     service = module.get<SubscriptionUserService>(SubscriptionUserService);
+    const logger = (service as any).logger as Logger;
+    (logger as any).cls = mockClsService;
   });
 
   it('should be defined', () => {
