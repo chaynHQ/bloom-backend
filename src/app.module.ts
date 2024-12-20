@@ -16,6 +16,9 @@ import { PartnerAccessModule } from './partner-access/partner-access.module';
 import { PartnerAdminModule } from './partner-admin/partner-admin.module';
 import { PartnerFeatureModule } from './partner-feature/partner-feature.module';
 import { PartnerModule } from './partner/partner.module';
+import { ResourceFeedbackModule } from './resource-feedback/resource-feedback.module';
+import { ResourceUserModule } from './resource-user/resource-user.module';
+import { ResourceModule } from './resource/resource.module';
 import { SessionFeedbackModule } from './session-feedback/session-feedback.module';
 import { SessionUserModule } from './session-user/session-user.module';
 import { SessionModule } from './session/session.module';
@@ -47,6 +50,9 @@ import { WebhooksModule } from './webhooks/webhooks.module';
     HealthModule,
     CrispModule,
     CrispListenerModule,
+    ResourceModule,
+    ResourceUserModule,
+    ResourceFeedbackModule,
   ],
 })
 export class AppModule {}

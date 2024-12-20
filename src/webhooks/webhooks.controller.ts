@@ -16,7 +16,7 @@ import { storyblokWebhookSecret } from 'src/utils/constants';
 import { ControllerDecorator } from 'src/utils/controller.decorator';
 import { ZapierSimplybookBodyDto } from '../partner-access/dtos/zapier-body.dto';
 import { ZapierAuthGuard } from '../partner-access/zapier-auth.guard';
-import { StoryDto } from './dto/story.dto';
+import { StoryWebhookDto } from './dto/story.dto';
 import { WebhooksService } from './webhooks.service';
 
 @ApiTags('Webhooks')
@@ -36,8 +36,8 @@ export class WebhooksController {
   }
 
   @Post('storyblok')
-  @ApiBody({ type: StoryDto })
-  async updateStory(@Request() req, @Body() data: StoryDto, @Headers() headers) {
+  @ApiBody({ type: StoryWebhookDto })
+  async handleStoryUpdated(@Request() req, @Body() data: StoryWebhookDto, @Headers() headers) {
     const signature: string | undefined = headers['webhook-signature'];
     // Verify storyblok signature uses storyblok webhook secret - see https://www.storyblok.com/docs/guide/in-depth/webhooks#securing-a-webhook
     if (!signature) {
@@ -53,6 +53,6 @@ export class WebhooksController {
       this.logger.error(error);
       throw new HttpException(error, HttpStatus.UNAUTHORIZED);
     }
-    return this.webhooksService.updateStory(data);
+    return this.webhooksService.handleStoryUpdated(data);
   }
 }
