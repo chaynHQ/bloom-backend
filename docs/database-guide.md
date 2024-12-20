@@ -2,6 +2,11 @@
 
 ## How to Populate the Database
 
+**Prerequisites:**
+
+- [Postgres 16](https://www.postgresql.org/download/) \*technically not required if running in Docker
+- Running Bloom’s backend
+
 ### Summary
 
 Most open-source contributions (like running Cypress integration tests from the frontend) require adding test data to your local database. To do this, download Bloom's test data dump file, connect to the database server, then populate the database with the backup data.

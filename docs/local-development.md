@@ -24,6 +24,14 @@ To test the backend:
 - Docker
 - PostgreSQL 16
 
+#### Recommended Minimum System Requirements:
+
+- CPU: Quad-core 2.5 GHz (i5/Ryzen 5)
+- Memory: 16 GB RAM
+- Storage: 512 GB
+- OS: Linux, macOS, Windows, or WSL2 (latest versions)
+- Internet Connection: For accessing dependencies and external APIs/services
+
 ## Configure Environment Variables
 
 See [configure-env.md](configure-env.md) for instructions on configuring environment variables.
@@ -137,11 +145,6 @@ yarn format
 Populating your local database with test data is required for running Cypress integration tests and testing Bloom’s full-stack functionality.
 
 See the [database-guide.md](database-guide.md) for instructions.
-
-**Prerequisites:**
-
-- [Postgres 16](https://www.postgresql.org/download/) \*_technically not required if using the Docker method, but recommended._
-- Running Bloom’s backend
 
 # Git Flow and Deployment
 

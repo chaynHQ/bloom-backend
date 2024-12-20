@@ -19,7 +19,7 @@ Chayn's Bloom service offers several key features designed to support individual
 
 ## Bloom Backend Technical Documentation
 
-Read our [Bloom Backend Technical Wiki Docs](https://github.com/chaynHQ/bloom-backend/wiki/Key-Concepts-and-Architecture) for overviews of key concepts and data & database architecture.
+Read our [Bloom Backend Tech Wiki Docs](https://github.com/chaynHQ/bloom-backend/wiki) for overviews of key concepts and data & database architecture.
 
 Technologies Used:
 
@@ -38,7 +38,7 @@ Technologies Used:
 - [GitHub Actions](https://github.com/features/actions) - CI pipeline
 - [ESLint](https://eslint.org/) and [Prettier](https://prettier.io/) for linting and formatting.
 
-## Local development
+## Local Development
 
 Making an open-source contribution you have agreed to our [Code of Conduct](/CODE_OF_CONDUCT.md).
 
