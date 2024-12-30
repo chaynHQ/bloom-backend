@@ -6575,10 +6575,10 @@ statuses@2.0.1:
   resolved "https://registry.yarnpkg.com/statuses/-/statuses-2.0.1.tgz#55cb000ccf1d48728bd23c685a063998cf1a1b63"
   integrity sha512-RwNA9Z/7PrK06rYLIzFMlaF+l73iwpzsqRIFgbMLbTcLD6cOao82TaWefPXQvB2fOC4AjuYSEndS7N/mTCbkdQ==
 
-storyblok-js-client@^6.9.2:
-  version "6.9.2"
-  resolved "https://registry.yarnpkg.com/storyblok-js-client/-/storyblok-js-client-6.9.2.tgz#af37c6f8ea0968603e4fcccac01228b715a8439c"
-  integrity sha512-31GM5X/SIP4eJsSMCpAnaPDRmmUotSSWD3Umnuzf3CGqjyakot2Gv5QmuV23fRM7TCDUQlg5wurROmAzkKMKKg==
+storyblok-js-client@^6.10.6:
+  version "6.10.6"
+  resolved "https://registry.yarnpkg.com/storyblok-js-client/-/storyblok-js-client-6.10.6.tgz#951bd131ae8db34e1b8e67e1ee41f2c5e0da5dbb"
+  integrity sha512-4n/n6tkLu3kmZwb2aSZgwqGta8DodbQbGjuclWY+A6xsmrVWrRBytUs+5lvJVTGkshLflVPhufeO4j/1zvVSPQ==
 
 stream-events@^1.0.5:
   version "1.0.5"
