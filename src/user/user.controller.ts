@@ -14,6 +14,7 @@ import { ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiTags } from '@nestjs
 import { Request } from 'express';
 import { UserEntity } from 'src/entities/user.entity';
 import { SuperAdminAuthGuard } from 'src/partner-admin/super-admin-auth.guard';
+import { ServiceUserProfilesService } from 'src/service-user-profiles/service-user-profiles.service';
 import { formatUserObject } from 'src/utils/serialize';
 import { FirebaseAuthGuard } from '../firebase/firebase-auth.guard';
 import { ControllerDecorator } from '../utils/controller.decorator';
@@ -27,7 +28,10 @@ import { UserService } from './user.service';
 @ControllerDecorator()
 @Controller('/v1/user')
 export class UserController {
-  constructor(private readonly userService: UserService) {}
+  constructor(
+    private readonly userService: UserService,
+    private readonly serviceUserProfilesService: ServiceUserProfilesService,
+  ) {}
 
   @Post()
   @ApiOperation({
@@ -104,5 +108,13 @@ export class UserController {
       : { include: [], fields: [], limit: undefined };
     const users = await this.userService.getUsers(userQuery, include || [], fields, limit);
     return users.map((u) => formatUserObject(u));
+  }
+
+  @ApiBearerAuth()
+  @Get('/bulk-upload-mailchimp-profiles')
+  @UseGuards(SuperAdminAuthGuard)
+  async bulkUploadMailchimpProfiles() {
+    await this.serviceUserProfilesService.bulkUploadMailchimpProfiles();
+    return 'ok';
   }
 }

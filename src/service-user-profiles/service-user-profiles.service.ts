@@ -238,8 +238,8 @@ export class ServiceUserProfilesService {
   // UPDATE THE FILTERS to the current requirements
   public async bulkUploadMailchimpProfiles() {
     try {
-      const filterStartDate = '2023-01-01'; // UPDATE
-      const filterEndDate = '2024-01-01'; // UPDATE
+      const filterStartDate = '2024-10-29'; // UPDATE
+      const filterEndDate = '2025-01-06'; // UPDATE
       const users = await this.userRepository.find({
         where: {
           // UPDATE TO ANY FILTERS
