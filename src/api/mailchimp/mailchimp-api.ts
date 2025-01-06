@@ -66,6 +66,36 @@ export const batchCreateMailchimpProfiles = async (
   }
 };
 
+export const batchUpdateMailchimpProfiles = async (
+  userProfiles: Partial<UpdateListMemberRequest>[],
+) => {
+  try {
+    const operations = [];
+
+    userProfiles.forEach((userProfile, index) => {
+      operations.push({
+        method: 'PATCH',
+        path: `/lists/${mailchimpAudienceId}/members/${getEmailMD5Hash(userProfile.email_address)}`,
+        operation_id: String(index),
+        body: JSON.stringify(userProfile),
+      });
+    });
+
+    const batchRequest = await mailchimp.batches.start({
+      operations: operations,
+    });
+    logger.log(`Mailchimp batch request: ${batchRequest}`);
+    logger.log('Wait 2 minutes before calling response...');
+
+    setTimeout(async () => {
+      const batchResponse = await mailchimp.batches.status(batchRequest.id);
+      logger.log(`Mailchimp batch response: ${batchResponse}`);
+    }, 120000);
+  } catch (error) {
+    throw new Error(`Batch update mailchimp profiles API call failed: ${JSON.stringify(error)}`);
+  }
+};
+
 // Note getMailchimpProfile is not currently used
 export const getMailchimpProfile = async (email: string): Promise<ListMember> => {
   try {
