@@ -32,7 +32,7 @@ export const createMailchimpProfile = async (
   try {
     return await mailchimp.lists.addListMember(mailchimpAudienceId, profileData);
   } catch (error) {
-    throw new Error(`Create mailchimp profile API call failed: ${error}`);
+    throw new Error(`Create mailchimp profile API call failed: ${JSON.stringify(error)}`);
   }
 };
 
