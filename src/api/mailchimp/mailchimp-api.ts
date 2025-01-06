@@ -46,7 +46,7 @@ export const batchCreateMailchimpProfiles = async (
       operations.push({
         method: 'POST',
         path: `/lists/${mailchimpAudienceId}/members`,
-        operation_id: index,
+        operation_id: String(index),
         body: JSON.stringify(userProfile),
       });
     });
@@ -54,15 +54,15 @@ export const batchCreateMailchimpProfiles = async (
     const batchRequest = await mailchimp.batches.start({
       operations: operations,
     });
-    console.log('Mailchimp batch request:', batchRequest);
-    console.log('Wait 2 minutes before calling response...');
+    logger.log(`Mailchimp batch request: ${batchRequest}`);
+    logger.log('Wait 2 minutes before calling response...');
 
     setTimeout(async () => {
       const batchResponse = await mailchimp.batches.status(batchRequest.id);
-      console.log('Mailchimp batch response:', batchResponse);
+      logger.log(`Mailchimp batch response: ${batchResponse}`);
     }, 120000);
   } catch (error) {
-    throw new Error(`Batch create mailchimp profiles API call failed: ${error}`);
+    throw new Error(`Batch create mailchimp profiles API call failed: ${JSON.stringify(error)}`);
   }
 };
 
