@@ -117,4 +117,12 @@ export class UserController {
     await this.serviceUserProfilesService.bulkUploadMailchimpProfiles();
     return 'ok';
   }
+
+  @ApiBearerAuth()
+  @Get('/bulk-update-mailchimp-profiles')
+  @UseGuards(SuperAdminAuthGuard)
+  async bulkUpdateMailchimpProfiles() {
+    await this.serviceUserProfilesService.bulkUpdateMailchimpProfiles();
+    return 'ok';
+  }
 }
