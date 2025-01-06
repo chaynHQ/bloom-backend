@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
   batchCreateMailchimpProfiles,
+  batchUpdateMailchimpProfiles,
   createMailchimpMergeField,
   createMailchimpProfile,
   updateMailchimpProfile,
@@ -234,12 +235,11 @@ export class ServiceUserProfilesService {
   }
 
   // Static bulk upload function to be used in specific cases e.g. bug prevented a subset of new users from being created
-  // Currently no endpoint for this function
   // UPDATE THE FILTERS to the current requirements
   public async bulkUploadMailchimpProfiles() {
     try {
-      const filterStartDate = '2023-01-01'; // UPDATE
-      const filterEndDate = '2024-01-01'; // UPDATE
+      const filterStartDate = '2024-10-29'; // UPDATE
+      const filterEndDate = '2025-01-06'; // UPDATE
       const users = await this.userRepository.find({
         where: {
           // UPDATE TO ANY FILTERS
@@ -263,6 +263,40 @@ export class ServiceUserProfilesService {
       );
     } catch (error) {
       throw new Error(`Bulk upload mailchimp profiles API call failed: ${error}`);
+    }
+  }
+  // Static bulk update function to be used in specific cases e.g. bug prevented a subset of users from being updated
+  // UPDATE THE FILTERS to the current requirements
+  public async bulkUpdateMailchimpProfiles() {
+    try {
+      const filterStartDate = '2024-10-29'; // UPDATE
+      const filterEndDate = '2025-01-06'; // UPDATE
+      const users = await this.userRepository.find({
+        where: {
+          // UPDATE TO ANY FILTERS
+          updatedAt: And(
+            Raw((alias) => `${alias} >= :filterStartDate`, { filterStartDate: filterStartDate }),
+            Raw((alias) => `${alias} < :filterEndDate`, { filterEndDate: filterEndDate }),
+          ),
+          createdAt: Raw((alias) => `${alias} < :filterStartDate`, {
+            filterStartDate: filterStartDate,
+          }),
+        },
+        relations: {
+          partnerAccess: { partner: true, therapySession: true },
+          courseUser: { course: true, sessionUser: { session: true } },
+        },
+      });
+      const mailchimpUserProfiles = users.map((user) =>
+        this.createCompleteMailchimpUserProfile(user),
+      );
+
+      await batchUpdateMailchimpProfiles(mailchimpUserProfiles);
+      logger.log(
+        `Updated batch mailchimp profiles for ${users.length} users, updated before ${filterStartDate}`,
+      );
+    } catch (error) {
+      throw new Error(`Bulk update mailchimp profiles API call failed: ${error}`);
     }
   }
 

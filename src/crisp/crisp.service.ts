@@ -101,11 +101,9 @@ export class CrispService {
     email: string,
   ): Promise<CrispProfileDataResponse> {
     try {
-      const crispPeopleData = CrispClient.website.updatePeopleData(
-        crispWebsiteId,
-        email,
-        peopleData,
-      );
+      const crispPeopleData = CrispClient.website.updatePeopleData(crispWebsiteId, email, {
+        data: peopleData,
+      });
       return crispPeopleData;
     } catch (error) {
       throw new Error(`Update crisp profile API call failed: ${error}`);
