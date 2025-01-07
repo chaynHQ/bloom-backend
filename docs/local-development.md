@@ -22,15 +22,9 @@ To test the backend:
 - NodeJS v20.x
 - Yarn v1.x
 - Docker
-- PostgreSQL 16
+- PostgreSQL 16 (only required if not running in Docker)
 
-#### Recommended Minimum System Requirements:
-
-- CPU: Quad-core 2.5 GHz (i5/Ryzen 5)
-- Memory: 16 GB RAM
-- Storage: 512 GB
-- OS: Linux, macOS, Windows, or WSL2 (latest versions)
-- Internet Connection: For accessing dependencies and external APIs/services
+_Recommended Minimum System Requirements: CPU: Quad-core 2.5 GHz (i5/Ryzen 5), Memory: 16 GB RAM, Storage: 512 GB, OS: Linux, macOS, Windows, or WSL2 (latest versions), Internet Connection: For accessing dependencies and external APIs/services._
 
 ## Configure Environment Variables
 
@@ -54,7 +48,7 @@ There are 3 methods you can use to run Bloom’s backend locally:
 
 Bloom's backend is containerized and can be run solely in Docker - both the PostgreSQL database and NestJS app. This uses the least resources on your computer. To run the backend locally, make sure your system has Docker installed - you may need Docker Desktop if using a Mac or Windows.
 
-First, make sure the Docker app is running (just open the app). Then run
+First, make sure the Docker app is running. Then run:
 
 ```bash
 docker-compose up
@@ -90,7 +84,7 @@ See [Visual Studio Code Docs: Developing Inside a Dev Container](https://code.vi
 
 ### Run Manually
 
-Manage postgres locally to [populate the database](#populate-database), then run:
+Start the Postgres server, create a database called 'bloom', then run:
 
 ```bash
 yarn start:dev

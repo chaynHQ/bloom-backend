@@ -4,8 +4,7 @@
 
 **Prerequisites:**
 
-- [Postgres 16](https://www.postgresql.org/download/) \*technically not required if running in Docker
-- Running Bloom’s backend
+- Bloom's backend must be running
 
 ### Summary
 
@@ -13,21 +12,23 @@ Most open-source contributions (like running Cypress integration tests from the 
 
 ### Download Test Data Dump File
 
-Download the test data dump file [linked here from our Google Drive](https://drive.google.com/file/d/1y6KJpAlpozEg3GqhK8JRdmK-s7uzJXtB/view?usp=drive_link).
+First, download the test data dump file [linked here from our Google Drive](https://drive.google.com/file/d/1y6KJpAlpozEg3GqhK8JRdmK-s7uzJXtB/view?usp=drive_link). Then place this dump file in the project directory.
 
 ### Connect to Server and Add Data
 
-There are multiple methods you can use here. For simplicity, these directions assume you are using Docker.
+Use the Docker directions if you are running the app in Docker. The data will persist on your computer using the path specified for the database volume in `docker-compose.yml`. For manually hosting Postgres on your machine, use the Postgres directions.
 
-Run the following command to restore the database from the dump file using pg_restore:
+#### Docker Directions:
+
+Run to restore the database from the dump file using pg_restore:
 
 ```
-docker exec -i <container_name> pg_restore -U <username> -d <database_name> --clean --if-exists < </path/to/dumpfile.dump>
+docker exec -i <container_name> pg_restore -U <username> -d <database_name> --clean --if-exists < /path/to/dumpfile.dump
 ```
 
 `container_name`, `username`, and `database_name` are defined in the `docker-compose.yml` file under ‘db’.
 
-Start the bloom psql database server:
+Start the bloom psql database server in Docker:
 
 ```
 docker exec -it <container_name> psql -U <username> -d <database_name>
@@ -35,7 +36,25 @@ docker exec -it <container_name> psql -U <username> -d <database_name>
 
 This will open the psql server for bloom, where you can run queries to verify the restore.
 
-You can verify the restore by running a SQL query to test if one of our test user's data has been properly populated into the database:
+#### Postgres Directions:
+
+Ensure your postgres server is running with a configured database called "bloom" (we recommend naming your username "postgres" but not required).
+
+Run to restore the database from the dump file with pg_restore:
+
+```bash
+pg_restore -U <username> -d <database_name> --clean --if-exists < /path/to/dumpfile.dump
+```
+
+Start the bloom database server:
+
+```bash
+psql -U <username> -d <database_name>
+```
+
+### Verify Data
+
+With the psql server running, verify the restore by with a SQL query to test if one of our test user's data has been properly populated into the database:
 
 ```
 SELECT * FROM public."user" users WHERE users."email" = 'tech+cypresspublic@chayn.co';

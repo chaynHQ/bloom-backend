@@ -7,7 +7,7 @@ services:
       context: .
       dockerfile: Dockerfile
     environment:
-      DATABASE_URL: postgres://postgres:postgres@host.docker.internal:35000/bloom
+      DATABASE_URL: postgres://postgres:postgres@db:5432/bloom
     ports:
       - 35001:35001
     depends_on:
@@ -25,3 +25,8 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: bloom
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+volumes:
+  postgres-data:
