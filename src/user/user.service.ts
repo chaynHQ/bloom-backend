@@ -249,7 +249,7 @@ export class UserService {
 
     if (
       Object.keys(updateUserDto).length === 1 &&
-      !!updateUserDto.lastActiveAt &&
+      !!updateUserDto.lastActiveAt && !!user.lastActiveAt &&
       updateUserDto.lastActiveAt.getDate() === user.lastActiveAt.getDate()
     ) {
       // Do nothing, prevent unnecessay updates to service profiles when last active date is same date
@@ -302,7 +302,6 @@ export class UserService {
 
     while (startIndex < users.length) {
       const batch = users.slice(startIndex, startIndex + BATCH_SIZE);
-
       await Promise.all(
         batch.map(async (user) => {
           try {
@@ -310,8 +309,7 @@ export class UserService {
           } catch (error) {
             this.logger.warn(
               `deleteCypressTestUsers - unable to delete crisp profile for user ${user.id}`,
-              error,
-            );
+              error);
           }
           try {
             await deleteMailchimpProfile(user.email);
@@ -338,9 +336,8 @@ export class UserService {
               error,
             );
           }
-        }),
-      );
-
+        })
+      )
       startIndex += BATCH_SIZE;
       await new Promise((resolve) => setTimeout(resolve, INTERVAL)); // Wait before processing next batch
     }

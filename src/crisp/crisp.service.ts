@@ -112,7 +112,7 @@ export class CrispService {
 
   async deleteCrispProfile(email: string) {
     try {
-      CrispClient.website.removePeopleProfile(crispWebsiteId, email);
+      await CrispClient.website.removePeopleProfile(crispWebsiteId, email);
     } catch (error) {
       throw new Error(`Delete crisp profile API call failed: ${error}`);
     }
