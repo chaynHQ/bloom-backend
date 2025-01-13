@@ -2,13 +2,13 @@
 
 ## How to Populate the Database
 
-**Prerequisites:**
+### Prerequisites
 
-- Bloom's backend must be running
+- Bloom's backend is running
 
 ### Summary
 
-Most open-source contributions (like running Cypress integration tests from the frontend) require adding test data to your local database. To do this, download Bloom's test data dump file, connect to the database server, then populate the database with the backup data.
+Most open-source contributions (e.g. running Cypress integration tests from the frontend) require adding test data to your local database. To do this, download Bloom's test data dump file, connect to the database server, then populate the database with the backup data.
 
 ### Download Test Data Dump File
 
@@ -16,54 +16,41 @@ First, download the test data dump file [linked here from our Google Drive](http
 
 ### Connect to Server and Add Data
 
-Use the Docker directions if you are running the app in Docker. The data will persist on your computer using the path specified for the database volume in `docker-compose.yml`. For manually hosting Postgres on your machine, use the Postgres directions.
+Next, use the appropriate command based on your setup (Fully Dockerized DB, Docker with Local DB, or Running Manually) to connect to the server and add data.
 
-#### Docker Directions:
+- Restore the database from the dump file using pg_restore:
 
-Run to restore the database from the dump file using pg_restore:
+  ```
+  # Fully Dockerized DB:
+  docker exec -i <container_name> pg_restore -U <username> -d <database_name> --clean --if-exists < /path/to/dumpfile.dump
 
-```
-docker exec -i <container_name> pg_restore -U <username> -d <database_name> --clean --if-exists < /path/to/dumpfile.dump
-```
+  # Docker with Local DB or Running Manually:
+  pg_restore -U postgres -d bloom --clean --if-exists /path/to/dumpfile.dump
+  ```
 
-`container_name`, `username`, and `database_name` are defined in the `docker-compose.yml` file under ‘db’.
+  `container_name`, `username`, and `database_name` are defined in the `docker-compose.yml` under the ‘db’ service config.
 
-Start the bloom psql database server in Docker:
+- Start the bloom psql database server:
 
-```
-docker exec -it <container_name> psql -U <username> -d <database_name>
-```
+  ```
+  # Fully Dockerized DB:
+  docker exec -it <container_name> psql -U <username> -d <database_name>
 
-This will open the psql server for bloom, where you can run queries to verify the restore.
+  # Docker with Local DB or Running Manually:
+  psql -U <username> -h localhost -p 5432 -d <database_name>
+  ```
 
-#### Postgres Directions:
+- Within the psql server, run queries to verify the restore:
 
-Ensure your postgres server is running with a configured database called "bloom" (we recommend naming your username "postgres" but not required).
+  ```
+  SELECT * FROM public."user" users WHERE users."email" = 'tech+cypresspublic@chayn.co';
+  ```
 
-Run to restore the database from the dump file with pg_restore:
-
-```bash
-pg_restore -U <username> -d <database_name> --clean --if-exists < /path/to/dumpfile.dump
-```
-
-Start the bloom database server:
-
-```bash
-psql -U <username> -d <database_name>
-```
-
-### Verify Data
-
-With the psql server running, verify the restore by with a SQL query to test if one of our test user's data has been properly populated into the database:
-
-```
-SELECT * FROM public."user" users WHERE users."email" = 'tech+cypresspublic@chayn.co';
-```
-
-If the user exists, the database has successfully been seeded!
+  If the user exists, the database has successfully been seeded with test data!
 
 ### Troubleshooting
 
+- When running in Docker, ensure paths to Docker volumes have correct permissions. Windows and WSL users may need to update the `docker-compose.yml` to remove the named volume (volumes: postgres-data:) and replace the volume path with an absolute path (e.g., /mnt/c/... for non-WSL Windows paths or /home/user/... for WSL). WSL users should store volumes on the WSL side to avoid mounting onto Windows, creating new directories if needed. If issues with volumes persist, you can remove persistent data storage by removing the volumes from the 'db' service in the `docker-compose.yml` file. Use `docker-compose up -d --force-recreate` & `docker-compose up --build` to hard reset Docker containers. Delete containers with `docker rm <container_name_or_id>` and their respective volumes & images with `docker system prune`.
 - If you remove **`--clean`** from the restore command but encounter duplicate object errors, the existing schema may conflict with the restore. In that case, clean the specific objects manually or use **`DROP SCHEMA public CASCADE`** before restoring.
 - Verify that the dump file is valid by running: `pg_restore --list yourfile.dump` If it fails to list contents, the dump file may be corrupted or incomplete.
 - In the psql server, verify the tables and columns exist with `\dt` , `\dt public.*` , and `\d public."user";`
