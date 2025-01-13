@@ -16,17 +16,31 @@ import { PartnerAccessModule } from './partner-access/partner-access.module';
 import { PartnerAdminModule } from './partner-admin/partner-admin.module';
 import { PartnerFeatureModule } from './partner-feature/partner-feature.module';
 import { PartnerModule } from './partner/partner.module';
+import { ResourceFeedbackModule } from './resource-feedback/resource-feedback.module';
+import { ResourceUserModule } from './resource-user/resource-user.module';
+import { ResourceModule } from './resource/resource.module';
 import { SessionFeedbackModule } from './session-feedback/session-feedback.module';
 import { SessionUserModule } from './session-user/session-user.module';
 import { SessionModule } from './session/session.module';
 import { SubscriptionUserModule } from './subscription-user/subscription-user.module';
 import { UserModule } from './user/user.module';
 import { WebhooksModule } from './webhooks/webhooks.module';
+import { ClsModule } from 'nestjs-cls';
+import { v4 as uuidv4 } from 'uuid';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     TypeOrmModule.forRoot(dataSourceOptions as TypeOrmModuleOptions),
+    ClsModule.forRoot({
+      global: true,
+      middleware: {
+          mount: true,
+          generateId: true,
+          idGenerator: (req: Request) =>
+              req.headers['X-Request-Id'] ?? uuidv4(),
+      }
+    }),
     LoggerModule,
     PartnerAccessModule,
     AuthModule,
@@ -47,6 +61,9 @@ import { WebhooksModule } from './webhooks/webhooks.module';
     HealthModule,
     CrispModule,
     CrispListenerModule,
+    ResourceModule,
+    ResourceUserModule,
+    ResourceFeedbackModule,
   ],
 })
 export class AppModule {}

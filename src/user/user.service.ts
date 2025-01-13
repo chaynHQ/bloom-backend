@@ -1,6 +1,9 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { deleteMailchimpProfile } from 'src/api/mailchimp/mailchimp-api';
+import {
+  deleteCypressMailchimpProfiles,
+  deleteMailchimpProfile,
+} from 'src/api/mailchimp/mailchimp-api';
 import { CrispService } from 'src/crisp/crisp.service';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { PartnerEntity } from 'src/entities/partner.entity';
@@ -139,6 +142,8 @@ export class UserService {
       .leftJoinAndSelect('courseUser.course', 'course')
       .leftJoinAndSelect('courseUser.sessionUser', 'sessionUser')
       .leftJoinAndSelect('sessionUser.session', 'session')
+      .leftJoinAndSelect('user.resourceUser', 'resourceUser')
+      .leftJoinAndSelect('resourceUser.resource', 'resource')
       .leftJoinAndSelect('user.subscriptionUser', 'subscriptionUser')
       .leftJoinAndSelect('subscriptionUser.subscription', 'subscription')
       .where('user.id = :id', { id })
@@ -244,7 +249,7 @@ export class UserService {
 
     if (
       Object.keys(updateUserDto).length === 1 &&
-      !!updateUserDto.lastActiveAt &&
+      !!updateUserDto.lastActiveAt && !!user.lastActiveAt &&
       updateUserDto.lastActiveAt.getDate() === user.lastActiveAt.getDate()
     ) {
       // Do nothing, prevent unnecessay updates to service profiles when last active date is same date
@@ -297,7 +302,6 @@ export class UserService {
 
     while (startIndex < users.length) {
       const batch = users.slice(startIndex, startIndex + BATCH_SIZE);
-
       await Promise.all(
         batch.map(async (user) => {
           try {
@@ -305,8 +309,7 @@ export class UserService {
           } catch (error) {
             this.logger.warn(
               `deleteCypressTestUsers - unable to delete crisp profile for user ${user.id}`,
-              error,
-            );
+              error);
           }
           try {
             await deleteMailchimpProfile(user.email);
@@ -333,9 +336,8 @@ export class UserService {
               error,
             );
           }
-        }),
-      );
-
+        })
+      )
       startIndex += BATCH_SIZE;
       await new Promise((resolve) => setTimeout(resolve, INTERVAL)); // Wait before processing next batch
     }
@@ -365,6 +367,9 @@ export class UserService {
       if (clean) {
         // Delete all remaining cypress firebase users (e.g. from failed user creations)
         await this.authService.deleteCypressFirebaseUsers();
+
+        // Delete all remaining crisp accounts
+        await deleteCypressMailchimpProfiles();
 
         // Delete all remaining crisp accounts
         await this.crispService.deleteCypressCrispProfiles();

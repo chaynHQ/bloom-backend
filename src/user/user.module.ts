@@ -7,6 +7,7 @@ import { EventLogEntity } from 'src/entities/event-log.entity';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { PartnerAdminEntity } from 'src/entities/partner-admin.entity';
 import { PartnerEntity } from 'src/entities/partner.entity';
+import { ResourceUserEntity } from 'src/entities/resource-user.entity';
 import { SubscriptionUserEntity } from 'src/entities/subscription-user.entity';
 import { SubscriptionEntity } from 'src/entities/subscription.entity';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
@@ -33,6 +34,7 @@ import { UserService } from './user.service';
       PartnerAdminEntity,
       TherapySessionEntity,
       EventLogEntity,
+      ResourceUserEntity,
     ]),
     FirebaseModule,
   ],

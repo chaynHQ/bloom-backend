@@ -11,6 +11,7 @@ import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { PartnerAdminEntity } from 'src/entities/partner-admin.entity';
 import { PartnerFeatureEntity } from 'src/entities/partner-feature.entity';
 import { PartnerEntity } from 'src/entities/partner.entity';
+import { ResourceEntity } from 'src/entities/resource.entity';
 import { SessionEntity } from 'src/entities/session.entity';
 import { SubscriptionUserEntity } from 'src/entities/subscription-user.entity';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
@@ -30,6 +31,7 @@ import {
   mockPartnerAdminEntity,
   mockPartnerEntity,
   mockPartnerFeatureEntity,
+  mockResource,
   mockSession,
   mockSubscriptionUserEntity,
   mockTherapySessionEntity,
@@ -37,6 +39,7 @@ import {
   mockUserRecord,
 } from './mockData';
 import { createQueryBuilderMock } from './mockUtils';
+import { ClsService } from 'nestjs-cls';
 
 export const mockSlackMessageClientMethods: PartialFuncReturn<SlackMessageClient> = {
   sendMessageToTherapySlackChannel: async () => {
@@ -49,6 +52,11 @@ export const mockWebhooksServiceMethods: PartialFuncReturn<WebhooksService> = {
     return mockTherapySessionEntity;
   },
 };
+
+export const mockClsService = {
+  getId: jest.fn().mockReturnValue('mockRequestId'),
+  get: jest.fn().mockReturnValue('mockSessionId'),
+} as Partial<jest.Mocked<ClsService>> as jest.Mocked<ClsService>;
 
 export const mockPartnerServiceMethods = {
   getPartnerById: async (arg): Promise<PartnerEntity> => {
@@ -92,8 +100,23 @@ export const mockSessionRepositoryMethods: PartialFuncReturn<Repository<SessionE
   },
 };
 
+export const mockResourceRepositoryMethods: PartialFuncReturn<Repository<ResourceEntity>> = {
+  findOneBy: async () => {
+    return mockResource;
+  },
+  save: async (entity) => {
+    return entity as ResourceEntity;
+  },
+  create: () => {
+    return mockResource;
+  },
+};
+
 export const mockCourseRepositoryMethods: PartialFuncReturn<Repository<CourseEntity>> = {
   findOneBy: async () => {
+    return mockCourse;
+  },
+  findOneByOrFail: async () => {
     return mockCourse;
   },
   create: () => {
@@ -287,6 +310,13 @@ export const mockEventLoggerRepositoryMethods: PartialFuncReturn<Repository<Even
       id: 'newId',
     } as EventLogEntity;
   },
+  save: async (dto) => {
+    return {
+      ...mockEventLog,
+      ...dto,
+      id: 'logId',
+    } as EventLogEntity;
+  },
   findOneBy: async (arg) => {
     return { ...mockEventLog, ...(arg ? { ...arg } : {}) } as EventLogEntity;
   },
@@ -296,7 +326,6 @@ export const mockEventLoggerRepositoryMethods: PartialFuncReturn<Repository<Even
   findBy: async (arg) => {
     return [{ ...mockEventLog, ...(arg ? { ...arg } : {}) }] as EventLogEntity[];
   },
-  save: async (arg) => arg as EventLogEntity,
 };
 
 export const mockSubscriptionUserRepositoryMethods: PartialFuncReturn<
@@ -338,3 +367,4 @@ export const mockSubscriptionUserRepositoryMethods: PartialFuncReturn<
 };
 
 export const mockZapierWebhookClientMethods = {} as ZapierWebhookClient;
+

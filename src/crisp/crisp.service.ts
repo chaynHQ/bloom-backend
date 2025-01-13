@@ -101,11 +101,9 @@ export class CrispService {
     email: string,
   ): Promise<CrispProfileDataResponse> {
     try {
-      const crispPeopleData = CrispClient.website.updatePeopleData(
-        crispWebsiteId,
-        email,
-        peopleData,
-      );
+      const crispPeopleData = CrispClient.website.updatePeopleData(crispWebsiteId, email, {
+        data: peopleData,
+      });
       return crispPeopleData;
     } catch (error) {
       throw new Error(`Update crisp profile API call failed: ${error}`);
@@ -114,7 +112,7 @@ export class CrispService {
 
   async deleteCrispProfile(email: string) {
     try {
-      CrispClient.website.removePeopleProfile(crispWebsiteId, email);
+      await CrispClient.website.removePeopleProfile(crispWebsiteId, email);
     } catch (error) {
       throw new Error(`Delete crisp profile API call failed: ${error}`);
     }
@@ -122,7 +120,7 @@ export class CrispService {
 
   async deleteCypressCrispProfiles() {
     try {
-      const profiles = CrispClient.website.listPeopleProfiles(
+      const profiles = await CrispClient.website.listPeopleProfiles(
         crispWebsiteId,
         undefined,
         undefined,
@@ -132,8 +130,10 @@ export class CrispService {
         'cypresstestemail+',
       );
 
-      profiles.data.data.forEach(async (profile) => {
-        CrispClient.website.removePeopleProfile(crispWebsiteId, profile.email);
+      console.log(`Deleting ${profiles.length} crisp profiles`);
+
+      profiles?.forEach(async (profile) => {
+        await CrispClient.website.removePeopleProfile(crispWebsiteId, profile.email);
       });
     } catch (error) {
       throw new Error(`Delete cypress crisp profiles API call failed: ${error}`);
