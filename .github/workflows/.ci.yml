@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       SIMPLYBOOK_CREDENTIALS: '{"login": "login"}'
       STORYBLOK_WEBHOOK_SECRET: ${{ secrets.STORYBLOK_WEBHOOK_SECRET }}
