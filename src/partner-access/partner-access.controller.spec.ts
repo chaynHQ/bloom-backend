@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { createMock, DeepMocked } from '@golevelup/ts-jest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
@@ -10,6 +11,9 @@ import { UserService } from '../user/user.service';
 import { CreatePartnerAccessDto } from './dtos/create-partner-access.dto';
 import { PartnerAccessController } from './partner-access.controller';
 import { PartnerAccessService } from './partner-access.service';
+import { Logger } from '../logger/logger';
+import {mockClsService} from 'test/utils/mockedServices';
+import { ClsService } from 'nestjs-cls';
 
 const mockUserRepository = () => ({});
 
@@ -48,7 +52,8 @@ describe('PartnerAccessController', () => {
         } as unknown as PartnerAccessEntity);
       },
     };
-
+    const logger = (authGuard as any).logger as Logger;
+    (logger as any).cls = mockClsService;
     const module: TestingModule = await Test.createTestingModule({
       controllers: [PartnerAccessController],
       providers: [
@@ -59,6 +64,7 @@ describe('PartnerAccessController', () => {
           provide: getRepositoryToken(UserEntity),
           useFactory: mockUserRepository,
         },
+        {provide: ClsService, useValue: mockClsService},
       ],
     })
       .overrideGuard(PartnerAdminAuthGuard)

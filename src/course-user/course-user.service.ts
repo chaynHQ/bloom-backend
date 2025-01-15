@@ -21,7 +21,7 @@ export class CourseUserService {
       .getOne();
   }
 
-  async getCourseUserByUserId(userId: string) {
+  async getCourseUserByUserId(userId: string): Promise<CourseUserEntity[]> {
     return await this.courseUserRepository
       .createQueryBuilder('course_user')
       .leftJoinAndSelect('course_user.course', 'course')

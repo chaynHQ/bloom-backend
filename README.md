@@ -19,8 +19,6 @@ Chayn's Bloom service offers several key features designed to support individual
 
 ## Bloom Backend Technical Documentation
 
-Read our [Bloom Backend Tech Wiki Docs](https://github.com/chaynHQ/bloom-backend/wiki) for overviews of key concepts and data & database architecture.
-
 Technologies Used:
 
 - [NestJS](https://nestjs.com/) - NodeJs framework for building scalable and reliable server-side applications
@@ -38,7 +36,9 @@ Technologies Used:
 - [GitHub Actions](https://github.com/features/actions) - CI pipeline
 - [ESLint](https://eslint.org/) and [Prettier](https://prettier.io/) for linting and formatting.
 
-## Local Development
+Read our [Bloom Backend Tech Wiki Docs](https://github.com/chaynHQ/bloom-backend/wiki) for overviews of key concepts and data & database architecture.
+
+## Local Development Directions:
 
 Making an open-source contribution you have agreed to our [Code of Conduct](/CODE_OF_CONDUCT.md).
 
