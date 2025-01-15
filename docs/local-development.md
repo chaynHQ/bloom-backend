@@ -2,20 +2,18 @@
 
 ## Summary
 
-**The develop branch is our source of truth.** Fork from develop, create new feature branch, then when your PR is merged, develop will automatically merge into the main branch for deployment to production.
-
 To run Bloom's backend:
 
 1. Install prerequisites
 2. Configure environment variables
 3. Install dependencies
 4. Run the app using Docker, Dev Containers, or Manually
-5. Populate the database (only required for full-stack contributions / running integration tests from the frontend)
+5. Populate the database
 
 To test the backend:
 
 - Run unit tests
-- Run e2e integration tests from the frontend for fullstack contributions \*requires populating the database with data first
+- Run e2e integration tests from the frontend for full-stack contributions
 
 ## Prerequisites
 
@@ -39,21 +37,17 @@ yarn
 
 There are 3 methods you can use to run Bloom’s backend locally:
 
-1. **Using Docker (recommended)** - run app + PostgreSQL in a container, with options to containerize both PostgreSQL server and database (PostgreSQL installation not required) OR host the database locally (PostgreSQL required).
+1. **Using Docker (recommended)** - the backend app is fully containerized, installing PostgreSQL is optional.
 2. **Visual Studio Code Dev Container (recommended for Visual Code users)** - installs all dependencies and the PostgreSQL database container automatically.
-3. **Manually (recommended for PostgreSQL users)** - manage PostgesSQL locally.
-
-_Note: you can use an application like Postman to test the apis locally_
+3. **Manually (recommended for PostgreSQL users)** - run the app with yarn and manage PostgreSQL locally.
 
 ### Run with Docker - Recommended
 
-Prequisites: Docker, PostgreSQL optional
+Prequisites: Docker (we recommend [Docker Desktop](https://docs.docker.com/desktop/)), PostgreSQL (optional).
 
-Bloom's backend is containerized and can be run solely in Docker - both the PostgreSQL and NestJS app. To run the backend locally, ensure Docker is installed - we recommend installing [Docker Desktop](https://docs.docker.com/desktop/).
+Bloom's backend is fully containerized - both PostgreSQL and NestJS app. This does not require PostgreSQL to be installed locally. To connect to a local PostgreSQL database instead, modify the `DATABASE_URL` in the `docker-compose.yml` file. This will enable communications between Docker and your local database.
 
-If hosting the PostgreSQL database locally while running the app in Docker: switch the `DATABASE_URL` in `docker-compose.yml` to use `host.docker.internal` for enabling communications between the Docker container and your local PostgreSQL db.
-
-First, make sure the Docker app is running. Then run:
+To start the Docker container run:
 
 ```bash
 docker-compose up
@@ -89,7 +83,7 @@ See [Visual Studio Code Docs: Developing Inside a Dev Container](https://code.vi
 
 Prerequisites: PostgreSQL
 
-Log into PostgreSQL and create a database called "bloom". Ensure it is running on port `5432` (or your desired port). Finally, start the PostgreSQL server on your machine.
+Log into PostgreSQL and create a database called "bloom". Ensure it is running on port `35000` (or your desired port). Finally, start the PostgreSQL server on your machine.
 
 With the psql server running, start the app:
 
@@ -149,16 +143,16 @@ See the [database-guide.md](database-guide.md) for instructions.
 
 # Git Flow and Deployment
 
-**The develop branch is our source of truth, not main.**
+**The develop branch is our source of truth, not main.** Fork from `develop`, create new feature branch, then when your PR is merged, `develop` will automatically merge into the main branch for deployment to production. Keep your branch updated by rebasing and merging feature/bug branches into `develop` as you code.
 
-Create new branches from the `develop` base branch. There is no need to run the build command before pushing changes to GitHub, simply push and create a pull request for the new branch. GitHub Actions will run build and linting tasks automatically. Rebase and merge feature/bug branches into `develop`.
-
-This will trigger an automatic deployment to the staging app by Heroku.
+Once your PR is merged to `develop`, this will trigger an automatic deployment to the staging app by Heroku.
 
 When changes have been tested in staging, merge `develop` into `main`. This will trigger an automatic deployment to the production app by Heroku.
 
-# Swagger
+# APIs
 
 Swagger automatically reflects all of the endpoints in the app, showing their urls and example request and response objects.
 
 To access Swagger simply run the project and visit http://localhost:35001/swagger
+
+For testing APIs, we recommend using tools like Postman.

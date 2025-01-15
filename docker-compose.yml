@@ -8,7 +8,7 @@ services:
       dockerfile: Dockerfile
     env_file: '.env'
     environment:
-      # To connect to local psql db instead, replace DATABASE_URL with
+      # To connect to local your local psql db, replace DATABASE_URL with:
       # postgres://postgres:postgres@host.docker.internal:5432/bloom
       DATABASE_URL: postgres://postgres:postgres@db:5432/bloom
     ports:
@@ -29,7 +29,7 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: bloom
     volumes:
-      - postgres-data:/var/lib/postgresql/data
+      - postgres-data:/var/lib/postgresql/data # path for named volume
 
 volumes:
-  postgres-data:
+  postgres-data: # named volume for persistent postgres data
