@@ -3,7 +3,7 @@
 # if any vulnerabilities or invalid licenses are introduced.
 # See for more info: https://github.com/actions/dependency-review-action
 
-name: "Dependency Review"
+name: 'Dependency Review'
 on: [pull_request]
 
 permissions:
@@ -11,11 +11,11 @@ permissions:
 
 jobs:
   dependency-review:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - name: "Checkout Repository"
+      - name: 'Checkout Repository'
         uses: actions/checkout@v4
-      - name: "Dependency Review"
+      - name: 'Dependency Review'
         uses: actions/dependency-review-action@v4
         with:
           # fails when moderate vulnerabilities are deteched
