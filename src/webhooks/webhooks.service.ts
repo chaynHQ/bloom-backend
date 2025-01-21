@@ -270,7 +270,7 @@ export class WebhooksService {
     const storyPageComponent = storyData.content.component as STORYBLOK_PAGE_COMPONENTS;
 
     const updatedStoryData = {
-      name: storyData.name,
+      name: storyData.content.name,
       slug: storyData.full_slug,
       status: status,
     }; // fields to update on existing and new stories

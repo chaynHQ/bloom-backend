@@ -429,7 +429,7 @@ describe('WebhooksService', () => {
         storyblokUuid: mockCourseStoryblokResult.data.story.uuid,
         status: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
         slug: mockCourseStoryblokResult.data.story.full_slug,
-        name: mockCourseStoryblokResult.data.story.name,
+        name: mockCourseStoryblokResult.data.story.content.name,
       };
 
       const course = (await service.handleStoryUpdated(body)) as CourseEntity;
@@ -442,7 +442,7 @@ describe('WebhooksService', () => {
       expect(courseSaveRepoSpy).toHaveBeenCalledWith(expectedResponse);
 
       expect(mockedServiceUserProfilesService.createMailchimpCourseMergeField).toHaveBeenCalledWith(
-        mockCourseStoryblokResult.data.story.name,
+        mockCourseStoryblokResult.data.story.content.name,
       );
       courseFindOneRepoSpy.mockClear();
       courseSaveRepoSpy.mockClear();
@@ -536,7 +536,7 @@ describe('WebhooksService', () => {
       const updatedMockResourceStoryblokResult = { ...mockResourceStoryblokResult };
       const newName = 'New resource name';
       const newSlug = 'resources/shorts/new-resource-name';
-      updatedMockResourceStoryblokResult.data.story.name = newName;
+      updatedMockResourceStoryblokResult.data.story.content.name = newName;
       updatedMockResourceStoryblokResult.data.story.full_slug = newSlug;
 
       // Mock StoryblokClient to return a resource story
