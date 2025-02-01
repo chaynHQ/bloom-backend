@@ -131,7 +131,7 @@ export class SessionUserService {
   }
 
   public async setSessionUserCompleted(
-    user : UserEntity,
+    user: UserEntity,
     { storyblokId }: UpdateSessionUserDto,
     completed: boolean,
   ) {

@@ -18,9 +18,9 @@ import {
 import {
   mockPartnerAccessRepositoryMethods,
   mockPartnerRepositoryMethods,
-    mockClsService,
+  mockClsService,
 } from 'test/utils/mockedServices';
-import {  Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { createQueryBuilderMock } from '../../test/utils/mockUtils';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
 import { PartnerAccessCodeStatusEnum } from '../utils/constants';
@@ -28,7 +28,7 @@ import { CreatePartnerAccessDto } from './dtos/create-partner-access.dto';
 import { GetPartnerAccessesDto } from './dtos/get-partner-access.dto';
 import { UpdatePartnerAccessDto } from './dtos/update-partner-access.dto';
 import { PartnerAccessService } from './partner-access.service';
-import {Logger} from '../logger/logger';
+import { Logger } from '../logger/logger';
 
 const partnerId = 'partnerId1';
 const partnerAdminId = 'partnerAdminId1';

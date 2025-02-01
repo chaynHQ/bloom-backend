@@ -12,7 +12,7 @@ import { CreatePartnerAccessDto } from './dtos/create-partner-access.dto';
 import { PartnerAccessController } from './partner-access.controller';
 import { PartnerAccessService } from './partner-access.service';
 import { Logger } from '../logger/logger';
-import {mockClsService} from 'test/utils/mockedServices';
+import { mockClsService } from 'test/utils/mockedServices';
 import { ClsService } from 'nestjs-cls';
 
 const mockUserRepository = () => ({});
@@ -64,7 +64,7 @@ describe('PartnerAccessController', () => {
           provide: getRepositoryToken(UserEntity),
           useFactory: mockUserRepository,
         },
-        {provide: ClsService, useValue: mockClsService},
+        { provide: ClsService, useValue: mockClsService },
       ],
     })
       .overrideGuard(PartnerAdminAuthGuard)

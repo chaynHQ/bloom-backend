@@ -16,11 +16,10 @@ export class CoursesUserController {
   @Get()
   @ApiBearerAuth('access-token')
   @ApiOperation({
-    description:
-      'Returns user courses and session data.',
+    description: 'Returns user courses and session data.',
   })
   @UseGuards(FirebaseAuthGuard)
-  async getCourseUserByUserId(@Req() req: Request) : Promise<ICoursesWithSessions[]> {
+  async getCourseUserByUserId(@Req() req: Request): Promise<ICoursesWithSessions[]> {
     const user = req['userEntity'] as UserEntity;
     const coursesUser = await this.courseUserService.getCourseUserByUserId(user.id);
     return formatCourseUserObjects(coursesUser);

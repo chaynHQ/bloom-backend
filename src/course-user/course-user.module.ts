@@ -35,7 +35,7 @@ import { CoursesUserController } from './courses-user.controller';
       SubscriptionEntity,
       EventLogEntity,
     ]),
-    FirebaseModule
+    FirebaseModule,
   ],
   controllers: [CoursesUserController],
   providers: [
@@ -50,6 +50,7 @@ import { CoursesUserController } from './courses-user.controller';
     SubscriptionService,
     ZapierWebhookClient,
     SlackMessageClient,
-    EventLoggerService],
+    EventLoggerService,
+  ],
 })
 export class CourseUserModule {}

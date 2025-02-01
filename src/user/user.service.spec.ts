@@ -38,7 +38,7 @@ import { AdminUpdateUserDto } from './dtos/admin-update-user.dto';
 import { CreateUserDto } from './dtos/create-user.dto';
 import { UpdateUserDto } from './dtos/update-user.dto';
 import { UserService } from './user.service';
-import {Logger} from '../logger/logger';
+import { Logger } from '../logger/logger';
 
 const createUserDto: CreateUserDto = {
   email: 'user@email.com',

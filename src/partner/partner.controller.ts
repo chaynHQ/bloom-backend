@@ -49,10 +49,7 @@ export class PartnerController {
   @Patch(':id')
   @ApiOperation({ description: 'Update a partner profile and makes partner active or inactive' })
   @ApiBody({ type: UpdatePartnerDto })
-  async updatePartner(
-    @Param() { id },
-    @Body() updatePartnerDto: UpdatePartnerDto,
-  ) {
+  async updatePartner(@Param() { id }, @Body() updatePartnerDto: UpdatePartnerDto) {
     return this.partnerService.updatePartner(id, updatePartnerDto);
   }
 }

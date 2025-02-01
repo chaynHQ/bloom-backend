@@ -26,21 +26,19 @@ export class Logger extends ConsoleLogger {
     this.initialiseRollbar();
   }
 
-  getRequestContext() : RequestContext
-  {
-    try{
+  getRequestContext(): RequestContext {
+    try {
       return {
         requestId: this.cls.getId(),
-        sessionId: this.cls.get('sessionId')
-      }
-    }catch{
-      console.log("Error getting request context");
+        sessionId: this.cls.get('sessionId'),
+      };
+    } catch {
+      console.log('Error getting request context');
       return {
-        requestId: "not set",
-        sessionId: "not set"
-      }
+        requestId: 'not set',
+        sessionId: 'not set',
+      };
     }
-
   }
 
   log(message: string | LogMessage): void {
@@ -50,15 +48,15 @@ export class Logger extends ConsoleLogger {
     super.log(decoratedMessage);
   }
 
-  warn(message: string | ErrorLog, trace?:string): void {
+  warn(message: string | ErrorLog, trace?: string): void {
     try {
       const formattedMessage = typeof message === 'string' ? message : JSON.stringify(message);
       const requestContext = this.getRequestContext();
       const decoratedMessage = `[Request ID: ${requestContext.requestId}, Session ID: ${requestContext.sessionId}] ${formattedMessage}`;
       const taggedMessage = `[warn] ${decoratedMessage}`;
       super.warn(taggedMessage, trace);
-    }catch{
-      console.error("Error logging warning");
+    } catch {
+      console.error('Error logging warning');
     }
   }
 
