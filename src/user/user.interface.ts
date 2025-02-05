@@ -14,4 +14,6 @@ export interface IUser {
   isSuperAdmin: boolean;
   signUpLanguage: string;
   emailRemindersFrequency: EMAIL_REMINDERS_FREQUENCY;
+  contactPermission: boolean;
+  serviceEmailsPermission: boolean;
 }
