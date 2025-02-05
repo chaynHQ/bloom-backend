@@ -1,6 +1,5 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import _ from 'lodash';
 import { UserEntity } from 'src/entities/user.entity';
 import { ServiceUserProfilesService } from 'src/service-user-profiles/service-user-profiles.service';
 import { Repository } from 'typeorm';
@@ -34,26 +33,26 @@ export class SessionUserService {
     courseUser: CourseUserEntity,
     course: CourseEntity,
   ): Promise<CourseUserEntity> {
-    const userSessionIds = courseUser.sessionUser?.map((sessionUser) => {
-      if (sessionUser.completed) return sessionUser.sessionId;
-    });
+    const completedSessionTotal = courseUser.sessionUser?.filter((su) => su.completed).length;
 
-    const courseSessionIds = course.session?.map((session) => {
-      if (session.status === STORYBLOK_STORY_STATUS_ENUM.PUBLISHED) return session.id;
-    });
+    const courseSessionsTotal = course.session?.filter(
+      (s) => s.status === STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
+    ).length;
 
-    const courseIsComplete = _.xor(courseSessionIds, userSessionIds).length == 0;
+    const courseIsComplete = completedSessionTotal === courseSessionsTotal;
+    const updateRequired = courseUser.completed !== courseIsComplete;
 
-    if (courseUser.completed !== courseIsComplete) {
-      await this.courseUserService.setCourseUserCompleted(
-        {
-          userId: courseUser.userId,
-          courseId: courseUser.courseId,
-        },
-        courseIsComplete,
-      );
-
+    if (updateRequired) {
       courseUser.completed = courseIsComplete;
+
+      try {
+        await this.courseUserService.setCourseUserCompleted(
+          { userId: courseUser.userId, courseId: courseUser.courseId },
+          courseIsComplete,
+        );
+      } catch (error) {
+        this.logger.error(`Error updating: ${error}`);
+      }
     }
 
     return courseUser;
@@ -174,7 +173,7 @@ export class SessionUserService {
       sessionUser.completedAt = completed ? new Date() : null;
       await this.sessionUserRepository.save(sessionUser);
 
-      courseUser.sessionUser?.map((su) => {
+      courseUser.sessionUser?.forEach((su) => {
         if (su.sessionId === id) {
           su.completed = completed;
         }
@@ -195,6 +194,7 @@ export class SessionUserService {
       where: { id: courseId },
       relations: { session: true },
     });
+    this.logger.log(`course: ${course.name}`);
     courseUser = await this.checkCourseIsComplete(courseUser, course);
     courseUser.course = course;
     const formattedResponse = formatCourseUserObjects([courseUser])[0];
