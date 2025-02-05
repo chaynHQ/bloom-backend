@@ -35,11 +35,10 @@ import { v4 as uuidv4 } from 'uuid';
     ClsModule.forRoot({
       global: true,
       middleware: {
-          mount: true,
-          generateId: true,
-          idGenerator: (req: Request) =>
-              req.headers['X-Request-Id'] ?? uuidv4(),
-      }
+        mount: true,
+        generateId: true,
+        idGenerator: (req: Request) => req.headers['X-Request-Id'] ?? uuidv4(),
+      },
     }),
     LoggerModule,
     PartnerAccessModule,

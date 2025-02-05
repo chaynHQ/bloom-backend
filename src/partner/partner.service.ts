@@ -92,7 +92,7 @@ export class PartnerService {
     return 'Successful';
   }
 
-  async updatePartner(partnerId: string, { active }: UpdatePartnerDto){
+  async updatePartner(partnerId: string, { active }: UpdatePartnerDto) {
     const updatedPartnerResponse = await this.partnerRepository
       .createQueryBuilder()
       .update(PartnerEntity)

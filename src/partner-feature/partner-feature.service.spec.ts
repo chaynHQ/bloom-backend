@@ -78,9 +78,7 @@ describe('PartnerFeatureService', () => {
       expect(response).toMatchObject(createPartnerFeatureDto);
     });
     it('when supplied with incorrect featureId should throw', async () => {
-      jest.spyOn(mockFeatureService, 'getFeature').mockImplementationOnce(() => {
-        return undefined;
-      });
+      jest.spyOn(mockFeatureService, 'getFeature').mockResolvedValueOnce(undefined);
       await expect(service.createPartnerFeature(createPartnerFeatureDto)).rejects.toThrow();
     });
     it('when supplied with incorrect partnerId should throw', async () => {
@@ -105,7 +103,7 @@ describe('PartnerFeatureService', () => {
       expect(response).toMatchObject(mockAutomaticAccessCodePartnerFeatureEntity);
     });
     it('when supplied with incorrect partner name, it should throw', async () => {
-      jest.spyOn(mockPartnerService, 'getPartner').mockImplementationOnce(() => undefined);
+      jest.spyOn(mockPartnerService, 'getPartner').mockResolvedValueOnce(undefined);
       await expect(service.getAutomaticAccessCodeFeatureForPartner('Badoo')).rejects.toThrow(
         'Unable to find partner with that name',
       );

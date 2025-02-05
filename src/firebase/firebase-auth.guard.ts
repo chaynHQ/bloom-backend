@@ -23,7 +23,7 @@ export class FirebaseAuthGuard implements CanActivate {
   constructor(
     private authService: AuthService,
     private userService: UserService,
-    private cls : ClsService,
+    private cls: ClsService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -91,11 +91,13 @@ export class FirebaseAuthGuard implements CanActivate {
     return true;
   }
 
-
-  private setSessionId(user :  DecodedIdToken) {
+  private setSessionId(user: DecodedIdToken) {
     const uid = user.uid;
     const authTime = user.auth_time;
-    const sessionId: string = crypto.createHash('sha256').update(`${uid}-${authTime}`).digest('hex');
+    const sessionId: string = crypto
+      .createHash('sha256')
+      .update(`${uid}-${authTime}`)
+      .digest('hex');
     this.cls.set('sessionId', sessionId);
   }
 }
