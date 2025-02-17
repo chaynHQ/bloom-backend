@@ -122,6 +122,8 @@ export const formatUserObject = (userObject: UserEntity): GetUserDto => {
       isSuperAdmin: userObject.isSuperAdmin,
       signUpLanguage: userObject.signUpLanguage,
       emailRemindersFrequency: userObject.emailRemindersFrequency,
+      contactPermission: userObject.contactPermission,
+      serviceEmailsPermission: userObject.serviceEmailsPermission,
     },
     partnerAccesses: userObject.partnerAccess
       ? formatPartnerAccessObjects(userObject.partnerAccess)
@@ -155,6 +157,8 @@ export const formatGetUsersObject = (userObject: UserEntity): GetUserDto => {
       isSuperAdmin: userObject.isSuperAdmin,
       signUpLanguage: userObject.signUpLanguage,
       emailRemindersFrequency: userObject.emailRemindersFrequency,
+      contactPermission: userObject.contactPermission,
+      serviceEmailsPermission: userObject.serviceEmailsPermission,
     },
     ...(userObject.partnerAccess
       ? {

@@ -181,18 +181,15 @@ export class UserService {
     }
 
     try {
-      //TODO Not yet sure if deleting automatically from Crisp is the right thing to do
-      // as we don't know whether we need to manually check if there is any safeguarding concerns before we delete.
-      // const crispResponse = await deleteCrispProfile(user.email);
-
-      // if they have subscriptions,redact the number
+      // If they have subscriptions,redact the number
       await this.subscriptionUserService.softDeleteSubscriptionsForUser(user.id, user.email);
-      // if they have therapy sessions redact email and delete client from therapy sessions
+      // If they have therapy sessions redact email and delete client from therapy sessions
       await this.therapySessionService.softDeleteTherapySessions(user.id, user.email, randomString);
 
-      //Randomise User Data in DB
+      // Randomise User Data in DB
       const updateUser = {
         ...user,
+        firebaseUid: randomString,
         name: randomString,
         email: randomString,
         isActive: false,
