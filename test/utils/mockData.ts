@@ -109,7 +109,6 @@ export const mockCourse: CourseEntity = {
   coursePartner: [],
   courseUser: [],
   id: 'courseId1',
-  storyblokId: 123456,
   storyblokUuid: 'courseUuid1',
   slug: '/slug/slug',
   status: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
@@ -122,7 +121,6 @@ export const mockCourse: CourseEntity = {
 export const mockSession: SessionEntity = {
   sessionUser: [],
   id: 'sessionId1',
-  storyblokId: 123456,
   storyblokUuid: 'sessionStoryblokUuid1',
   slug: 'courses/creating-boundaries/what-are-boundaries',
   status: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
@@ -137,7 +135,6 @@ export const mockSession: SessionEntity = {
 export const mockResource: ResourceEntity = {
   resourceUser: [],
   id: 'resourceId1',
-  storyblokId: 123456,
   storyblokUuid: 'resourceUuid1',
   slug: 'resources/shorts/resource-name',
   status: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
@@ -150,7 +147,6 @@ export const mockResource: ResourceEntity = {
 
 export const mockResource2: ResourceEntity = {
   id: 'resourceId2',
-  storyblokId: 98765,
   storyblokUuid: 'resourceUuid2',
   slug: 'resources/shorts/resource-name',
   status: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
@@ -449,7 +445,7 @@ export const mockSubscriptionUserEntity = {
 export const mockStoryWebhookDto = {
   text: 'string',
   action: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
-  story_id: 1,
+  story_uuid: '1234',
   space_id: 123,
   full_slug: 'course slug',
 };
@@ -459,7 +455,6 @@ export const mockSessionEntity = {
   name: 'session name',
   slug: 'session_name',
   status: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
-  storyblokId: 123,
   storyblokUuid: '1234',
   courseId: '12345',
 } as SessionEntity;
