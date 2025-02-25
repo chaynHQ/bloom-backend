@@ -4,6 +4,6 @@ import { IsDefined, IsNotEmpty } from 'class-validator';
 export class UpdateSessionUserDto {
   @IsNotEmpty()
   @IsDefined()
-  @ApiProperty({ type: Number })
-  storyblokId: number;
+  @ApiProperty({ type: String })
+  storyblokUuid: string;
 }

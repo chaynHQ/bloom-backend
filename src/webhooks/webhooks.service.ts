@@ -276,7 +276,6 @@ export class WebhooksService {
     }; // fields to update on existing and new stories
 
     const newStoryData = {
-      storyblokId: storyData.id,
       storyblokUuid: storyData.uuid,
       ...updatedStoryData,
     }; // includes storyblok id and uuid for new stories only
@@ -305,7 +304,7 @@ export class WebhooksService {
 
       if (storyPageComponent === STORYBLOK_PAGE_COMPONENTS.COURSE) {
         const existingCourse = await this.courseRepository.findOneBy({
-          storyblokId: storyData.id,
+          storyblokUuid: storyData.uuid,
         });
         const data = existingCourse
           ? { ...existingCourse, ...updatedStoryData }
@@ -334,7 +333,7 @@ export class WebhooksService {
         });
 
         const existingSession = await this.sessionRepository.findOneBy({
-          storyblokId: storyData.id,
+          storyblokUuid: storyData.uuid,
         });
         const data = existingSession
           ? { ...existingSession, ...updatedStoryData, courseId: course.id }
@@ -346,17 +345,17 @@ export class WebhooksService {
       }
       return undefined; // Story wasn't a course, session or resource story. No sync or updates completed
     } catch (err) {
-      const error = `Storyblok webhook failed - error updating or creating ${status} ${storyPageComponent} story record ${storyData.id} - ${err}`;
+      const error = `Storyblok webhook failed - error updating or creating ${status} ${storyPageComponent} story record ${storyData.uuid} - ${err}`;
       this.logger.error(error);
       throw new HttpException(error, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
-  async updateInactiveStoryStatus(story_id: number, status: STORYBLOK_STORY_STATUS_ENUM) {
+  async updateInactiveStoryStatus(story_uuid: string, status: STORYBLOK_STORY_STATUS_ENUM) {
     // Story is deleted so cant be fetched from storyblok to get story type
     // Try to find course with matching story_id first
     let course = await this.courseRepository.findOneBy({
-      storyblokId: story_id,
+      storyblokUuid: story_uuid,
     });
 
     if (course) {
@@ -366,7 +365,7 @@ export class WebhooksService {
     }
     // No course found, try finding session instead
     let session = await this.sessionRepository.findOneBy({
-      storyblokId: story_id,
+      storyblokUuid: story_uuid,
     });
 
     if (session) {
@@ -377,7 +376,7 @@ export class WebhooksService {
 
     // No session found, try finding resource instead
     let resource = await this.resourceRepository.findOneBy({
-      storyblokId: story_id,
+      storyblokUuid: story_uuid,
     });
 
     if (resource) {
@@ -391,16 +390,16 @@ export class WebhooksService {
   // Triggered by a webhook, this function handles updating our database records to sync with storyblok story data
   async handleStoryUpdated(data: StoryWebhookDto) {
     const status = data.action;
-    const story_id = data.story_id;
+    const story_uuid = data.story_uuid;
 
-    this.logger.log(`Storyblok story ${status} request - ${story_id}`);
+    this.logger.log(`Storyblok story ${status} request - ${story_uuid}`);
 
     if (
       status === STORYBLOK_STORY_STATUS_ENUM.UNPUBLISHED ||
       status === STORYBLOK_STORY_STATUS_ENUM.DELETED
     ) {
       // Story can't be retrieved from storyblok so we just update the status of existing records
-      return this.updateInactiveStoryStatus(story_id, status);
+      return this.updateInactiveStoryStatus(story_uuid, status);
     }
 
     // Story was either published or moved
@@ -416,7 +415,7 @@ export class WebhooksService {
     });
 
     try {
-      const response = await Storyblok.get(`cdn/stories/${story_id}`);
+      const response = await Storyblok.get(`cdn/stories/${story_uuid}`);
       if (response?.data?.story) {
         story = response.data.story as ISbStoryData;
       }
