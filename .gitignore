@@ -34,7 +34,10 @@ lerna-debug.log*
 !.vscode/launch.json
 !.vscode/extensions.json
 
+# Environment variables
 .env*
 !.env.example
 
+# Postgres Data
 *.dump
+postgres-data

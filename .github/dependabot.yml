@@ -9,6 +9,10 @@ updates:
       interval: "weekly"
       time: "09:00"
       timezone: "Europe/London"
+    assignees:
+      - kyleecodes
+    reviewers:
+      - kyleecodes
 
   # Maintain dependencies for GitHub Actions
   - package-ecosystem: "github-actions"
@@ -19,6 +23,10 @@ updates:
       interval: "weekly"
       time: "09:00"
       timezone: "Europe/London"
+    assignees:
+      - kyleecodes
+    reviewers:
+      - kyleecodes
 
   # Maintain dependencies for dev containers
   - package-ecosystem: "devcontainers"
@@ -27,3 +35,37 @@ updates:
       interval: "weekly"
       time: "09:00"
       timezone: "Europe/London"
+    assignees:
+      - kyleecodes
+    reviewers:
+      - kyleecodes
+
+  # Maintain dependencies for docker
+  # Scans for vulnerabilities in docker base images
+  # Does not scan for vulnerabilities inside containers
+  # See for more info: https://docs.github.com/en/code-security/dependabot/ecosystems-supported-by-dependabot/supported-ecosystems-and-repositories#docker
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      time: "09:00"
+      timezone: "Europe/London"
+    assignees:
+      - kyleecodes
+    reviewers:
+      - kyleecodes
+
+  # Maintain dependencies for docker
+  # Scans for vulnerabilities in docker container images
+  # Does not scan for vulnerabilities inside containers
+  # See for more info: https://docs.github.com/en/code-security/dependabot/ecosystems-supported-by-dependabot/supported-ecosystems-and-repositories#docker-compose
+  - package-ecosystem: "docker-compose"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      time: "09:00"
+      timezone: "Europe/London"
+    assignees:
+      - kyleecodes
+    reviewers:
+      - kyleecodes
