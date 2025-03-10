@@ -56,7 +56,7 @@
     "rollbar": "^2.26.4",
     "rxjs": "^7.8.1",
     "storyblok-js-client": "^6.10.6",
-    "typeorm": "^0.3.20",
+    "typeorm": "^0.3.21",
     "uuid": "^11.0.3"
   },
   "devDependencies": {
