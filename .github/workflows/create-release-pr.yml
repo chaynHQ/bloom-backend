@@ -4,6 +4,10 @@ on:
   push:
     branches: [develop]
 
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   create-pr-to-main:
     name: Create release PR to main

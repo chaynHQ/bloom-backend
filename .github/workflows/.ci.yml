@@ -6,6 +6,10 @@ on:
   push:
     branches: [develop]
 
+permissions:
+  contents: read
+  checks: write
+
 jobs:
   build:
     runs-on: ubuntu-24.04
