@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { AxiosResponse } from 'axios';
 import {
   respondIoCreateContactWebhook,
@@ -47,8 +47,10 @@ export class ZapierWebhookClient {
       );
       return response;
     } catch (err) {
-      this.logger.error(`Unable to delete contact from respond.io with number ${phonenumber}`);
-      throw err;
+      this.logger.error(
+        `Unable to delete contact from respond.io with number ${phonenumber} - ${err}`,
+      );
+      throw new HttpException('Unable to delete contact from respond.io', HttpStatus.BAD_REQUEST);
     }
   }
 }
