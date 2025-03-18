@@ -201,6 +201,7 @@ describe('WebhooksService', () => {
 
       const body = {
         action: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
+        story_id: mockSession.storyblokId,
         story_uuid: mockSession.storyblokUuid,
         text: '',
       };
@@ -211,6 +212,7 @@ describe('WebhooksService', () => {
     it('when action is deleted, story should be set as deleted in database', async () => {
       const body = {
         action: STORYBLOK_STORY_STATUS_ENUM.DELETED,
+        story_id: mockSession.storyblokId,
         story_uuid: mockSession.storyblokUuid,
         text: '',
       };
@@ -223,6 +225,7 @@ describe('WebhooksService', () => {
     it('when action is unpublished, story should be set as unpublished in database', async () => {
       const body = {
         action: STORYBLOK_STORY_STATUS_ENUM.UNPUBLISHED,
+        story_id: mockSession.storyblokId,
         story_uuid: mockSession.storyblokUuid,
         text: '',
       };
@@ -275,6 +278,7 @@ describe('WebhooksService', () => {
 
       const body = {
         action: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
+        story_id: mockCourse.storyblokId,
         story_uuid: mockCourse.storyblokUuid,
         text: '',
       };
@@ -317,6 +321,7 @@ describe('WebhooksService', () => {
 
       const body = {
         action: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
+        story_id: mockSession.storyblokId,
         story_uuid: mockSession.storyblokUuid,
         full_slug: mockSession.slug,
         text: '',
@@ -378,6 +383,7 @@ describe('WebhooksService', () => {
 
       const body = {
         action: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
+        story_id: mockSession.storyblokId,
         story_uuid: mockSession.storyblokUuid,
         full_slug: mockSession.slug,
         text: '',
@@ -417,6 +423,7 @@ describe('WebhooksService', () => {
 
       const body = {
         action: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
+        story_id: mockCourseStoryblokResult.data.story.id,
         story_uuid: mockCourseStoryblokResult.data.story.uuid,
         full_slug: mockCourseStoryblokResult.data.story.full_slug,
         text: '',
@@ -448,6 +455,7 @@ describe('WebhooksService', () => {
     it('should handle unpublished action for a resource', async () => {
       const body = {
         action: STORYBLOK_STORY_STATUS_ENUM.UNPUBLISHED,
+        story_id: mockResource.storyblokId,
         story_uuid: mockResource.storyblokUuid,
         text: '',
       };
@@ -460,6 +468,7 @@ describe('WebhooksService', () => {
     it('should handle published action for a resource', async () => {
       const body = {
         action: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
+        story_id: mockResource.storyblokId,
         story_uuid: mockResource.storyblokUuid,
         text: '',
       };
@@ -472,6 +481,7 @@ describe('WebhooksService', () => {
     it('should handle deleted action for a resource', async () => {
       const body = {
         action: STORYBLOK_STORY_STATUS_ENUM.DELETED,
+        story_id: mockResource.storyblokId,
         story_uuid: mockResource.storyblokUuid,
         text: '',
       };
@@ -498,6 +508,7 @@ describe('WebhooksService', () => {
 
       const body = {
         action: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
+        story_id: mockResourceStoryblokResult.data.story.id,
         story_uuid: mockResourceStoryblokResult.data.story.uuid,
         full_slug: mockResourceStoryblokResult.data.story.full_slug,
         text: '',
@@ -546,6 +557,7 @@ describe('WebhooksService', () => {
 
       const body = {
         action: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
+        story_id: mockResourceStoryblokResult.data.story.id,
         story_uuid: mockResourceStoryblokResult.data.story.uuid,
         full_slug: mockResourceStoryblokResult.data.story.full_slug,
         text: '',

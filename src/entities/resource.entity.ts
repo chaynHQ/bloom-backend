@@ -29,6 +29,12 @@ export class ResourceEntity extends BaseBloomEntity {
     unique: true,
     nullable: true,
   })
+  storyblokId: number;
+
+  @Column({
+    unique: true,
+    nullable: true,
+  })
   storyblokUuid: string;
 
   @OneToMany(() => ResourceUserEntity, (resourceUserEntity) => resourceUserEntity.resource, {

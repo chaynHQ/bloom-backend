@@ -25,6 +25,12 @@ export class SessionEntity extends BaseBloomEntity {
     unique: true,
     nullable: true,
   })
+  storyblokId: number;
+
+  @Column({
+    unique: true,
+    nullable: true,
+  })
   storyblokUuid: string;
 
   @Column()

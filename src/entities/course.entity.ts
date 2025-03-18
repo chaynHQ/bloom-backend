@@ -25,6 +25,12 @@ export class CourseEntity extends BaseBloomEntity {
     unique: true,
     nullable: true,
   })
+  storyblokId: number;
+
+  @Column({
+    unique: true,
+    nullable: true,
+  })
   storyblokUuid: string;
 
   @OneToMany(() => SessionEntity, (sessionEntity) => sessionEntity.course, { cascade: true })
