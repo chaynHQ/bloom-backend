@@ -23,6 +23,6 @@ export class CourseDto {
 
   @IsNotEmpty()
   @IsDefined()
-  @ApiProperty({ type: Number })
-  storyblokId: number;
+  @ApiProperty({ type: String })
+  storyblokUuid: string;
 }

@@ -25,7 +25,6 @@ export const formatCourseUserObject = (courseUser: CourseUserEntity) => {
     name: courseUser.course.name,
     slug: courseUser.course.slug,
     status: courseUser.course.status,
-    storyblokId: courseUser.course.storyblokId,
     storyblokUuid: courseUser.course.storyblokUuid,
     completed: courseUser.completed,
     sessions: courseUser.sessionUser?.map((sessionUser) => {
@@ -35,7 +34,6 @@ export const formatCourseUserObject = (courseUser: CourseUserEntity) => {
         updatedAt: sessionUser.updatedAt,
         name: sessionUser.session.name,
         slug: sessionUser.session.slug,
-        storyblokId: sessionUser.session.storyblokId,
         storyblokUuid: sessionUser.session.storyblokUuid,
         status: sessionUser.session.status,
         completed: sessionUser.completed,
@@ -53,7 +51,6 @@ export const formatResourceUserObject = (resourceUsers: ResourceUserEntity[]) =>
       name: resourceUser.resource.name,
       slug: resourceUser.resource.slug,
       status: resourceUser.resource.status,
-      storyblokId: resourceUser.resource.storyblokId,
       storyblokUuid: resourceUser.resource.storyblokUuid,
       completed: !!resourceUser.completedAt, // convert to boolean from data populated
     };

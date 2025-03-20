@@ -23,8 +23,8 @@ export class SessionDto {
 
   @IsNotEmpty()
   @IsDefined()
-  @ApiProperty({ type: Number })
-  storyblokId: number;
+  @ApiProperty({ type: String })
+  storyblokUuid: string;
 
   @IsString()
   @IsNotEmpty()
