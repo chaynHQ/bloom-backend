@@ -7,7 +7,6 @@ export interface IResource {
   name?: string;
   slug?: string;
   status?: STORYBLOK_STORY_STATUS_ENUM;
-  storyblokId?: number;
   storyblokUuid?: string;
   category?: RESOURCE_CATEGORIES;
   completedAt?: Date | string;

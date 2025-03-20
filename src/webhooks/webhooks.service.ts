@@ -346,7 +346,7 @@ export class WebhooksService {
       }
       return undefined; // Story wasn't a course, session or resource story. No sync or updates completed
     } catch (err) {
-      const error = `Storyblok webhook failed - error updating or creating ${status} ${storyPageComponent} story record ${storyData.id} - ${err}`;
+      const error = `Storyblok webhook failed - error updating or creating ${status} ${storyPageComponent} story record ${storyData.uuid} - ${err}`;
       this.logger.error(error);
       throw new HttpException(error, HttpStatus.INTERNAL_SERVER_ERROR);
     }

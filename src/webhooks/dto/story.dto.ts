@@ -19,6 +19,12 @@ export class StoryWebhookDto {
   @ApiProperty({ type: Number })
   story_id: number;
 
+  @IsString()
+  @IsNotEmpty()
+  @IsDefined()
+  @ApiProperty({ type: String })
+  story_uuid: string;
+
   @IsOptional()
   @IsNumber()
   space_id?: number;
