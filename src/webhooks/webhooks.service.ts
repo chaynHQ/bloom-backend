@@ -305,7 +305,7 @@ export class WebhooksService {
 
       if (storyPageComponent === STORYBLOK_PAGE_COMPONENTS.COURSE) {
         const existingCourse = await this.courseRepository.findOneBy({
-          storyblokId: storyData.id,
+          storyblokUuid: storyData.uuid,
         });
         const data = existingCourse
           ? { ...existingCourse, ...updatedStoryData }
@@ -334,7 +334,7 @@ export class WebhooksService {
         });
 
         const existingSession = await this.sessionRepository.findOneBy({
-          storyblokId: storyData.id,
+          storyblokUuid: storyData.uuid,
         });
         const data = existingSession
           ? { ...existingSession, ...updatedStoryData, courseId: course.id }
@@ -352,11 +352,12 @@ export class WebhooksService {
     }
   }
 
+  // TODO once story_uuid is sent via the webhook we can change the arguements to story_uuid
   async updateInactiveStoryStatus(story_id: number, status: STORYBLOK_STORY_STATUS_ENUM) {
     // Story is deleted so cant be fetched from storyblok to get story type
     // Try to find course with matching story_id first
     let course = await this.courseRepository.findOneBy({
-      storyblokId: story_id,
+      storyblokId: story_id, // TODO change to storyblokUuid once available
     });
 
     if (course) {
@@ -366,7 +367,7 @@ export class WebhooksService {
     }
     // No course found, try finding session instead
     let session = await this.sessionRepository.findOneBy({
-      storyblokId: story_id,
+      storyblokId: story_id, // TODO change to storyblokUuid once available
     });
 
     if (session) {
@@ -377,7 +378,7 @@ export class WebhooksService {
 
     // No session found, try finding resource instead
     let resource = await this.resourceRepository.findOneBy({
-      storyblokId: story_id,
+      storyblokId: story_id, // TODO change to storyblokUuid once available
     });
 
     if (resource) {
