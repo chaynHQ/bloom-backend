@@ -3088,10 +3088,10 @@ create-require@^1.1.0:
   resolved "https://registry.yarnpkg.com/create-require/-/create-require-1.1.1.tgz#c1d7e8f1e5f6cfc9ff65f9cd352d37348756c333"
   integrity sha512-dcKFX3jn0MpIaXjisoRvexIJVEKzaq7z2rZKxf+MSr9TkdmHmsU4m2lcLojrj/FHl8mk5VxMmYA+ftRkP/3oKQ==
 
-crisp-api@^9.7.0:
-  version "9.8.0"
-  resolved "https://registry.yarnpkg.com/crisp-api/-/crisp-api-9.8.0.tgz#6e3962e4eae52eeb7cee8fe308b17d319b293da1"
-  integrity sha512-0GeY77O2L08gN9nJFfqgZ9fPmyhUF3Mqp0T1P4YZBv+ObNzsMtcWcmoeDrbUYCdcDOJpmAZgsWO+s7VbNN+rJA==
+crisp-api@^9.9.0:
+  version "9.9.0"
+  resolved "https://registry.yarnpkg.com/crisp-api/-/crisp-api-9.9.0.tgz#6c1e02ec5700b5ba6cfcf2624f0bc675ef288db3"
+  integrity sha512-P4dy36gLH897VGoZsUpmgz5buwkA3p+7W4jHhBYrdCZuMwcCbXxxpeMEw2wSmySDg6lKsfwuOFLClIQIa0TC3w==
   dependencies:
     fbemitter "github:crisp-dev/emitter#695f60594bdca0c876e5c232de57702ab3151b6f"
     got "11.8.5"
