@@ -1,4 +1,4 @@
-FROM node:22-alpine
+FROM node:23-alpine
 
 # Install git for devcontainers
 RUN apk add --no-cache git
