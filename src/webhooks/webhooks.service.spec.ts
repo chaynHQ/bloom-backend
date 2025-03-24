@@ -329,6 +329,7 @@ describe('WebhooksService', () => {
 
       const expectedResponse = {
         storyblokUuid: mockSession.storyblokUuid,
+        storyblokId: mockSession.storyblokId,
         status: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
         slug: mockSession.slug,
         name: mockSession.name,
@@ -391,6 +392,7 @@ describe('WebhooksService', () => {
 
       const expectedResponse = {
         storyblokUuid: mockSession.storyblokUuid,
+        storyblokId: mockSession.storyblokId,
         status: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
         slug: mockSession.slug,
         name: mockSession.name,
@@ -431,6 +433,7 @@ describe('WebhooksService', () => {
 
       const expectedResponse = {
         storyblokUuid: mockCourseStoryblokResult.data.story.uuid,
+        storyblokId: mockCourseStoryblokResult.data.story.id,
         status: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
         slug: mockCourseStoryblokResult.data.story.full_slug,
         name: mockCourseStoryblokResult.data.story.content.name,
@@ -516,6 +519,7 @@ describe('WebhooksService', () => {
 
       const expectedResponse = {
         storyblokUuid: mockResourceStoryblokResult.data.story.uuid,
+        storyblokId: mockResourceStoryblokResult.data.story.id,
         status: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
         slug: mockResourceStoryblokResult.data.story.full_slug,
         name: mockResourceStoryblokResult.data.story.name,
