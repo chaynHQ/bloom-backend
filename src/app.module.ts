@@ -25,11 +25,21 @@ import { SessionModule } from './session/session.module';
 import { SubscriptionUserModule } from './subscription-user/subscription-user.module';
 import { UserModule } from './user/user.module';
 import { WebhooksModule } from './webhooks/webhooks.module';
+import { ClsModule } from 'nestjs-cls';
+import { v4 as uuidv4 } from 'uuid';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     TypeOrmModule.forRoot(dataSourceOptions as TypeOrmModuleOptions),
+    ClsModule.forRoot({
+      global: true,
+      middleware: {
+        mount: true,
+        generateId: true,
+        idGenerator: (req: Request) => req.headers['X-Request-Id'] ?? uuidv4(),
+      },
+    }),
     LoggerModule,
     PartnerAccessModule,
     AuthModule,

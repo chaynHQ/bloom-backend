@@ -450,6 +450,7 @@ export const mockStoryWebhookDto = {
   text: 'string',
   action: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
   story_id: 1,
+  story_uuid: '1234',
   space_id: 123,
   full_slug: 'course slug',
 };
@@ -459,7 +460,6 @@ export const mockSessionEntity = {
   name: 'session name',
   slug: 'session_name',
   status: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
-  storyblokId: 123,
   storyblokUuid: '1234',
   courseId: '12345',
 } as SessionEntity;

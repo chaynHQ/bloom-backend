@@ -39,6 +39,7 @@ import {
   mockUserRecord,
 } from './mockData';
 import { createQueryBuilderMock } from './mockUtils';
+import { ClsService } from 'nestjs-cls';
 
 export const mockSlackMessageClientMethods: PartialFuncReturn<SlackMessageClient> = {
   sendMessageToTherapySlackChannel: async () => {
@@ -51,6 +52,11 @@ export const mockWebhooksServiceMethods: PartialFuncReturn<WebhooksService> = {
     return mockTherapySessionEntity;
   },
 };
+
+export const mockClsService = {
+  getId: jest.fn().mockReturnValue('mockRequestId'),
+  get: jest.fn().mockReturnValue('mockSessionId'),
+} as Partial<jest.Mocked<ClsService>> as jest.Mocked<ClsService>;
 
 export const mockPartnerServiceMethods = {
   getPartnerById: async (arg): Promise<PartnerEntity> => {

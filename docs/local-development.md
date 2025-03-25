@@ -2,35 +2,26 @@
 
 ## Summary
 
-**The develop branch is our source of truth.** Fork from develop, create new feature branch, then when your PR is merged, develop will automatically merge into the main branch for deployment to production.
-
 To run Bloom's backend:
 
 1. Install prerequisites
 2. Configure environment variables
 3. Install dependencies
-4. Run in a Dev Container, with Docker, or manually.
-5. Populate the database (required for most fullstack contributions and running integration tests from the frontend)
+4. Run the app using Docker, Dev Containers, or Manually
+5. Populate the database
 
 To test the backend:
 
 - Run unit tests
-- Run e2e integration tests from the frontend for fullstack contributions \*requires populating the database with data first
+- Run e2e integration tests from the frontend for full-stack contributions
 
 ## Prerequisites
 
-- NodeJS v20.x
+- NodeJS v22.x
 - Yarn v1.x
-- Docker
-- PostgreSQL 16
+- Docker and / or PostgreSQL
 
-#### Recommended Minimum System Requirements:
-
-- CPU: Quad-core 2.5 GHz (i5/Ryzen 5)
-- Memory: 16 GB RAM
-- Storage: 512 GB
-- OS: Linux, macOS, Windows, or WSL2 (latest versions)
-- Internet Connection: For accessing dependencies and external APIs/services
+_Recommended Minimum System Requirements: CPU: Quad-core 2.5 GHz (i5/Ryzen 5), Memory: 16 GB RAM, Storage: 512 GB, OS: Linux, macOS, Windows, or WSL2 (latest versions), Internet Connection: For accessing dependencies and external APIs/services._
 
 ## Configure Environment Variables
 
@@ -46,15 +37,17 @@ yarn
 
 There are 3 methods you can use to run Bloom’s backend locally:
 
-1. **Using Docker (recommended)** - runs postgres in a container.
-2. **Visual Studio Code Dev Container (recommended for Visual Studio users)** - installs all dependencies and the postgres database container automatically.
-3. **Manually** - manage postgres locally.
+1. **Using Docker (recommended)** - the backend app is fully containerized, installing PostgreSQL is optional.
+2. **Visual Studio Code Dev Container (recommended for Visual Code users)** - installs all dependencies and the PostgreSQL database container automatically.
+3. **Manually (recommended for PostgreSQL users)** - run the app with yarn and manage PostgreSQL locally.
 
-### With Docker - Recommended
+### Run with Docker - Recommended
 
-Bloom's backend is containerized and can be run solely in Docker - both the PostgreSQL database and NestJS app. This uses the least resources on your computer. To run the backend locally, make sure your system has Docker installed - you may need Docker Desktop if using a Mac or Windows.
+Prequisites: Docker (we recommend [Docker Desktop](https://docs.docker.com/desktop/)), PostgreSQL (optional).
 
-First, make sure the Docker app is running (just open the app). Then run
+Bloom's backend is fully containerized - both PostgreSQL and NestJS app. This does not require PostgreSQL to be installed locally. To connect to a local PostgreSQL database instead, modify the `DATABASE_URL` in the `docker-compose.yml` file. This will enable communications between Docker and your local database.
+
+To start the Docker container run:
 
 ```bash
 docker-compose up
@@ -66,9 +59,7 @@ You should see this in the shell output:
 Listening on localhost:35001, CTRL+C to stop
 ```
 
-_Note: you can use an application like Postman to test the apis locally_
-
-### Run in Dev Container - Recommended for Visual Studio Users
+### Run with Dev Container - Recommended for Visual Studio Users
 
 This method will automatically install all dependencies, IDE settings, and postgres container in a Dev Container (Docker container) within Visual Studio Code.
 
@@ -88,9 +79,13 @@ The dev Container is configured in the `.devcontainer` directory:
 
 See [Visual Studio Code Docs: Developing Inside a Dev Container](https://code.visualstudio.com/docs/devcontainers/containers) for more info.
 
-### Run Manually
+### Run Manually - Recommended for PostgreSQL Users
 
-Manage postgres locally to [populate the database](#populate-database), then run:
+Prerequisites: PostgreSQL
+
+Log into PostgreSQL and create a database called "bloom". Ensure it is running on port `35000` (or your desired port). Finally, start the PostgreSQL server on your machine.
+
+With the psql server running, start the app:
 
 ```bash
 yarn start:dev
@@ -148,16 +143,16 @@ See the [database-guide.md](database-guide.md) for instructions.
 
 # Git Flow and Deployment
 
-**The develop branch is our source of truth, not main.**
+**The develop branch is our source of truth, not main.** Fork from `develop`, create new feature branch, then when your PR is merged, `develop` will automatically merge into the main branch for deployment to production. Keep your branch updated by rebasing and merging feature/bug branches into `develop` as you code.
 
-Create new branches from the `develop` base branch. There is no need to run the build command before pushing changes to GitHub, simply push and create a pull request for the new branch. GitHub Actions will run build and linting tasks automatically. Rebase and merge feature/bug branches into `develop`.
-
-This will trigger an automatic deployment to the staging app by Heroku.
+Once your PR is merged to `develop`, this will trigger an automatic deployment to the staging app by Heroku.
 
 When changes have been tested in staging, merge `develop` into `main`. This will trigger an automatic deployment to the production app by Heroku.
 
-# Swagger
+# APIs
 
 Swagger automatically reflects all of the endpoints in the app, showing their urls and example request and response objects.
 
 To access Swagger simply run the project and visit http://localhost:35001/swagger
+
+For testing APIs, we recommend using tools like Postman.

@@ -134,7 +134,6 @@ export class UserService {
       .createQueryBuilder('user')
       .leftJoinAndSelect('user.partnerAccess', 'partnerAccess')
       .leftJoinAndSelect('user.partnerAdmin', 'partnerAdmin')
-      .leftJoinAndSelect('partnerAccess.therapySession', 'therapySession')
       .leftJoinAndSelect('partnerAccess.partner', 'partner')
       .leftJoinAndSelect('partnerAccess.partner', 'partnerAccessPartner')
       .leftJoinAndSelect('partnerAdmin.partner', 'partnerAdminPartner')
@@ -178,18 +177,15 @@ export class UserService {
     }
 
     try {
-      //TODO Not yet sure if deleting automatically from Crisp is the right thing to do
-      // as we don't know whether we need to manually check if there is any safeguarding concerns before we delete.
-      // const crispResponse = await deleteCrispProfile(user.email);
-
-      // if they have subscriptions,redact the number
+      // If they have subscriptions,redact the number
       await this.subscriptionUserService.softDeleteSubscriptionsForUser(user.id, user.email);
-      // if they have therapy sessions redact email and delete client from therapy sessions
+      // If they have therapy sessions redact email and delete client from therapy sessions
       await this.therapySessionService.softDeleteTherapySessions(user.id, user.email, randomString);
 
-      //Randomise User Data in DB
+      // Randomise User Data in DB
       const updateUser = {
         ...user,
+        firebaseUid: randomString,
         name: randomString,
         email: randomString,
         isActive: false,
@@ -246,6 +242,7 @@ export class UserService {
     if (
       Object.keys(updateUserDto).length === 1 &&
       !!updateUserDto.lastActiveAt &&
+      !!user.lastActiveAt &&
       updateUserDto.lastActiveAt.getDate() === user.lastActiveAt.getDate()
     ) {
       // Do nothing, prevent unnecessay updates to service profiles when last active date is same date
@@ -298,7 +295,6 @@ export class UserService {
 
     while (startIndex < users.length) {
       const batch = users.slice(startIndex, startIndex + BATCH_SIZE);
-
       await Promise.all(
         batch.map(async (user) => {
           try {
@@ -336,7 +332,6 @@ export class UserService {
           }
         }),
       );
-
       startIndex += BATCH_SIZE;
       await new Promise((resolve) => setTimeout(resolve, INTERVAL)); // Wait before processing next batch
     }

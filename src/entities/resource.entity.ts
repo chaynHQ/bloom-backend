@@ -29,13 +29,13 @@ export class ResourceEntity extends BaseBloomEntity {
     unique: true,
     nullable: true,
   })
-  storyblokUuid: string;
+  storyblokId: number;
 
   @Column({
     unique: true,
     nullable: true,
   })
-  storyblokId: number;
+  storyblokUuid: string;
 
   @OneToMany(() => ResourceUserEntity, (resourceUserEntity) => resourceUserEntity.resource, {
     cascade: true,

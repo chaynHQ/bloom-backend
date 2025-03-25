@@ -18,7 +18,19 @@ export class AuthService {
   private readonly logger = new Logger('AuthService');
 
   public async loginFirebaseUser({ email, password }: UserAuthDto) {
-    return await this.firebase.auth.signInWithEmailAndPassword(email, password);
+    try {
+      const userCredential = await this.firebase.auth.signInWithEmailAndPassword(email, password);
+      return userCredential;
+    } catch (error) {
+      this.logger.log(error);
+      if (error.code === 'auth/multi-factor-auth-required') {
+        throw new HttpException(
+          'Multi-factor authentication required - login via frontend and complete 2FA to get access token',
+          HttpStatus.UNAUTHORIZED,
+        );
+      }
+      throw error;
+    }
   }
 
   async parseAuth(header: string): Promise<DecodedIdToken> {
