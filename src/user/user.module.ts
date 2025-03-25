@@ -17,7 +17,6 @@ import { ServiceUserProfilesService } from 'src/service-user-profiles/service-us
 import { SubscriptionUserService } from 'src/subscription-user/subscription-user.service';
 import { SubscriptionService } from 'src/subscription/subscription.service';
 import { TherapySessionService } from 'src/therapy-session/therapy-session.service';
-import { AuthService } from '../auth/auth.service';
 import { FirebaseModule } from '../firebase/firebase.module';
 import { PartnerAccessService } from '../partner-access/partner-access.service';
 import { UserController } from './user.controller';
@@ -41,7 +40,6 @@ import { UserService } from './user.service';
   controllers: [UserController],
   providers: [
     UserService,
-    AuthService,
     PartnerAccessService,
     ServiceUserProfilesService,
     SubscriptionService,

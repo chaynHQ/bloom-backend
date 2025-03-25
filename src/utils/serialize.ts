@@ -128,7 +128,6 @@ export const formatUserObject = (userObject: UserEntity): GetUserDto => {
     partnerAdmin: userObject.partnerAdmin
       ? formatPartnerAdminObjects(userObject.partnerAdmin)
       : null,
-    courses: userObject.courseUser ? formatCourseUserObjects(userObject.courseUser) : [],
     resources: userObject.resourceUser ? formatResourceUserObject(userObject.resourceUser) : [],
     subscriptions:
       userObject.subscriptionUser && userObject.subscriptionUser.length > 0
