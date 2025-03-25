@@ -387,7 +387,6 @@ export class UserService {
       partnerAdmin?: { partnerAdminId: string };
     },
     relations: string[],
-    fields: Array<string>,
     limit: number,
   ): Promise<UserEntity[] | undefined> {
     const users = await this.userRepository.find({

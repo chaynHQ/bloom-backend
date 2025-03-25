@@ -2,7 +2,6 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { PartnerFeatureEntity } from 'src/entities/partner-feature.entity';
 import { PartnerEntity } from 'src/entities/partner.entity';
-import { UserEntity } from 'src/entities/user.entity';
 import { FeatureService } from 'src/feature/feature.service';
 import { PartnerService } from 'src/partner/partner.service';
 import { FEATURES } from 'src/utils/constants';
@@ -17,7 +16,6 @@ export class PartnerFeatureService {
   constructor(
     @InjectRepository(PartnerFeatureEntity)
     private partnerFeatureRepository: Repository<PartnerFeatureEntity>,
-    @InjectRepository(UserEntity) private userRepository: Repository<UserEntity>,
     private readonly partnerService: PartnerService,
     private readonly featureService: FeatureService,
   ) {}
