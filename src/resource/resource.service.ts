@@ -1,14 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Logger } from 'src/logger/logger';
 import { Repository } from 'typeorm';
 import { ResourceEntity } from '../entities/resource.entity';
 import { CreateResourceDto } from './dtos/create-resource.dto';
 
 @Injectable()
 export class ResourceService {
-  private readonly logger = new Logger('ResourceService');
-
   constructor(
     @InjectRepository(ResourceEntity)
     private resourceRepository: Repository<ResourceEntity>,

@@ -103,10 +103,10 @@ export class UserController {
   @Get()
   @UseGuards(SuperAdminAuthGuard)
   async getUsers(@Query() query) {
-    const { include, fields, limit, ...userQuery } = query.searchCriteria
+    const { include, limit, ...userQuery } = query.searchCriteria
       ? JSON.parse(query.searchCriteria)
-      : { include: [], fields: [], limit: undefined };
-    const users = await this.userService.getUsers(userQuery, include || [], fields, limit);
+      : { include: [], limit: undefined };
+    const users = await this.userService.getUsers(userQuery, include || [], limit);
     return users.map((u) => formatUserObject(u));
   }
 
