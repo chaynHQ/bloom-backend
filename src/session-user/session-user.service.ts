@@ -84,8 +84,8 @@ export class SessionUserService {
     });
   }
 
-  public async createSessionUser(user: UserEntity, { storyblokId }: UpdateSessionUserDto) {
-    const session = await this.sessionService.getSessionByStoryblokId(storyblokId);
+  public async createSessionUser(user: UserEntity, { storyblokUuid }: UpdateSessionUserDto) {
+    const session = await this.sessionService.getSessionByStoryblokUuid(storyblokUuid);
 
     if (!session) {
       throw new HttpException('SESSION NOT FOUND', HttpStatus.NOT_FOUND);
@@ -131,14 +131,14 @@ export class SessionUserService {
 
   public async setSessionUserCompleted(
     user: UserEntity,
-    { storyblokId }: UpdateSessionUserDto,
+    { storyblokUuid }: UpdateSessionUserDto,
     completed: boolean,
   ) {
-    const session = await this.sessionService.getSessionByStoryblokId(storyblokId);
+    const session = await this.sessionService.getSessionByStoryblokUuid(storyblokUuid);
 
     if (!session) {
       throw new HttpException(
-        `Session not found for storyblok id: ${storyblokId}`,
+        `Session not found for storyblok id: ${storyblokUuid}`,
         HttpStatus.NOT_FOUND,
       );
     }

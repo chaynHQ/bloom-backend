@@ -202,6 +202,7 @@ describe('WebhooksService', () => {
       const body = {
         action: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
         story_id: mockSession.storyblokId,
+        story_uuid: mockSession.storyblokUuid,
         text: '',
       };
 
@@ -212,6 +213,7 @@ describe('WebhooksService', () => {
       const body = {
         action: STORYBLOK_STORY_STATUS_ENUM.DELETED,
         story_id: mockSession.storyblokId,
+        story_uuid: mockSession.storyblokUuid,
         text: '',
       };
 
@@ -224,6 +226,7 @@ describe('WebhooksService', () => {
       const body = {
         action: STORYBLOK_STORY_STATUS_ENUM.UNPUBLISHED,
         story_id: mockSession.storyblokId,
+        story_uuid: mockSession.storyblokUuid,
         text: '',
       };
 
@@ -276,6 +279,7 @@ describe('WebhooksService', () => {
       const body = {
         action: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
         story_id: mockCourse.storyblokId,
+        story_uuid: mockCourse.storyblokUuid,
         text: '',
       };
 
@@ -298,7 +302,7 @@ describe('WebhooksService', () => {
       });
 
       expect(sessionFindOneRepoSpy).toHaveBeenCalledWith({
-        storyblokId: mockSession.storyblokId,
+        storyblokUuid: mockSession.storyblokUuid,
       });
 
       courseFindOneSpy.mockClear();
@@ -318,13 +322,14 @@ describe('WebhooksService', () => {
       const body = {
         action: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
         story_id: mockSession.storyblokId,
+        story_uuid: mockSession.storyblokUuid,
         full_slug: mockSession.slug,
         text: '',
       };
 
       const expectedResponse = {
-        storyblokId: mockSession.storyblokId,
         storyblokUuid: mockSession.storyblokUuid,
+        storyblokId: mockSession.storyblokId,
         status: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
         slug: mockSession.slug,
         name: mockSession.name,
@@ -339,7 +344,7 @@ describe('WebhooksService', () => {
       });
       expect(sessionSaveRepoSpy).toHaveBeenCalledWith(expectedResponse);
       expect(sessionFindOneRepoSpy).toHaveBeenCalledWith({
-        storyblokId: mockSession.storyblokId,
+        storyblokUuid: mockSession.storyblokUuid,
       });
 
       courseFindOneSpy.mockClear();
@@ -380,13 +385,14 @@ describe('WebhooksService', () => {
       const body = {
         action: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
         story_id: mockSession.storyblokId,
+        story_uuid: mockSession.storyblokUuid,
         full_slug: mockSession.slug,
         text: '',
       };
 
       const expectedResponse = {
-        storyblokId: mockSession.storyblokId,
         storyblokUuid: mockSession.storyblokUuid,
+        storyblokId: mockSession.storyblokId,
         status: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
         slug: mockSession.slug,
         name: mockSession.name,
@@ -420,13 +426,14 @@ describe('WebhooksService', () => {
       const body = {
         action: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
         story_id: mockCourseStoryblokResult.data.story.id,
+        story_uuid: mockCourseStoryblokResult.data.story.uuid,
         full_slug: mockCourseStoryblokResult.data.story.full_slug,
         text: '',
       };
 
       const expectedResponse = {
-        storyblokId: mockCourseStoryblokResult.data.story.id,
         storyblokUuid: mockCourseStoryblokResult.data.story.uuid,
+        storyblokId: mockCourseStoryblokResult.data.story.id,
         status: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
         slug: mockCourseStoryblokResult.data.story.full_slug,
         name: mockCourseStoryblokResult.data.story.content.name,
@@ -436,7 +443,7 @@ describe('WebhooksService', () => {
 
       expect(course).toEqual(expectedResponse);
       expect(courseFindOneRepoSpy).toHaveBeenCalledWith({
-        storyblokId: mockCourseStoryblokResult.data.story.id,
+        storyblokUuid: mockCourseStoryblokResult.data.story.uuid,
       });
 
       expect(courseSaveRepoSpy).toHaveBeenCalledWith(expectedResponse);
@@ -452,6 +459,7 @@ describe('WebhooksService', () => {
       const body = {
         action: STORYBLOK_STORY_STATUS_ENUM.UNPUBLISHED,
         story_id: mockResource.storyblokId,
+        story_uuid: mockResource.storyblokUuid,
         text: '',
       };
 
@@ -464,6 +472,7 @@ describe('WebhooksService', () => {
       const body = {
         action: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
         story_id: mockResource.storyblokId,
+        story_uuid: mockResource.storyblokUuid,
         text: '',
       };
 
@@ -476,6 +485,7 @@ describe('WebhooksService', () => {
       const body = {
         action: STORYBLOK_STORY_STATUS_ENUM.DELETED,
         story_id: mockResource.storyblokId,
+        story_uuid: mockResource.storyblokUuid,
         text: '',
       };
 
@@ -502,13 +512,14 @@ describe('WebhooksService', () => {
       const body = {
         action: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
         story_id: mockResourceStoryblokResult.data.story.id,
+        story_uuid: mockResourceStoryblokResult.data.story.uuid,
         full_slug: mockResourceStoryblokResult.data.story.full_slug,
         text: '',
       };
 
       const expectedResponse = {
-        storyblokId: mockResourceStoryblokResult.data.story.id,
         storyblokUuid: mockResourceStoryblokResult.data.story.uuid,
+        storyblokId: mockResourceStoryblokResult.data.story.id,
         status: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
         slug: mockResourceStoryblokResult.data.story.full_slug,
         name: mockResourceStoryblokResult.data.story.name,
@@ -551,13 +562,13 @@ describe('WebhooksService', () => {
       const body = {
         action: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
         story_id: mockResourceStoryblokResult.data.story.id,
+        story_uuid: mockResourceStoryblokResult.data.story.uuid,
         full_slug: mockResourceStoryblokResult.data.story.full_slug,
         text: '',
       };
 
       const expectedResponse = {
         ...mockResource2,
-        storyblokId: mockResourceStoryblokResult.data.story.id,
         storyblokUuid: mockResourceStoryblokResult.data.story.uuid,
         status: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
         slug: newSlug,
