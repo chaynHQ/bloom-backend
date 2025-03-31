@@ -12,6 +12,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      SIMPLYBOOK_CREDENTIALS: '{"login": "login"}'
+      STORYBLOK_WEBHOOK_SECRET: ${{ secrets.STORYBLOK_WEBHOOK_SECRET }}
     permissions:
       contents: read #This is required for actions/checkout
 
@@ -56,7 +59,7 @@ jobs:
 
       - name: Unzip artifact for deployment
         run: unzip release.zip
-      
+
       - name: Login to Azure
         uses: azure/login@v2
         with:
@@ -71,4 +74,3 @@ jobs:
           app-name: 'bloom-staging'
           slot-name: 'Production'
           package: .
-          
