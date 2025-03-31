@@ -45,7 +45,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     environment:
-      name: 'Production'
+      name: 'Staging'
       url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
     permissions:
       id-token: write #This is required for requesting the JWT
@@ -72,5 +72,8 @@ jobs:
         uses: azure/webapps-deploy@v3
         with:
           app-name: 'bloom-staging'
-          slot-name: 'Production'
+          slot-name: 'Staging'
           package: .
+
+      - name: Run migrations
+        run: npm run typeorm migration:run -- -d ./src/typeorm.config.ts
