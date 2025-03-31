@@ -76,4 +76,4 @@ jobs:
           package: .
 
       - name: Run migrations
-        run: npm run migration:run
+        run: npm run typeorm migration:run -- -d ./src/typeorm.config.ts

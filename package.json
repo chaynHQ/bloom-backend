@@ -24,7 +24,7 @@
     "seed": "bash ./staging_backup.sh -c",
     "typeorm": "typeorm-ts-node-commonjs",
     "migration:generate": "yarn typeorm -- -d ./src/typeorm.config.ts migration:generate ./src/migrations/bloom-backend",
-    "migration:run": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:run -d ./src/typeorm.config.ts",
+    "migration:run": "yarn typeorm migration:run -- -d ./src/typeorm.config.ts",
     "migration:revert": "yarn typeorm -- -d ./src/typeorm.config.ts migration:revert",
     "migration:show": "yarn build && yarn typeorm -- migration:show"
   },
@@ -49,7 +49,7 @@
     "lodash": "^4.17.21",
     "nestjs-cls": "^4.4.1",
     "newrelic": "^12.5.1",
-    "pg": "^8.14.1",
+    "pg": "^8.11.5",
     "pg-connection-string": "^2.7.0",
     "reflect-metadata": "^0.2.1",
     "rimraf": "^6.0.1",
