@@ -24,7 +24,7 @@
     "seed": "bash ./staging_backup.sh -c",
     "typeorm": "typeorm-ts-node-commonjs",
     "migration:generate": "yarn typeorm -- -d ./src/typeorm.config.ts migration:generate ./src/migrations/bloom-backend",
-    "migration:run": "yarn typeorm migration:run -- -d ./src/typeorm.config.ts",
+    "migration:run": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:run -d ./src/typeorm.config.ts",
     "migration:revert": "yarn typeorm -- -d ./src/typeorm.config.ts migration:revert",
     "migration:show": "yarn build && yarn typeorm -- migration:show"
   },
