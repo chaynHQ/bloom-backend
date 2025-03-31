@@ -72,7 +72,7 @@ jobs:
         uses: azure/webapps-deploy@v3
         with:
           app-name: 'bloom-staging'
-          slot-name: 'Staging'
+          slot-name: 'Production'
           package: .
 
       - name: Run migrations
