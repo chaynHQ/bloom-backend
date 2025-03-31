@@ -5567,10 +5567,10 @@ nestjs-cls@^4.4.1:
   resolved "https://registry.yarnpkg.com/nestjs-cls/-/nestjs-cls-4.5.0.tgz#c18914b35b808429b6974a197385aa28e11d8176"
   integrity sha512-oi3GNCc5pnsnVI5WJKMDwmg4NP+JyEw+edlwgepyUba5+RGGtJzpbVaaxXGW1iPbDuQde3/fA8Jdjq9j88BVcQ==
 
-newrelic@^12.5.1:
-  version "12.15.0"
-  resolved "https://registry.yarnpkg.com/newrelic/-/newrelic-12.15.0.tgz#7b0175f5d36060f3d29013574a7b875a12f08fa8"
-  integrity sha512-9lseiusfKfXIitnHq4GzPAhLYDkvp/7mwXdw3i8Epg31sVl3/kuvg4TH7gYJw6na6LtcPz3A/lukasu6ubdGyA==
+newrelic@^12.16.1:
+  version "12.16.1"
+  resolved "https://registry.yarnpkg.com/newrelic/-/newrelic-12.16.1.tgz#8e0efd32ca3561975466eb475bc9237e70542a47"
+  integrity sha512-YkHyqVv49krTVVMdhvqNhlxZJGktjBUIlrjzHoyAVUghP4UhS+eGQEqdB9RU09lwnZ2awA1CGVWRwwTWBbWdlA==
   dependencies:
     "@grpc/grpc-js" "^1.12.2"
     "@grpc/proto-loader" "^0.7.5"
@@ -5890,7 +5890,7 @@ pg-types@^2.1.0:
     postgres-date "~1.0.4"
     postgres-interval "^1.1.0"
 
-pg@^8.14.1:
+pg@^8.11.5:
   version "8.14.1"
   resolved "https://registry.yarnpkg.com/pg/-/pg-8.14.1.tgz#2e3d1f287b64797cdfc8d1ba000f61a7ff8d66ed"
   integrity sha512-0TdbqfjwIun9Fm/r89oB7RFQ0bLgduAhiIqIXOsyKoiC/L54DbuAAzIEN/9Op0f1Po9X7iCPXGoa/Ah+2aI8Xw==

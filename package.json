@@ -48,7 +48,7 @@
     "firebase-admin": "^13.1.0",
     "lodash": "^4.17.21",
     "nestjs-cls": "^4.4.1",
-    "newrelic": "^12.5.1",
+    "newrelic": "^12.16.1",
     "pg": "^8.11.5",
     "pg-connection-string": "^2.7.0",
     "reflect-metadata": "^0.2.1",
