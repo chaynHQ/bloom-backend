@@ -1,9 +1,4 @@
 {
-  "ts-node": {
-    "require": [
-      "cli"
-    ]
-  },
   "compilerOptions": {
     "module": "commonjs",
     "declaration": true,
