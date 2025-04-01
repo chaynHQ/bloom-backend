@@ -1,5 +1,4 @@
 import { ConfigService } from '@nestjs/config';
-import { config } from 'dotenv';
 import * as PostgressConnectionStringParser from 'pg-connection-string';
 import { DataSource, DataSourceOptions } from 'typeorm';
 import { CoursePartnerEntity } from './entities/course-partner.entity';
@@ -55,7 +54,6 @@ import { BloomBackend1722295564731 } from './migrations/1722295564731-bloom-back
 import { BloomBackend1733160378757 } from './migrations/1733160378757-bloom-backend';
 import { BloomBackend1733850090811 } from './migrations/1733850090811-bloom-backend';
 
-config();
 const configService = new ConfigService();
 
 const isProduction = configService.get('NODE_ENV') === 'production';
@@ -64,6 +62,10 @@ const isStaging = configService.get('NODE_ENV') === 'staging';
 const { host, port, user, password, database } = PostgressConnectionStringParser.parse(
   configService.get('DATABASE_URL'),
 );
+
+if (!database) {
+  throw new Error('Database name is required');
+}
 
 export const dataSourceOptions = {
   type: 'postgres',
