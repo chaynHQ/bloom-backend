@@ -86,5 +86,13 @@ jobs:
           slot-name: 'Production' # Change the slot name to Staging
           package: .
 
+      - name: Check typeorm.config.ts exists
+        run: |
+          if [ -f ./src/typeorm.config.ts ]; then
+            echo "typeorm.config.ts exists"
+          else
+            echo "typeorm.config.ts does not exist"
+            exit 1
+          fi
       - name: Run migrations
         run: yarn run typeorm migration:run -- -d ./src/typeorm.config.ts
