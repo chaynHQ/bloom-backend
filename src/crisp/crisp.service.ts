@@ -36,11 +36,13 @@ export class CrispService {
         message.website_id,
         message.session_id,
       );
-      await this.eventLoggerService.createEventLog({
-        email: sessionMetaData.email,
-        event: eventName,
-        date: new Date(),
-      });
+      await this.eventLoggerService.createEventLog(
+        {
+          event: eventName,
+          date: new Date(),
+        },
+        sessionMetaData.email,
+      );
     } catch (error) {
       throw new Error(`Failed to handle crisp event for ${eventName}: ${error}`);
     }

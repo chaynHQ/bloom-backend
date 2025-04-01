@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { EventLogEntity } from 'src/entities/event-log.entity';
 import { UserEntity } from 'src/entities/user.entity';
 import { Repository } from 'typeorm';
-import { EVENT_NAME, ICreateEventLog } from './event-logger.interface';
+import { EVENT_NAME } from './event-logger.interface';
 
 const logger = new Logger('EventLogger');
 
@@ -27,7 +27,10 @@ export class EventLoggerService {
     });
   }
 
-  async createEventLog({ email, userId, event, date }: ICreateEventLog) {
+  async createEventLog(
+    { userId, event, date, metadata }: Partial<EventLogEntity>,
+    email?: string | undefined,
+  ) {
     try {
       if (!userId && !email) {
         logger.error('createEventLog - failed to create event log - no user id or email provided');
@@ -51,7 +54,7 @@ export class EventLoggerService {
         userId = user.id;
       }
 
-      return await this.eventLoggerRepository.save({ userId, event, date });
+      return await this.eventLoggerRepository.save({ userId, event, date, metadata });
     } catch (err) {
       throw new HttpException(
         `createEventLog - failed to create event log ${err}`,
