@@ -3,7 +3,7 @@ FROM node:20-alpine
 # Install git for devcontainers
 RUN apk add --no-cache git
 
-ENV NODE_ENV=development
+ENV NODE_ENV=production
 
 WORKDIR /app
 
@@ -15,6 +15,6 @@ COPY . .
 
 RUN yarn build
 
-EXPOSE 35001
+EXPOSE 8080
 
-CMD ["yarn", "start:dev"] 
+CMD ["yarn", "start"] 
