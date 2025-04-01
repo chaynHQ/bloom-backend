@@ -87,6 +87,4 @@ jobs:
           package: .
 
       - name: Run migrations
-        run: |
-          yarn add ts-node
-          yarn typeorm migration:run -- -d ./src/typeorm.config.ts
+        run: yarn run typeorm migration:run -- -d ./src/typeorm.config.ts
