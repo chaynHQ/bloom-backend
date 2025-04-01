@@ -94,5 +94,5 @@ jobs:
             echo "typeorm.config.ts does not exist"
             exit 1
           fi
-      - name: Run migrations
-        run: yarn run typeorm migration:run -- -d ./src/typeorm.config.ts
+      # - name: Run migrations
+      #   run: yarn run typeorm migration:run -- -d ./src/typeorm.config.ts
