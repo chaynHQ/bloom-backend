@@ -87,4 +87,4 @@ jobs:
           package: .
 
       - name: Run migrations
-        run: yarn migration:run
+        run: yarn typeorm migration:run -- -d ./src/typeorm.config.ts
