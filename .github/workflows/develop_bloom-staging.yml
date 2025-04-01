@@ -87,4 +87,6 @@ jobs:
           package: .
 
       - name: Run migrations
-        run: npx typeorm-ts-node-commonjs migration:run -- -d ./src/typeorm.config.ts
+        run: |
+          yarn add typeorm-ts-node-commonjs
+          yarn typeorm-ts-node-commonjs migration:run -- -d ./src/typeorm.config.ts
