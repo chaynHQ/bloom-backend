@@ -56,7 +56,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     environment:
-      name: 'Staging' # Change the environment name to Staging
+      name: 'Production' # Change the environment name to Staging
       url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
     permissions:
       id-token: write #This is required for requesting the JWT
@@ -83,7 +83,7 @@ jobs:
         uses: azure/webapps-deploy@v3
         with:
           app-name: 'bloom-staging'
-          slot-name: 'Staging' # Change the slot name to Staging
+          slot-name: 'Production' # Change the slot name to Staging
           package: .
 
       - name: Run migrations
