@@ -1,4 +1,5 @@
 #!/bin/bash
+echo "Start: Run TypeORM migrations."
 
 # Navigate to the application's directory
 cd /home/site/wwwroot
