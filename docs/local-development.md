@@ -145,9 +145,9 @@ See the [database-guide.md](database-guide.md) for instructions.
 
 **The develop branch is our source of truth, not main.** Fork from `develop`, create new feature branch, then when your PR is merged, `develop` will automatically merge into the main branch for deployment to production. Keep your branch updated by rebasing and merging feature/bug branches into `develop` as you code.
 
-Once your PR is merged to `develop`, this will trigger an automatic deployment to the staging app by Heroku.
+Once your PR is merged to `develop`, this will trigger an automatic deployment to the staging app by Render.
 
-When changes have been tested in staging, merge `develop` into `main`. This will trigger an automatic deployment to the production app by Heroku.
+When changes have been tested in staging, merge `develop` into `main`. This will trigger an automatic deployment to the production app by Render.
 
 # APIs
 

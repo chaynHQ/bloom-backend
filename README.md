@@ -32,7 +32,7 @@ Technologies Used:
 - [Crisp](https://crisp.chat/en/) - User messaging
 - [Mailchimp](https://mailchimp.com/developer/marketing/) - Transactional email
 - [Docker](https://www.docker.com/) - Containers for api and db
-- [Heroku](https://heroku.com) - Build, deploy and operate staging and production apps
+- [Render](https://render.com) - Build, deploy and operate staging and production apps
 - [GitHub Actions](https://github.com/features/actions) - CI pipeline
 - [ESLint](https://eslint.org/) and [Prettier](https://prettier.io/) for linting and formatting.
 

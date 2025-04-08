@@ -60,4 +60,4 @@ The frontend and backend each have _required_ and _optional_ environment variabl
 
 Note: Variables provided by Chayn are public, not linked to production, and subject to change at any time. Check for updates if you are experiencing problems. The absence of some optional environment variables may result in test failures. If you require an optional environment variable and cannot acquire it yourself (some must be connected to Chayn in some way), please reach out to the team in GitHub’s issue discussions.
 
-**Please notify us if creating new environment variables in your PR so we can add it to Heroku before release deployment.**
+**Please notify us if creating new environment variables in your PR so we can add it to Render before release deployment.**
