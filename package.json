@@ -14,7 +14,6 @@
     "start:debug": "NODE_ENV=development nest start --debug --watch",
     "start:staging": "node -r newrelic dist/src/main --optimize_for_size --max_old_space_size=460 --gc_interval=100",
     "start:prod": "node -r newrelic dist/src/main --optimize_for_size --max_old_space_size=460 --gc_interval=100",
-    "start:heroku": "node -r newrelic dist/src/main --optimize_for_size --max_old_space_size=460 --gc_interval=100",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "test": "NODE_ENV=test jest",
     "test:watch": "NODE_ENV=test jest --watch",

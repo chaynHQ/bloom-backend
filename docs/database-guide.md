@@ -90,26 +90,35 @@ Next, connect to the database server and add test data from the dump file, using
   ```
 - If the sql dump file is outdated, you can update it by running `docker compose down` then `docker compose up` again as this is configured to run migrations.
 
-### Chayn Staff - Heroku Directions
+### Chayn Staff - Render Directions
 
-Chayn staff with access to Heroku, you also have the option to seed the database via the following script. Before you start, make sure:
+Chayn staff with access to Render also have the option to copy/seed the staging database.
 
-1. bloom-local-db container is running in Docker
-2. you are logged into the Heroku via your terminal. Read more about the Heroku Cli [here](https://devcenter.heroku.com/articles/heroku-cli)
-3. Replace <HEROKU_APP_NAME> with the correct Heroku app name in the `seed-local-db.sh file`
-4. Run `chmod +x ./seed-local-db.sh` in your terminal to make the file executable
+Use either method to download a dump of the database:
 
-After the above has been confirmed, run
+**Using Render dashboard**
 
-```bash
-bash seed-local-db.sh
-```
+1. Create a backup on the Render dashboard and download it - see https://render.com/docs/postgresql-backups
+2. Run the restore command locally (change `local_database_url` and `backup_name`)
+   `pg_restore --dbname=$local_database_url --verbose --clean --if-exists --no-owner --no-privileges --format=directory backup_name/bloom-backend-staging`
+3. Delete the backup file locally
+
+**Using pg_dump and docker**
+
+Ensure your IP address is whitelisted in Render dashboard before trying to access the Render database directly
+
+1. Run `pg_dump` to create a dump file for the database
+   `pg_dump -Fd -j 2 -U user -h host -p port -d password -f postgres_dump`
+2. Run the restore command in docker
+   `docker exec -i bloom-local-db pg_restore -U postgres -d bloom < postgres_dump.dump`
+3. Run the following command to delete the dump file
+   `rm postgres_dump.dump`
 
 ## Database Migrations
 
 A migration in TypeORM is a single file with SQL queries to update a database schema as updates/additions are made. Read more about migrations [here](https://github.com/typeorm/typeorm/blob/master/docs/migrations.md).
 
-Migrations are automatically run when the app is built docker (locally) or Heroku for staging and production apps.
+Migrations are automatically run when the app is built docker (locally) or Render for staging and production apps.
 
 **You'll need to generate and run a migration each time you add or update a database field or table.**
 

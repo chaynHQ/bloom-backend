@@ -40,4 +40,5 @@ lerna-debug.log*
 
 # Postgres Data
 *.dump
+*.dir.tar.gz
 postgres-data
