@@ -1,3 +1,4 @@
+import { EventLogMetadata } from 'src/event-logger/event-logger.interface';
 import { Column, Entity, JoinTable, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 import { BaseBloomEntity } from '../entities/base.entity';
 import { UserEntity } from './user.entity';
@@ -12,6 +13,9 @@ export class EventLogEntity extends BaseBloomEntity {
 
   @Column()
   event: string;
+
+  @Column({ type: 'jsonb', default: {} })
+  metadata: EventLogMetadata = {};
 
   @Column()
   userId: string;

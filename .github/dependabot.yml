@@ -1,9 +1,10 @@
 # This file contains the configs for dependabot.
-# See for more info: https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+# See for more info:
+# https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
 
 version: 2
 updates:
-  - package-ecosystem: "npm" # See documentation for possible values
+  - package-ecosystem: "npm" # same value for yarn
     directory: "/" # Location of package manifests
     schedule:
       interval: "weekly"
@@ -13,11 +14,23 @@ updates:
       - kyleecodes
     reviewers:
       - kyleecodes
+    groups:
+      dev-deps:
+        dependency-type: "development"
+        update-types: # Excludes major updates so we can review individually
+          - "minor"
+          - "patch"
+      prod-deps:
+        dependency-type: "production"
+        update-types: # Excludes major updates so we can review individually
+          - "minor"
+          - "patch"
 
   # Maintain dependencies for GitHub Actions
   - package-ecosystem: "github-actions"
     # Workflow files stored in the default location of `.github/workflows`.
-    # (You don't need to specify `/.github/workflows` for `directory`. You can use `directory: "/"`.)
+    # (You don't need to specify `/.github/workflows` for `directory`.
+    # You can use `directory: "/"`.)
     directory: "/"
     schedule:
       interval: "weekly"
@@ -27,45 +40,8 @@ updates:
       - kyleecodes
     reviewers:
       - kyleecodes
+    groups:
+      actions-deps:
+        patterns:
+          - "*" # Group all GitHub Actions updates together
 
-  # Maintain dependencies for dev containers
-  - package-ecosystem: "devcontainers"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-      time: "09:00"
-      timezone: "Europe/London"
-    assignees:
-      - kyleecodes
-    reviewers:
-      - kyleecodes
-
-  # Maintain dependencies for docker
-  # Scans for vulnerabilities in docker base images
-  # Does not scan for vulnerabilities inside containers
-  # See for more info: https://docs.github.com/en/code-security/dependabot/ecosystems-supported-by-dependabot/supported-ecosystems-and-repositories#docker
-  - package-ecosystem: "docker"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-      time: "09:00"
-      timezone: "Europe/London"
-    assignees:
-      - kyleecodes
-    reviewers:
-      - kyleecodes
-
-  # Maintain dependencies for docker
-  # Scans for vulnerabilities in docker container images
-  # Does not scan for vulnerabilities inside containers
-  # See for more info: https://docs.github.com/en/code-security/dependabot/ecosystems-supported-by-dependabot/supported-ecosystems-and-repositories#docker-compose
-  - package-ecosystem: "docker-compose"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-      time: "09:00"
-      timezone: "Europe/London"
-    assignees:
-      - kyleecodes
-    reviewers:
-      - kyleecodes

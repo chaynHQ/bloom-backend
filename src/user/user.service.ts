@@ -137,10 +137,6 @@ export class UserService {
       .leftJoinAndSelect('partnerAccess.partner', 'partner')
       .leftJoinAndSelect('partnerAccess.partner', 'partnerAccessPartner')
       .leftJoinAndSelect('partnerAdmin.partner', 'partnerAdminPartner')
-      .leftJoinAndSelect('user.courseUser', 'courseUser')
-      .leftJoinAndSelect('courseUser.course', 'course')
-      .leftJoinAndSelect('courseUser.sessionUser', 'sessionUser')
-      .leftJoinAndSelect('sessionUser.session', 'session')
       .leftJoinAndSelect('user.resourceUser', 'resourceUser')
       .leftJoinAndSelect('resourceUser.resource', 'resource')
       .leftJoinAndSelect('user.subscriptionUser', 'subscriptionUser')
@@ -387,7 +383,6 @@ export class UserService {
       partnerAdmin?: { partnerAdminId: string };
     },
     relations: string[],
-    fields: Array<string>,
     limit: number,
   ): Promise<UserEntity[] | undefined> {
     const users = await this.userRepository.find({

@@ -23,7 +23,6 @@ export class SessionUserService {
     private sessionUserRepository: Repository<SessionUserEntity>,
     @InjectRepository(CourseEntity)
     private courseRepository: Repository<CourseEntity>,
-    @InjectRepository(UserEntity) private userRepository: Repository<UserEntity>,
     private readonly courseUserService: CourseUserService,
     private readonly sessionService: SessionService,
     private serviceUserProfilesService: ServiceUserProfilesService,

@@ -44,7 +44,6 @@ const mockGetUserDto = {
   user: mockUserEntity,
   partnerAccesses: [],
   partnerAdmin: null,
-  courses: [],
   therapySessions: [],
 } as GetUserDto;
 
