@@ -22,7 +22,10 @@ export class SessionFeedbackService {
     const session = await this.sessionService.getSessionAndCourse(sessionFeedbackDto.sessionId);
 
     if (!session) {
-      throw new HttpException('SESSION NOT FOUND', HttpStatus.NOT_FOUND);
+      throw new HttpException(
+        `SESSION NOT FOUND - ${sessionFeedbackDto.sessionId}`,
+        HttpStatus.NOT_FOUND,
+      );
     }
 
     await this.sessionFeedbackRepository.save(sessionFeedbackDto);
