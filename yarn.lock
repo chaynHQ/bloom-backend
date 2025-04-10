@@ -5602,10 +5602,10 @@ neo-async@^2.6.2:
   resolved "https://registry.yarnpkg.com/neo-async/-/neo-async-2.6.2.tgz#b4aafb93e3aeb2d8174ca53cf163ab7d7308305f"
   integrity sha512-Yd3UES5mWCSqR+qNT93S3UoYUkqAZ9lLg8a7g9rimsWmYGK8cVToA4/sF3RrshdyV3sAGMXVUmpMYOw+dLpOuw==
 
-nestjs-cls@^4.4.1:
-  version "4.5.0"
-  resolved "https://registry.yarnpkg.com/nestjs-cls/-/nestjs-cls-4.5.0.tgz#c18914b35b808429b6974a197385aa28e11d8176"
-  integrity sha512-oi3GNCc5pnsnVI5WJKMDwmg4NP+JyEw+edlwgepyUba5+RGGtJzpbVaaxXGW1iPbDuQde3/fA8Jdjq9j88BVcQ==
+nestjs-cls@^5.4.2:
+  version "5.4.2"
+  resolved "https://registry.yarnpkg.com/nestjs-cls/-/nestjs-cls-5.4.2.tgz#4b0cc705e5e4d6d46d2c59fc309e5bf5d3c89f98"
+  integrity sha512-KQPOhD7ya82gSEc+XDwFKERPMaWK95bzV4E2pLmx8oC1hfMNuVc4dkWmEKJiu+o0hCWP/v51iWNgOGHKnJ9Raw==
 
 newrelic@^12.17.0:
   version "12.17.0"
