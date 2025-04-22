@@ -79,8 +79,6 @@ export class SuperAdminAuthGuard implements CanActivate {
       user = await this.userRepository.findOneByOrFail({ firebaseUid: firebaseToken.uid });
       request['userEntity'] = user;
     } catch (error) {
-      this.logger.warn('Test superadmin 1');
-
       throw new HttpException(
         `SuperAdminAuthGuard - Error finding user: ${error}`,
         HttpStatus.INTERNAL_SERVER_ERROR,
@@ -88,18 +86,25 @@ export class SuperAdminAuthGuard implements CanActivate {
     }
     this.logger.log('Test superadmin 4');
 
-    if (!user.isSuperAdmin || !user.email.contains('@chayn.co')) {
-      this.logger.warn({
-        error: AUTH_GUARD_ERRORS.SUPERADMIN_UNAUTHORISED,
-        errorMessage: `unauthorised user without superadmin access or chayn account`,
-        status: HttpStatus.UNAUTHORIZED,
-      });
+    try {
+      if (!user.isSuperAdmin || !user.email.contains('@chayn.co')) {
+        this.logger.warn({
+          error: AUTH_GUARD_ERRORS.SUPERADMIN_UNAUTHORISED,
+          errorMessage: `unauthorised user without superadmin access or chayn account`,
+          status: HttpStatus.UNAUTHORIZED,
+        });
+        throw new HttpException(
+          `SuperAdminAuthGuard - unauthorised user without superadmin access or chayn account`,
+          HttpStatus.UNAUTHORIZED,
+        );
+      }
+    } catch (error) {
+      this.logger.error('Error checking superadmin access', error);
       throw new HttpException(
-        `SuperAdminAuthGuard - unauthorised user without superadmin access or chayn account`,
-        HttpStatus.UNAUTHORIZED,
+        `SuperAdminAuthGuard - error checking superadmin access: ${error}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
-
     this.logger.log('Test superadmin 5');
 
     return true;
