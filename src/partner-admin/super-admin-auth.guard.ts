@@ -24,6 +24,7 @@ export class SuperAdminAuthGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
+    this.logger.log('Test superadmin 1');
     const request = context.switchToHttp().getRequest<Request>();
 
     const { authorization } = request.headers;
@@ -34,6 +35,7 @@ export class SuperAdminAuthGuard implements CanActivate {
         HttpStatus.UNAUTHORIZED,
       );
     }
+    this.logger.log('Test superadmin 2');
 
     let firebaseToken: DecodedIdToken;
     try {
@@ -58,6 +60,8 @@ export class SuperAdminAuthGuard implements CanActivate {
       );
     }
 
+    this.logger.log('Test superadmin 3');
+
     if (!firebaseToken.email_verified || !firebaseToken.firebase.sign_in_second_factor) {
       this.logger.warn({
         error: AUTH_GUARD_ERRORS.SUPERADMIN_2FA_REQUIRED,
@@ -75,11 +79,15 @@ export class SuperAdminAuthGuard implements CanActivate {
       user = await this.userRepository.findOneByOrFail({ firebaseUid: firebaseToken.uid });
       request['userEntity'] = user;
     } catch (error) {
+      this.logger.warn('Test superadmin 1');
+
       throw new HttpException(
         `SuperAdminAuthGuard - Error finding user: ${error}`,
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
+    this.logger.log('Test superadmin 4');
+
     if (!user.isSuperAdmin || !user.email.contains('@chayn.co')) {
       this.logger.warn({
         error: AUTH_GUARD_ERRORS.SUPERADMIN_UNAUTHORISED,
@@ -91,6 +99,8 @@ export class SuperAdminAuthGuard implements CanActivate {
         HttpStatus.UNAUTHORIZED,
       );
     }
+
+    this.logger.log('Test superadmin 5');
 
     return true;
   }
