@@ -24,7 +24,6 @@ export class SuperAdminAuthGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    this.logger.log('Test superadmin 1');
     const request = context.switchToHttp().getRequest<Request>();
 
     const { authorization } = request.headers;
@@ -35,7 +34,6 @@ export class SuperAdminAuthGuard implements CanActivate {
         HttpStatus.UNAUTHORIZED,
       );
     }
-    this.logger.log('Test superadmin 2');
 
     let firebaseToken: DecodedIdToken;
     try {
@@ -60,8 +58,6 @@ export class SuperAdminAuthGuard implements CanActivate {
       );
     }
 
-    this.logger.log('Test superadmin 3');
-
     if (!firebaseToken.email_verified || !firebaseToken.firebase.sign_in_second_factor) {
       this.logger.warn({
         error: AUTH_GUARD_ERRORS.SUPERADMIN_2FA_REQUIRED,
@@ -84,10 +80,9 @@ export class SuperAdminAuthGuard implements CanActivate {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
-    this.logger.log('Test superadmin 4');
 
     try {
-      if (!user.isSuperAdmin || !user.email.contains('@chayn.co')) {
+      if (!user.isSuperAdmin || !user.email.includes('@chayn.co')) {
         this.logger.warn({
           error: AUTH_GUARD_ERRORS.SUPERADMIN_UNAUTHORISED,
           errorMessage: `unauthorised user without superadmin access or chayn account`,
@@ -105,7 +100,6 @@ export class SuperAdminAuthGuard implements CanActivate {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
-    this.logger.log('Test superadmin 5');
 
     return true;
   }

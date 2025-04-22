@@ -110,7 +110,7 @@ export class UserController {
     } catch {
       throw new HttpException(
         `Failed to parse searchCriteria: ${query.searchCriteria}`,
-        HttpStatus.INTERNAL_SERVER_ERROR,
+        HttpStatus.BAD_REQUEST,
       );
     }
 
