@@ -3,6 +3,8 @@ import {
   Controller,
   Delete,
   Get,
+  HttpException,
+  HttpStatus,
   Param,
   Patch,
   Post,
@@ -15,7 +17,6 @@ import { Request } from 'express';
 import { UserEntity } from 'src/entities/user.entity';
 import { SuperAdminAuthGuard } from 'src/partner-admin/super-admin-auth.guard';
 import { ServiceUserProfilesService } from 'src/service-user-profiles/service-user-profiles.service';
-import { formatUserObject } from 'src/utils/serialize';
 import { FirebaseAuthGuard } from '../firebase/firebase-auth.guard';
 import { ControllerDecorator } from '../utils/controller.decorator';
 import { AdminUpdateUserDto } from './dtos/admin-update-user.dto';
@@ -103,20 +104,25 @@ export class UserController {
   @Get()
   @UseGuards(SuperAdminAuthGuard)
   async getUsers(@Query() query) {
-    const { include, limit, ...userQuery } = query.searchCriteria
-      ? JSON.parse(query.searchCriteria)
-      : { include: [], limit: undefined };
+    let searchQuery;
+    try {
+      searchQuery = query.searchCriteria ? JSON.parse(query.searchCriteria) : undefined;
+    } catch {
+      throw new HttpException(
+        `Failed to parse searchCriteria: ${query.searchCriteria}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+
+    const { include, limit, ...userQuery } = searchQuery || { include: [], limit: undefined };
     const users = await this.userService.getUsers(userQuery, include || [], limit);
-    return users.map((u) => formatUserObject(u));
+    return users;
   }
 
   @ApiBearerAuth()
   @Get('/bulk-upload-mailchimp-profiles')
   @UseGuards(SuperAdminAuthGuard)
-  async bulkUploadMailchimpProfiles() {
-    await this.serviceUserProfilesService.bulkUploadMailchimpProfiles();
-    return 'ok';
-  }
+  async bulkUploadMailchimpProfiles() {}
 
   @ApiBearerAuth()
   @Get('/bulk-update-mailchimp-profiles')
