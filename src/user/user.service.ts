@@ -384,7 +384,7 @@ export class UserService {
     },
     relations: string[],
     limit: number,
-  ): Promise<UserEntity[] | undefined> {
+  ): Promise<GetUserDto[] | undefined> {
     try {
       const users = await this.userRepository.find({
         relations,
@@ -414,7 +414,7 @@ export class UserService {
         },
         ...(limit && { take: limit }),
       });
-      return users;
+      return users.map((u) => formatUserObject(u));
     } catch (error) {
       this.logger.error(`getUsers - Unable to get users with filters ${filters}`, error);
       throw new HttpException(
