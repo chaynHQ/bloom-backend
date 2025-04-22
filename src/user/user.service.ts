@@ -385,34 +385,42 @@ export class UserService {
     relations: string[],
     limit: number,
   ): Promise<UserEntity[] | undefined> {
-    const users = await this.userRepository.find({
-      relations,
-      where: {
-        ...(filters.email && { email: ILike(`%${filters.email}%`) }),
-        ...(filters.partnerAccess && {
-          partnerAccess: {
-            ...(filters.partnerAccess.userId && { userId: filters.partnerAccess.userId }),
-            ...(typeof filters.partnerAccess.featureTherapy !== 'undefined' && {
-              featureTherapy: filters.partnerAccess.featureTherapy,
-            }),
-            ...(typeof filters.partnerAccess.active !== 'undefined' && {
-              active: filters.partnerAccess.active,
-            }),
-          },
-        }),
-        ...(filters.partnerAdmin && {
-          partnerAdmin: {
-            ...(filters.partnerAdmin && {
-              id:
-                filters.partnerAdmin.partnerAdminId === 'IS NOT NULL'
-                  ? Not(IsNull())
-                  : filters.partnerAdmin.partnerAdminId,
-            }),
-          },
-        }),
-      },
-      ...(limit && { take: limit }),
-    });
-    return users;
+    try {
+      const users = await this.userRepository.find({
+        relations,
+        where: {
+          ...(filters.email && { email: ILike(`%${filters.email}%`) }),
+          ...(filters.partnerAccess && {
+            partnerAccess: {
+              ...(filters.partnerAccess.userId && { userId: filters.partnerAccess.userId }),
+              ...(typeof filters.partnerAccess.featureTherapy !== 'undefined' && {
+                featureTherapy: filters.partnerAccess.featureTherapy,
+              }),
+              ...(typeof filters.partnerAccess.active !== 'undefined' && {
+                active: filters.partnerAccess.active,
+              }),
+            },
+          }),
+          ...(filters.partnerAdmin && {
+            partnerAdmin: {
+              ...(filters.partnerAdmin && {
+                id:
+                  filters.partnerAdmin.partnerAdminId === 'IS NOT NULL'
+                    ? Not(IsNull())
+                    : filters.partnerAdmin.partnerAdminId,
+              }),
+            },
+          }),
+        },
+        ...(limit && { take: limit }),
+      });
+      return users;
+    } catch (error) {
+      this.logger.error(`getUsers - Unable to get users with filters ${filters}`, error);
+      throw new HttpException(
+        `Unable to get users with filters ${filters} due to error - ${error}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 }
