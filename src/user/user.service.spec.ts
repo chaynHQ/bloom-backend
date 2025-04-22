@@ -13,6 +13,7 @@ import { ServiceUserProfilesService } from 'src/service-user-profiles/service-us
 import { SubscriptionUserService } from 'src/subscription-user/subscription-user.service';
 import { TherapySessionService } from 'src/therapy-session/therapy-session.service';
 import { EMAIL_REMINDERS_FREQUENCY, PartnerAccessCodeStatusEnum } from 'src/utils/constants';
+import { formatUserObject } from 'src/utils/serialize';
 import {
   mockIFirebaseUser,
   mockPartnerAccessEntity,
@@ -562,7 +563,7 @@ describe('UserService', () => {
         .spyOn(repo, 'find')
         .mockImplementationOnce(async () => [{ ...mockUserEntity, email: 'a@b.com' }]);
       const users = await service.getUsers({ email: 'a@b.com' }, [], 10);
-      expect(users).toEqual([{ ...mockUserEntity, email: 'a@b.com' }]);
+      expect(users).toEqual([formatUserObject({ ...mockUserEntity, email: 'a@b.com' })]);
     });
   });
 
