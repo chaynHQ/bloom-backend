@@ -392,7 +392,6 @@ export class UserService {
           ...(filters.email && { email: ILike(`%${filters.email}%`) }),
           ...(filters.partnerAccess && {
             partnerAccess: {
-              ...(filters.partnerAccess.userId && { userId: filters.partnerAccess.userId }),
               ...(typeof filters.partnerAccess.featureTherapy !== 'undefined' && {
                 featureTherapy: filters.partnerAccess.featureTherapy,
               }),
@@ -404,10 +403,7 @@ export class UserService {
           ...(filters.partnerAdmin && {
             partnerAdmin: {
               ...(filters.partnerAdmin && {
-                id:
-                  filters.partnerAdmin.partnerAdminId === 'IS NOT NULL'
-                    ? Not(IsNull())
-                    : filters.partnerAdmin.partnerAdminId,
+                id: Not(IsNull()),
               }),
             },
           }),
