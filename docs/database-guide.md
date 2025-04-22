@@ -108,7 +108,7 @@ Use either method to download a dump of the database:
 Ensure your IP address is whitelisted in Render dashboard before trying to access the Render database directly
 
 1. Run `pg_dump` to create a dump file for the database
-   `pg_dump -Fd -j 2 -U user -h host -p port -d password -f postgres_dump`
+   `pg_dump -Fc {RENDER_PG_EXTERNAL_CONNECTION_STRING} > postgres_dump.dump`
 2. Run the restore command in docker
    `docker exec -i bloom-local-db pg_restore -U postgres -d bloom < postgres_dump.dump`
 3. Run the following command to delete the dump file
