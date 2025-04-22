@@ -10,7 +10,8 @@ module.exports = [
   {
     languageOptions: {
       globals: {
-        node: true,
+        process: true,
+        console: true,
         require: true,
         jest: true,
       },
