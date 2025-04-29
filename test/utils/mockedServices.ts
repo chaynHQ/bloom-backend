@@ -166,6 +166,9 @@ export const mockTherapySessionRepositoryMethods: PartialFuncReturn<
   findOneBy: async (arg) => {
     return { ...mockTherapySessionEntity, ...(arg ? arg : {}) } as TherapySessionEntity;
   },
+  findOne: async (arg) => {
+    return { ...mockTherapySessionEntity, ...(arg ? arg : {}) } as TherapySessionEntity;
+  },
   findOneOrFail: async (arg) => {
     return { ...mockTherapySessionEntity, ...(arg ? arg : {}) } as TherapySessionEntity;
   },

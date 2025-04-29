@@ -1,5 +1,5 @@
-import { Controller, Get, Req, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Controller, Delete, Get, Param, Req, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { Request } from 'express';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
 import { ControllerDecorator } from 'src/utils/controller.decorator';
@@ -23,5 +23,17 @@ export class TherapySessionController {
     const user = req['userEntity'] as UserEntity;
     const therapySessions = await this.therapySessionService.getUserTherapySessions(user.id);
     return therapySessions;
+  }
+
+  @Delete(':id')
+  @ApiParam({ name: 'id', description: 'Therapy session id to delete' })
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    description: 'Deletes a therapy session for a user.',
+  })
+  @UseGuards(FirebaseAuthGuard)
+  async deleteTherapySession(@Param() { id }): Promise<TherapySessionEntity> {
+    const therapySession = await this.therapySessionService.cancelTherapySession(id);
+    return therapySession;
   }
 }

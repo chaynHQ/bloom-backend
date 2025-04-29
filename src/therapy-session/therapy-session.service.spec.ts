@@ -61,4 +61,15 @@ describe('TherapySessionService', () => {
       expect(response).toMatchObject([mockTherapySessionEntity]);
     });
   });
+
+  describe('cancelTherapySession', () => {
+    it('when supplied with correct details, should cancel therapy session', async () => {
+      const response = await service.cancelTherapySession(mockTherapySessionEntity.id);
+      expect(response).toMatchObject({
+        ...mockTherapySessionEntity,
+        cancelledAt: expect.any(Date),
+        action: 'CANCELLED_BOOKING',
+      });
+    });
+  });
 });
