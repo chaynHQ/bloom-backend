@@ -58,4 +58,14 @@ export class TherapySessionService {
 
     return redactedTherapySessions;
   }
+
+  async getUserTherapySessions(userId: string): Promise<TherapySessionEntity[]> {
+    const therapySessions = await this.therapySessionRepository
+      .createQueryBuilder('therapy_session')
+      .select()
+      .where('therapy_session.userId = :userId', { userId: userId })
+      .getMany();
+
+    return therapySessions;
+  }
 }

@@ -54,4 +54,11 @@ describe('TherapySessionService', () => {
       ]);
     });
   });
+
+  describe('getUserTherapySessions', () => {
+    it('when supplied with correct details, should return therapy sessions', async () => {
+      const response = await service.getUserTherapySessions(mockUserEntity.id);
+      expect(response).toMatchObject([mockTherapySessionEntity]);
+    });
+  });
 });
