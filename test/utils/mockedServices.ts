@@ -1,5 +1,6 @@
 import { PartialFuncReturn } from '@golevelup/ts-jest';
 import { UserRecord } from 'firebase-admin/lib/auth/user-record';
+import { ClsService } from 'nestjs-cls';
 import { SlackMessageClient } from 'src/api/slack/slack-api';
 import { ZapierWebhookClient } from 'src/api/zapier/zapier-webhook-client';
 import { CoursePartnerService } from 'src/course-partner/course-partner.service';
@@ -39,7 +40,6 @@ import {
   mockUserRecord,
 } from './mockData';
 import { createQueryBuilderMock } from './mockUtils';
-import { ClsService } from 'nestjs-cls';
 
 export const mockSlackMessageClientMethods: PartialFuncReturn<SlackMessageClient> = {
   sendMessageToTherapySlackChannel: async () => {
@@ -161,9 +161,12 @@ export const mockTherapySessionRepositoryMethods: PartialFuncReturn<
   Repository<TherapySessionEntity>
 > = {
   createQueryBuilder: createQueryBuilderMock({
-    getMany: jest.fn().mockResolvedValue([TherapySessionEntity]),
+    getMany: jest.fn().mockResolvedValue([mockTherapySessionEntity]),
   }),
   findOneBy: async (arg) => {
+    return { ...mockTherapySessionEntity, ...(arg ? arg : {}) } as TherapySessionEntity;
+  },
+  findOne: async (arg) => {
     return { ...mockTherapySessionEntity, ...(arg ? arg : {}) } as TherapySessionEntity;
   },
   findOneOrFail: async (arg) => {
