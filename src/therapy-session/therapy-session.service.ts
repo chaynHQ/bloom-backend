@@ -1,7 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { cancelBooking } from 'src/api/simplybook/simplybook-api';
 import { SlackMessageClient } from 'src/api/slack/slack-api';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
+import { SIMPLYBOOK_ACTION_ENUM } from 'src/utils/constants';
 import { Repository } from 'typeorm';
 
 @Injectable()
@@ -13,6 +15,24 @@ export class TherapySessionService {
     private therapySessionRepository: Repository<TherapySessionEntity>,
     private slackMessageClient: SlackMessageClient,
   ) {}
+
+  async cancelTherapySession(therapySessionId: string): Promise<TherapySessionEntity> {
+    try {
+      const therapySession = await this.therapySessionRepository.findOne({
+        where: { id: therapySessionId },
+      });
+      await cancelBooking(therapySession.bookingCode);
+
+      return {
+        ...therapySession,
+        cancelledAt: new Date(),
+        action: SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING,
+      };
+    } catch (error) {
+      this.logger.error(`Error cancelling therapy session: ${error}`);
+      throw new Error(`Error cancelling therapy session: ${error}`);
+    }
+  }
 
   async softDeleteTherapySessions(
     userId,
@@ -57,5 +77,15 @@ export class TherapySessionService {
     );
 
     return redactedTherapySessions;
+  }
+
+  async getUserTherapySessions(userId: string): Promise<TherapySessionEntity[]> {
+    const therapySessions = await this.therapySessionRepository
+      .createQueryBuilder('therapy_session')
+      .select()
+      .where('therapy_session.userId = :userId', { userId: userId })
+      .getMany();
+
+    return therapySessions;
   }
 }
