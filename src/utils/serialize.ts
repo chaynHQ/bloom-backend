@@ -1,5 +1,6 @@
 import { PartnerAdminEntity } from 'src/entities/partner-admin.entity';
 import { PartnerEntity } from 'src/entities/partner.entity';
+import { ResourceUserEntity } from 'src/entities/resource-user.entity';
 import { IPartnerFeature } from 'src/partner-feature/partner-feature.interface';
 import { IPartner } from 'src/partner/partner.interface';
 import { GetSubscriptionUserDto } from 'src/subscription-user/dto/get-subscription-user.dto';
@@ -24,7 +25,6 @@ export const formatCourseUserObject = (courseUser: CourseUserEntity) => {
     name: courseUser.course.name,
     slug: courseUser.course.slug,
     status: courseUser.course.status,
-    storyblokId: courseUser.course.storyblokId,
     storyblokUuid: courseUser.course.storyblokUuid,
     completed: courseUser.completed,
     sessions: courseUser.sessionUser?.map((sessionUser) => {
@@ -34,13 +34,27 @@ export const formatCourseUserObject = (courseUser: CourseUserEntity) => {
         updatedAt: sessionUser.updatedAt,
         name: sessionUser.session.name,
         slug: sessionUser.session.slug,
-        storyblokId: sessionUser.session.storyblokId,
         storyblokUuid: sessionUser.session.storyblokUuid,
         status: sessionUser.session.status,
         completed: sessionUser.completed,
       };
     }),
   };
+};
+
+export const formatResourceUserObject = (resourceUsers: ResourceUserEntity[]) => {
+  return resourceUsers.map((resourceUser) => {
+    return {
+      id: resourceUser.resource.id,
+      createdAt: resourceUser.createdAt,
+      updatedAt: resourceUser.updatedAt,
+      name: resourceUser.resource.name,
+      slug: resourceUser.resource.slug,
+      status: resourceUser.resource.status,
+      storyblokUuid: resourceUser.resource.storyblokUuid,
+      completed: !!resourceUser.completedAt, // convert to boolean from data populated
+    };
+  });
 };
 
 export const formatPartnerAdminObjects = (partnerAdminObject: PartnerAdminEntity) => {
@@ -105,6 +119,8 @@ export const formatUserObject = (userObject: UserEntity): GetUserDto => {
       isSuperAdmin: userObject.isSuperAdmin,
       signUpLanguage: userObject.signUpLanguage,
       emailRemindersFrequency: userObject.emailRemindersFrequency,
+      contactPermission: userObject.contactPermission,
+      serviceEmailsPermission: userObject.serviceEmailsPermission,
     },
     partnerAccesses: userObject.partnerAccess
       ? formatPartnerAccessObjects(userObject.partnerAccess)
@@ -113,6 +129,11 @@ export const formatUserObject = (userObject: UserEntity): GetUserDto => {
       ? formatPartnerAdminObjects(userObject.partnerAdmin)
       : null,
     courses: userObject.courseUser ? formatCourseUserObjects(userObject.courseUser) : [],
+    resources: userObject.resourceUser ? formatResourceUserObject(userObject.resourceUser) : [],
+    subscriptions:
+      userObject.subscriptionUser && userObject.subscriptionUser.length > 0
+        ? formatSubscriptionObjects(userObject.subscriptionUser)
+        : [],
   };
 };
 
@@ -133,6 +154,8 @@ export const formatGetUsersObject = (userObject: UserEntity): GetUserDto => {
       isSuperAdmin: userObject.isSuperAdmin,
       signUpLanguage: userObject.signUpLanguage,
       emailRemindersFrequency: userObject.emailRemindersFrequency,
+      contactPermission: userObject.contactPermission,
+      serviceEmailsPermission: userObject.serviceEmailsPermission,
     },
     ...(userObject.partnerAccess
       ? {

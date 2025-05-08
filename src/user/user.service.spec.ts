@@ -13,6 +13,7 @@ import { ServiceUserProfilesService } from 'src/service-user-profiles/service-us
 import { SubscriptionUserService } from 'src/subscription-user/subscription-user.service';
 import { TherapySessionService } from 'src/therapy-session/therapy-session.service';
 import { EMAIL_REMINDERS_FREQUENCY, PartnerAccessCodeStatusEnum } from 'src/utils/constants';
+import { formatUserObject } from 'src/utils/serialize';
 import {
   mockIFirebaseUser,
   mockPartnerAccessEntity,
@@ -23,6 +24,7 @@ import {
 } from 'test/utils/mockData';
 import {
   mockAuthServiceMethods,
+  mockClsService,
   mockPartnerAccessRepositoryMethods,
   mockPartnerRepositoryMethods,
   mockUserRepositoryMethodsFactory,
@@ -31,6 +33,7 @@ import { Repository } from 'typeorm';
 import { createQueryBuilderMock } from '../../test/utils/mockUtils';
 import { AuthService } from '../auth/auth.service';
 import { UserEntity } from '../entities/user.entity';
+import { Logger } from '../logger/logger';
 import { PartnerAccessService } from '../partner-access/partner-access.service';
 import { AdminUpdateUserDto } from './dtos/admin-update-user.dto';
 import { CreateUserDto } from './dtos/create-user.dto';
@@ -120,6 +123,8 @@ describe('UserService', () => {
     }).compile();
 
     service = module.get<UserService>(UserService);
+    const logger = (service as any).logger as Logger;
+    (logger as any).cls = mockClsService;
     repo = module.get<Repository<UserEntity>>(getRepositoryToken(UserEntity));
   });
 
@@ -314,7 +319,6 @@ describe('UserService', () => {
     });
 
     it('when supplied a firebase user dto with an email that already exists, it should return an error', async () => {
-      const repoSaveSpy = jest.spyOn(repo, 'save');
       const authServiceUpdateEmailSpy = jest
         .spyOn(mockAuthService, 'updateFirebaseUserEmail')
         .mockImplementationOnce(async () => {
@@ -323,6 +327,11 @@ describe('UserService', () => {
 
       await expect(service.updateUser(updateUserDto, mockUserEntity.id)).rejects.toThrow(
         'Email already exists',
+      );
+
+      expect(authServiceUpdateEmailSpy).toHaveBeenCalledWith(
+        mockUserEntity.firebaseUid,
+        updateUserDto.email,
       );
     });
 
@@ -622,8 +631,8 @@ describe('UserService', () => {
       jest
         .spyOn(repo, 'find')
         .mockImplementationOnce(async () => [{ ...mockUserEntity, email: 'a@b.com' }]);
-      const users = await service.getUsers({ email: 'a@b.com' }, [], [], 10);
-      expect(users).toEqual([{ ...mockUserEntity, email: 'a@b.com' }]);
+      const users = await service.getUsers({ email: 'a@b.com' }, [], 10);
+      expect(users).toEqual([formatUserObject({ ...mockUserEntity, email: 'a@b.com' })]);
     });
   });
 

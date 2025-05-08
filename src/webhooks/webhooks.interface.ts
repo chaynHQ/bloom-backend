@@ -7,8 +7,8 @@ export interface ITherapySession {
   serviceName?: string;
   serviceProviderName?: string;
   serviceProviderEmail?: string;
-  startDateDime?: Date;
-  endDateDime?: Date;
+  startDateTime?: Date;
+  endDateTime?: Date;
   cancelledAt?: Date;
   rescheduledFrom?: Date;
   completedAt?: Date;

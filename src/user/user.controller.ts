@@ -3,6 +3,8 @@ import {
   Controller,
   Delete,
   Get,
+  HttpException,
+  HttpStatus,
   Param,
   Patch,
   Post,
@@ -14,7 +16,7 @@ import { ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiTags } from '@nestjs
 import { Request } from 'express';
 import { UserEntity } from 'src/entities/user.entity';
 import { SuperAdminAuthGuard } from 'src/partner-admin/super-admin-auth.guard';
-import { formatUserObject } from 'src/utils/serialize';
+import { ServiceUserProfilesService } from 'src/service-user-profiles/service-user-profiles.service';
 import { FirebaseAuthGuard } from '../firebase/firebase-auth.guard';
 import { ControllerDecorator } from '../utils/controller.decorator';
 import { AdminUpdateUserDto } from './dtos/admin-update-user.dto';
@@ -27,7 +29,10 @@ import { UserService } from './user.service';
 @ControllerDecorator()
 @Controller('/v1/user')
 export class UserController {
-  constructor(private readonly userService: UserService) {}
+  constructor(
+    private readonly userService: UserService,
+    private readonly serviceUserProfilesService: ServiceUserProfilesService,
+  ) {}
 
   @Post()
   @ApiOperation({
@@ -99,10 +104,31 @@ export class UserController {
   @Get()
   @UseGuards(SuperAdminAuthGuard)
   async getUsers(@Query() query) {
-    const { include, fields, limit, ...userQuery } = query.searchCriteria
-      ? JSON.parse(query.searchCriteria)
-      : { include: [], fields: [], limit: undefined };
-    const users = await this.userService.getUsers(userQuery, include || [], fields, limit);
-    return users.map((u) => formatUserObject(u));
+    let searchQuery;
+    try {
+      searchQuery = query.searchCriteria ? JSON.parse(query.searchCriteria) : undefined;
+    } catch {
+      throw new HttpException(
+        `Failed to parse searchCriteria: ${query.searchCriteria}`,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    const { include, limit, ...userQuery } = searchQuery || { include: [], limit: undefined };
+    const users = await this.userService.getUsers(userQuery, include || [], limit);
+    return users;
+  }
+
+  @ApiBearerAuth()
+  @Get('/bulk-upload-mailchimp-profiles')
+  @UseGuards(SuperAdminAuthGuard)
+  async bulkUploadMailchimpProfiles() {}
+
+  @ApiBearerAuth()
+  @Get('/bulk-update-mailchimp-profiles')
+  @UseGuards(SuperAdminAuthGuard)
+  async bulkUpdateMailchimpProfiles() {
+    await this.serviceUserProfilesService.bulkUpdateMailchimpProfiles();
+    return 'ok';
   }
 }

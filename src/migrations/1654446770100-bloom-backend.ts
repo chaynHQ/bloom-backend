@@ -7,7 +7,7 @@ export class bloomBackend1654446770100 implements MigrationInterface {
 	    SET "completedAt"=COALESCE(CAST(sessionuser."updatedAt" AS DATE), CURRENT_DATE)
 	    WHERE sessionuser."completedAt" IS NULL AND sessionuser."completed"=true;`);
   }
-   
+
   public async down(): Promise<void> {
     // Note that it doesn't make sense to add a down as there
     // is no way of identifying which session_users were changed.

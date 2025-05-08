@@ -11,6 +11,9 @@ import { PartnerAccessEntity } from './entities/partner-access.entity';
 import { PartnerAdminEntity } from './entities/partner-admin.entity';
 import { PartnerFeatureEntity } from './entities/partner-feature.entity';
 import { PartnerEntity } from './entities/partner.entity';
+import { ResourceFeedbackEntity } from './entities/resource-feedback.entity';
+import { ResourceUserEntity } from './entities/resource-user.entity';
+import { ResourceEntity } from './entities/resource.entity';
 import { SessionFeedbackEntity } from './entities/session-feedback.entity';
 import { SessionUserEntity } from './entities/session-user.entity';
 import { SessionEntity } from './entities/session.entity';
@@ -49,6 +52,10 @@ import { BloomBackend1718300621138 } from './migrations/1718300621138-bloom-back
 import { BloomBackend1718728423454 } from './migrations/1718728423454-bloom-backend';
 import { BloomBackend1719668310816 } from './migrations/1719668310816-bloom-backend';
 import { BloomBackend1722295564731 } from './migrations/1722295564731-bloom-backend';
+import { BloomBackend1733160378757 } from './migrations/1733160378757-bloom-backend';
+import { BloomBackend1733850090811 } from './migrations/1733850090811-bloom-backend';
+import { BloomBackend1743510885507 } from './migrations/1743510885507-bloom-backend';
+import { BloomBackend1744450013565 } from './migrations/1744450013565-bloom-backend';
 
 config();
 const configService = new ConfigService();
@@ -87,6 +94,9 @@ export const dataSourceOptions = {
     SubscriptionUserEntity,
     TherapySessionEntity,
     SessionFeedbackEntity,
+    ResourceUserEntity,
+    ResourceEntity,
+    ResourceFeedbackEntity,
   ],
   migrations: [
     bloomBackend1637704119795,
@@ -120,6 +130,10 @@ export const dataSourceOptions = {
     BloomBackend1718728423454,
     BloomBackend1719668310816,
     BloomBackend1722295564731,
+    BloomBackend1733160378757,
+    BloomBackend1733850090811,
+    BloomBackend1743510885507,
+    BloomBackend1744450013565
   ],
   subscribers: [],
   ssl: isProduction || isStaging,

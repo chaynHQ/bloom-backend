@@ -6,7 +6,7 @@ import { storyblokWebhookSecret } from 'src/utils/constants';
 import {
   mockSessionEntity,
   mockSimplybookBodyBase,
-  mockStoryDto,
+  mockStoryWebhookDto,
   mockTherapySessionEntity,
 } from 'test/utils/mockData';
 import { mockWebhooksServiceMethods } from 'test/utils/mockedServices';
@@ -62,16 +62,16 @@ describe('AppController', () => {
         webhooksController.updatePartnerAccessTherapy(mockSimplybookBodyBase),
       ).rejects.toThrow('Therapy session not found');
     });
-    describe('updateStory', () => {
-      it('updateStory should pass if service returns true', async () => {
-        jest.spyOn(mockWebhooksService, 'updateStory').mockImplementationOnce(async () => {
+    describe('handleStoryUpdated', () => {
+      it('handleStoryUpdated should pass if service returns true', async () => {
+        jest.spyOn(mockWebhooksService, 'handleStoryUpdated').mockImplementationOnce(async () => {
           return mockSessionEntity;
         });
         await expect(
-          webhooksController.updateStory(
-            createRequestObject(mockStoryDto),
-            mockStoryDto,
-            generateMockHeaders(mockStoryDto),
+          webhooksController.handleStoryUpdated(
+            createRequestObject(mockStoryWebhookDto),
+            mockStoryWebhookDto,
+            generateMockHeaders(mockStoryWebhookDto),
           ),
         ).resolves.toBe(mockSessionEntity);
       });

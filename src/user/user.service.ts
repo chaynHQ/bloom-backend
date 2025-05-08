@@ -1,6 +1,9 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { deleteMailchimpProfile } from 'src/api/mailchimp/mailchimp-api';
+import {
+  deleteCypressMailchimpProfiles,
+  deleteMailchimpProfile,
+} from 'src/api/mailchimp/mailchimp-api';
 import { CrispService } from 'src/crisp/crisp.service';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { PartnerEntity } from 'src/entities/partner.entity';
@@ -131,14 +134,13 @@ export class UserService {
       .createQueryBuilder('user')
       .leftJoinAndSelect('user.partnerAccess', 'partnerAccess')
       .leftJoinAndSelect('user.partnerAdmin', 'partnerAdmin')
-      .leftJoinAndSelect('partnerAccess.therapySession', 'therapySession')
       .leftJoinAndSelect('partnerAccess.partner', 'partner')
       .leftJoinAndSelect('partnerAccess.partner', 'partnerAccessPartner')
       .leftJoinAndSelect('partnerAdmin.partner', 'partnerAdminPartner')
-      .leftJoinAndSelect('user.courseUser', 'courseUser')
-      .leftJoinAndSelect('courseUser.course', 'course')
-      .leftJoinAndSelect('courseUser.sessionUser', 'sessionUser')
-      .leftJoinAndSelect('sessionUser.session', 'session')
+      .leftJoinAndSelect('user.resourceUser', 'resourceUser')
+      .leftJoinAndSelect('resourceUser.resource', 'resource')
+      .leftJoinAndSelect('user.subscriptionUser', 'subscriptionUser')
+      .leftJoinAndSelect('subscriptionUser.subscription', 'subscription')
       .where('user.id = :id', { id })
       .getOne();
 
@@ -175,18 +177,15 @@ export class UserService {
     }
 
     try {
-      //TODO Not yet sure if deleting automatically from Crisp is the right thing to do
-      // as we don't know whether we need to manually check if there is any safeguarding concerns before we delete.
-      // const crispResponse = await deleteCrispProfile(user.email);
-
-      // if they have subscriptions,redact the number
+      // If they have subscriptions,redact the number
       await this.subscriptionUserService.softDeleteSubscriptionsForUser(user.id, user.email);
-      // if they have therapy sessions redact email and delete client from therapy sessions
+      // If they have therapy sessions redact email and delete client from therapy sessions
       await this.therapySessionService.softDeleteTherapySessions(user.id, user.email, randomString);
 
-      //Randomise User Data in DB
+      // Randomise User Data in DB
       const updateUser = {
         ...user,
+        firebaseUid: randomString,
         name: randomString,
         email: randomString,
         isActive: false,
@@ -243,6 +242,7 @@ export class UserService {
     if (
       Object.keys(updateUserDto).length === 1 &&
       !!updateUserDto.lastActiveAt &&
+      !!user.lastActiveAt &&
       updateUserDto.lastActiveAt.getDate() === user.lastActiveAt.getDate()
     ) {
       // Do nothing, prevent unnecessay updates to service profiles when last active date is same date
@@ -295,7 +295,6 @@ export class UserService {
 
     while (startIndex < users.length) {
       const batch = users.slice(startIndex, startIndex + BATCH_SIZE);
-
       await Promise.all(
         batch.map(async (user) => {
           try {
@@ -333,7 +332,6 @@ export class UserService {
           }
         }),
       );
-
       startIndex += BATCH_SIZE;
       await new Promise((resolve) => setTimeout(resolve, INTERVAL)); // Wait before processing next batch
     }
@@ -365,6 +363,9 @@ export class UserService {
         await this.authService.deleteCypressFirebaseUsers();
 
         // Delete all remaining crisp accounts
+        await deleteCypressMailchimpProfiles();
+
+        // Delete all remaining crisp accounts
         await this.crispService.deleteCypressCrispProfiles();
       }
     } catch (error) {
@@ -382,37 +383,40 @@ export class UserService {
       partnerAdmin?: { partnerAdminId: string };
     },
     relations: string[],
-    fields: Array<string>,
     limit: number,
-  ): Promise<UserEntity[] | undefined> {
-    const users = await this.userRepository.find({
-      relations,
-      where: {
-        ...(filters.email && { email: ILike(`%${filters.email}%`) }),
-        ...(filters.partnerAccess && {
-          partnerAccess: {
-            ...(filters.partnerAccess.userId && { userId: filters.partnerAccess.userId }),
-            ...(typeof filters.partnerAccess.featureTherapy !== 'undefined' && {
-              featureTherapy: filters.partnerAccess.featureTherapy,
-            }),
-            ...(typeof filters.partnerAccess.active !== 'undefined' && {
-              active: filters.partnerAccess.active,
-            }),
-          },
-        }),
-        ...(filters.partnerAdmin && {
-          partnerAdmin: {
-            ...(filters.partnerAdmin && {
-              id:
-                filters.partnerAdmin.partnerAdminId === 'IS NOT NULL'
-                  ? Not(IsNull())
-                  : filters.partnerAdmin.partnerAdminId,
-            }),
-          },
-        }),
-      },
-      ...(limit && { take: limit }),
-    });
-    return users;
+  ): Promise<GetUserDto[] | undefined> {
+    try {
+      const users = await this.userRepository.find({
+        relations,
+        where: {
+          ...(filters.email && { email: ILike(`%${filters.email}%`) }),
+          ...(filters.partnerAccess && {
+            partnerAccess: {
+              ...(typeof filters.partnerAccess.featureTherapy !== 'undefined' && {
+                featureTherapy: filters.partnerAccess.featureTherapy,
+              }),
+              ...(typeof filters.partnerAccess.active !== 'undefined' && {
+                active: filters.partnerAccess.active,
+              }),
+            },
+          }),
+          ...(filters.partnerAdmin && {
+            partnerAdmin: {
+              ...(filters.partnerAdmin && {
+                id: Not(IsNull()),
+              }),
+            },
+          }),
+        },
+        ...(limit && { take: limit }),
+      });
+      return users.map((u) => formatUserObject(u));
+    } catch (error) {
+      this.logger.error(`getUsers - Unable to get users with filters ${filters}`, error);
+      throw new HttpException(
+        `Unable to get users with filters ${filters} due to error - ${error}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 }

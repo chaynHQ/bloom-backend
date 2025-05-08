@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { createMock, DeepMocked } from '@golevelup/ts-jest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
@@ -17,6 +18,7 @@ import {
 import {
   mockPartnerAccessRepositoryMethods,
   mockPartnerRepositoryMethods,
+  mockClsService,
 } from 'test/utils/mockedServices';
 import { Repository } from 'typeorm';
 import { createQueryBuilderMock } from '../../test/utils/mockUtils';
@@ -26,6 +28,7 @@ import { CreatePartnerAccessDto } from './dtos/create-partner-access.dto';
 import { GetPartnerAccessesDto } from './dtos/get-partner-access.dto';
 import { UpdatePartnerAccessDto } from './dtos/update-partner-access.dto';
 import { PartnerAccessService } from './partner-access.service';
+import { Logger } from '../logger/logger';
 
 const partnerId = 'partnerId1';
 const partnerAdminId = 'partnerAdminId1';
@@ -41,7 +44,6 @@ const mockGetUserDto = {
   user: mockUserEntity,
   partnerAccesses: [],
   partnerAdmin: null,
-  courses: [],
   therapySessions: [],
 } as GetUserDto;
 
@@ -96,6 +98,8 @@ describe('PartnerAccessService', () => {
     }).compile();
 
     service = module.get<PartnerAccessService>(PartnerAccessService);
+    const logger = (service as any).logger as Logger;
+    (logger as any).cls = mockClsService;
     repo = module.get<Repository<PartnerAccessEntity>>(getRepositoryToken(PartnerAccessEntity));
   });
 
