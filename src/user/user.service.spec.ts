@@ -557,6 +557,9 @@ describe('UserService', () => {
   });
 
   describe('getUserProfile', () => {
+    afterEach(() => {
+      jest.spyOn(repo, 'createQueryBuilder').mockRestore();
+    });
     const fixedDate = new Date('2025-05-08T19:33:10.822Z');
 
     it('should return user entity and user DTO when user is found', async () => {
@@ -606,16 +609,17 @@ describe('UserService', () => {
         partnerAdmin: null,
         resources: [],
       };
-
-      jest.spyOn(repo, 'createQueryBuilder').mockReturnValue({
-        leftJoinAndSelect: jest.fn().mockReturnThis(),
-        where: jest.fn().mockReturnThis(),
-        getOne: jest.fn().mockResolvedValue(mockUserEntity),
-      } as any);
-
+      const repoSpyCreateQueryBuilder = jest.spyOn(repo, 'createQueryBuilder');
+      repoSpyCreateQueryBuilder
+        .mockImplementation(
+          createQueryBuilderMock() as never, // TODO resolve this typescript issue
+        )
+        .mockImplementationOnce(
+          createQueryBuilderMock({
+            getOne: jest.fn().mockResolvedValue(mockUserEntity),
+          }) as never,
+        );
       const result = await service.getUserProfile('userId1');
-
-      // expect(result).toMatchObject({ userEntity: mockUserEntity, userDto: mockUserDto });
       expect(result).toMatchObject({
         userEntity: {
           ...mockUserEntity,
@@ -636,12 +640,16 @@ describe('UserService', () => {
     });
 
     it('should throw HttpException when user is not found', async () => {
-      jest.spyOn(repo, 'createQueryBuilder').mockReturnValue({
-        leftJoinAndSelect: jest.fn().mockReturnThis(),
-        where: jest.fn().mockReturnThis(),
-        getOne: jest.fn().mockResolvedValue(undefined),
-      } as any);
-
+      const repoSpyCreateQueryBuilder = jest.spyOn(repo, 'createQueryBuilder');
+      repoSpyCreateQueryBuilder
+        .mockImplementation(
+          createQueryBuilderMock() as never, // TODO resolve this typescript issue
+        )
+        .mockImplementationOnce(
+          createQueryBuilderMock({
+            getOne: jest.fn().mockResolvedValue(undefined),
+          }) as never,
+        );
       await expect(service.getUserProfile('userId1')).rejects.toThrow(
         new HttpException('USER NOT FOUND', HttpStatus.NOT_FOUND),
       );
