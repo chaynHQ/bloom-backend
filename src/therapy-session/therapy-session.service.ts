@@ -31,8 +31,6 @@ export class TherapySessionService {
       });
       await cancelBooking(therapySession.bookingCode);
 
-      therapySession.cancelledAt = new Date();
-
       const updatedTherapySession = await this.therapySessionRepository.save({
         ...therapySession,
         cancelledAt: new Date(),
