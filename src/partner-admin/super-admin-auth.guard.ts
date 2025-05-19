@@ -80,15 +80,24 @@ export class SuperAdminAuthGuard implements CanActivate {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
-    if (!user.isSuperAdmin || !user.email.contains('@chayn.co')) {
-      this.logger.warn({
-        error: AUTH_GUARD_ERRORS.SUPERADMIN_UNAUTHORISED,
-        errorMessage: `unauthorised user without superadmin access or chayn account`,
-        status: HttpStatus.UNAUTHORIZED,
-      });
+
+    try {
+      if (!user.isSuperAdmin || !user.email.includes('@chayn.co')) {
+        this.logger.warn({
+          error: AUTH_GUARD_ERRORS.SUPERADMIN_UNAUTHORISED,
+          errorMessage: `unauthorised user without superadmin access or chayn account`,
+          status: HttpStatus.UNAUTHORIZED,
+        });
+        throw new HttpException(
+          `SuperAdminAuthGuard - unauthorised user without superadmin access or chayn account`,
+          HttpStatus.UNAUTHORIZED,
+        );
+      }
+    } catch (error) {
+      this.logger.error('Error checking superadmin access', error);
       throw new HttpException(
-        `SuperAdminAuthGuard - unauthorised user without superadmin access or chayn account`,
-        HttpStatus.UNAUTHORIZED,
+        `SuperAdminAuthGuard - error checking superadmin access: ${error}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
 

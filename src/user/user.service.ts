@@ -137,10 +137,6 @@ export class UserService {
       .leftJoinAndSelect('partnerAccess.partner', 'partner')
       .leftJoinAndSelect('partnerAccess.partner', 'partnerAccessPartner')
       .leftJoinAndSelect('partnerAdmin.partner', 'partnerAdminPartner')
-      .leftJoinAndSelect('user.courseUser', 'courseUser')
-      .leftJoinAndSelect('courseUser.course', 'course')
-      .leftJoinAndSelect('courseUser.sessionUser', 'sessionUser')
-      .leftJoinAndSelect('sessionUser.session', 'session')
       .leftJoinAndSelect('user.resourceUser', 'resourceUser')
       .leftJoinAndSelect('resourceUser.resource', 'resource')
       .leftJoinAndSelect('user.subscriptionUser', 'subscriptionUser')
@@ -387,37 +383,40 @@ export class UserService {
       partnerAdmin?: { partnerAdminId: string };
     },
     relations: string[],
-    fields: Array<string>,
     limit: number,
-  ): Promise<UserEntity[] | undefined> {
-    const users = await this.userRepository.find({
-      relations,
-      where: {
-        ...(filters.email && { email: ILike(`%${filters.email}%`) }),
-        ...(filters.partnerAccess && {
-          partnerAccess: {
-            ...(filters.partnerAccess.userId && { userId: filters.partnerAccess.userId }),
-            ...(typeof filters.partnerAccess.featureTherapy !== 'undefined' && {
-              featureTherapy: filters.partnerAccess.featureTherapy,
-            }),
-            ...(typeof filters.partnerAccess.active !== 'undefined' && {
-              active: filters.partnerAccess.active,
-            }),
-          },
-        }),
-        ...(filters.partnerAdmin && {
-          partnerAdmin: {
-            ...(filters.partnerAdmin && {
-              id:
-                filters.partnerAdmin.partnerAdminId === 'IS NOT NULL'
-                  ? Not(IsNull())
-                  : filters.partnerAdmin.partnerAdminId,
-            }),
-          },
-        }),
-      },
-      ...(limit && { take: limit }),
-    });
-    return users;
+  ): Promise<GetUserDto[] | undefined> {
+    try {
+      const users = await this.userRepository.find({
+        relations,
+        where: {
+          ...(filters.email && { email: ILike(`%${filters.email}%`) }),
+          ...(filters.partnerAccess && {
+            partnerAccess: {
+              ...(typeof filters.partnerAccess.featureTherapy !== 'undefined' && {
+                featureTherapy: filters.partnerAccess.featureTherapy,
+              }),
+              ...(typeof filters.partnerAccess.active !== 'undefined' && {
+                active: filters.partnerAccess.active,
+              }),
+            },
+          }),
+          ...(filters.partnerAdmin && {
+            partnerAdmin: {
+              ...(filters.partnerAdmin && {
+                id: Not(IsNull()),
+              }),
+            },
+          }),
+        },
+        ...(limit && { take: limit }),
+      });
+      return users.map((u) => formatUserObject(u));
+    } catch (error) {
+      this.logger.error(`getUsers - Unable to get users with filters ${filters}`, error);
+      throw new HttpException(
+        `Unable to get users with filters ${filters} due to error - ${error}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 }

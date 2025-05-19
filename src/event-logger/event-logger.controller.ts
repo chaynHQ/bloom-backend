@@ -2,7 +2,7 @@ import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { FirebaseAuthGuard } from 'src/firebase/firebase-auth.guard';
 import { ControllerDecorator } from 'src/utils/controller.decorator';
-import { EVENT_NAME } from './event-logger.interface';
+import { CreateEventLogDto } from './dtos/create-event-log.dto';
 import { EventLoggerService } from './event-logger.service';
 
 @ApiTags('Event Logger')
@@ -17,12 +17,13 @@ export class EventLoggerController {
   })
   @ApiBearerAuth('access-token')
   @UseGuards(FirebaseAuthGuard)
-  async createEventLog(@Req() req: Request, @Body() { event }: { event: EVENT_NAME }) {
+  async createEventLog(@Req() req: Request, @Body() { event, metadata }: CreateEventLogDto) {
     const now = new Date();
     return await this.eventLoggerService.createEventLog({
       userId: req['userEntity'].id,
       event,
       date: now,
+      metadata,
     });
   }
 }

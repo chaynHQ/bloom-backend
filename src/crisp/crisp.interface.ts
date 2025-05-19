@@ -7,12 +7,6 @@ export enum EVENT_NAME {
   LOGGED_OUT = 'LOGGED_OUT',
 }
 
-export interface ICreateEventLog {
-  date: Date | string;
-  event: EVENT_NAME;
-  userId: string;
-}
-
 export interface CrispProfileCustomFields {
   signed_up_at?: string;
   last_active_at?: string;
