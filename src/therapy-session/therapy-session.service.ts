@@ -15,7 +15,8 @@ export class TherapySessionService {
   constructor(
     @InjectRepository(TherapySessionEntity)
     private therapySessionRepository: Repository<TherapySessionEntity>,
-    private readonly partnerAccessRepository: Repository<PartnerAccessEntity>,
+    @InjectRepository(PartnerAccessEntity)
+    private partnerAccessRepository: Repository<PartnerAccessEntity>,
     private readonly serviceUserProfilesService: ServiceUserProfilesService,
     private slackMessageClient: SlackMessageClient,
   ) {}
