@@ -1,7 +1,9 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
+import { ClsModule } from 'nestjs-cls';
 import { dataSourceOptions } from 'src/typeorm.config';
+import { v4 as uuidv4 } from 'uuid';
 import { AuthModule } from './auth/auth.module';
 import { CoursePartnerModule } from './course-partner/course-partner.module';
 import { CourseUserModule } from './course-user/course-user.module';
@@ -23,10 +25,9 @@ import { SessionFeedbackModule } from './session-feedback/session-feedback.modul
 import { SessionUserModule } from './session-user/session-user.module';
 import { SessionModule } from './session/session.module';
 import { SubscriptionUserModule } from './subscription-user/subscription-user.module';
+import { TherapySessionModule } from './therapy-session/therapy-session.module';
 import { UserModule } from './user/user.module';
 import { WebhooksModule } from './webhooks/webhooks.module';
-import { ClsModule } from 'nestjs-cls';
-import { v4 as uuidv4 } from 'uuid';
 
 @Module({
   imports: [
@@ -63,6 +64,7 @@ import { v4 as uuidv4 } from 'uuid';
     ResourceModule,
     ResourceUserModule,
     ResourceFeedbackModule,
+    TherapySessionModule,
   ],
 })
 export class AppModule {}
