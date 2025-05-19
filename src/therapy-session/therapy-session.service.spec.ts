@@ -5,6 +5,7 @@ import axios from 'axios';
 import { SlackMessageClient } from 'src/api/slack/slack-api';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
+import { ServiceUserProfilesService } from 'src/service-user-profiles/service-user-profiles.service';
 import { SIMPLYBOOK_ACTION_ENUM } from 'src/utils/constants';
 import {
   mockSimplybookBodyBase,
@@ -31,6 +32,7 @@ describe('TherapySessionService', () => {
   let service: TherapySessionService;
   let mockedTherapySessionRepository: DeepMocked<Repository<TherapySessionEntity>>;
   let mockedPartnerAccessRepository: DeepMocked<Repository<PartnerAccessEntity>>;
+  let mockServiceUserProfilesService: DeepMocked<ServiceUserProfilesService>;
   const mockedSlackMessageClient = createMock<SlackMessageClient>(mockSlackMessageClientMethods);
 
   beforeEach(async () => {
@@ -43,6 +45,8 @@ describe('TherapySessionService', () => {
       mockPartnerAccessRepositoryMethods,
     );
 
+    mockServiceUserProfilesService = createMock<ServiceUserProfilesService>();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         TherapySessionService,
@@ -54,6 +58,7 @@ describe('TherapySessionService', () => {
           provide: getRepositoryToken(PartnerAccessEntity),
           useValue: mockedPartnerAccessRepository,
         },
+        { provide: ServiceUserProfilesService, useValue: mockServiceUserProfilesService },
         {
           provide: SlackMessageClient,
           useValue: mockedSlackMessageClient,
