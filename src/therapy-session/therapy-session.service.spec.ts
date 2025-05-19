@@ -3,6 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import axios from 'axios';
 import { SlackMessageClient } from 'src/api/slack/slack-api';
+import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
 import { SIMPLYBOOK_ACTION_ENUM } from 'src/utils/constants';
 import {
@@ -11,6 +12,7 @@ import {
   mockUserEntity,
 } from 'test/utils/mockData';
 import {
+  mockPartnerAccessRepositoryMethods,
   mockSlackMessageClientMethods,
   mockTherapySessionRepositoryMethods,
 } from 'test/utils/mockedServices';
@@ -28,6 +30,7 @@ const simplyBookAuthResponse = {
 describe('TherapySessionService', () => {
   let service: TherapySessionService;
   let mockedTherapySessionRepository: DeepMocked<Repository<TherapySessionEntity>>;
+  let mockedPartnerAccessRepository: DeepMocked<Repository<PartnerAccessEntity>>;
   const mockedSlackMessageClient = createMock<SlackMessageClient>(mockSlackMessageClientMethods);
 
   beforeEach(async () => {
@@ -36,6 +39,9 @@ describe('TherapySessionService', () => {
     mockedTherapySessionRepository = createMock<Repository<TherapySessionEntity>>(
       mockTherapySessionRepositoryMethods,
     );
+    mockedPartnerAccessRepository = createMock<Repository<PartnerAccessEntity>>(
+      mockPartnerAccessRepositoryMethods,
+    );
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -43,6 +49,10 @@ describe('TherapySessionService', () => {
         {
           provide: getRepositoryToken(TherapySessionEntity),
           useValue: mockedTherapySessionRepository,
+        },
+        {
+          provide: getRepositoryToken(PartnerAccessEntity),
+          useValue: mockedPartnerAccessRepository,
         },
         {
           provide: SlackMessageClient,
