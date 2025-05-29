@@ -19,7 +19,7 @@ export type BookingInfo = {
 };
 
 const SIMPLYBOOK_API_BASE_URL = 'https://user-api-v2.simplybook.me/admin';
-const LOGGER = new Logger('SimplybookAPI');
+const logger = new Logger('SimplybookAPI');
 
 const getAuthToken: () => Promise<string> = async () => {
   try {
@@ -126,8 +126,6 @@ export const cancelBooking: (id: number) => Promise<BookingResponse[]> = async (
         `No data returned from Simplybook API. Response: ${JSON.stringify(bookingsResponse)}`,
       );
     }
-    LOGGER.log(`Cancelled booking`);
-    LOGGER.log(bookingsResponse.data);
     return bookingsResponse.data;
   } catch (error) {
     handleError(`Failed to cancel booking ${id} from Simplybook.`, error);
@@ -163,7 +161,6 @@ export const updateSimplybookClient = async (clientId: string, clientData: { ema
       },
       body: clientData,
     });
-    LOGGER.log(`Updated Simplybook client`);
     return bookingsResponse.data.data;
   } catch (error) {
     handleError(`Failed to update client from Simplybook.`, error);
@@ -171,6 +168,6 @@ export const updateSimplybookClient = async (clientId: string, clientData: { ema
 };
 
 const handleError = (message: string, error) => {
-  LOGGER.error(message, error);
+  logger.error(message, error);
   throw new Error(`${message}: ${error})`);
 };
