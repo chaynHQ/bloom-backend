@@ -80,11 +80,11 @@ export const getBookingId: (bookingCode: string) => Promise<number> = async (
       },
     );
 
-    if (!bookingsResponse || !bookingsResponse.data || !bookingsResponse.data[0]?.id) {
+    if (!bookingsResponse || !bookingsResponse.data.data || !bookingsResponse.data.data[0]?.id) {
       throw new Error(`No data returned from Simplybook API. Response: ${bookingsResponse}`);
     }
 
-    return bookingsResponse.data[0].id;
+    return bookingsResponse.data.data[0].id;
   } catch (error) {
     handleError(
       `Failed to retrieve booking information for code ${bookingCode} from Simplybook.`,
@@ -121,12 +121,12 @@ export const cancelBooking: (id: number) => Promise<BookingResponse[]> = async (
         'X-Token': `${token}`,
       },
     });
-    if (!bookingsResponse || !bookingsResponse.data) {
+    if (!bookingsResponse || !bookingsResponse.data.data) {
       throw new Error(`No data returned from Simplybook API. Response: ${bookingsResponse}`);
     }
     LOGGER.log(`Cancelled booking`);
-    LOGGER.log(bookingsResponse.data);
-    return bookingsResponse.data;
+    LOGGER.log(bookingsResponse.data.data);
+    return bookingsResponse.data.data;
   } catch (error) {
     handleError(`Failed to cancel booking ${id} from Simplybook.`, error);
   }
