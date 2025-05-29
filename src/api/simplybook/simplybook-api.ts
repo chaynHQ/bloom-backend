@@ -80,17 +80,11 @@ export const getBookingId: (bookingCode: string) => Promise<number> = async (
       },
     );
 
-    if (!bookingsResponse || !bookingsResponse.data) {
+    if (!bookingsResponse || !bookingsResponse.data || !bookingsResponse.data[0]?.id) {
       throw new Error(`No data returned from Simplybook API. Response: ${bookingsResponse}`);
     }
-    LOGGER.log(`Retrieved booking information for code ${bookingCode}`);
-    LOGGER.log(bookingsResponse.data);
-    if (!bookingsResponse.data.id) {
-      throw new Error(
-        `No booking id returned in simplybook get response for booking code ${bookingCode}. Response: ${bookingsResponse}`,
-      );
-    }
-    return bookingsResponse.data.id;
+
+    return bookingsResponse.data[0].id;
   } catch (error) {
     handleError(
       `Failed to retrieve booking information for code ${bookingCode} from Simplybook.`,
