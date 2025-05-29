@@ -32,7 +32,7 @@ export class TherapySessionService {
       });
       let bookingId = therapySession.bookingId;
 
-      if (bookingId) {
+      if (!bookingId) {
         bookingId = await getBookingId(therapySession.bookingCode);
       }
 
