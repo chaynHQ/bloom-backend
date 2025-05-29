@@ -91,6 +91,7 @@ export const cancelBooking: (id: string) => Promise<BookingResponse[]> = async (
         'X-Token': `${token}`,
       },
     });
+    LOGGER.log(`Cancelled booking: ${bookingsResponse.data.data}`);
     return bookingsResponse.data.data;
   } catch (error) {
     handleError(`Failed to cancel booking ${id} from Simplybook.`, error);

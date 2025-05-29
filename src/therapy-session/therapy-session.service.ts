@@ -30,7 +30,14 @@ export class TherapySessionService {
           user: true,
         },
       });
-      await cancelBooking(therapySession.bookingCode);
+      const response = await cancelBooking(therapySession.bookingCode);
+
+      if (!response) {
+        this.logger.error(
+          `Failed to cancel therapy session with booking code ${therapySession.bookingCode}`,
+        );
+        throw new Error('Failed to cancel therapy session');
+      }
 
       const updatedTherapySession = await this.therapySessionRepository.save({
         ...therapySession,
