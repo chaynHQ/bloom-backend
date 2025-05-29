@@ -1,6 +1,6 @@
-import { Logger } from '@nestjs/common';
 import axios from 'axios';
 import { format } from 'date-fns';
+import { Logger } from 'src/logger/logger';
 
 import { simplybookCompanyName, simplybookCredentials } from 'src/utils/constants';
 
@@ -94,7 +94,8 @@ export const cancelBooking: (id: string) => Promise<BookingResponse[]> = async (
     if (!bookingsResponse || !bookingsResponse.data) {
       throw new Error(`No data returned from Simplybook API. Response: ${bookingsResponse}`);
     }
-    LOGGER.log(`Cancelled booking: ${JSON.stringify(bookingsResponse)}`);
+    LOGGER.log(`Cancelled booking`);
+    LOGGER.log(bookingsResponse.data);
     return bookingsResponse.data;
   } catch (error) {
     handleError(`Failed to cancel booking ${id} from Simplybook.`, error);
@@ -130,15 +131,10 @@ export const updateSimplybookClient = async (clientId: string, clientData: { ema
       },
       body: clientData,
     });
-    LOGGER.log({ event: 'UPDATE_SIMPLYBOOK_CLIENT', fields: [Object.keys(clientData)] });
+    LOGGER.log(`Updated Simplybook client`);
     return bookingsResponse.data.data;
   } catch (error) {
-    LOGGER.error({
-      error: 'SIMPLYBOOK_CLIENT_UPDATE_ERROR',
-      status: error.status,
-      errorMessage: error.message,
-    });
-    handleError(`Failed to edit client ${clientId} from Simplybook.`, error);
+    handleError(`Failed to update client from Simplybook.`, error);
   }
 };
 
