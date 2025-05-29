@@ -63,6 +63,35 @@ const queryBookingsForDate: (date: Date) => Promise<BookingResponse[]> = async (
   }
 };
 
+export const getBookingId: (bookingCode: string) => Promise<number> = async (
+  bookingCode: string,
+) => {
+  const token = await getAuthToken();
+
+  try {
+    const bookingsResponse = await axios.get(
+      `${SIMPLYBOOK_API_BASE_URL}/bookings?filter[search]=${bookingCode}`,
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Company-Login': simplybookCompanyName,
+          'X-Token': `${token}`,
+        },
+      },
+    );
+
+    if (!bookingsResponse || !bookingsResponse.data) {
+      throw new Error(`No data returned from Simplybook API. Response: ${bookingsResponse}`);
+    }
+    return bookingsResponse.data.id;
+  } catch (error) {
+    handleError(
+      `Failed to retrieve booking information for code ${bookingCode} from Simplybook.`,
+      error,
+    );
+  }
+};
+
 export const getBookingsForDate: (date: Date) => Promise<BookingInfo[]> = async (date: Date) => {
   try {
     const bookings: BookingResponse[] = await queryBookingsForDate(date);
@@ -80,7 +109,7 @@ export const getBookingsForDate: (date: Date) => Promise<BookingInfo[]> = async 
   }
 };
 
-export const cancelBooking: (id: string) => Promise<BookingResponse[]> = async (id: string) => {
+export const cancelBooking: (id: number) => Promise<BookingResponse[]> = async (id: number) => {
   const token = await getAuthToken();
 
   try {
