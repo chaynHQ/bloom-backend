@@ -83,6 +83,13 @@ export const getBookingId: (bookingCode: string) => Promise<number> = async (
     if (!bookingsResponse || !bookingsResponse.data) {
       throw new Error(`No data returned from Simplybook API. Response: ${bookingsResponse}`);
     }
+    LOGGER.log(`Retrieved booking information for code ${bookingCode}`);
+    LOGGER.log(bookingsResponse.data);
+    if (!bookingsResponse.data.id) {
+      throw new Error(
+        `No booking id returned in simplybook get response for booking code ${bookingCode}. Response: ${bookingsResponse}`,
+      );
+    }
     return bookingsResponse.data.id;
   } catch (error) {
     handleError(
@@ -167,7 +174,7 @@ export const updateSimplybookClient = async (clientId: string, clientData: { ema
   }
 };
 
-const handleError = (error, message: string) => {
+const handleError = (message: string, error) => {
   LOGGER.error(message, error);
   throw new Error(`${message}: ${error})`);
 };
