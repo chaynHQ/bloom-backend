@@ -66,6 +66,7 @@ export class TherapySessionService {
         partnerAccesses,
         therapySession.user.email,
       );
+      this.logger.log(`Cancelled therapy session with ID: ${therapySessionId}`);
 
       return updatedTherapySession;
     } catch (error) {
