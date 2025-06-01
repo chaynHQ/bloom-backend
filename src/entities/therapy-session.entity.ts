@@ -19,6 +19,9 @@ export class TherapySessionEntity extends BaseBloomEntity {
   bookingCode: string;
 
   @Column({ nullable: true })
+  bookingId: number;
+
+  @Column({ nullable: true })
   clientTimezone: string;
 
   @Column()
