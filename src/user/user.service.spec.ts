@@ -556,6 +556,106 @@ describe('UserService', () => {
     });
   });
 
+  describe('getUserProfile', () => {
+    afterEach(() => {
+      jest.spyOn(repo, 'createQueryBuilder').mockRestore();
+    });
+    const fixedDate = new Date('2025-05-08T19:33:10.822Z');
+
+    it('should return user entity and user DTO when user is found', async () => {
+      const mockUserEntity = new UserEntity();
+      mockUserEntity.id = 'userId1';
+      mockUserEntity.email = 'user@email.com';
+      mockUserEntity.name = 'name';
+      mockUserEntity.createdAt = fixedDate;
+      mockUserEntity.updatedAt = fixedDate;
+      mockUserEntity.lastActiveAt = fixedDate;
+      mockUserEntity.isActive = true;
+      mockUserEntity.isSuperAdmin = false;
+      mockUserEntity.signUpLanguage = 'en';
+      mockUserEntity.emailRemindersFrequency = EMAIL_REMINDERS_FREQUENCY.TWO_MONTHS;
+      mockUserEntity.firebaseUid = '123';
+      mockUserEntity.crispTokenId = '123';
+      mockUserEntity.serviceEmailsPermission = true;
+      mockUserEntity.contactPermission = true;
+      mockUserEntity.deletedAt = null;
+      mockUserEntity.courseUser = [];
+      mockUserEntity.partnerAccess = [];
+      mockUserEntity.partnerAdmin = null;
+      mockUserEntity.subscriptionUser = [];
+      mockUserEntity.therapySession = [];
+      mockUserEntity.eventLog = [];
+      mockUserEntity.resourceUser = [];
+
+      const mockUserDto = {
+        user: {
+          id: 'userId1',
+          email: 'user@email.com',
+          name: 'name',
+          createdAt: fixedDate,
+          updatedAt: fixedDate,
+          lastActiveAt: fixedDate,
+          isActive: true,
+          isSuperAdmin: false,
+          signUpLanguage: 'en',
+          emailRemindersFrequency: 'TWO_MONTHS',
+          firebaseUid: '123',
+          crispTokenId: '123',
+          deletedAt: null,
+          contactPermission: true,
+          serviceEmailsPermission: true,
+        },
+        partnerAccesses: [],
+        partnerAdmin: null,
+        resources: [],
+      };
+      const repoSpyCreateQueryBuilder = jest.spyOn(repo, 'createQueryBuilder');
+      repoSpyCreateQueryBuilder
+        .mockImplementation(
+          createQueryBuilderMock() as never, // TODO resolve this typescript issue
+        )
+        .mockImplementationOnce(
+          createQueryBuilderMock({
+            getOne: jest.fn().mockResolvedValue(mockUserEntity),
+          }) as never,
+        );
+      const result = await service.getUserProfile('userId1');
+      expect(result).toMatchObject({
+        userEntity: {
+          ...mockUserEntity,
+          createdAt: expect.any(Date),
+          updatedAt: expect.any(Date),
+          lastActiveAt: expect.any(Date),
+        },
+        userDto: {
+          ...mockUserDto,
+          user: {
+            ...mockUserDto.user,
+            createdAt: expect.any(Date),
+            updatedAt: expect.any(Date),
+            lastActiveAt: expect.any(Date),
+          },
+        },
+      });
+    });
+
+    it('should throw HttpException when user is not found', async () => {
+      const repoSpyCreateQueryBuilder = jest.spyOn(repo, 'createQueryBuilder');
+      repoSpyCreateQueryBuilder
+        .mockImplementation(
+          createQueryBuilderMock() as never, // TODO resolve this typescript issue
+        )
+        .mockImplementationOnce(
+          createQueryBuilderMock({
+            getOne: jest.fn().mockResolvedValue(undefined),
+          }) as never,
+        );
+      await expect(service.getUserProfile('userId1')).rejects.toThrow(
+        new HttpException('USER NOT FOUND', HttpStatus.NOT_FOUND),
+      );
+    });
+  });
+
   // TODO - Extend getUser tests. At the moment, this is only used by super admins
   describe('getUsers', () => {
     it('getUsers', async () => {

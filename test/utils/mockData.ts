@@ -216,6 +216,7 @@ export const mockTherapySessionEntity = {
   serviceProviderEmail: 'therapist@test.com',
   serviceProviderName: 'Therapist name',
   bookingCode: '123',
+  bookingId: 123456,
   clientTimezone: 'Europe/London',
   clientEmail: 'client@test.com',
   startDateTime: new Date('2022-09-12T07:30:00+0100'),
