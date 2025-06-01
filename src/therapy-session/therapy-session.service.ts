@@ -1,8 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { cancelBooking } from 'src/api/simplybook/simplybook-api';
+import { cancelBooking, getBookingId } from 'src/api/simplybook/simplybook-api';
 import { SlackMessageClient } from 'src/api/slack/slack-api';
+import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
+import { ServiceUserProfilesService } from 'src/service-user-profiles/service-user-profiles.service';
 import { SIMPLYBOOK_ACTION_ENUM } from 'src/utils/constants';
 import { Repository } from 'typeorm';
 
@@ -13,6 +15,9 @@ export class TherapySessionService {
   constructor(
     @InjectRepository(TherapySessionEntity)
     private therapySessionRepository: Repository<TherapySessionEntity>,
+    @InjectRepository(PartnerAccessEntity)
+    private partnerAccessRepository: Repository<PartnerAccessEntity>,
+    private readonly serviceUserProfilesService: ServiceUserProfilesService,
     private slackMessageClient: SlackMessageClient,
   ) {}
 
@@ -20,14 +25,50 @@ export class TherapySessionService {
     try {
       const therapySession = await this.therapySessionRepository.findOne({
         where: { id: therapySessionId },
+        relations: {
+          partnerAccess: true,
+          user: true,
+        },
       });
-      await cancelBooking(therapySession.bookingCode);
+      let bookingId = therapySession.bookingId;
 
-      return {
+      if (!bookingId) {
+        bookingId = await getBookingId(therapySession.bookingCode);
+      }
+
+      await cancelBooking(bookingId);
+
+      const updatedTherapySession = await this.therapySessionRepository.save({
         ...therapySession,
+        bookingId,
         cancelledAt: new Date(),
         action: SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING,
-      };
+      });
+
+      await this.partnerAccessRepository.save({
+        ...therapySession.partnerAccess,
+        therapySessionsRemaining: therapySession.partnerAccess.therapySessionsRemaining + 1,
+        therapySessionsRedeemed: therapySession.partnerAccess.therapySessionsRedeemed - 1,
+      });
+
+      const partnerAccesses = await this.partnerAccessRepository.find({
+        where: {
+          userId: therapySession.userId,
+          active: true,
+          featureTherapy: true,
+        },
+        relations: {
+          therapySession: true,
+        },
+      });
+
+      this.serviceUserProfilesService.updateServiceUserProfilesTherapy(
+        partnerAccesses,
+        therapySession.user.email,
+      );
+      this.logger.log(`Cancelled therapy session with ID: ${therapySessionId}`);
+
+      return updatedTherapySession;
     } catch (error) {
       this.logger.error(`Error cancelling therapy session: ${error}`);
       throw new Error(`Error cancelling therapy session: ${error}`);
