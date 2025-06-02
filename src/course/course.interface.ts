@@ -7,7 +7,7 @@ export interface ICourse {
   name?: string;
   slug?: string;
   status?: STORYBLOK_STORY_STATUS_ENUM;
-  storyblokId?: string;
+  storyblokUuid?: string;
 }
 export interface ICoursesWithSessions {
   id: string;
