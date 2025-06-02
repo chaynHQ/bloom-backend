@@ -419,8 +419,13 @@ export class WebhooksService {
       throw new HttpException(error, HttpStatus.NOT_FOUND);
     }
 
-    const storyblokUuid = story?.uuid;
+    if (!story || !story.uuid) {
+      const error = `Storyblok webhook failed - missing story or uuid in response for story ID ${story_id}`;
+      this.logger.error(error);
+      throw new HttpException(error, HttpStatus.BAD_REQUEST);
+    }
 
+    const storyblokUuid = story.uuid;
     if (
       status === STORYBLOK_STORY_STATUS_ENUM.UNPUBLISHED ||
       status === STORYBLOK_STORY_STATUS_ENUM.DELETED
