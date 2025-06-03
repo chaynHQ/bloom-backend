@@ -76,6 +76,7 @@ describe('PartnerAdminService', () => {
   describe('createPartnerAdmin', () => {
     it('when supplied with correct data should create partner admin', async () => {
       const repoSpySave = jest.spyOn(repo, 'save');
+      jest.spyOn(mockUserRepository, 'findOne').mockResolvedValue(undefined);
       jest.spyOn(mockUserRepository, 'save').mockResolvedValue(mockUserEntity);
 
       const response = await service.createPartnerAdminUser(dto);
