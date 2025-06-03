@@ -1,7 +1,7 @@
 import { HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { UserEntity } from 'src/entities/user.entity';
-import { Repository } from 'typeorm';
+import { ILike, Repository } from 'typeorm';
 import { PartnerAdminEntity } from '../entities/partner-admin.entity';
 import { FIREBASE } from '../firebase/firebase-factory';
 import { FirebaseServices } from '../firebase/firebase.types';
@@ -47,21 +47,44 @@ export class PartnerAdminService {
         throw new HttpException('Partner does not exist', HttpStatus.BAD_REQUEST);
       }
 
-      const firebaseUser = await this.firebase.auth.createUserWithEmailAndPassword(
-        email,
-        generateRandomString(10),
-      );
-
-      const user = await this.userRepository.save({
-        name,
-        email,
-        firebaseUid: firebaseUser.user.uid,
-        contactPermission: true,
-        serviceEmailsPermission: true,
+      // Check if the user already exists
+      const userResponse = await this.userRepository.findOne({
+        where: {
+          email: ILike(email),
+        },
+        relations: {
+          partnerAdmin: true,
+        },
       });
 
+      let userId: string;
+
+      if (userResponse?.id) {
+        if (userResponse.partnerAdmin) {
+          throw new HttpException('User is already a partner admin', HttpStatus.BAD_REQUEST);
+        }
+        // User exists, use existing user
+        userId = userResponse.id;
+      } else {
+        // No user found, create a new user
+        const firebaseUser = await this.firebase.auth.createUserWithEmailAndPassword(
+          email,
+          generateRandomString(10),
+        );
+
+        const user = await this.userRepository.save({
+          name,
+          email,
+          firebaseUid: firebaseUser.user.uid,
+          contactPermission: true,
+          serviceEmailsPermission: true,
+        });
+
+        userId = user.id;
+      }
+
       return await this.partnerAdminRepository.save({
-        userId: user.id,
+        userId: userId,
         partnerId: partnerResponse.id,
       });
     } catch (error) {
