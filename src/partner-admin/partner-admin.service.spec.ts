@@ -76,6 +76,7 @@ describe('PartnerAdminService', () => {
   describe('createPartnerAdmin', () => {
     it('when supplied with correct data should create partner admin', async () => {
       const repoSpySave = jest.spyOn(repo, 'save');
+      jest.spyOn(mockUserRepository, 'findOne').mockResolvedValue(undefined);
       jest.spyOn(mockUserRepository, 'save').mockResolvedValue(mockUserEntity);
 
       const response = await service.createPartnerAdminUser(dto);
@@ -87,7 +88,9 @@ describe('PartnerAdminService', () => {
   it('when supplied with an email that already exists, it should throw', async () => {
     jest
       .spyOn(mockUserRepository, 'save')
-      .mockRejectedValueOnce(new Error('auth/email-already-in-use'));
-    await expect(service.createPartnerAdminUser(dto)).rejects.toThrow('auth/email-already-in-use');
+      .mockRejectedValueOnce(new Error('User is already a partner admin'));
+    await expect(service.createPartnerAdminUser(dto)).rejects.toThrow(
+      'User is already a partner admin',
+    );
   });
 });
