@@ -54,7 +54,7 @@
     "rimraf": "^6.0.1",
     "rollbar": "^2.26.4",
     "rxjs": "^7.8.1",
-    "storyblok-js-client": "^6.10.6",
+    "storyblok-js-client": "^7.0.0",
     "typeorm": "^0.3.24",
     "uuid": "^11.0.3"
   },
