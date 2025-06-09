@@ -65,10 +65,10 @@
     "@nestjs/schematics": "^11.0.5",
     "@nestjs/testing": "^10.4.15",
     "@types/date-fns": "^2.6.0",
-    "@types/express": "^5.0.2",
+    "@types/express": "^5.0.3",
     "@types/jest": "^29.5.13",
     "@types/lodash": "^4.17.17",
-    "@types/node": "^22.15.29",
+    "@types/node": "^22.15.30",
     "@types/supertest": "^6.0.2",
     "eslint": "^9.28.0",
     "eslint-config-prettier": "^10.1.5",
@@ -81,7 +81,7 @@
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
     "typescript": "^5.8.3",
-    "typescript-eslint": "^8.33.0"
+    "typescript-eslint": "^8.33.1"
   },
   "engines": {
     "node": "22.x",
