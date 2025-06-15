@@ -9,7 +9,6 @@ import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
 import { UserEntity } from 'src/entities/user.entity';
 import { ZapierSimplybookBodyDto } from 'src/partner-access/dtos/zapier-body.dto';
 import { ServiceUserProfilesService } from 'src/service-user-profiles/service-user-profiles.service';
-import { IUser } from 'src/user/user.interface';
 import { serializeZapierSimplyBookDtoToTherapySessionEntity } from 'src/utils/serialize';
 import StoryblokClient, { ISbStoryData } from 'storyblok-js-client';
 import { ILike, MoreThan, Repository } from 'typeorm';
@@ -138,7 +137,10 @@ export class WebhooksService {
     }
   }
 
-  private async getSimplyBookTherapyUser(userId: string, client_email: string): Promise<IUser> {
+  private async getSimplyBookTherapyUser(
+    userId: string,
+    client_email: string,
+  ): Promise<UserEntity> {
     if (!userId) {
       // No userId sent in the webhook - likely due to user clicking simplybook link from email instead of in-app widget
       // Try to find a user associated to this email
@@ -191,7 +193,7 @@ export class WebhooksService {
     }
   }
 
-  private async newPartnerAccessTherapy(user: IUser, simplyBookDto: ZapierSimplybookBodyDto) {
+  private async newPartnerAccessTherapy(user: UserEntity, simplyBookDto: ZapierSimplybookBodyDto) {
     const partnerAccesses = await this.partnerAccessRepository.find({
       where: {
         userId: user.id,
