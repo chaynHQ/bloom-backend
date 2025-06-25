@@ -352,12 +352,11 @@ export class WebhooksService {
     }
   }
 
-  // TODO once story_uuid is sent via the webhook we can change the arguements to story_uuid
-  async updateInactiveStoryStatus(story_id: number, status: STORYBLOK_STORY_STATUS_ENUM) {
+  async updateInactiveStoryStatus(storyblokUuid: string, status: STORYBLOK_STORY_STATUS_ENUM) {
     // Story is deleted so cant be fetched from storyblok to get story type
     // Try to find course with matching story_id first
     let course = await this.courseRepository.findOneBy({
-      storyblokId: story_id, // TODO change to storyblokUuid once available
+      storyblokUuid,
     });
 
     if (course) {
@@ -367,7 +366,7 @@ export class WebhooksService {
     }
     // No course found, try finding session instead
     let session = await this.sessionRepository.findOneBy({
-      storyblokId: story_id, // TODO change to storyblokUuid once available
+      storyblokUuid,
     });
 
     if (session) {
@@ -378,7 +377,7 @@ export class WebhooksService {
 
     // No session found, try finding resource instead
     let resource = await this.resourceRepository.findOneBy({
-      storyblokId: story_id, // TODO change to storyblokUuid once available
+      storyblokUuid,
     });
 
     if (resource) {
@@ -395,14 +394,6 @@ export class WebhooksService {
     const story_id = data.story_id;
 
     this.logger.log(`Storyblok story ${status} request - ${story_id}`);
-
-    if (
-      status === STORYBLOK_STORY_STATUS_ENUM.UNPUBLISHED ||
-      status === STORYBLOK_STORY_STATUS_ENUM.DELETED
-    ) {
-      // Story can't be retrieved from storyblok so we just update the status of existing records
-      return this.updateInactiveStoryStatus(story_id, status);
-    }
 
     // Story was either published or moved
     // Retrieve the story data from storyblok before handling the update/create
@@ -425,6 +416,21 @@ export class WebhooksService {
       const error = `Storyblok webhook failed - error getting story from storyblok - ${err}`;
       this.logger.error(error);
       throw new HttpException(error, HttpStatus.NOT_FOUND);
+    }
+
+    if (!story || !story.uuid) {
+      const error = `Storyblok webhook failed - missing story or uuid in response for story ID ${story_id}`;
+      this.logger.error(error);
+      throw new HttpException(error, HttpStatus.BAD_REQUEST);
+    }
+
+    const storyblokUuid = story.uuid;
+    if (
+      status === STORYBLOK_STORY_STATUS_ENUM.UNPUBLISHED ||
+      status === STORYBLOK_STORY_STATUS_ENUM.DELETED
+    ) {
+      // Story can't be retrieved from storyblok so we just update the status of existing records
+      return this.updateInactiveStoryStatus(storyblokUuid, status);
     }
 
     // Create or update the resource/course/session record in our database
