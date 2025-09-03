@@ -21,6 +21,7 @@ export enum LANGUAGE_DEFAULT {
 
 export enum RESOURCE_CATEGORIES {
   SHORT_VIDEO = 'short_video',
+  SINGLE_VIDEO = 'single_video',
   CONVERSATION = 'conversation',
 }
 
@@ -28,6 +29,7 @@ export enum STORYBLOK_PAGE_COMPONENTS {
   COURSE = 'Course',
   SESSION = 'Session',
   SESSION_IBA = 'session_iba',
+  RESOURCE_SINGLE_VIDEO = 'resource_single_video',
   RESOURCE_SHORT_VIDEO = 'resource_short_video',
   RESOURCE_CONVERSATION = 'resource_conversation',
   MEET_THE_TEAM = 'meet_the_team',
