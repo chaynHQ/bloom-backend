@@ -284,12 +284,15 @@ export class WebhooksService {
     try {
       if (
         storyPageComponent === STORYBLOK_PAGE_COMPONENTS.RESOURCE_SHORT_VIDEO ||
-        storyPageComponent === STORYBLOK_PAGE_COMPONENTS.RESOURCE_CONVERSATION
+        storyPageComponent === STORYBLOK_PAGE_COMPONENTS.RESOURCE_CONVERSATION ||
+        storyPageComponent === STORYBLOK_PAGE_COMPONENTS.RESOURCE_SINGLE_VIDEO
       ) {
         const resourceCategory =
           storyPageComponent === STORYBLOK_PAGE_COMPONENTS.RESOURCE_SHORT_VIDEO
             ? RESOURCE_CATEGORIES.SHORT_VIDEO
-            : RESOURCE_CATEGORIES.CONVERSATION;
+            : storyPageComponent === STORYBLOK_PAGE_COMPONENTS.RESOURCE_SINGLE_VIDEO
+              ? RESOURCE_CATEGORIES.SINGLE_VIDEO
+              : RESOURCE_CATEGORIES.CONVERSATION;
 
         const existingResource = await this.resourceRepository.findOneBy({
           storyblokUuid: storyData.uuid,
