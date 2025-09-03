@@ -18,7 +18,7 @@ export class ResourceService {
     return this.resourceRepository.save(createResourceDto);
   }
 
-  async gerResourceByStoryblokUuid(storyblokUuid: string): Promise<ResourceEntity> {
+  async getResourceByStoryblokUuid(storyblokUuid: string): Promise<ResourceEntity> {
     return await this.resourceRepository.findOneBy({ storyblokUuid: storyblokUuid });
   }
 }
