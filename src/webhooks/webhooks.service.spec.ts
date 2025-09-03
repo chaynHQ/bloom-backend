@@ -206,7 +206,9 @@ describe('WebhooksService', () => {
         text: '',
       };
 
-      return expect(service.handleStoryUpdated(body)).rejects.toThrow('STORYBLOK STORY NOT FOUND');
+      return expect(service.handleStoryUpdated(body)).rejects.toThrow(
+        'Storyblok webhook failed - error getting story from storyblok - {}',
+      );
     });
 
     it('when action is deleted, story should be set as deleted in database', async () => {
