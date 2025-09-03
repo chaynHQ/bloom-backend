@@ -410,6 +410,7 @@ export class WebhooksService {
 
     const Storyblok = new StoryblokClient({
       accessToken: storyblokToken,
+      region: 'eu',
       cache: {
         clear: 'auto',
         type: 'memory',
