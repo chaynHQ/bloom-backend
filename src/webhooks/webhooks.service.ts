@@ -1,5 +1,6 @@
 import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { apiPlugin, ISbStoryData, storyblokInit } from '@storyblok/js';
 import { SlackMessageClient } from 'src/api/slack/slack-api';
 import { CourseEntity } from 'src/entities/course.entity';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
@@ -11,7 +12,6 @@ import { ZapierSimplybookBodyDto } from 'src/partner-access/dtos/zapier-body.dto
 import { ServiceUserProfilesService } from 'src/service-user-profiles/service-user-profiles.service';
 import { IUser } from 'src/user/user.interface';
 import { serializeZapierSimplyBookDtoToTherapySessionEntity } from 'src/utils/serialize';
-import StoryblokClient, { ISbStoryData } from 'storyblok-js-client';
 import { ILike, MoreThan, Repository } from 'typeorm';
 import { CoursePartnerService } from '../course-partner/course-partner.service';
 import {
@@ -408,17 +408,16 @@ export class WebhooksService {
       throw new HttpException(error, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
-    const Storyblok = new StoryblokClient({
+    const { storyblokApi } = storyblokInit({
       accessToken: storyblokToken,
-      region: 'eu',
-      cache: {
-        clear: 'auto',
-        type: 'memory',
+      apiOptions: {
+        region: 'eu',
       },
+      use: [apiPlugin],
     });
 
     try {
-      const response = await Storyblok.get(`cdn/stories/${story_id}`);
+      const response = await storyblokApi.get(`cdn/stories/${story_id}`);
       if (response?.data?.story) {
         story = response.data.story as ISbStoryData;
       }
