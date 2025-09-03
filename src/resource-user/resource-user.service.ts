@@ -40,7 +40,7 @@ export class ResourceUserService {
   }
 
   public async createResourceUser(user: UserEntity, { storyblokUuid }: UpdateResourceUserDto) {
-    const resource = await this.resourceService.gerResourceByStoryblokUuid(storyblokUuid);
+    const resource = await this.resourceService.getResourceByStoryblokUuid(storyblokUuid);
 
     if (!resource) {
       throw new HttpException('RESOURCE NOT FOUND', HttpStatus.NOT_FOUND);
@@ -66,7 +66,7 @@ export class ResourceUserService {
     { storyblokUuid }: UpdateResourceUserDto,
     completed: boolean,
   ) {
-    const resource = await this.resourceService.gerResourceByStoryblokUuid(storyblokUuid);
+    const resource = await this.resourceService.getResourceByStoryblokUuid(storyblokUuid);
 
     if (!resource) {
       throw new HttpException(
