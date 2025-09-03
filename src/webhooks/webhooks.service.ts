@@ -402,6 +402,12 @@ export class WebhooksService {
     // Retrieve the story data from storyblok before handling the update/create
     let story: ISbStoryData;
 
+    if (!storyblokToken) {
+      const error = `Storyblok webhook failed - missing storyblok token`;
+      this.logger.error(error);
+      throw new HttpException(error, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
     const Storyblok = new StoryblokClient({
       accessToken: storyblokToken,
       cache: {
