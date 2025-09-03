@@ -284,12 +284,15 @@ export class WebhooksService {
     try {
       if (
         storyPageComponent === STORYBLOK_PAGE_COMPONENTS.RESOURCE_SHORT_VIDEO ||
-        storyPageComponent === STORYBLOK_PAGE_COMPONENTS.RESOURCE_CONVERSATION
+        storyPageComponent === STORYBLOK_PAGE_COMPONENTS.RESOURCE_CONVERSATION ||
+        storyPageComponent === STORYBLOK_PAGE_COMPONENTS.RESOURCE_SINGLE_VIDEO
       ) {
         const resourceCategory =
           storyPageComponent === STORYBLOK_PAGE_COMPONENTS.RESOURCE_SHORT_VIDEO
             ? RESOURCE_CATEGORIES.SHORT_VIDEO
-            : RESOURCE_CATEGORIES.CONVERSATION;
+            : storyPageComponent === STORYBLOK_PAGE_COMPONENTS.RESOURCE_SINGLE_VIDEO
+              ? RESOURCE_CATEGORIES.SINGLE_VIDEO
+              : RESOURCE_CATEGORIES.CONVERSATION;
 
         const existingResource = await this.resourceRepository.findOneBy({
           storyblokUuid: storyData.uuid,
@@ -399,8 +402,15 @@ export class WebhooksService {
     // Retrieve the story data from storyblok before handling the update/create
     let story: ISbStoryData;
 
+    if (!storyblokToken) {
+      const error = `Storyblok webhook failed - missing storyblok token`;
+      this.logger.error(error);
+      throw new HttpException(error, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
     const Storyblok = new StoryblokClient({
       accessToken: storyblokToken,
+      region: 'eu',
       cache: {
         clear: 'auto',
         type: 'memory',
@@ -413,9 +423,9 @@ export class WebhooksService {
         story = response.data.story as ISbStoryData;
       }
     } catch (err) {
-      const error = `Storyblok webhook failed - error getting story from storyblok - ${err}`;
+      const error = `Storyblok webhook failed - error getting story from storyblok - ${JSON.stringify(err)}`;
       this.logger.error(error);
-      throw new HttpException(error, HttpStatus.NOT_FOUND);
+      throw new HttpException(error, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     if (!story || !story.uuid) {
