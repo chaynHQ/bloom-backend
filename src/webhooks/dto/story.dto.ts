@@ -13,12 +13,6 @@ export class StoryWebhookDto {
   @ApiProperty({ type: String })
   action: STORYBLOK_STORY_STATUS_ENUM;
 
-  @IsNumber()
-  @IsNotEmpty()
-  @IsDefined()
-  @ApiProperty({ type: Number })
-  story_id: number;
-
   @IsOptional()
   @IsNumber()
   space_id?: number;
