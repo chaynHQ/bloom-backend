@@ -1,6 +1,7 @@
 import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { apiPlugin, ISbStoryData, storyblokInit } from '@storyblok/js';
+import * as storyblok from '@storyblok/js';
+import { ISbStoryData } from '@storyblok/js';
 import { SlackMessageClient } from 'src/api/slack/slack-api';
 import { CourseEntity } from 'src/entities/course.entity';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
@@ -408,12 +409,12 @@ export class WebhooksService {
       throw new HttpException(error, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
-    const { storyblokApi } = storyblokInit({
+    const { storyblokApi } = storyblok.storyblokInit({
       accessToken: storyblokToken,
       apiOptions: {
         region: 'eu',
       },
-      use: [apiPlugin],
+      use: [storyblok.apiPlugin],
     });
 
     try {
