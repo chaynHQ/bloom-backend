@@ -422,7 +422,12 @@ export class WebhooksService {
         story = response.data.story as ISbStoryData;
       }
     } catch (err) {
-      const error = `Storyblok webhook failed - error getting story from storyblok - ${JSON.stringify(err)}`;
+      if (err.status === 404) {
+        const error = `Storyblok webhook failed - story not found in storyblok for story ID ${story_id}`;
+        this.logger.error(error);
+        throw new HttpException(error, HttpStatus.NOT_FOUND);
+      }
+      const error = `Storyblok webhook failed - error getting story from storyblok - ${err.message}}`;
       this.logger.error(error);
       throw new HttpException(error, HttpStatus.INTERNAL_SERVER_ERROR);
     }
