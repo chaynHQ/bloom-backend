@@ -277,7 +277,6 @@ export class WebhooksService {
     }; // fields to update on existing and new stories
 
     const newStoryData = {
-      storyblokId: storyData.id,
       storyblokUuid: storyData.uuid,
       ...updatedStoryData,
     }; // includes storyblok id and uuid for new stories only
@@ -395,9 +394,9 @@ export class WebhooksService {
   // Triggered by a webhook, this function handles updating our database records to sync with storyblok story data
   async handleStoryUpdated(data: StoryWebhookDto) {
     const status = data.action;
-    const story_id = data.story_id;
+    const story_slug = data.full_slug;
 
-    this.logger.log(`Storyblok story ${status} request - ${story_id}`);
+    this.logger.log(`Storyblok story ${status} request - ${story_slug}`);
 
     // Story was either published or moved
     // Retrieve the story data from storyblok before handling the update/create
@@ -411,7 +410,7 @@ export class WebhooksService {
 
     try {
       const response = await apiCall({
-        url: `https://api.storyblok.com/v2/cdn/stories/${story_id}?token=${storyblokToken}`,
+        url: `https://api.storyblok.com/v2/cdn/stories/${story_slug}?token=${storyblokToken}`,
         type: 'get',
       });
       if (response?.data?.story) {
@@ -419,7 +418,7 @@ export class WebhooksService {
       }
     } catch (err) {
       if (err.status === 404) {
-        const error = `Storyblok webhook failed - story not found in storyblok for story ID ${story_id}`;
+        const error = `Storyblok webhook failed - story not found in storyblok for story ${story_slug}`;
         this.logger.error(error);
         throw new HttpException(error, HttpStatus.NOT_FOUND);
       }
@@ -428,8 +427,8 @@ export class WebhooksService {
       throw new HttpException(error, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
-    if (!story || !story.uuid) {
-      const error = `Storyblok webhook failed - missing story or uuid in response for story ID ${story_id}`;
+    if (!story || !story.slug) {
+      const error = `Storyblok webhook failed - missing story in response for story ${story_slug}`;
       this.logger.error(error);
       throw new HttpException(error, HttpStatus.BAD_REQUEST);
     }
