@@ -1,7 +1,7 @@
 import { createMock } from '@golevelup/ts-jest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { storyblokInit } from '@storyblok/js';
+import apiCall from 'src/api/apiCalls';
 import { SlackMessageClient } from 'src/api/slack/slack-api';
 import { CoursePartnerService } from 'src/course-partner/course-partner.service';
 import { CrispService } from 'src/crisp/crisp.service';
@@ -53,7 +53,7 @@ import {
 import { ILike, Repository } from 'typeorm';
 import { WebhooksService } from './webhooks.service';
 
-jest.mock('@storyblok/js');
+jest.mock('src/api/apiCalls');
 
 jest.mock('src/api/simplybook/simplybook-api', () => {
   return {
@@ -69,8 +69,6 @@ jest.mock('src/api/simplybook/simplybook-api', () => {
     },
   };
 });
-
-let mockStoryblokApiGet: jest.Mock;
 
 describe('WebhooksService', () => {
   let service: WebhooksService;
@@ -111,13 +109,7 @@ describe('WebhooksService', () => {
   beforeEach(async () => {
     jest.clearAllMocks();
 
-    mockStoryblokApiGet = jest.fn().mockResolvedValue(mockSessionStoryblokResult);
-
-    (storyblokInit as jest.Mock).mockReturnValue({
-      storyblokApi: {
-        get: mockStoryblokApiGet,
-      },
-    });
+    (apiCall as jest.Mock).mockClear().mockResolvedValue(mockSessionStoryblokResult);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -189,7 +181,7 @@ describe('WebhooksService', () => {
 
   describe('handleStoryUpdated', () => {
     it('when story does not exist, it returns with a 404', async () => {
-      mockStoryblokApiGet.mockRejectedValueOnce({ status: 404 });
+      (apiCall as jest.Mock).mockRejectedValueOnce({ status: 404 });
 
       expect.assertions(1);
 
@@ -238,7 +230,7 @@ describe('WebhooksService', () => {
         storyblokUuid: 'anotherCourseUuid',
       };
 
-      mockStoryblokApiGet.mockResolvedValueOnce({
+      (apiCall as jest.Mock).mockResolvedValueOnce({
         ...mockSessionStoryblokResult,
         data: {
           story: {
@@ -349,7 +341,7 @@ describe('WebhooksService', () => {
 
       const courseFindOneSpy = jest.spyOn(mockedCourseRepository, 'findOneByOrFail');
 
-      mockStoryblokApiGet.mockResolvedValueOnce({
+      (apiCall as jest.Mock).mockResolvedValueOnce({
         ...mockSessionStoryblokResult,
         data: {
           story: {
@@ -395,7 +387,7 @@ describe('WebhooksService', () => {
         .mockImplementationOnce(async () => undefined);
       const courseSaveRepoSpy = jest.spyOn(mockedCourseRepository, 'save');
 
-      mockStoryblokApiGet.mockResolvedValueOnce(mockCourseStoryblokResult);
+      (apiCall as jest.Mock).mockResolvedValueOnce(mockCourseStoryblokResult);
 
       const body = {
         action: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
@@ -474,7 +466,7 @@ describe('WebhooksService', () => {
         .spyOn(mockedResourceRepository, 'findOneBy')
         .mockImplementationOnce(async () => undefined);
 
-      mockStoryblokApiGet.mockResolvedValueOnce(mockResourceStoryblokResult);
+      (apiCall as jest.Mock).mockResolvedValueOnce(mockResourceStoryblokResult);
 
       const body = {
         action: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
@@ -517,7 +509,50 @@ describe('WebhooksService', () => {
       updatedMockResourceStoryblokResult.data.story.content.name = newName;
       updatedMockResourceStoryblokResult.data.story.full_slug = newSlug;
 
-      mockStoryblokApiGet.mockResolvedValueOnce(updatedMockResourceStoryblokResult);
+      (apiCall as jest.Mock).mockResolvedValueOnce(updatedMockResourceStoryblokResult);
+
+      const body = {
+        action: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
+        story_id: mockResourceStoryblokResult.data.story.id,
+        story_uuid: mockResourceStoryblokResult.data.story.uuid,
+        full_slug: mockResourceStoryblokResult.data.story.full_slug,
+        text: '',
+      };
+
+      const expectedResponse = {
+        ...mockResource2,
+        storyblokUuid: mockResourceStoryblokResult.data.story.uuid,
+        status: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
+        slug: newSlug,
+        name: newName,
+        category: RESOURCE_CATEGORIES.SHORT_VIDEO,
+      };
+
+      const updatedResource = (await service.handleStoryUpdated(body)) as ResourceEntity;
+
+      expect(updatedResource).toEqual(expectedResponse);
+      expect(resourceSaveRepoSpy).toHaveBeenCalled();
+      expect(resourceFindOneRepoSpy).toHaveBeenCalledWith({
+        storyblokUuid: mockResourceStoryblokResult.data.story.uuid,
+      });
+
+      resourceSaveRepoSpy.mockClear();
+      resourceFindOneRepoSpy.mockClear();
+    });
+
+    it('should handle updating an existing resource', async () => {
+      const resourceSaveRepoSpy = jest.spyOn(mockedResourceRepository, 'save');
+      const resourceFindOneRepoSpy = jest
+        .spyOn(mockedResourceRepository, 'findOneBy')
+        .mockImplementationOnce(async () => mockResource2);
+
+      const updatedMockResourceStoryblokResult = { ...mockResourceStoryblokResult };
+      const newName = 'New resource name';
+      const newSlug = 'resources/shorts/new-resource-name';
+      updatedMockResourceStoryblokResult.data.story.content.name = newName;
+      updatedMockResourceStoryblokResult.data.story.full_slug = newSlug;
+
+      (apiCall as jest.Mock).mockResolvedValueOnce(updatedMockResourceStoryblokResult);
 
       const body = {
         action: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
