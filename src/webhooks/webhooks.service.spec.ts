@@ -1,6 +1,7 @@
 import { createMock } from '@golevelup/ts-jest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { storyblokInit } from '@storyblok/js';
 import { SlackMessageClient } from 'src/api/slack/slack-api';
 import { CoursePartnerService } from 'src/course-partner/course-partner.service';
 import { CrispService } from 'src/crisp/crisp.service';
@@ -22,7 +23,6 @@ import {
   SIMPLYBOOK_ACTION_ENUM,
   STORYBLOK_STORY_STATUS_ENUM,
 } from 'src/utils/constants';
-import StoryblokClient from 'storyblok-js-client';
 import {
   mockCourse,
   mockCourseStoryblokResult,
@@ -53,15 +53,7 @@ import {
 import { ILike, Repository } from 'typeorm';
 import { WebhooksService } from './webhooks.service';
 
-// Difficult to mock classes as well as node modules.
-// This seemed the best approach
-jest.mock('storyblok-js-client', () => {
-  return jest.fn().mockImplementation(() => {
-    return {
-      get: async () => mockSessionStoryblokResult,
-    };
-  });
-});
+jest.mock('@storyblok/js');
 
 jest.mock('src/api/simplybook/simplybook-api', () => {
   return {
@@ -77,6 +69,8 @@ jest.mock('src/api/simplybook/simplybook-api', () => {
     },
   };
 });
+
+let mockStoryblokApiGet: jest.Mock;
 
 describe('WebhooksService', () => {
   let service: WebhooksService;
@@ -116,6 +110,15 @@ describe('WebhooksService', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
+
+    mockStoryblokApiGet = jest.fn().mockResolvedValue(mockSessionStoryblokResult);
+
+    (storyblokInit as jest.Mock).mockReturnValue({
+      storyblokApi: {
+        get: mockStoryblokApiGet,
+      },
+    });
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         WebhooksService,
@@ -186,17 +189,8 @@ describe('WebhooksService', () => {
 
   describe('handleStoryUpdated', () => {
     it('when story does not exist, it returns with a 404', async () => {
-      // unfortunately it is mega hard to mock classes that are also node modules and this was
-      // the only solution i got working
-      // eslint-disable-next-line
-      // @ts-ignore
-      StoryblokClient.mockImplementationOnce(() => {
-        return {
-          get: async () => {
-            throw new Error('STORYBLOK STORY NOT FOUND');
-          },
-        };
-      });
+      mockStoryblokApiGet.mockRejectedValueOnce({ status: 404 });
+
       expect.assertions(1);
 
       const body = {
@@ -207,7 +201,7 @@ describe('WebhooksService', () => {
       };
 
       return expect(service.handleStoryUpdated(body)).rejects.toThrow(
-        'Storyblok webhook failed - error getting story from storyblok - {}',
+        `Storyblok webhook failed - story not found in storyblok for story ID ${mockSession.storyblokId}`,
       );
     });
 
@@ -244,25 +238,17 @@ describe('WebhooksService', () => {
         storyblokUuid: 'anotherCourseUuid',
       };
 
-      // eslint-disable-next-line
-      // @ts-ignore
-      StoryblokClient.mockImplementationOnce(() => {
-        return {
-          get: async () => {
-            return {
-              ...mockSessionStoryblokResult,
-              data: {
-                story: {
-                  ...mockSessionStoryblokResult.data.story,
-                  content: {
-                    ...mockSessionStoryblokResult.data.story.content,
-                    course: 'anotherCourseUuId',
-                  },
-                },
-              },
-            };
+      mockStoryblokApiGet.mockResolvedValueOnce({
+        ...mockSessionStoryblokResult,
+        data: {
+          story: {
+            ...mockSessionStoryblokResult.data.story,
+            content: {
+              ...mockSessionStoryblokResult.data.story.content,
+              course: 'anotherCourseUuId',
+            },
           },
-        };
+        },
       });
 
       const sessionSaveRepoSpy = jest.spyOn(mockedSessionRepository, 'save');
@@ -363,25 +349,17 @@ describe('WebhooksService', () => {
 
       const courseFindOneSpy = jest.spyOn(mockedCourseRepository, 'findOneByOrFail');
 
-      // eslint-disable-next-line
-      // @ts-ignore
-      StoryblokClient.mockImplementationOnce(() => {
-        return {
-          get: async () => {
-            return {
-              ...mockSessionStoryblokResult,
-              data: {
-                story: {
-                  ...mockSessionStoryblokResult.data.story,
-                  content: {
-                    ...mockSessionStoryblokResult.data.story.content,
-                    component: 'session_iba',
-                  },
-                },
-              },
-            };
+      mockStoryblokApiGet.mockResolvedValueOnce({
+        ...mockSessionStoryblokResult,
+        data: {
+          story: {
+            ...mockSessionStoryblokResult.data.story,
+            content: {
+              ...mockSessionStoryblokResult.data.story.content,
+              component: 'session_iba',
+            },
           },
-        };
+        },
       });
 
       const body = {
@@ -417,13 +395,7 @@ describe('WebhooksService', () => {
         .mockImplementationOnce(async () => undefined);
       const courseSaveRepoSpy = jest.spyOn(mockedCourseRepository, 'save');
 
-      // eslint-disable-next-line
-      // @ts-ignore
-      StoryblokClient.mockImplementationOnce(() => {
-        return {
-          get: async () => mockCourseStoryblokResult,
-        };
-      });
+      mockStoryblokApiGet.mockResolvedValueOnce(mockCourseStoryblokResult);
 
       const body = {
         action: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
@@ -502,14 +474,7 @@ describe('WebhooksService', () => {
         .spyOn(mockedResourceRepository, 'findOneBy')
         .mockImplementationOnce(async () => undefined);
 
-      // Mock StoryblokClient to return a resource story
-      // eslint-disable-next-line
-      // @ts-ignore
-      StoryblokClient.mockImplementationOnce(() => {
-        return {
-          get: async () => mockResourceStoryblokResult,
-        };
-      });
+      mockStoryblokApiGet.mockResolvedValueOnce(mockResourceStoryblokResult);
 
       const body = {
         action: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
@@ -552,14 +517,7 @@ describe('WebhooksService', () => {
       updatedMockResourceStoryblokResult.data.story.content.name = newName;
       updatedMockResourceStoryblokResult.data.story.full_slug = newSlug;
 
-      // Mock StoryblokClient to return a resource story
-      // eslint-disable-next-line
-      // @ts-ignore
-      StoryblokClient.mockImplementationOnce(() => {
-        return {
-          get: async () => updatedMockResourceStoryblokResult,
-        };
-      });
+      mockStoryblokApiGet.mockResolvedValueOnce(updatedMockResourceStoryblokResult);
 
       const body = {
         action: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
@@ -753,7 +711,6 @@ describe('WebhooksService', () => {
     });
 
     it('should set a booking as cancelled when action is cancel and there are no therapy sessions remaining TODO', async () => {
-      // mock that there is no therapy sessions remaining on partner access
       const partnerAccessFindSpy = jest
         .spyOn(mockedPartnerAccessRepository, 'findOneBy')
         .mockImplementationOnce(async () => {

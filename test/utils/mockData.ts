@@ -1,3 +1,4 @@
+import { ISbResult } from '@storyblok/js';
 import { add } from 'date-fns';
 import { UserRecord } from 'firebase-admin/lib/auth/user-record';
 import { CoursePartnerEntity } from 'src/entities/course-partner.entity';
@@ -25,7 +26,6 @@ import {
   SIMPLYBOOK_ACTION_ENUM,
   STORYBLOK_STORY_STATUS_ENUM,
 } from 'src/utils/constants';
-import { ISbResult } from 'storyblok-js-client';
 
 export const mockSessionStoryblokResult = {
   data: {
