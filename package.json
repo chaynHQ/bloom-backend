@@ -41,7 +41,7 @@
     "axios": "^1.11.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.2",
-    "crisp-api": "^9.10.0",
+    "crisp-api": "^10.0.13",
     "date-fns": "^4.1.0",
     "dotenv": "^16.5.0",
     "firebase": "^11.9.1",
