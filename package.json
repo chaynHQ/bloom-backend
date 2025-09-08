@@ -37,7 +37,7 @@
     "@nestjs/swagger": "^7.4.0",
     "@nestjs/terminus": "^11.0.0",
     "@nestjs/typeorm": "^11.0.0",
-    "@storyblok/js": "^4.2.5",
+    "@storyblok/js": "^4.2.7",
     "axios": "^1.11.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.2",
