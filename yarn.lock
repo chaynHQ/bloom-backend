@@ -1822,18 +1822,18 @@
   resolved "https://registry.yarnpkg.com/@sqltools/formatter/-/formatter-1.2.5.tgz#3abc203c79b8c3e90fd6c156a0c62d5403520e12"
   integrity sha512-Uy0+khmZqUrUGm5dmMqVlnvufZRSK0FbYzVgp0UMstm+F5+W2/jnEEQyc9vo1ZR/E5ZI/B1WjjoTqBqwJL6Krw==
 
-"@storyblok/js@^4.2.5":
-  version "4.2.5"
-  resolved "https://registry.yarnpkg.com/@storyblok/js/-/js-4.2.5.tgz#e3d192c6e3c83fe54500c28095ef3a7e9c47f2ff"
-  integrity sha512-oeZPAzNcI3H43ak83S24E6d7Kf28rvBTAPv8sml3RVtwS7CesF6uySFp+Q3THyu+TzBYScxOwOIFYMsOLz6BkQ==
+"@storyblok/js@^4.2.7":
+  version "4.2.7"
+  resolved "https://registry.yarnpkg.com/@storyblok/js/-/js-4.2.7.tgz#98fb3e45cfe67067b38b12f7ed11a17060aaeecc"
+  integrity sha512-hIDgJcIqCyTh59Sd6K+wVi6UG62/h6OkVLpz5unCxyMKTvhcAnaut58NJYBCV7rFJCkFTKftNQ0NQSyyCvaw2g==
   dependencies:
-    "@storyblok/richtext" "3.7.0"
+    "@storyblok/richtext" "3.7.2"
     storyblok-js-client "7.1.4"
 
-"@storyblok/richtext@3.7.0":
-  version "3.7.0"
-  resolved "https://registry.yarnpkg.com/@storyblok/richtext/-/richtext-3.7.0.tgz#e8511560e5796af735197cb96791e7f5d96e1a64"
-  integrity sha512-TAk7v7RUMV2uL942AErdDjsInJB0HsKXJIZBIU+M8W014kf4xbF2Qg0b/WAHEf4jfnjdJpGEglLEktHe/tLmcw==
+"@storyblok/richtext@3.7.2":
+  version "3.7.2"
+  resolved "https://registry.yarnpkg.com/@storyblok/richtext/-/richtext-3.7.2.tgz#fbd3184cfc80e312c34fc14f27e9f6e28d131d1d"
+  integrity sha512-w5HMqN85zmrHHOX7HteJ4aGeVEL33mtjDK2v5nwAMxEvU3jHJ5JqnYP6UKhNMtI7uu9WVXWDF12CBAkGZpczEg==
   dependencies:
     markdown-it "^14.1.0"
     markdown-it-github "^0.5.0"
