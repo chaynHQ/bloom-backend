@@ -1822,18 +1822,18 @@
   resolved "https://registry.yarnpkg.com/@sqltools/formatter/-/formatter-1.2.5.tgz#3abc203c79b8c3e90fd6c156a0c62d5403520e12"
   integrity sha512-Uy0+khmZqUrUGm5dmMqVlnvufZRSK0FbYzVgp0UMstm+F5+W2/jnEEQyc9vo1ZR/E5ZI/B1WjjoTqBqwJL6Krw==
 
-"@storyblok/js@^4.2.5":
-  version "4.2.5"
-  resolved "https://registry.yarnpkg.com/@storyblok/js/-/js-4.2.5.tgz#e3d192c6e3c83fe54500c28095ef3a7e9c47f2ff"
-  integrity sha512-oeZPAzNcI3H43ak83S24E6d7Kf28rvBTAPv8sml3RVtwS7CesF6uySFp+Q3THyu+TzBYScxOwOIFYMsOLz6BkQ==
+"@storyblok/js@^4.2.8":
+  version "4.2.8"
+  resolved "https://registry.yarnpkg.com/@storyblok/js/-/js-4.2.8.tgz#6adbac002535fb1510b71cb584d87fc23e1a6e3b"
+  integrity sha512-CnZQDza5X+Bb5o2j9GOc2bEjishQd8ZSQG9tQUrYdSG05aqY9SlRBAcno+gPKSJFxs3H6pPAQ+B3cfIieLgJXA==
   dependencies:
-    "@storyblok/richtext" "3.7.0"
+    "@storyblok/richtext" "3.8.0"
     storyblok-js-client "7.1.4"
 
-"@storyblok/richtext@3.7.0":
-  version "3.7.0"
-  resolved "https://registry.yarnpkg.com/@storyblok/richtext/-/richtext-3.7.0.tgz#e8511560e5796af735197cb96791e7f5d96e1a64"
-  integrity sha512-TAk7v7RUMV2uL942AErdDjsInJB0HsKXJIZBIU+M8W014kf4xbF2Qg0b/WAHEf4jfnjdJpGEglLEktHe/tLmcw==
+"@storyblok/richtext@3.8.0":
+  version "3.8.0"
+  resolved "https://registry.yarnpkg.com/@storyblok/richtext/-/richtext-3.8.0.tgz#95cc0b7bdc2f2e012d4eb5d31ae9e3d175421925"
+  integrity sha512-GL3pLlrj+WdDZMjc4uQlSVbtlOMUtZgYHbLsOo0iEWRacj6Dro4e5BrryLZQ1189cUCQqGdR1s8+qvVbxfJhCw==
   dependencies:
     markdown-it "^14.1.0"
     markdown-it-github "^0.5.0"
@@ -2691,10 +2691,10 @@ available-typed-arrays@^1.0.7:
   dependencies:
     possible-typed-array-names "^1.0.0"
 
-axios@^1.11.0:
-  version "1.11.0"
-  resolved "https://registry.yarnpkg.com/axios/-/axios-1.11.0.tgz#c2ec219e35e414c025b2095e8b8280278478fdb6"
-  integrity sha512-1Lx3WLFQWm3ooKDYZD1eXmoGO9fxYQjrycfHFC8P0sCfQVXyROp0p9PFWBehewBOdCwHc+f/b8I0fMto5eSfwA==
+axios@^1.11.0, axios@^1.12.2:
+  version "1.12.2"
+  resolved "https://registry.yarnpkg.com/axios/-/axios-1.12.2.tgz#6c307390136cf7a2278d09cec63b136dfc6e6da7"
+  integrity sha512-vMJzPewAlRyOgxV2dU0Cuz2O8zzzx9VYtbJOaBgXFeLc4IV/Eg50n4LowmehOOR61S8ZMpc2K5Sa7g6A4jfkUw==
   dependencies:
     follow-redirects "^1.15.6"
     form-data "^4.0.4"
