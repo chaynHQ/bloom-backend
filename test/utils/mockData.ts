@@ -277,6 +277,7 @@ export const mockPartnerEntity = {
   name: 'Bumble',
   id: 'partnerId',
   partnerFeature: [],
+  isActive: true,
 } as PartnerEntity;
 
 export const mockAltPartnerEntity = {

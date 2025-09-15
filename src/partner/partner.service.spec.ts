@@ -1,10 +1,10 @@
 import { createMock, DeepMocked } from '@golevelup/ts-jest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { createQueryBuilderMock } from 'test/utils/mockUtils';
 import { Repository } from 'typeorm';
 import { mockPartnerEntity } from '../../test/utils/mockData';
 import { mockPartnerRepositoryMethods } from '../../test/utils/mockedServices';
-import { createQueryBuilderMock } from '../../test/utils/mockUtils';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
 import { PartnerAdminEntity } from '../entities/partner-admin.entity';
 import { PartnerEntity } from '../entities/partner.entity';
@@ -58,27 +58,44 @@ describe('PartnerService', () => {
   });
 
   describe('updatePartner', () => {
-    it('when supplied with correct data should return new partner', async () => {
-      jest.spyOn(mockPartnerRepository, 'createQueryBuilder').mockImplementationOnce(
+    it('when supplied with isActive data should update partner', async () => {
+      jest.spyOn(mockPartnerRepository, 'save').mockImplementationOnce(() => {
+        return Promise.resolve({ ...mockPartnerEntity, isActive: false });
+      });
+
+      jest.spyOn(mockPartnerAccessRepository, 'createQueryBuilder').mockImplementationOnce(
         createQueryBuilderMock({
-          execute: jest.fn().mockResolvedValue({ raw: [{ ...mockPartnerEntity, active: false }] }),
-        }) as never, // TODO resolve this typescript issue
+          execute: jest.fn().mockResolvedValue({}),
+        }) as never,
+      );
+
+      jest.spyOn(mockPartnerAdminRepository, 'createQueryBuilder').mockImplementationOnce(
+        createQueryBuilderMock({
+          execute: jest.fn().mockResolvedValue({}),
+        }) as never,
       );
 
       const response = await service.updatePartnerActiveStatus(mockPartnerEntity.id, {
         active: false,
       });
-      expect(response).toMatchObject({ ...mockPartnerEntity, active: false });
+
+      expect(mockPartnerRepository.save).toHaveBeenCalledWith({
+        ...mockPartnerEntity,
+        isActive: false,
+      });
+      expect(mockPartnerAdminRepository.createQueryBuilder).toHaveBeenCalled();
+      expect(mockPartnerAccessRepository.createQueryBuilder).toHaveBeenCalled();
+      expect(response).toMatchObject({ ...mockPartnerEntity, isActive: false });
     });
 
-    it('when supplied with incorrect partnerName should throw', async () => {
-      jest.spyOn(mockPartnerRepository, 'createQueryBuilder').mockImplementationOnce(() => {
-        throw new Error('Error unable to update');
+    it('when supplied with incorrect partner id should throw', async () => {
+      jest.spyOn(mockPartnerRepository, 'findOneBy').mockImplementationOnce(() => {
+        return Promise.resolve(null);
       });
 
       await expect(
-        service.updatePartnerActiveStatus(mockPartnerEntity.id, { active: false }),
-      ).rejects.toThrow('Error unable to update');
+        service.updatePartnerActiveStatus('invalidid', { active: false }),
+      ).rejects.toThrow('Partner does not exist');
     });
   });
 });
