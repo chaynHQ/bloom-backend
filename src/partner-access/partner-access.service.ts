@@ -80,6 +80,10 @@ export class PartnerAccessService {
       throw new HttpException(PartnerAccessCodeStatusEnum.DOES_NOT_EXIST, HttpStatus.BAD_REQUEST);
     }
 
+    if (!partnerAccess.active) {
+      throw new HttpException(PartnerAccessCodeStatusEnum.INACTIVE, HttpStatus.BAD_REQUEST);
+    }
+
     if (partnerAccess.userId) {
       if (userId && partnerAccess.userId === userId) {
         throw new HttpException(PartnerAccessCodeStatusEnum.ALREADY_APPLIED, HttpStatus.CONFLICT);
@@ -104,6 +108,10 @@ export class PartnerAccessService {
 
     if (!partner) {
       throw new HttpException('Invalid partnerId supplied', HttpStatus.BAD_REQUEST);
+    }
+
+    if (!partner.isActive) {
+      throw new HttpException('Partner is not active', HttpStatus.BAD_REQUEST);
     }
 
     const automaticAccessCodePartnerFeature = partner.partnerFeature.find(

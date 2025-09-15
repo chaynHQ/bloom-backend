@@ -79,6 +79,7 @@ export enum FEEDBACK_TAGS_ENUM {
 
 export enum PartnerAccessCodeStatusEnum {
   VALID = 'VALID',
+  INACTIVE = 'INACTIVE',
   INVALID_CODE = 'INVALID_CODE',
   DOES_NOT_EXIST = 'DOES_NOT_EXIST',
   ALREADY_IN_USE = 'ALREADY_IN_USE',

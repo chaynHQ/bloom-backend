@@ -1,15 +1,15 @@
 import { createMock, DeepMocked } from '@golevelup/ts-jest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { PartnerEntity } from '../entities/partner.entity';
-import { PartnerService } from './partner.service';
 import { Repository } from 'typeorm';
+import { mockPartnerEntity } from '../../test/utils/mockData';
+import { mockPartnerRepositoryMethods } from '../../test/utils/mockedServices';
+import { createQueryBuilderMock } from '../../test/utils/mockUtils';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
 import { PartnerAdminEntity } from '../entities/partner-admin.entity';
+import { PartnerEntity } from '../entities/partner.entity';
 import { UserEntity } from '../entities/user.entity';
-import { mockPartnerRepositoryMethods } from '../../test/utils/mockedServices';
-import { mockPartnerEntity } from '../../test/utils/mockData';
-import { createQueryBuilderMock } from '../../test/utils/mockUtils';
+import { PartnerService } from './partner.service';
 
 const createPartnerDto = {
   name: mockPartnerEntity.name,
@@ -65,7 +65,9 @@ describe('PartnerService', () => {
         }) as never, // TODO resolve this typescript issue
       );
 
-      const response = await service.updatePartner(mockPartnerEntity.id, { active: false });
+      const response = await service.updatePartnerActiveStatus(mockPartnerEntity.id, {
+        active: false,
+      });
       expect(response).toMatchObject({ ...mockPartnerEntity, active: false });
     });
 
@@ -74,9 +76,9 @@ describe('PartnerService', () => {
         throw new Error('Error unable to update');
       });
 
-      await expect(service.updatePartner(mockPartnerEntity.id, { active: false })).rejects.toThrow(
-        'Error unable to update',
-      );
+      await expect(
+        service.updatePartnerActiveStatus(mockPartnerEntity.id, { active: false }),
+      ).rejects.toThrow('Error unable to update');
     });
   });
 });
