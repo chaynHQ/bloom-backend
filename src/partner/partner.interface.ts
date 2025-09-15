@@ -5,5 +5,6 @@ export interface IPartner {
   createdAt?: Date | string;
   updatedAt?: Date | string;
   name?: string;
+  isActive?: boolean;
   partnerFeature?: IPartnerFeature[];
 }

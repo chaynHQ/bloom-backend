@@ -6,7 +6,6 @@ import { UserEntity } from 'src/entities/user.entity';
 import { In, Repository } from 'typeorm';
 import { PartnerEntity } from '../entities/partner.entity';
 import { CreatePartnerDto } from './dtos/create-partner.dto';
-import { DeletePartnerDto } from './dtos/delete-partner.dto';
 import { UpdatePartnerDto } from './dtos/update-partner.dto';
 
 @Injectable()
@@ -60,48 +59,42 @@ export class PartnerService {
       .getOne();
   }
 
-  async deletePartner({ partnerId }: DeletePartnerDto): Promise<string> {
+  async updatePartnerActiveStatus(partnerId: string, { active }: UpdatePartnerDto) {
     const partner = await this.partnerRepository.findOneBy({ id: partnerId });
     if (!partner) {
       throw new HttpException('Partner does not exist', HttpStatus.BAD_REQUEST);
     }
 
-    await this.partnerAccessRepository
-      .createQueryBuilder('partner_access')
-      .update(PartnerAccessEntity)
-      .set({ active: false })
-      .where('partnerId = :partnerId', { partnerId })
-      .execute();
-
-    // //Partner Admins
-    const partnerAdmins = await this.partnerAdminRepository.findBy({ partnerId });
-    const partnerAdminUserIds = partnerAdmins.map((pa) => {
-      return pa.userId;
+    // Update partner active status
+    const updatedPartnerResponse = await this.partnerRepository.save({
+      ...partner,
+      isActive: active,
     });
 
-    await this.userRepository
-      .createQueryBuilder('user')
-      .update(UserEntity)
-      .set({ isActive: false })
-      .where({ id: In(partnerAdminUserIds) })
-      .execute();
+    if (updatedPartnerResponse) {
+      const partnerAdmins = await this.partnerAdminRepository.findBy({ partnerId });
+      const partnerAdminIds = partnerAdmins.map((pa) => pa.id);
 
-    partner.isActive = false;
-    await this.partnerRepository.save(partner);
+      // Update partner admin active status
+      await this.partnerAdminRepository
+        .createQueryBuilder('partner_admin')
+        .update(PartnerAdminEntity)
+        .set({ active: active })
+        .where({ id: In(partnerAdminIds) })
+        .execute();
 
-    return 'Successful';
-  }
+      const partnerAccess = await this.partnerAccessRepository.findBy({ partnerId });
+      const partnerAccessIds = partnerAccess.map((pa) => pa.id);
 
-  async updatePartner(partnerId: string, { active }: UpdatePartnerDto) {
-    const updatedPartnerResponse = await this.partnerRepository
-      .createQueryBuilder()
-      .update(PartnerEntity)
-      .set({ isActive: active })
-      .where('id = :id', { id: partnerId })
-      .returning('*')
-      .execute();
-    if (updatedPartnerResponse.raw.length > 0) {
-      return updatedPartnerResponse.raw[0];
+      // Update partner access active status
+      await this.partnerAccessRepository
+        .createQueryBuilder('partner_access')
+        .update(PartnerAccessEntity)
+        .set({ active: active })
+        .where({ id: In(partnerAccessIds) })
+        .execute();
+
+      return updatedPartnerResponse;
     } else {
       throw new Error('Failed to update partner');
     }

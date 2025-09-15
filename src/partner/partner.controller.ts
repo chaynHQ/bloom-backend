@@ -5,9 +5,9 @@ import { PartnerEntity } from '../entities/partner.entity';
 import { SuperAdminAuthGuard } from '../partner-admin/super-admin-auth.guard';
 import { ControllerDecorator } from '../utils/controller.decorator';
 import { CreatePartnerDto } from './dtos/create-partner.dto';
+import { UpdatePartnerDto } from './dtos/update-partner.dto';
 import { IPartner } from './partner.interface';
 import { PartnerService } from './partner.service';
-import { UpdatePartnerDto } from './dtos/update-partner.dto';
 
 @ApiTags('Partner')
 @ControllerDecorator()
@@ -36,10 +36,9 @@ export class PartnerController {
 
   @Get(':name')
   @ApiOperation({ description: 'Returns profile data for a partner' })
-  @UseGuards(SuperAdminAuthGuard) // Temporary super admin auth guard
+  @UseGuards(SuperAdminAuthGuard)
   @ApiParam({ name: 'name', description: 'Gets partner by name' })
   async getPartner(@Param() { name }): Promise<IPartner> {
-    // annoyingly the frontend doesn't have the id when features are needed
     const partnerResponse = await this.partnerService.getPartnerWithPartnerFeaturesByName(name);
     return formatPartnerObject(partnerResponse);
   }
@@ -47,9 +46,9 @@ export class PartnerController {
   @ApiBearerAuth('access-token')
   @UseGuards(SuperAdminAuthGuard)
   @Patch(':id')
-  @ApiOperation({ description: 'Update a partner profile and makes partner active or inactive' })
+  @ApiOperation({ description: 'Update a partner profile to make partner active or inactive' })
   @ApiBody({ type: UpdatePartnerDto })
-  async updatePartner(@Param() { id }, @Body() updatePartnerDto: UpdatePartnerDto) {
-    return this.partnerService.updatePartner(id, updatePartnerDto);
+  async updatePartnerActiveStatus(@Param() { id }, @Body() updatePartnerDto: UpdatePartnerDto) {
+    return this.partnerService.updatePartnerActiveStatus(id, updatePartnerDto);
   }
 }
