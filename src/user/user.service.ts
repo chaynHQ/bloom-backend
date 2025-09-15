@@ -132,10 +132,9 @@ export class UserService {
   }> {
     const queryResult = await this.userRepository
       .createQueryBuilder('user')
-      .leftJoinAndSelect('user.partnerAccess', 'partnerAccess')
-      .leftJoinAndSelect('user.partnerAdmin', 'partnerAdmin')
+      .leftJoinAndSelect('user.partnerAccess', 'partnerAccess', 'partnerAccess.active = true')
+      .leftJoinAndSelect('user.partnerAdmin', 'partnerAdmin', 'partnerAdmin.active = true')
       .leftJoinAndSelect('partnerAccess.partner', 'partner')
-      .leftJoinAndSelect('partnerAccess.partner', 'partnerAccessPartner')
       .leftJoinAndSelect('partnerAdmin.partner', 'partnerAdminPartner')
       .leftJoinAndSelect('user.resourceUser', 'resourceUser')
       .leftJoinAndSelect('resourceUser.resource', 'resource')

@@ -167,6 +167,7 @@ export const formatPartnerObject = (partnerObject: PartnerEntity): IPartner => {
   return {
     name: partnerObject.name,
     id: partnerObject.id,
+    isActive: partnerObject.isActive,
     partnerFeature: partnerObject.partnerFeature
       ? partnerObject.partnerFeature.map<IPartnerFeature>((pf) => {
           return {
