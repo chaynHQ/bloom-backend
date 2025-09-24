@@ -1,6 +1,6 @@
-import { EMAIL_REMINDERS_FREQUENCY } from '../utils/constants';
+import { EMAIL_REMINDERS_FREQUENCY } from '../../utils/constants';
 
-export interface IUser {
+export class UserProfileDto {
   id: string;
   createdAt: Date | string;
   updatedAt: Date | string;
