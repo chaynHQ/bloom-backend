@@ -102,7 +102,10 @@ const getEnv = (env: string, envName: string): string => {
 
     return env;
   } catch (error) {
-    if (nodeEnv !== ENVIRONMENTS.TEST) console.log(error);
+    if (nodeEnv !== ENVIRONMENTS.TEST) {
+      // Log error without exposing sensitive environment variable details
+      console.error(`Environment configuration error: Missing required variable`);
+    }
   }
 };
 

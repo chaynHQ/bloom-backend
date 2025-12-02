@@ -59,27 +59,27 @@ export class AuthService {
         email,
         password,
       });
-      this.logger.log(`Create user: Firebase user created: ${email}`);
+      this.logger.log('Create user: Firebase user created');
       return firebaseUser;
     } catch (err) {
       const errorCode = err.code;
 
       if (errorCode === 'auth/invalid-email') {
         this.logger.warn(
-          `Create user: user tried to create email with invalid email: ${email} - ${err}`,
+          'Create user: user tried to create email with invalid email format',
         );
         throw new HttpException(FIREBASE_ERRORS.CREATE_USER_INVALID_EMAIL, HttpStatus.BAD_REQUEST);
       } else if (errorCode === 'auth/weak-password' || errorCode === 'auth/invalid-password') {
-        this.logger.warn(`Create user: user tried to create email with weak password - ${err}`);
+        this.logger.warn('Create user: user tried to create account with weak password');
         throw new HttpException(FIREBASE_ERRORS.CREATE_USER_WEAK_PASSWORD, HttpStatus.BAD_REQUEST);
       } else if (
         errorCode === 'auth/email-already-in-use' ||
         errorCode === 'auth/email-already-exists'
       ) {
-        this.logger.warn(`Create user: Firebase user already exists: ${email}`);
+        this.logger.warn('Create user: Firebase user already exists');
         throw new HttpException(FIREBASE_ERRORS.CREATE_USER_ALREADY_EXISTS, HttpStatus.BAD_REQUEST);
       } else {
-        this.logger.error(`Create user: Error creating firebase user - ${email}: ${err}`);
+        this.logger.error(`Create user: Error creating firebase user: ${err.code || 'unknown error'}`);
         throw new HttpException(FIREBASE_ERRORS.CREATE_USER_FIREBASE_ERROR, HttpStatus.BAD_REQUEST);
       }
     }

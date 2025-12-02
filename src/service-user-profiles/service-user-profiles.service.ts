@@ -82,9 +82,9 @@ export class ServiceUserProfilesService {
         merge_fields: mailchimpMergeFields,
       });
 
-      logger.log(`Create user: updated service user profiles. User: ${email}`);
+      logger.log('Create user: updated service user profiles');
     } catch (error) {
-      logger.error(`Create service user profiles error - ${error}. User: ${email}`);
+      logger.error(`Create service user profiles error: ${error.message || 'unknown error'}`);
     }
   }
 
@@ -120,7 +120,7 @@ export class ServiceUserProfilesService {
         },
         existingEmail,
       );
-      logger.log(`Updated service user profiles user. Email: ${email}`);
+      logger.log('Updated service user profiles user');
     } catch (error) {
       if (error.toString() === 'Error: Not found') {
         // mailchimp account not found, create one
@@ -132,7 +132,7 @@ export class ServiceUserProfilesService {
           },
         });
         this.createCompleteMailchimpUserProfile(userWithRelations);
-        logger.log(`Created and updated service user profiles user. Email: ${email}`);
+        logger.log('Created and updated service user profiles user');
       }
       logger.error(`Update service user profiles user error - ${JSON.stringify(error)}`);
     }
