@@ -586,7 +586,7 @@ describe('WebhooksService', () => {
         .spyOn(mockedUserRepository, 'findOneBy')
         .mockImplementationOnce(() => undefined);
       await expect(service.updatePartnerAccessTherapy(mockSimplybookBodyBase)).rejects.toThrow(
-        'UpdatePartnerAccessTherapy - error finding user with userID userId2 - UpdatePartnerAccessTherapy - User not found',
+        'UpdatePartnerAccessTherapy - error finding user with userID userId2 - User not found',
       );
       expect(userFindOneRepoSpy).toHaveBeenCalled();
     });

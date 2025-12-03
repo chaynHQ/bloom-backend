@@ -98,7 +98,9 @@ export enum COMMUNICATION_SERVICE {
 
 const getEnv = (env: string, envName: string): string => {
   if (!env) {
-    console.error(`Environment configuration error: Missing required variable ${envName}`);
+    if (nodeEnv !== ENVIRONMENTS.TEST) {
+      console.error(`Environment configuration error: Missing required variable ${envName}`);
+    }
     return;
   }
   return env;
