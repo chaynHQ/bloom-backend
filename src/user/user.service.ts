@@ -84,16 +84,16 @@ export class UserService {
           user.id,
         );
 
-        this.logger.log(`Create user: (no access code) created partner user in db. User: ${email}`);
+        this.logger.log('Create user: (no access code) created partner user in db');
       } else if (signUpType === SIGNUP_TYPE.PARTNER_USER_WITH_CODE) {
         // Assign the existing partner access to new user
         partnerAccess.userId = user.id;
         partnerAccess = await this.partnerAccessRepository.save(partnerAccess);
         this.logger.log(
-          `Create user: (with access code) created partner user in db. User: ${email}`,
+          'Create user: (with access code) created partner user in db',
         );
       } else {
-        this.logger.log(`Create user: created public user in db. User: ${email}`);
+        this.logger.log('Create user: created public user in db');
       }
 
       await this.serviceUserProfilesService.createServiceUserProfiles(user, partner, partnerAccess);
@@ -105,7 +105,7 @@ export class UserService {
       return userDto;
     } catch (error) {
       if (!Object.values(FIREBASE_ERRORS).includes(error)) {
-        this.logger.error(`Create user: Error creating user ${email}: ${error}`);
+        this.logger.error(`Create user: Error creating user: ${error.message || 'unknown error'}`);
       }
       throw error;
     }
@@ -171,7 +171,7 @@ export class UserService {
     } catch (err) {
       // Continue to delete user, even if firebase request fails
       this.logger.error(
-        `deleteUser - firebase error. Unable to delete user ${user.email} due to error ${err}`,
+        `deleteUser - firebase error. Unable to delete user due to error: ${err.code || 'unknown error'}`,
       );
     }
 
@@ -193,7 +193,7 @@ export class UserService {
       return await this.userRepository.save(updateUser);
     } catch (error) {
       throw new HttpException(
-        `Unable to complete deleting user, ${user.email} due to error - ${error}`,
+        `Unable to complete deleting user due to error: ${error.message || 'unknown error'}`,
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
@@ -343,9 +343,10 @@ export class UserService {
     let deletedUsers: UserEntity[];
     try {
       const users = await this.userRepository.find({
-        where: {
-          email: ILike('%cypresstestemail+%'),
-        },
+        where: [
+          { email: ILike('%cypresstestemail+%@chayn.co') },
+          { email: ILike('test-%@chayn.co') },
+        ],
       });
 
       deletedUsers = await this.batchDeleteUsers(users);

@@ -508,7 +508,7 @@ describe('UserService', () => {
       const mockAuthServiceSpy = jest.spyOn(mockAuthService, 'deleteFirebaseUser');
 
       await expect(service.deleteUser(mockUserEntity)).rejects.toThrow(
-        'Unable to complete deleting user, user@email.com due to error - Error: Subscription deletion error, unable to redact subscriptions for user with id userId1',
+        'Unable to complete deleting user due to error: Subscription deletion error, unable to redact subscriptions for user with id userId1',
       );
 
       expect(repoSpySave).toHaveBeenCalledTimes(0);
@@ -546,7 +546,7 @@ describe('UserService', () => {
       const mockAuthServiceSpy = jest.spyOn(mockAuthService, 'deleteFirebaseUser');
 
       await expect(service.deleteUser(mockUserEntity)).rejects.toThrow(
-        'Unable to complete deleting user, user@email.com due to error - Error: Therapy deletion error, unable to redact therapy sessions for user with id userId1',
+        'Unable to complete deleting user due to error: Therapy deletion error, unable to redact therapy sessions for user with id userId1',
       );
 
       expect(repoSpySave).toHaveBeenCalledTimes(0);

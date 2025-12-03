@@ -49,7 +49,7 @@ export class WebhooksService {
     const { action, booking_code, user_id, client_email } = simplyBookDto;
 
     this.logger.log(
-      `Update therapy session webhook function STARTED for ${action} - ${client_email} - ${booking_code} - userId ${user_id}`,
+      `Update therapy session webhook function STARTED for ${action} - booking_code ${booking_code} - userId ${user_id}`,
     );
 
     // Retrieve existing therapy session record for this booking
@@ -59,13 +59,13 @@ export class WebhooksService {
     });
 
     if (action !== SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING && !existingTherapySession) {
-      const error = `UpdatePartnerAccessTherapy - existing therapy session not found for user ${client_email} booking code ${booking_code}`;
+      const error = `UpdatePartnerAccessTherapy - existing therapy session not found for booking code ${booking_code}`;
       this.logger.error(error);
       throw new HttpException(error, HttpStatus.BAD_REQUEST);
     }
 
     if (action === SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING && existingTherapySession && isProduction) {
-      const error = `UpdatePartnerAccessTherapy - therapy session already exists for ${client_email} booking code ${booking_code}, preventing duplicate NEW_BOOKING action`;
+      const error = `UpdatePartnerAccessTherapy - therapy session already exists for booking code ${booking_code}, preventing duplicate NEW_BOOKING action`;
       this.logger.error(error);
       throw new HttpException(error, HttpStatus.FOUND);
     }
@@ -78,7 +78,7 @@ export class WebhooksService {
       const therapySession = await this.newPartnerAccessTherapy(user, simplyBookDto);
 
       this.logger.log(
-        `Update therapy session webhook function COMPLETED for ${action} - ${user.email} - ${booking_code} - userId ${user_id}`,
+        `Update therapy session webhook function COMPLETED for ${action} - booking_code ${booking_code} - userId ${user_id}`,
       );
       return therapySession;
     }
@@ -100,7 +100,7 @@ export class WebhooksService {
 
         existingTherapySession.cancelledAt = new Date();
       } catch (err) {
-        const error = `UpdatePartnerAccessTherapy - error updating partner access for ${action} - email ${user.email} userId ${user.id} - ${err}`;
+        const error = `UpdatePartnerAccessTherapy - error updating partner access for ${action} - userId ${user.id} - ${err.message || 'unknown error'}`;
         this.logger.error(error);
         throw new HttpException(error, HttpStatus.INTERNAL_SERVER_ERROR);
       }
@@ -129,11 +129,11 @@ export class WebhooksService {
       this.serviceUserProfilesService.updateServiceUserProfilesTherapy(partnerAccesses, user.email);
 
       this.logger.log(
-        `Update therapy session webhook function COMPLETED for ${action} - ${user.email} - ${booking_code} - userId ${user_id}`,
+        `Update therapy session webhook function COMPLETED for ${action} - booking_code ${booking_code} - userId ${user_id}`,
       );
       return therapySession;
     } catch (err) {
-      const error = `UpdatePartnerAccessTherapy - error updating therapy session for ${action} - email ${user.email} userId ${user.id} - ${err}`;
+      const error = `UpdatePartnerAccessTherapy - error updating therapy session for ${action} - userId ${user.id} - ${err.message || 'unknown error'}`;
       this.logger.error(error);
       throw new HttpException(error, HttpStatus.INTERNAL_SERVER_ERROR);
     }
@@ -161,13 +161,13 @@ export class WebhooksService {
           }
         }
       } catch (err) {
-        const error = `UpdatePartnerAccessTherapy - error finding user in therapyRepository or userRepository with email ${client_email} - ${err}`;
+        const error = `UpdatePartnerAccessTherapy - error finding user in therapyRepository or userRepository - ${err.message || 'unknown error'}`;
         this.logger.error(error);
         throw new HttpException(error, HttpStatus.INTERNAL_SERVER_ERROR);
       }
       if (!userId) {
         // All searches tried and failed, throw 404/400 error
-        const error = `UpdatePartnerAccessTherapy - user not found for email ${client_email} and no userId provided or found`;
+        const error = 'UpdatePartnerAccessTherapy - user not found and no userId provided';
         this.logger.error(error);
         throw new HttpException(error, HttpStatus.BAD_REQUEST);
       }
@@ -182,11 +182,11 @@ export class WebhooksService {
       await this.slackMessageClient.sendMessageToTherapySlackChannel(
         `Unknown user made a therapy booking with email ${client_email}, userID ${userId} 🚨`,
       );
-      const error = `UpdatePartnerAccessTherapy - user not found for userID ${userId}, with origin client_email ${client_email}`;
+      const error = `User not found`;
       this.logger.error(error);
       throw new HttpException(error, HttpStatus.BAD_REQUEST);
     } catch (err) {
-      const error = `UpdatePartnerAccessTherapy - error finding user with userID ${userId} and origin client_email ${client_email} - ${err}`;
+      const error = `UpdatePartnerAccessTherapy - error finding user with userID ${userId} - ${err.message || 'unknown error'}`;
       this.logger.error(error);
       throw new HttpException(error, HttpStatus.INTERNAL_SERVER_ERROR);
     }
@@ -209,7 +209,7 @@ export class WebhooksService {
       await this.slackMessageClient.sendMessageToTherapySlackChannel(
         `User booked therapy with no partner therapy access, please email user ${user.email} to confirm the booking has not been made and fix the account access`,
       );
-      const error = `newPartnerAccessTherapy - no partner therapy access - email ${user.email} userId ${user.id}`;
+      const error = `newPartnerAccessTherapy - no partner therapy access - userId ${user.id}`;
       this.logger.error(error);
       throw new HttpException(error, HttpStatus.FORBIDDEN);
     }
@@ -225,7 +225,7 @@ export class WebhooksService {
       await this.slackMessageClient.sendMessageToTherapySlackChannel(
         `User booked therapy with no therapy sessions remaining, please email user ${user.email} to confirm the booking has not been made`,
       );
-      const error = `newPartnerAccessTherapy - user has partner therapy access but has 0 therapy sessions remaining - email ${user.email} userId ${user.id}`;
+      const error = `newPartnerAccessTherapy - user has partner therapy access but has 0 therapy sessions remaining - userId ${user.id}`;
       this.logger.error(error);
       throw new HttpException(error, HttpStatus.FORBIDDEN);
     }
@@ -258,7 +258,7 @@ export class WebhooksService {
       );
       return therapySession;
     } catch (err) {
-      const error = `newPartnerAccessTherapy - error saving new therapy session and partner access - email ${user.email} userId ${user.id} - ${err}`;
+      const error = `newPartnerAccessTherapy - error saving new therapy session and partner access - userId ${user.id} - ${err.message || 'unknown error'}`;
       this.logger.error(error);
       throw new HttpException(error, HttpStatus.INTERNAL_SERVER_ERROR);
     }
