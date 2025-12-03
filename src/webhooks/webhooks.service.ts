@@ -182,7 +182,7 @@ export class WebhooksService {
       await this.slackMessageClient.sendMessageToTherapySlackChannel(
         `Unknown user made a therapy booking with email ${client_email}, userID ${userId} 🚨`,
       );
-      const error = `UpdatePartnerAccessTherapy - user not found for userID ${userId}`;
+      const error = `User not found`;
       this.logger.error(error);
       throw new HttpException(error, HttpStatus.BAD_REQUEST);
     } catch (err) {
