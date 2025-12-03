@@ -5,6 +5,7 @@ import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
 import { ControllerDecorator } from 'src/utils/controller.decorator';
 import { UserEntity } from '../entities/user.entity';
 import { FirebaseAuthGuard } from '../firebase/firebase-auth.guard';
+import { TherapySessionParamDto } from './dto/therapy-session-param.dto';
 import { TherapySessionService } from './therapy-session.service';
 
 @ApiTags('Therapy Session')
@@ -32,8 +33,8 @@ export class TherapySessionController {
     description: 'Cancels a therapy session for a user.',
   })
   @UseGuards(FirebaseAuthGuard)
-  async cancelTherapySession(@Param() { id }): Promise<TherapySessionEntity> {
-    const therapySession = await this.therapySessionService.cancelTherapySession(id);
+  async cancelTherapySession(@Param() params: TherapySessionParamDto): Promise<TherapySessionEntity> {
+    const therapySession = await this.therapySessionService.cancelTherapySession(params.id);
     return therapySession;
   }
 }

@@ -1,10 +1,14 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsBoolean, IsDate, IsEmail, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsDate, IsEmail, IsOptional, IsString, MaxLength } from 'class-validator';
 import { EMAIL_REMINDERS_FREQUENCY } from '../../utils/constants';
+import { SanitizeText, NormalizeEmail, TrimWhitespace, IsNotSqlInjection, IsNotXss } from '../../utils/sanitization.decorators';
 
 export class AdminUpdateUserDto {
   @IsString()
   @IsOptional()
+  @MaxLength(50, { message: 'Name is too long' })
+  @SanitizeText()
+  @IsNotXss()
   @ApiProperty({ type: String })
   name: string;
 
@@ -25,6 +29,10 @@ export class AdminUpdateUserDto {
 
   @IsString()
   @IsOptional()
+  @MaxLength(10, { message: 'Language code is too long' })
+  @TrimWhitespace()
+  @IsNotSqlInjection()
+  @IsNotXss()
   @ApiProperty({ type: String })
   signUpLanguage: string;
 
@@ -35,6 +43,9 @@ export class AdminUpdateUserDto {
 
   @IsEmail({})
   @IsOptional()
+  @MaxLength(255, { message: 'Email is too long' })
+  @NormalizeEmail()
+  @IsNotSqlInjection()
   @ApiProperty({ type: 'email' })
   email: string;
 

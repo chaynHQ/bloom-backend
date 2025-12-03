@@ -2,14 +2,14 @@ import { ApiProperty } from '@nestjs/swagger';
 import { IsDefined, IsNotEmpty, IsString, MaxLength } from 'class-validator';
 import { TrimWhitespace, IsNotSqlInjection, IsNotXss } from '../../utils/sanitization.decorators';
 
-export class ValidatePartnerAccessCodeDto {
-  @IsNotEmpty()
+export class FeatureParamDto {
   @IsString()
+  @IsNotEmpty()
   @IsDefined()
-  @MaxLength(6, { message: 'Partner access code must be 6 characters' })
+  @MaxLength(36, { message: 'Feature ID must be a valid UUID' })
   @TrimWhitespace()
   @IsNotSqlInjection()
   @IsNotXss()
-  @ApiProperty({ type: String })
-  partnerAccessCode: string;
+  @ApiProperty({ type: String, description: 'Feature ID' })
+  id: string;
 }
