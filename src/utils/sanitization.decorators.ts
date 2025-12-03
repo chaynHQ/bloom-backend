@@ -1,17 +1,20 @@
 import { Transform, TransformFnParams } from 'class-transformer';
-import { ValidateBy, buildMessage, ValidationOptions } from 'class-validator';
+import { buildMessage, ValidateBy, ValidationOptions } from 'class-validator';
 import * as validator from 'validator';
 
 // DOMPurify setup for Node.js environment
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let DOMPurify: any;
 try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { JSDOM } = require('jsdom');
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const createDOMPurify = require('dompurify');
   const window = new JSDOM('').window;
   DOMPurify = createDOMPurify(window);
-} catch (error) {
+} catch {
   // Fallback if JSDOM is not available (e.g., in browser environment)
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   DOMPurify = require('dompurify');
 }
 
@@ -23,29 +26,21 @@ type DOMPurifyConfig = {
 
 /**
  * Sanitizes HTML content using DOMPurify to prevent XSS attacks
+ * Provides safe defaults while allowing customization for specific use cases
  */
 export const SanitizeHtml = (options?: DOMPurifyConfig) =>
   Transform(({ value }: TransformFnParams) => {
     if (typeof value !== 'string') return value;
-    return DOMPurify.sanitize(value, options || {});
-  });
 
-/**
- * Trims whitespace and sanitizes HTML content
- */
-export const TrimAndSanitizeHtml = (options?: DOMPurifyConfig) =>
-  Transform(({ value }: TransformFnParams) => {
-    if (typeof value !== 'string') return value;
-    return DOMPurify.sanitize(value.trim(), options || {});
-  });
+    // Default safe configuration
+    const defaultConfig: DOMPurifyConfig = {
+      ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'p', 'br', 'ul', 'ol', 'li'],
+      ALLOWED_ATTR: [],
+      KEEP_CONTENT: true,
+      ...options,
+    };
 
-/**
- * Strips all HTML tags from input
- */
-export const StripHtmlTags = () =>
-  Transform(({ value }: TransformFnParams) => {
-    if (typeof value !== 'string') return value;
-    return value.replace(/<[^>]*>/g, '');
+    return DOMPurify.sanitize(value, defaultConfig);
   });
 
 /**
@@ -67,59 +62,18 @@ export const NormalizeEmail = () =>
   });
 
 /**
- * Escapes SQL-like patterns that could be dangerous
- */
-export const EscapeSqlPatterns = () =>
-  Transform(({ value }: TransformFnParams) => {
-    if (typeof value !== 'string') return value;
-    // Escape common SQL injection patterns
-    return value
-      .replace(/'/g, "''")  // Escape single quotes
-      .replace(/;/g, '\\;')  // Escape semicolons
-      .replace(/--/g, '\\-\\-')  // Escape SQL comments
-      .replace(/\/\*/g, '\\/\\*')  // Escape multi-line comments
-      .replace(/\*\//g, '\\*\\/')
-      .replace(/\bUNION\b/gi, 'UNION')  // Normalize but don't remove (let validation catch it)
-      .replace(/\bSELECT\b/gi, 'SELECT')
-      .replace(/\bINSERT\b/gi, 'INSERT')
-      .replace(/\bUPDATE\b/gi, 'UPDATE')
-      .replace(/\bDELETE\b/gi, 'DELETE')
-      .replace(/\bDROP\b/gi, 'DROP');
-  });
-
-/**
- * Removes null bytes and control characters
- */
-export const RemoveControlCharacters = () =>
-  Transform(({ value }: TransformFnParams) => {
-    if (typeof value !== 'string') return value;
-    // Remove null bytes and most control characters except newlines and tabs
-    // eslint-disable-next-line no-control-regex
-    return value.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
-  });
-
-/**
  * Applies comprehensive sanitization for text inputs
  */
 export const SanitizeText = () =>
   Transform(({ value }: TransformFnParams) => {
     if (typeof value !== 'string') return value;
-    
-    let sanitized = value;
-    
-    // Remove control characters
+
+    // Remove control characters first
     // eslint-disable-next-line no-control-regex
-    sanitized = sanitized.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
-    
-    // Trim whitespace
-    sanitized = sanitized.trim();
-    
-    // Basic XSS protection - remove script tags and javascript: protocols
-    sanitized = sanitized.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
-    sanitized = sanitized.replace(/javascript:/gi, '');
-    sanitized = sanitized.replace(/on\w+\s*=/gi, ''); // Remove event handlers
-    
-    return sanitized;
+    const cleanedValue = value.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+
+    // Let DOMPurify handle all the XSS protection - it's designed for this
+    return DOMPurify.sanitize(cleanedValue.trim());
   });
 
 /**
@@ -132,7 +86,7 @@ export function IsNotSqlInjection(validationOptions?: ValidationOptions) {
       validator: {
         validate: (value: unknown) => {
           if (typeof value !== 'string') return true;
-          
+
           const sqlPatterns = [
             /(\bUNION\b.*\bSELECT\b)/gi,
             /(\bSELECT\b.*\bFROM\b)/gi,
@@ -143,10 +97,10 @@ export function IsNotSqlInjection(validationOptions?: ValidationOptions) {
             /(\bALTER\b.*\bTABLE\b)/gi,
             /(;\s*(SELECT|INSERT|UPDATE|DELETE|DROP|ALTER|CREATE))/gi,
             /(';\s*--)/gi,
-            /(\|\||&&|\bOR\b.*=.*\bOR\b)/gi
+            /(\|\||&&|\bOR\b.*=.*\bOR\b)/gi,
           ];
-          
-          return !sqlPatterns.some(pattern => pattern.test(value));
+
+          return !sqlPatterns.some((pattern) => pattern.test(value));
         },
         defaultMessage: buildMessage(
           (eachPrefix) => eachPrefix + '$property contains potentially dangerous SQL patterns',
@@ -168,7 +122,7 @@ export function IsNotXss(validationOptions?: ValidationOptions) {
       validator: {
         validate: (value: unknown) => {
           if (typeof value !== 'string') return true;
-          
+
           const xssPatterns = [
             /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi,
             /<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi,
@@ -178,15 +132,16 @@ export function IsNotXss(validationOptions?: ValidationOptions) {
             /<meta\b[^<]*>/gi,
             /javascript:/gi,
             /vbscript:/gi,
+            /data:/gi,
             /on\w+\s*=/gi,
             /<[^>]+on\w+\s*=/gi,
             /expression\s*\(/gi,
             /@import/gi,
             /document\.(cookie|domain|write)/gi,
-            /window\.(location|open)/gi
+            /window\.(location|open)/gi,
           ];
-          
-          return !xssPatterns.some(pattern => pattern.test(value));
+
+          return !xssPatterns.some((pattern) => pattern.test(value));
         },
         defaultMessage: buildMessage(
           (eachPrefix) => eachPrefix + '$property contains potentially dangerous XSS patterns',
@@ -197,19 +152,3 @@ export function IsNotXss(validationOptions?: ValidationOptions) {
     validationOptions,
   );
 }
-
-/**
- * Combined sanitization and validation for user input
- */
-export const SecureText = () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return function (target: any, propertyKey: string) {
-    // Apply transformations first
-    TrimAndSanitizeHtml()(target, propertyKey);
-    RemoveControlCharacters()(target, propertyKey);
-    
-    // Then apply validations
-    IsNotSqlInjection()(target, propertyKey);
-    IsNotXss()(target, propertyKey);
-  };
-};
