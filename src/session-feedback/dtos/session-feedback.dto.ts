@@ -1,15 +1,10 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEnum, IsNotEmpty, IsString, MaxLength } from 'class-validator';
+import { IsEnum, IsNotEmpty } from 'class-validator';
 import { FEEDBACK_TAGS_ENUM } from 'src/utils/constants';
-import { TrimWhitespace, SanitizeHtml, IsNotSqlInjection, IsNotXss } from '../../utils/sanitization.decorators';
+import { SecureInput } from '../../utils/sanitization.decorators';
 
 export class SessionFeedbackDto {
-  @IsNotEmpty()
-  @IsString()
-  @MaxLength(36, { message: 'Session ID must be a valid UUID' })
-  @TrimWhitespace()
-  @IsNotSqlInjection()
-  @IsNotXss()
+  @SecureInput('id', { required: true, maxLength: 36 })
   @ApiProperty({ type: String })
   sessionId: string;
 
@@ -22,11 +17,7 @@ export class SessionFeedbackDto {
   })
   feedbackTags: FEEDBACK_TAGS_ENUM;
 
-  @IsString()
-  @MaxLength(5000, { message: 'Feedback description is too long' })
-  @SanitizeHtml({ ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'p', 'br', 'ul', 'ol', 'li'] })
-  @IsNotSqlInjection()
-  @IsNotXss()
+  @SecureInput('html', { maxLength: 5000, allowedTags: ['b', 'i', 'em', 'strong', 'p', 'br', 'ul', 'ol', 'li'] })
   @ApiProperty({ type: String })
   feedbackDescription: string;
 }

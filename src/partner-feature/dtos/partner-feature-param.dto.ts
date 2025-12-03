@@ -1,27 +1,17 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsDefined, IsNotEmpty, IsString, MaxLength } from 'class-validator';
-import { TrimWhitespace, IsNotSqlInjection, IsNotXss } from '../../utils/sanitization.decorators';
+import { IsDefined } from 'class-validator';
+import { SecureInput } from '../../utils/sanitization.decorators';
 
 export class PartnerFeatureParamDto {
-  @IsString()
-  @IsNotEmpty()
+  @SecureInput('id', { required: true, maxLength: 36 })
   @IsDefined()
-  @MaxLength(36, { message: 'Partner feature ID must be a valid UUID' })
-  @TrimWhitespace()
-  @IsNotSqlInjection()
-  @IsNotXss()
   @ApiProperty({ type: String, description: 'Partner feature ID' })
   id: string;
 }
 
 export class PartnerNameParamDto {
-  @IsString()
-  @IsNotEmpty()
+  @SecureInput('text', { required: true, maxLength: 50 })
   @IsDefined()
-  @MaxLength(50, { message: 'Partner name is too long' })
-  @TrimWhitespace()
-  @IsNotSqlInjection()
-  @IsNotXss()
   @ApiProperty({ type: String, description: 'Partner name' })
   partnerName: string;
 }

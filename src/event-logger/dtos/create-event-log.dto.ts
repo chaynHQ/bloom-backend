@@ -1,6 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsEnum, IsNotEmpty, IsObject, IsOptional } from 'class-validator';
-import { IsNotSqlInjection, IsNotXss } from '../../utils/sanitization.decorators';
 import { EVENT_NAME, EventLogMetadata } from '../event-logger.interface';
 
 export class CreateEventLogDto {
@@ -11,8 +10,6 @@ export class CreateEventLogDto {
 
   @IsOptional()
   @IsObject()
-  @IsNotSqlInjection()
-  @IsNotXss()
   @ApiProperty({ description: 'The type of event being logged' })
   metadata: EventLogMetadata;
 }

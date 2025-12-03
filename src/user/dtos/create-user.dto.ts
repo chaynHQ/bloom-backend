@@ -1,51 +1,32 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsBoolean, IsDefined, IsEmail, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsBoolean, IsDefined, IsOptional } from 'class-validator';
 import { EMAIL_REMINDERS_FREQUENCY } from '../../utils/constants';
-import { SanitizeText, NormalizeEmail, TrimWhitespace, IsNotSqlInjection, IsNotXss } from '../../utils/sanitization.decorators';
+import { SecureInput } from '../../utils/sanitization.decorators';
 
 export class CreateUserDto {
-  @IsString()
-  @IsNotEmpty()
+  @SecureInput('text', { required: true, maxLength: 50 })
   @IsDefined()
-  @MaxLength(50, { message: 'Name is too long' })
-  @SanitizeText()
-  @IsNotXss()
   @ApiProperty({ type: String })
   name: string;
 
-  @IsEmail()
-  @IsNotEmpty()
+  @SecureInput('email', { required: true, maxLength: 255 })
   @IsDefined()
-  @MaxLength(255, { message: 'Email is too long' })
-  @NormalizeEmail()
-  @IsNotSqlInjection()
   @ApiProperty({ type: String })
   email: string;
 
-  // @IsStrongPassword()
-  @IsNotEmpty()
+  // TODO: Add @IsStrongPassword() if needed
+  @SecureInput('password', { required: true, maxLength: 128 })
   @IsDefined()
-  @MaxLength(128, { message: 'Password is too long' })
-  @TrimWhitespace()
-  @IsNotSqlInjection()
   @ApiProperty({ type: String })
   password: string;
 
+  @SecureInput('id', { maxLength: 6 })
   @IsOptional()
-  @IsString()
-  @MaxLength(6, { message: 'Partner access code must be 6 characters' })
-  @TrimWhitespace()
-  @IsNotSqlInjection()
-  @IsNotXss()
   @ApiProperty({ type: String })
   partnerAccessCode?: string;
 
+  @SecureInput('id', { maxLength: 36 })
   @IsOptional()
-  @IsString()
-  @MaxLength(36, { message: 'Partner ID must be a valid UUID' })
-  @TrimWhitespace()
-  @IsNotSqlInjection()
-  @IsNotXss()
   @ApiProperty({ type: String })
   partnerId?: string;
 
@@ -59,17 +40,12 @@ export class CreateUserDto {
   @ApiProperty({ type: Boolean })
   serviceEmailsPermission: boolean;
 
-  @IsOptional()
-  @IsString()
+  @SecureInput('text', { required: false, maxLength: 20 })
   @ApiProperty({ type: String })
   emailRemindersFrequency: EMAIL_REMINDERS_FREQUENCY;
 
+  @SecureInput('id', { maxLength: 10 })
   @IsOptional()
-  @IsString()
-  @MaxLength(10, { message: 'Language code is too long' })
-  @TrimWhitespace()
-  @IsNotSqlInjection()
-  @IsNotXss()
   @ApiProperty({ type: String })
   signUpLanguage: string;
 }

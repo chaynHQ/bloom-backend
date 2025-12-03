@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsDefined, IsEmail, IsEnum, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsDefined, IsEnum, IsNotEmpty, IsString } from 'class-validator';
 import { SIMPLYBOOK_ACTION_ENUM } from '../../utils/constants';
-import { NormalizeEmail, TrimWhitespace, SanitizeText, IsNotSqlInjection, IsNotXss } from '../../utils/sanitization.decorators';
+import { SecureInput } from '../../utils/sanitization.decorators';
 
 export class ZapierSimplybookBodyDto {
   @IsNotEmpty()
@@ -11,71 +11,45 @@ export class ZapierSimplybookBodyDto {
   @ApiProperty({ type: String })
   action: SIMPLYBOOK_ACTION_ENUM;
 
-  @IsNotEmpty()
-  @IsEmail()
+  @SecureInput('email', { required: true, maxLength: 255 })
   @IsDefined()
-  @MaxLength(255, { message: 'Client email is too long' })
-  @NormalizeEmail()
-  @IsNotSqlInjection()
   @ApiProperty({ type: String })
   client_email: string;
 
-  @IsString()
-  @IsOptional()
-  @MaxLength(36, { message: 'User ID must be a valid UUID' })
-  @TrimWhitespace()
-  @IsNotSqlInjection()
-  @IsNotXss()
+  @SecureInput('id', { required: false, maxLength: 36 })
   @ApiProperty({ type: String })
   user_id?: string;
 
-  @IsString()
-  @IsOptional()
+  @SecureInput('text', { required: false, maxLength: 50 })
   @ApiProperty({ type: String })
   client_timezone: string;
 
-  @IsString()
+  @SecureInput('id', { required: true, maxLength: 100 })
   @IsDefined()
-  @IsNotEmpty()
-  @MaxLength(100, { message: 'Booking code is too long' })
-  @TrimWhitespace()
-  @IsNotSqlInjection()
-  @IsNotXss()
   @ApiProperty({ type: String })
   booking_code: string;
 
-  @IsString()
+  @SecureInput('text', { required: true, maxLength: 200 })
   @IsDefined()
-  @MaxLength(200, { message: 'Service name is too long' })
-  @SanitizeText()
-  @IsNotSqlInjection()
-  @IsNotXss()
   @ApiProperty({ type: String })
   service_name: string;
 
-  @IsString()
+  @SecureInput('text', { required: true, maxLength: 200 })
   @IsDefined()
-  @MaxLength(200, { message: 'Service provider name is too long' })
-  @SanitizeText()
-  @IsNotSqlInjection()
-  @IsNotXss()
   @ApiProperty({ type: String })
   service_provider_name: string;
 
-  @IsString()
+  @SecureInput('email', { required: true, maxLength: 255 })
   @IsDefined()
-  @MaxLength(255, { message: 'Service provider email is too long' })
-  @NormalizeEmail()
-  @IsNotSqlInjection()
   @ApiProperty({ type: String })
   service_provider_email: string;
 
-  @IsString()
+  @SecureInput('text', { required: true, maxLength: 50 })
   @IsDefined()
   @ApiProperty({ type: String })
   start_date_time: string;
 
-  @IsString()
+  @SecureInput('text', { required: true, maxLength: 50 })
   @IsDefined()
   @ApiProperty({ type: String })
   end_date_time: string;

@@ -1,12 +1,9 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsOptional, IsString, MaxLength } from 'class-validator';
 import { Transform } from 'class-transformer';
-import { IsNotSqlInjection, IsNotXss } from '../../utils/sanitization.decorators';
+import { SecureInput } from '../../utils/sanitization.decorators';
 
 export class UserQueryDto {
-  @IsOptional()
-  @IsString()
-  @MaxLength(10000, { message: 'searchCriteria is too long' })
+  @SecureInput('text', { required: false, maxLength: 10000 })
   @Transform(({ value }) => {
     if (typeof value !== 'string') return value;
     // Basic validation that it's valid JSON structure before parsing
@@ -17,8 +14,6 @@ export class UserQueryDto {
       return '';
     }
   })
-  @IsNotSqlInjection()
-  @IsNotXss()
   @ApiProperty({ 
     type: String, 
     required: false, 
