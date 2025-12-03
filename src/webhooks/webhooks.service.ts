@@ -180,7 +180,7 @@ export class WebhooksService {
 
       // No user record found for userId, throw error
       await this.slackMessageClient.sendMessageToTherapySlackChannel(
-        `Unknown user made a therapy booking with userID ${userId} 🚨`,
+        `Unknown user made a therapy booking with email ${client_email}, userID ${userId} 🚨`,
       );
       const error = `UpdatePartnerAccessTherapy - user not found for userID ${userId}`;
       this.logger.error(error);
@@ -207,7 +207,7 @@ export class WebhooksService {
 
     if (!partnerAccesses.length) {
       await this.slackMessageClient.sendMessageToTherapySlackChannel(
-        'User booked therapy with no partner therapy access, please contact user to confirm the booking has not been made and fix the account access',
+        `User booked therapy with no partner therapy access, please email user ${user.email} to confirm the booking has not been made and fix the account access`,
       );
       const error = `newPartnerAccessTherapy - no partner therapy access - userId ${user.id}`;
       this.logger.error(error);
@@ -223,7 +223,7 @@ export class WebhooksService {
 
     if (!partnerAccess) {
       await this.slackMessageClient.sendMessageToTherapySlackChannel(
-        'User booked therapy with no therapy sessions remaining, please contact user to confirm the booking has not been made',
+        `User booked therapy with no therapy sessions remaining, please email user ${user.email} to confirm the booking has not been made`,
       );
       const error = `newPartnerAccessTherapy - user has partner therapy access but has 0 therapy sessions remaining - userId ${user.id}`;
       this.logger.error(error);
