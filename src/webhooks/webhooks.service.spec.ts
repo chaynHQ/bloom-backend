@@ -586,7 +586,7 @@ describe('WebhooksService', () => {
         .spyOn(mockedUserRepository, 'findOneBy')
         .mockImplementationOnce(() => undefined);
       await expect(service.updatePartnerAccessTherapy(mockSimplybookBodyBase)).rejects.toThrow(
-        'UpdatePartnerAccessTherapy - error finding user with userID userId2 and origin client_email testuser@test.com',
+        'UpdatePartnerAccessTherapy - error finding user with userID userId2 - User not found',
       );
       expect(userFindOneRepoSpy).toHaveBeenCalled();
     });
@@ -750,9 +750,7 @@ describe('WebhooksService', () => {
           ...mockSimplybookBodyBase,
           ...{ action: SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING },
         }),
-      ).rejects.toThrow(
-        'newPartnerAccessTherapy - no partner therapy access - email user@email.com userId userId2',
-      );
+      ).rejects.toThrow('newPartnerAccessTherapy - no partner therapy access - userId userId2');
     });
 
     it('should deduct therapyRemaining when user creates a new booking', async () => {
@@ -799,7 +797,7 @@ describe('WebhooksService', () => {
           ...{ action: SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING },
         }),
       ).rejects.toThrow(
-        'newPartnerAccessTherapy - user has partner therapy access but has 0 therapy sessions remaining - email user@email.com userId userId2',
+        'newPartnerAccessTherapy - user has partner therapy access but has 0 therapy sessions remaining - userId userId2',
       );
     });
     it('if user has 2 partner access codes and booking is tied to second code, user should be able to update booking', async () => {
