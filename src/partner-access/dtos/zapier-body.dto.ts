@@ -1,13 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsDefined, IsEnum, IsNotEmpty, IsString } from 'class-validator';
+import { IsDefined, IsEnum } from 'class-validator';
 import { SIMPLYBOOK_ACTION_ENUM } from '../../utils/constants';
 import { SecureInput } from '../../utils/sanitization.decorators';
 
 export class ZapierSimplybookBodyDto {
-  @IsNotEmpty()
-  @IsString()
-  @IsDefined()
   @IsEnum(SIMPLYBOOK_ACTION_ENUM)
+  @IsDefined()
   @ApiProperty({ type: String })
   action: SIMPLYBOOK_ACTION_ENUM;
 

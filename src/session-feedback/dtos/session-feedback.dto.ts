@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEnum, IsNotEmpty } from 'class-validator';
+import { IsDefined, IsEnum } from 'class-validator';
 import { FEEDBACK_TAGS_ENUM } from 'src/utils/constants';
 import { SecureInput } from '../../utils/sanitization.decorators';
 
@@ -8,7 +8,7 @@ export class SessionFeedbackDto {
   @ApiProperty({ type: String })
   sessionId: string;
 
-  @IsNotEmpty()
+  @IsDefined()
   @IsEnum(FEEDBACK_TAGS_ENUM)
   @ApiProperty({
     enum: FEEDBACK_TAGS_ENUM,

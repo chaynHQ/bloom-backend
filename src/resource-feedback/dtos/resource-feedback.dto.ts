@@ -1,19 +1,18 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEnum, IsNotEmpty, IsString } from 'class-validator';
+import { IsDefined, IsEnum } from 'class-validator';
 import { FEEDBACK_TAGS_ENUM } from 'src/utils/constants';
+import { SecureInput } from '../../utils/sanitization.decorators';
 
 export class ResourceFeedbackDto {
-  @IsNotEmpty()
-  @IsString()
+  @SecureInput('id', { required: true, maxLength: 36 })
   @ApiProperty({ type: String })
   id: string;
 
-  @IsNotEmpty()
-  @IsString()
+  @SecureInput('id', { required: true, maxLength: 36 })
   @ApiProperty({ type: String })
   resourceId: string;
 
-  @IsNotEmpty()
+  @IsDefined()
   @IsEnum(FEEDBACK_TAGS_ENUM)
   @ApiProperty({
     enum: FEEDBACK_TAGS_ENUM,
@@ -22,7 +21,7 @@ export class ResourceFeedbackDto {
   })
   feedbackTags: FEEDBACK_TAGS_ENUM;
 
-  @IsString()
+  @SecureInput('text', { maxLength: 5000 })
   @ApiProperty({ type: String })
   feedbackDescription: string;
 }

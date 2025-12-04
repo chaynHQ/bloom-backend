@@ -1,19 +1,17 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsBoolean, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsOptional } from 'class-validator';
+import { SecureInput } from '../../utils/sanitization.decorators';
 
 export class GetPartnerFeatureDto {
-  @IsOptional()
-  @IsString()
+  @SecureInput('id', { maxLength: 36 })
   @ApiProperty({ type: String })
   partnerFeatureId: string;
 
-  @IsOptional()
-  @IsString()
+  @SecureInput('id', { maxLength: 36 })
   @ApiProperty({ type: String })
   featureId: string;
 
-  @IsOptional()
-  @IsString()
+  @SecureInput('id', { maxLength: 36 })
   @ApiProperty({ type: String })
   partnerId: string;
 

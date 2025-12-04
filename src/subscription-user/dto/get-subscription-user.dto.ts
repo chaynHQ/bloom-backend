@@ -1,32 +1,29 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
-import { IsDefined, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsDefined, IsOptional } from 'class-validator';
+import { SecureInput } from '../../utils/sanitization.decorators';
 
 @Expose()
 export class GetSubscriptionUserDto {
   @ApiProperty()
-  @IsString()
+  @SecureInput('id', { required: true, maxLength: 36 })
   @IsDefined()
-  @IsNotEmpty()
   id: string;
 
   @ApiProperty()
-  @IsString()
+  @SecureInput('id', { required: true, maxLength: 36 })
   @IsDefined()
-  @IsNotEmpty()
   subscriptionId: string;
 
   @ApiProperty()
-  @IsString()
+  @SecureInput('text', { required: true, maxLength: 255 })
   @IsDefined()
-  @IsNotEmpty()
   @Expose()
   subscriptionName: string;
 
   @ApiProperty()
-  @IsString()
+  @SecureInput('text', { required: true, maxLength: 5000 })
   @IsDefined()
-  @IsNotEmpty()
   subscriptionInfo: string;
 
   @ApiProperty()

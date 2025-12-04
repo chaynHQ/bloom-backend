@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsBoolean, IsDefined, IsNotEmpty, IsNumber, IsOptional } from 'class-validator';
+import { IsBoolean, IsDefined, IsNumber, IsOptional } from 'class-validator';
 import { SecureInput } from '../../utils/sanitization.decorators';
 import { CrispProfileCustomFields } from '../crisp.interface';
 
@@ -43,13 +43,11 @@ export class CrispEventDto {
   from: string;
 
   @IsNumber()
-  @IsNotEmpty()
   @IsDefined()
   @ApiProperty({ type: Number })
   timestamp: number;
 
   @IsNumber()
-  @IsNotEmpty()
   @IsDefined()
   @ApiProperty({ type: Number })
   fingerprint: number;

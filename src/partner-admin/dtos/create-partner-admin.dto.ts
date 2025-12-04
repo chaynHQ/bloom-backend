@@ -1,16 +1,15 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsDefined, IsNotEmpty, IsString } from 'class-validator';
+import { IsDefined } from 'class-validator';
+import { SecureInput } from '../../utils/sanitization.decorators';
 
 export class CreatePartnerAdminDto {
-  @IsNotEmpty()
+  @SecureInput('id', { required: true, maxLength: 36 })
   @IsDefined()
   @ApiProperty({ type: String })
-  @IsString()
   userId: string;
 
-  @IsNotEmpty()
+  @SecureInput('id', { required: true, maxLength: 36 })
   @IsDefined()
   @ApiProperty({ type: String })
-  @IsString()
   partnerId: string;
 }
