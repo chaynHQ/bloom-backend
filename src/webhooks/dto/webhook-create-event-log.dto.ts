@@ -18,8 +18,8 @@ export class WebhookCreateEventLogDto {
   @ApiProperty({ type: String })
   email?: string;
 
-  @IsUUID(4, { message: 'userId must be a valid UUID' })
   @IsOptional()
+  @IsUUID(4, { message: 'userId must be a valid UUID' })
   @ApiProperty({ type: String })
   userId?: string;
 }
