@@ -1,14 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsEmail, IsString } from 'class-validator';
+import { SecureInput } from '../../utils/sanitization.decorators';
 
 export class CourseUserDto {
-  @IsNotEmpty()
-  @IsEmail()
+  @SecureInput('id', { required: true, maxLength: 36 })
   @ApiProperty({ type: String })
   userId: string;
 
-  @IsNotEmpty()
-  @IsString()
+  @SecureInput('id', { required: true, maxLength: 36 })
   @ApiProperty({ type: String })
   courseId: string;
 }

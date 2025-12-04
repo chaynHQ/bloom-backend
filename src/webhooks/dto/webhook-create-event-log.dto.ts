@@ -1,10 +1,10 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsDate, IsDefined, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsDate, IsDefined, IsNotEmpty } from 'class-validator';
 import { EVENT_NAME } from '../../event-logger/event-logger.interface';
+import { SecureInput } from '../../utils/sanitization.decorators';
 
 export class WebhookCreateEventLogDto {
-  @IsNotEmpty()
-  @IsString()
+  @SecureInput('text', { required: true, maxLength: 200 })
   @IsDefined()
   @ApiProperty({ type: String })
   event: EVENT_NAME;
@@ -15,13 +15,11 @@ export class WebhookCreateEventLogDto {
   @ApiProperty({ type: Date })
   date: Date;
 
-  @IsString()
-  @IsOptional()
+  @SecureInput('email', { maxLength: 255 })
   @ApiProperty({ type: String })
   email?: string;
 
-  @IsString()
-  @IsOptional()
+  @SecureInput('id', { maxLength: 36 })
   @ApiProperty({ type: String })
   userId?: string;
 }
