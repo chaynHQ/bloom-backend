@@ -1,21 +1,19 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsBoolean, IsDefined, IsNotEmpty, IsString } from 'class-validator';
+import { IsBoolean, IsDefined } from 'class-validator';
+import { SecureInput } from '../../utils/sanitization.decorators';
 
 export class CreatePartnerFeatureDto {
-  @IsString()
-  @IsNotEmpty()
+  @SecureInput('id', { required: true, maxLength: 36 })
   @IsDefined()
   @ApiProperty({ type: String })
   partnerId: string;
 
-  @IsString()
-  @IsNotEmpty()
+  @SecureInput('id', { required: true, maxLength: 36 })
   @IsDefined()
   @ApiProperty({ type: String })
   featureId: string;
 
   @IsBoolean()
-  @IsNotEmpty()
   @IsDefined()
   @ApiProperty({ type: Boolean })
   active: boolean;

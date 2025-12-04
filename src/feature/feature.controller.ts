@@ -4,6 +4,7 @@ import { FeatureEntity } from 'src/entities/feature.entity';
 import { SuperAdminAuthGuard } from '../partner-admin/super-admin-auth.guard';
 import { ControllerDecorator } from '../utils/controller.decorator';
 import { CreateFeatureDto } from './dtos/create-feature.dto';
+import { FeatureParamDto } from './dtos/feature-param.dto';
 import { FeatureService } from './feature.service';
 
 @ApiTags('Feature')
@@ -34,7 +35,7 @@ export class FeatureController {
   @ApiBearerAuth('access-token')
   @ApiOperation({ description: 'Returns feature' })
   @ApiParam({ name: 'id', description: 'Gets feature by id' })
-  async getFeature(@Param() { id }): Promise<FeatureEntity> {
-    return this.featureService.getFeature(id);
+  async getFeature(@Param() params: FeatureParamDto): Promise<FeatureEntity> {
+    return this.featureService.getFeature(params.id);
   }
 }
