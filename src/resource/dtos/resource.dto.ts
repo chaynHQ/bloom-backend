@@ -1,10 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEnum, IsOptional } from 'class-validator';
+import { IsEnum, IsOptional, IsUUID, IsDefined } from 'class-validator';
 import { STORYBLOK_STORY_STATUS_ENUM } from 'src/utils/constants';
 import { SecureInput } from '../../utils/sanitization.decorators';
 
 export class ResourceDto {
-  @SecureInput('id', { required: true, maxLength: 36 })
+  @IsUUID(4, { message: 'id must be a valid UUID' })
+  @IsDefined()
   @ApiProperty({ type: String })
   id: string;
 

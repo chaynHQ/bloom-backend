@@ -1,17 +1,17 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
-import { IsDefined, IsOptional } from 'class-validator';
+import { IsDefined, IsOptional, IsUUID } from 'class-validator';
 import { SecureInput } from '../../utils/sanitization.decorators';
 
 @Expose()
 export class GetSubscriptionUserDto {
   @ApiProperty()
-  @SecureInput('id', { required: true, maxLength: 36 })
+  @IsUUID(4, { message: 'id must be a valid UUID' })
   @IsDefined()
   id: string;
 
   @ApiProperty()
-  @SecureInput('id', { required: true, maxLength: 36 })
+  @IsUUID(4, { message: 'subscriptionId must be a valid UUID' })
   @IsDefined()
   subscriptionId: string;
 

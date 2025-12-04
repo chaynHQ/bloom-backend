@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsBoolean, IsDefined, IsOptional } from 'class-validator';
+import { IsBoolean, IsDefined, IsOptional, IsUUID } from 'class-validator';
 import { EMAIL_REMINDERS_FREQUENCY } from '../../utils/constants';
 import { SecureInput } from '../../utils/sanitization.decorators';
 
@@ -25,7 +25,7 @@ export class CreateUserDto {
   @ApiProperty({ type: String })
   partnerAccessCode?: string;
 
-  @SecureInput('id', { maxLength: 36 })
+  @IsUUID(4, { message: 'partnerId must be a valid UUID' })
   @IsOptional()
   @ApiProperty({ type: String })
   partnerId?: string;

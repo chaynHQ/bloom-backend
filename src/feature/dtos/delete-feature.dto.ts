@@ -1,8 +1,9 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { SecureInput } from '../../utils/sanitization.decorators';
+import { IsUUID, IsDefined } from 'class-validator';
 
 export class DeleteFeatureDto {
-  @SecureInput('id', { required: true, maxLength: 36 })
+  @IsUUID(4, { message: 'featureId must be a valid UUID' })
+  @IsDefined()
   @ApiProperty({ type: String })
   featureId: string;
 }
