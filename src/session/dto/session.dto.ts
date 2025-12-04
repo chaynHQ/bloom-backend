@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEnum } from 'class-validator';
+import { IsEnum, IsUUID, IsDefined } from 'class-validator';
 import { STORYBLOK_STORY_STATUS_ENUM } from 'src/utils/constants';
 import { SecureInput } from '../../utils/sanitization.decorators';
 
@@ -20,7 +20,8 @@ export class SessionDto {
   @ApiProperty({ type: String })
   storyblokUuid: string;
 
-  @SecureInput('id', { required: true, maxLength: 36 })
+  @IsUUID(4, { message: 'courseId must be a valid UUID' })
+  @IsDefined()
   @ApiProperty({ type: String })
   courseId: string;
 }

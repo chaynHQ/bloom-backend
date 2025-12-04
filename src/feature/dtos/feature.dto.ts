@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { IsUUID, IsDefined } from 'class-validator';
 import { SecureInput } from '../../utils/sanitization.decorators';
 
 export class Feature {
@@ -6,7 +7,8 @@ export class Feature {
   @ApiProperty({ type: String })
   name: string;
 
-  @SecureInput('id', { required: true, maxLength: 36 })
+  @IsUUID(4, { message: 'id must be a valid UUID' })
+  @IsDefined()
   @ApiProperty({ type: String })
   id: string;
 }
