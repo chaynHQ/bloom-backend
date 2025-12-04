@@ -17,7 +17,7 @@ export class CreateResourceFeedbackDto {
   })
   feedbackTags: FEEDBACK_TAGS_ENUM;
 
-  @SecureInput('html', { maxLength: 5000, allowedTags: ['b', 'i', 'em', 'strong', 'p', 'br', 'ul', 'ol', 'li'] })
+  @SecureInput('html', { maxLength: 5000 })
   @ApiProperty({ type: String })
   feedbackDescription: string;
 }

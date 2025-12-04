@@ -89,9 +89,7 @@ export class UserService {
         // Assign the existing partner access to new user
         partnerAccess.userId = user.id;
         partnerAccess = await this.partnerAccessRepository.save(partnerAccess);
-        this.logger.log(
-          'Create user: (with access code) created partner user in db',
-        );
+        this.logger.log('Create user: (with access code) created partner user in db');
       } else {
         this.logger.log('Create user: created public user in db');
       }

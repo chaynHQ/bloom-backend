@@ -24,7 +24,7 @@ export class ZapierSimplybookBodyDto {
   @ApiProperty({ type: String })
   client_timezone: string;
 
-  @SecureInput('id', { required: true, maxLength: 100 })
+  @SecureInput('text', { required: true, maxLength: 100 })
   @IsDefined()
   @ApiProperty({ type: String })
   booking_code: string;

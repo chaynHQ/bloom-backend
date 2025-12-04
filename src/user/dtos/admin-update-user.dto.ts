@@ -22,7 +22,7 @@ export class AdminUpdateUserDto {
   @ApiProperty({ type: String })
   emailRemindersFrequency: EMAIL_REMINDERS_FREQUENCY;
 
-  @SecureInput('id', { required: false, maxLength: 10 })
+  @SecureInput('text', { required: false, maxLength: 10 })
   @ApiProperty({ type: String })
   signUpLanguage: string;
 

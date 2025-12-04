@@ -20,7 +20,7 @@ export class CreateUserDto {
   @ApiProperty({ type: String })
   password: string;
 
-  @SecureInput('id', { maxLength: 6 })
+  @SecureInput('text', { maxLength: 6 })
   @IsOptional()
   @ApiProperty({ type: String })
   partnerAccessCode?: string;
@@ -44,7 +44,7 @@ export class CreateUserDto {
   @ApiProperty({ type: String })
   emailRemindersFrequency: EMAIL_REMINDERS_FREQUENCY;
 
-  @SecureInput('id', { maxLength: 10 })
+  @SecureInput('text', { maxLength: 10 })
   @IsOptional()
   @ApiProperty({ type: String })
   signUpLanguage: string;
