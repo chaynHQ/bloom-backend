@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import Crisp from 'crisp-api';
 import { EventLoggerService } from 'src/event-logger/event-logger.service';
 import { crispPluginId, crispPluginKey, crispWebsiteId } from 'src/utils/constants';
+import { isCypressTestEmail } from 'src/utils/utils';
 import {
   CrispProfileBase,
   CrispProfileBaseResponse,
@@ -62,6 +63,11 @@ export class CrispService {
   async createCrispProfile(
     newPeopleProfile: CrispProfileBase,
   ): Promise<NewCrispProfileBaseResponse> {
+    if (isCypressTestEmail(newPeopleProfile.email)) {
+      console.log('Skipping Crisp profile creation for Cypress test email');
+      return null;
+    }
+
     try {
       const crispProfile = CrispClient.website.addNewPeopleProfile(
         crispWebsiteId,
@@ -97,6 +103,11 @@ export class CrispService {
     peopleProfile: CrispProfileBase,
     email: string,
   ): Promise<CrispProfileBaseResponse> {
+    if (isCypressTestEmail(email)) {
+      console.log('Skipping Crisp profile base update for Cypress test email');
+      return null;
+    }
+
     try {
       const crispProfile = CrispClient.website.updatePeopleProfile(
         crispWebsiteId,
@@ -127,6 +138,11 @@ export class CrispService {
     peopleData: CrispProfileCustomFields,
     email: string,
   ): Promise<CrispProfileDataResponse> {
+    if (isCypressTestEmail(email)) {
+      console.log('Skipping Crisp people data update for Cypress test email');
+      return null;
+    }
+
     try {
       const crispPeopleData = CrispClient.website.updatePeopleData(crispWebsiteId, email, {
         data: peopleData,

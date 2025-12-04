@@ -1,6 +1,7 @@
 import mailchimp from '@mailchimp/mailchimp_marketing';
 import { createHash } from 'crypto';
 import { mailchimpApiKey, mailchimpAudienceId, mailchimpServerPrefix } from 'src/utils/constants';
+import { isCypressTestEmail } from 'src/utils/utils';
 import { Logger } from '../../logger/logger';
 import {
   ListMember,
@@ -29,6 +30,11 @@ export async function ping() {
 export const createMailchimpProfile = async (
   profileData: Partial<UpdateListMemberRequest>,
 ): Promise<ListMember> => {
+  if (isCypressTestEmail(profileData.email_address)) {
+    logger.log('Skipping Mailchimp profile creation for Cypress test email');
+    return null;
+  }
+
   try {
     return await mailchimp.lists.addListMember(mailchimpAudienceId, profileData);
   } catch (error) {
@@ -40,9 +46,17 @@ export const batchCreateMailchimpProfiles = async (
   userProfiles: Partial<UpdateListMemberRequest>[],
 ) => {
   try {
+    // Filter out Cypress test emails
+    const filteredProfiles = userProfiles.filter(profile => !isCypressTestEmail(profile.email_address));
+    
+    if (filteredProfiles.length === 0) {
+      logger.log('No profiles to create after filtering out Cypress test emails');
+      return;
+    }
+
     const operations = [];
 
-    userProfiles.forEach((userProfile, index) => {
+    filteredProfiles.forEach((userProfile, index) => {
       operations.push({
         method: 'POST',
         path: `/lists/${mailchimpAudienceId}/members`,
@@ -70,9 +84,17 @@ export const batchUpdateMailchimpProfiles = async (
   userProfiles: Partial<UpdateListMemberRequest>[],
 ) => {
   try {
+    // Filter out Cypress test emails
+    const filteredProfiles = userProfiles.filter(profile => !isCypressTestEmail(profile.email_address));
+    
+    if (filteredProfiles.length === 0) {
+      logger.log('No profiles to update after filtering out Cypress test emails');
+      return;
+    }
+
     const operations = [];
 
-    userProfiles.forEach((userProfile, index) => {
+    filteredProfiles.forEach((userProfile, index) => {
       operations.push({
         method: 'PATCH',
         path: `/lists/${mailchimpAudienceId}/members/${getEmailMD5Hash(userProfile.email_address)}`,
@@ -109,6 +131,11 @@ export const updateMailchimpProfile = async (
   newProfileData: ListMemberPartial,
   email: string,
 ): Promise<ListMember> => {
+  if (isCypressTestEmail(email)) {
+    logger.log('Skipping Mailchimp profile update for Cypress test email');
+    return null;
+  }
+
   try {
     return await mailchimp.lists.updateListMember(
       mailchimpAudienceId,
