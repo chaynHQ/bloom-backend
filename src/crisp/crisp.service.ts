@@ -20,6 +20,17 @@ export class CrispService {
     CrispClient.authenticateTier('plugin', crispPluginId, crispPluginKey);
   }
 
+  private isProfileNotFoundError(error: unknown): boolean {
+    // Based on Crisp API docs, error format is: { reason: 'error', message: 'not_found', code: 404 }
+    const errorObj = error as Record<string, unknown>;
+    
+    return (
+      errorObj.code === 404 ||
+      errorObj.message === 'not_found' ||
+      (errorObj.reason === 'error' && errorObj.message === 'not_found')
+    );
+  }
+
   async handleCrispEvent(message: CrispEventDto, eventName: EVENT_NAME) {
     try {
       if (
@@ -94,6 +105,20 @@ export class CrispService {
       );
       return crispProfile;
     } catch (error) {
+      // Only handle profile not found errors (404, not_found, or profile-related errors)
+      if (this.isProfileNotFoundError(error)) {
+        try {
+          await this.createCrispProfile({ email, ...peopleProfile });
+          return await CrispClient.website.updatePeopleProfile(
+            crispWebsiteId,
+            email,
+            peopleProfile,
+          );
+        } catch {
+          throw new Error(`Update crisp profile base API call failed: ${error}`);
+        }
+      }
+      // Re-throw non-profile-not-found errors (rate limits, auth, network, etc.)
       throw new Error(`Update crisp profile base API call failed: ${error}`);
     }
   }
@@ -108,6 +133,18 @@ export class CrispService {
       });
       return crispPeopleData;
     } catch (error) {
+      // Only handle profile not found errors (404, not_found, or profile-related errors)
+      if (this.isProfileNotFoundError(error)) {
+        try {
+          await this.createCrispProfile({ email });
+          return await CrispClient.website.updatePeopleData(crispWebsiteId, email, {
+            data: peopleData,
+          });
+        } catch {
+          throw new Error(`Update crisp profile API call failed: ${error}`);
+        }
+      }
+      // Re-throw non-profile-not-found errors (rate limits, auth, network, etc.)
       throw new Error(`Update crisp profile API call failed: ${error}`);
     }
   }
