@@ -18,7 +18,7 @@ mailchimp.setConfig({
 });
 
 export function getEmailMD5Hash(email: string) {
-  return createHash('md5').update(email).digest('hex');
+  return createHash('md5').update(email.toLowerCase().trim()).digest('hex');
 }
 
 export async function ping() {
@@ -116,6 +116,15 @@ export const updateMailchimpProfile = async (
       newProfileData,
     );
   } catch (error) {
+    if (error.status === 404 || error.message?.includes('not found')) {
+      // Profile doesn't exist, create it using existing function
+      const createData = {
+        email_address: email,
+        status: newProfileData.status || 'subscribed',
+        ...newProfileData,
+      };
+      return await createMailchimpProfile(createData);
+    }
     throw new Error(`Update mailchimp profile API call failed: ${error}`);
   }
 };

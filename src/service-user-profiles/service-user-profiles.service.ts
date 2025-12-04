@@ -122,18 +122,6 @@ export class ServiceUserProfilesService {
       );
       logger.log('Updated service user profiles user');
     } catch (error) {
-      if (error.toString() === 'Error: Not found') {
-        // mailchimp account not found, create one
-        const userWithRelations = await this.userRepository.findOne({
-          where: { id: user.id },
-          relations: {
-            partnerAccess: { partner: true, therapySession: true },
-            courseUser: { course: true, sessionUser: { session: true } },
-          },
-        });
-        this.createCompleteMailchimpUserProfile(userWithRelations);
-        logger.log('Created and updated service user profiles user');
-      }
       logger.error(`Update service user profiles user error - ${JSON.stringify(error)}`);
     }
   }
