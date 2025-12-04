@@ -25,8 +25,8 @@ export class CreateUserDto {
   @ApiProperty({ type: String })
   partnerAccessCode?: string;
 
-  @IsUUID(4, { message: 'partnerId must be a valid UUID' })
   @IsOptional()
+  @IsUUID(4, { message: 'partnerId must be a valid UUID' })
   @ApiProperty({ type: String })
   partnerId?: string;
 
