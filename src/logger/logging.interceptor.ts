@@ -37,7 +37,7 @@ export class LoggingInterceptor implements NestInterceptor {
             Date.now() - now
           }ms`,
         );
-        return throwError(() => new Error(err));
+        return throwError(() => err);
       }),
     );
   }
