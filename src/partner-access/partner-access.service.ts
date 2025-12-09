@@ -209,7 +209,7 @@ export class PartnerAccessService {
       );
     } catch (error) {
       this.logger.error(
-        `Error: Unable to update crisp profile for ${user.email}. Error: ${error.message} `,
+        `Error: Unable to update crisp profile. Error: ${error.message}`,
         error,
       );
     }

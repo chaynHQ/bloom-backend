@@ -1,9 +1,8 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsDefined, IsNotEmpty, IsString } from 'class-validator';
+import { IsUUID, IsDefined } from 'class-validator';
 
 export class DeleteFeatureDto {
-  @IsNotEmpty()
-  @IsString()
+  @IsUUID(4, { message: 'featureId must be a valid UUID' })
   @IsDefined()
   @ApiProperty({ type: String })
   featureId: string;

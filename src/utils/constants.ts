@@ -97,13 +97,13 @@ export enum COMMUNICATION_SERVICE {
 }
 
 const getEnv = (env: string, envName: string): string => {
-  try {
-    if (!env) throw `Unable to get environment variable ${envName}`;
-
-    return env;
-  } catch (error) {
-    if (nodeEnv !== ENVIRONMENTS.TEST) console.log(error);
+  if (!env) {
+    if (nodeEnv !== ENVIRONMENTS.TEST) {
+      console.error(`Environment configuration error: Missing required variable ${envName}`);
+    }
+    return;
   }
+  return env;
 };
 
 export const nodeEnv = getEnv(process.env.NODE_ENV, 'NODE_ENV');

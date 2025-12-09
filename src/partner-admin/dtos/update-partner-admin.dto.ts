@@ -1,8 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsBoolean, IsDefined, IsNotEmpty } from 'class-validator';
+import { IsBoolean, IsDefined } from 'class-validator';
 
 export class UpdatePartnerAdminDto {
-  @IsNotEmpty()
   @IsBoolean()
   @IsDefined()
   @ApiProperty({ type: Boolean })

@@ -12,6 +12,7 @@ import { CreatePartnerAccessDto } from './dtos/create-partner-access.dto';
 import { GetPartnerAccessesDto } from './dtos/get-partner-access.dto';
 import { UpdatePartnerAccessDto } from './dtos/update-partner-access.dto';
 import { ValidatePartnerAccessCodeDto } from './dtos/validate-partner-access.dto';
+import { PartnerAccessParamDto } from './dtos/partner-access-param.dto';
 import { PartnerAccessService } from './partner-access.service';
 
 @ApiTags('Partner Access')
@@ -80,8 +81,8 @@ export class PartnerAccessController {
   @Patch(':id')
   @ApiParam({ name: 'id', description: 'Updates partner access by id' })
   @UseGuards(SuperAdminAuthGuard)
-  async updatePartnerAccess(@Param() { id }, @Body() updates: UpdatePartnerAccessDto) {
-    return await this.partnerAccessService.updatePartnerAccess(id, updates);
+  async updatePartnerAccess(@Param() params: PartnerAccessParamDto, @Body() updates: UpdatePartnerAccessDto) {
+    return await this.partnerAccessService.updatePartnerAccess(params.id, updates);
   }
 
   @Post('validate-code')

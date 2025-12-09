@@ -46,7 +46,7 @@ export class SubscriptionUserService {
       );
 
       this.logger.log(
-        `Triggering zapier to add contact (number: ${sanitizedPhonenumber}) to respond.io for user ${user.email}.`,
+        `Triggering zapier to add contact (number: ${sanitizedPhonenumber}) to respond.io`,
       );
       await this.zapierClient.addContactToRespondIO({
         phonenumber: sanitizedPhonenumber,
@@ -80,7 +80,7 @@ export class SubscriptionUserService {
     if (subscription) {
       if (!subscription.cancelledAt) {
         this.logger.log(
-          `Triggering zapier to remove contact (number: ${subscription.subscriptionInfo}) from respond.io for user ${userEmail}.`,
+          `Triggering zapier to remove contact (number: ${subscription.subscriptionInfo}) from respond.io`,
         );
         await this.zapierClient.deleteContactFromRespondIO({
           phonenumber: subscription.subscriptionInfo,
@@ -143,7 +143,7 @@ export class SubscriptionUserService {
         }),
       );
       this.logger.log(
-        `Redacted number for ${updatedSubscriptions.length} subscription(s) for user with email ${userEmail}`,
+        `Redacted number for ${updatedSubscriptions.length} subscription(s)`,
       );
       return updatedSubscriptions;
     } catch (err) {

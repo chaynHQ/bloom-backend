@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsBoolean, IsDefined, IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsDefined, IsNumber, IsOptional } from 'class-validator';
+import { SecureInput } from '../../utils/sanitization.decorators';
 import { CrispProfileCustomFields } from '../crisp.interface';
 
 export interface CrispUserData extends CrispProfileCustomFields {
@@ -9,46 +10,44 @@ export interface CrispUserData extends CrispProfileCustomFields {
 }
 
 export class CrispEventDto {
-  @IsNotEmpty()
+  @SecureInput('text', { required: true, maxLength: 100 })
   @IsDefined()
   @ApiProperty({ type: String })
   website_id: string;
 
-  @IsNotEmpty()
+  @SecureInput('text', { required: true, maxLength: 100 })
   @IsDefined()
   @ApiProperty({ type: String })
   session_id: string;
 
-  @IsOptional()
+  @SecureInput('text', { maxLength: 100 })
   @ApiProperty({ type: String })
   inbox_id: string;
 
-  @IsOptional()
+  @SecureInput('text', { maxLength: 100 })
   @ApiProperty({ type: String })
   type: string;
 
-  @IsOptional()
+  @SecureInput('text', { maxLength: 255 })
   @ApiProperty({ type: String })
   origin: string;
 
-  @IsNotEmpty()
+  @SecureInput('html', { required: true, maxLength: 5000 })
   @IsDefined()
   @ApiProperty({ type: String })
   content: string;
 
-  @IsNotEmpty()
+  @SecureInput('text', { required: true, maxLength: 255 })
   @IsDefined()
   @ApiProperty({ type: String })
   from: string;
 
   @IsNumber()
-  @IsNotEmpty()
   @IsDefined()
   @ApiProperty({ type: Number })
   timestamp: number;
 
   @IsNumber()
-  @IsNotEmpty()
   @IsDefined()
   @ApiProperty({ type: Number })
   fingerprint: number;
@@ -57,8 +56,7 @@ export class CrispEventDto {
   @IsNumber()
   space_id?: number;
 
-  @IsOptional()
-  @IsString()
+  @SecureInput('text', { maxLength: 500 })
   full_slug?: string;
 
   @IsBoolean()
