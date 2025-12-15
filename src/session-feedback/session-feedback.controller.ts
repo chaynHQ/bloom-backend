@@ -13,10 +13,10 @@ export class SessionFeedbackController {
 
   @Post()
   @ApiBearerAuth('access-token')
+  @UseGuards(FirebaseAuthGuard)
   @ApiOperation({
     description: 'Stores feedback from a user',
   })
-  @UseGuards(FirebaseAuthGuard)
   async storeUserFeedback(
     @Body() sessionFeedbackDto: SessionFeedbackDto,
   ): Promise<SessionFeedbackDto> {

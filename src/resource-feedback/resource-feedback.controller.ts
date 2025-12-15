@@ -1,5 +1,6 @@
-import { Body, Controller, Post } from '@nestjs/common';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Post, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { FirebaseAuthGuard } from 'src/firebase/firebase-auth.guard';
 import { ControllerDecorator } from 'src/utils/controller.decorator';
 import { CreateResourceFeedbackDto } from './dtos/create-resource-feedback.dto';
 import { ResourceFeedbackService } from './resource-feedback.service';
@@ -10,8 +11,9 @@ import { ResourceFeedbackService } from './resource-feedback.service';
 export class ResourceFeedbackController {
   constructor(private readonly resourceFeedbackService: ResourceFeedbackService) {}
 
-  // TODO how do we protect this public endpoint from being abused?
   @Post()
+  @ApiBearerAuth('access-token')
+  @UseGuards(FirebaseAuthGuard)
   @ApiOperation({
     description: 'Stores feedback from a user',
   })

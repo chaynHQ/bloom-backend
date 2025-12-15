@@ -1,4 +1,4 @@
-import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 import { FEEDBACK_TAGS_ENUM } from '../utils/constants';
 import { BaseBloomEntity } from './base.entity';
 import { SessionEntity } from './session.entity';
@@ -11,7 +11,11 @@ export class SessionFeedbackEntity extends BaseBloomEntity {
   @ManyToOne(() => SessionEntity, (sessionEntity) => sessionEntity.sessionFeedback, {
     onDelete: 'CASCADE',
   })
+  @JoinColumn({ name: 'sessionId' })
   session: SessionEntity;
+
+  @Column({ name: 'sessionId' })
+  sessionId: string;
 
   @Column()
   feedbackTags: FEEDBACK_TAGS_ENUM;
