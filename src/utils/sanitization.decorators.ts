@@ -28,7 +28,7 @@ try {
   DOMPurify = require('dompurify');
 }
 
-type SecureInputType = 'text' | 'email' | 'html' | 'plaintext' | 'id' | 'password';
+type SecureInputType = 'text' | 'email' | 'html' | 'plaintext' | 'password';
 
 type SecureInputOptions = {
   required?: boolean;
@@ -49,14 +49,15 @@ type DOMPurifyConfig = {
  * Unified secure input decorator that handles sanitization and validation
  * Provides comprehensive protection against XSS, SQL injection, and other attacks
  *
- * @param type - The type of input field ('text', 'email', 'html', 'plaintext', 'id', 'password')
+ * @param type - The type of input field ('text', 'email', 'html', 'plaintext', 'password')
  * @param options - Configuration options for validation and sanitization
  *
  * Usage examples:
  * @SecureInput('text', { required: true, maxLength: 50 })
  * @SecureInput('email', { required: true })
  * @SecureInput('html', { maxLength: 5000, allowedTags: ['b', 'i', 'p'] })
- * @SecureInput('id', { maxLength: 36 })
+ * 
+ * NOTE: For database UUIDs, use @IsUUID() validation instead of @SecureInput
  */
 export function SecureInput(type: SecureInputType, options: SecureInputOptions = {}) {
   const {
@@ -161,13 +162,6 @@ function getSecureTransform(
           KEEP_CONTENT: true,
         });
 
-      case 'id':
-        // Very strict - only alphanumeric, hyphens, underscores
-        return validator.whitelist(
-          cleanedValue,
-          'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_',
-        );
-
       default:
         // Default to plain text sanitization for unknown types
         return DOMPurify.sanitize(cleanedValue, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] });
@@ -223,10 +217,6 @@ function getSecureValidators(
           ...customValidation,
         }),
       );
-      break;
-
-    case 'id':
-      validators.push(IsSecureId(customValidation));
       break;
 
     default:
@@ -328,47 +318,3 @@ function IsSecureInput(validationOptions?: ValidationOptions) {
   );
 }
 
-/**
- * Validator for ID fields - very strict alphanumeric + hyphens/underscores only
- * Prevents path traversal and injection attacks in ID fields
- */
-function IsSecureId(validationOptions?: ValidationOptions) {
-  return ValidateBy(
-    {
-      name: 'isSecureId',
-      validator: {
-        validate: (value: unknown) => {
-          if (typeof value !== 'string') return true;
-
-          // Only allow alphanumeric, hyphens, underscores
-          // No dots, slashes, or other special characters that could be used for attacks
-          if (!/^[a-zA-Z0-9_-]+$/.test(value)) {
-            return false;
-          }
-
-          // Additional checks for common ID-based attacks
-          const dangerousIdPatterns = [
-            // Path traversal
-            /\.\./g,
-            // Null bytes
-            // eslint-disable-next-line no-control-regex
-            /\x00/g,
-            // SQL wildcards
-            /%/g,
-            /\*/g,
-            // Command injection attempts
-            /[;&|`$()]/g,
-          ];
-
-          return !dangerousIdPatterns.some((pattern) => pattern.test(value));
-        },
-        defaultMessage: buildMessage(
-          (eachPrefix) =>
-            eachPrefix + '$property must contain only letters, numbers, hyphens, and underscores',
-          validationOptions,
-        ),
-      },
-    },
-    validationOptions,
-  );
-}

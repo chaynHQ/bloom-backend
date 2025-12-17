@@ -3,23 +3,23 @@ import { IsBoolean, IsInt, IsOptional } from 'class-validator';
 import { SecureInput } from '../../utils/sanitization.decorators';
 
 export class GetPartnerAccessesDto {
-  @IsBoolean()
   @IsOptional()
+  @IsBoolean()
   @ApiProperty({ type: Boolean })
   featureLiveChat: boolean;
 
-  @IsBoolean()
   @IsOptional()
+  @IsBoolean()
   @ApiProperty({ type: Boolean })
   featureTherapy: boolean;
 
-  @IsInt()
   @IsOptional()
+  @IsInt()
   @ApiProperty({ type: Number })
   therapySessionsRemaining: number;
 
-  @IsInt()
   @IsOptional()
+  @IsInt()
   @ApiProperty({ type: Number })
   therapySessionsRedeemed: number;
 

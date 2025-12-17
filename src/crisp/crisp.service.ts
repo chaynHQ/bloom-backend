@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import Crisp from 'crisp-api';
 import { EventLoggerService } from 'src/event-logger/event-logger.service';
 import { crispPluginId, crispPluginKey, crispWebsiteId } from 'src/utils/constants';
+import { isCypressTestEmail } from 'src/utils/utils';
 import {
   CrispProfileBase,
   CrispProfileBaseResponse,
@@ -18,6 +19,17 @@ const CrispClient = new Crisp();
 export class CrispService {
   constructor(private eventLoggerService: EventLoggerService) {
     CrispClient.authenticateTier('plugin', crispPluginId, crispPluginKey);
+  }
+
+  private isProfileNotFoundError(error: unknown): boolean {
+    // Based on Crisp API docs, error format is: { reason: 'error', message: 'not_found', code: 404 }
+    const errorObj = error as Record<string, unknown>;
+    
+    return (
+      errorObj.code === 404 ||
+      errorObj.message === 'not_found' ||
+      (errorObj.reason === 'error' && errorObj.message === 'not_found')
+    );
   }
 
   async handleCrispEvent(message: CrispEventDto, eventName: EVENT_NAME) {
@@ -51,6 +63,11 @@ export class CrispService {
   async createCrispProfile(
     newPeopleProfile: CrispProfileBase,
   ): Promise<NewCrispProfileBaseResponse> {
+    if (isCypressTestEmail(newPeopleProfile.email)) {
+      console.log('Skipping Crisp profile creation for Cypress test email');
+      return null;
+    }
+
     try {
       const crispProfile = CrispClient.website.addNewPeopleProfile(
         crispWebsiteId,
@@ -86,6 +103,11 @@ export class CrispService {
     peopleProfile: CrispProfileBase,
     email: string,
   ): Promise<CrispProfileBaseResponse> {
+    if (isCypressTestEmail(email)) {
+      console.log('Skipping Crisp profile base update for Cypress test email');
+      return null;
+    }
+
     try {
       const crispProfile = CrispClient.website.updatePeopleProfile(
         crispWebsiteId,
@@ -94,6 +116,20 @@ export class CrispService {
       );
       return crispProfile;
     } catch (error) {
+      // Only handle profile not found errors (404, not_found, or profile-related errors)
+      if (this.isProfileNotFoundError(error)) {
+        try {
+          await this.createCrispProfile({ email, ...peopleProfile });
+          return await CrispClient.website.updatePeopleProfile(
+            crispWebsiteId,
+            email,
+            peopleProfile,
+          );
+        } catch {
+          throw new Error(`Update crisp profile base API call failed: ${error}`);
+        }
+      }
+      // Re-throw non-profile-not-found errors (rate limits, auth, network, etc.)
       throw new Error(`Update crisp profile base API call failed: ${error}`);
     }
   }
@@ -102,12 +138,29 @@ export class CrispService {
     peopleData: CrispProfileCustomFields,
     email: string,
   ): Promise<CrispProfileDataResponse> {
+    if (isCypressTestEmail(email)) {
+      console.log('Skipping Crisp people data update for Cypress test email');
+      return null;
+    }
+
     try {
       const crispPeopleData = CrispClient.website.updatePeopleData(crispWebsiteId, email, {
         data: peopleData,
       });
       return crispPeopleData;
     } catch (error) {
+      // Only handle profile not found errors (404, not_found, or profile-related errors)
+      if (this.isProfileNotFoundError(error)) {
+        try {
+          await this.createCrispProfile({ email });
+          return await CrispClient.website.updatePeopleData(crispWebsiteId, email, {
+            data: peopleData,
+          });
+        } catch {
+          throw new Error(`Update crisp profile API call failed: ${error}`);
+        }
+      }
+      // Re-throw non-profile-not-found errors (rate limits, auth, network, etc.)
       throw new Error(`Update crisp profile API call failed: ${error}`);
     }
   }

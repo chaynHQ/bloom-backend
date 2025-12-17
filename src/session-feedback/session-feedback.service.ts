@@ -1,4 +1,4 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { SlackMessageClient } from 'src/api/slack/slack-api';
 import { SessionFeedbackEntity } from 'src/entities/session-feedback.entity';
@@ -6,6 +6,8 @@ import { SessionEntity } from 'src/entities/session.entity';
 import { Repository } from 'typeorm';
 import { SessionService } from '../session/session.service';
 import { SessionFeedbackDto } from './dtos/session-feedback.dto';
+
+const logger = new Logger('SessionFeedbackService');
 
 @Injectable()
 export class SessionFeedbackService {
@@ -32,8 +34,12 @@ export class SessionFeedbackService {
   }
   // We don't need to wait for this to finish so async is not needed
   sendSlackSessionFeedback(sessionFeedbackDto: SessionFeedbackDto, session: SessionEntity) {
-    this.slackMessageClient.sendMessageToBloomUserChannel(
-      `*${session.name}* in *${session.course?.name}* was rated *_${sessionFeedbackDto.feedbackTags}_* ${sessionFeedbackDto.feedbackDescription.length > 0 ? `with the comment: \n> _${sessionFeedbackDto.feedbackDescription}_` : ''}`,
-    );
+    try {
+      this.slackMessageClient.sendMessageToBloomUserChannel(
+        `*${session.name}* in *${session.course?.name}* was rated *_${sessionFeedbackDto.feedbackTags}_* ${sessionFeedbackDto.feedbackDescription.length > 0 ? `with the comment: \n> _${sessionFeedbackDto.feedbackDescription}_` : ''}`,
+      );
+    } catch (error) {
+      logger.error(`Failed to send Slack message for session feedback: ${error.message}`);
+    }
   }
 }

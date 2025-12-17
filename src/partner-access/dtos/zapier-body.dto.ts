@@ -14,7 +14,7 @@ export class ZapierSimplybookBodyDto {
   @ApiProperty({ type: String })
   client_email: string;
 
-  @SecureInput('id', { required: false, maxLength: 36 })
+  @SecureInput('text', { required: false, maxLength: 100 })
   @ApiProperty({ type: String })
   user_id?: string;
 
