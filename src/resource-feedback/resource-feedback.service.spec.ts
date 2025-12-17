@@ -2,6 +2,7 @@ import { createMock, DeepMocked } from '@golevelup/ts-jest';
 import { HttpException, HttpStatus } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { SlackMessageClient } from 'src/api/slack/slack-api';
 import { ResourceService } from 'src/resource/resource.service';
 import { FEEDBACK_TAGS_ENUM } from 'src/utils/constants';
 import { mockResource } from 'test/utils/mockData';
@@ -13,6 +14,7 @@ describe('ResourceFeedbackService', () => {
   let service: ResourceFeedbackService;
   let mockResourceFeedbackRepository: DeepMocked<Repository<ResourceFeedbackEntity>>;
   let mockResourceService: DeepMocked<ResourceService>;
+  let mockSlackMessageClient: DeepMocked<SlackMessageClient>;
 
   const resourceFeedbackDto = {
     resourceId: mockResource.id,
@@ -23,6 +25,7 @@ describe('ResourceFeedbackService', () => {
   beforeEach(async () => {
     mockResourceFeedbackRepository = createMock<Repository<ResourceFeedbackEntity>>();
     mockResourceService = createMock<ResourceService>();
+    mockSlackMessageClient = createMock<SlackMessageClient>();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -35,6 +38,7 @@ describe('ResourceFeedbackService', () => {
           provide: ResourceService,
           useValue: mockResourceService,
         },
+        { provide: SlackMessageClient, useValue: mockSlackMessageClient },
       ],
     }).compile();
 

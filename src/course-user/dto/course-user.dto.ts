@@ -1,14 +1,14 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsEmail, IsString } from 'class-validator';
+import { IsUUID, IsDefined } from 'class-validator';
 
 export class CourseUserDto {
-  @IsNotEmpty()
-  @IsEmail()
+  @IsUUID(4, { message: 'userId must be a valid UUID' })
+  @IsDefined()
   @ApiProperty({ type: String })
   userId: string;
 
-  @IsNotEmpty()
-  @IsString()
+  @IsUUID(4, { message: 'courseId must be a valid UUID' })
+  @IsDefined()
   @ApiProperty({ type: String })
   courseId: string;
 }

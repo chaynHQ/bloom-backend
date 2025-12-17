@@ -23,6 +23,8 @@ import { AdminUpdateUserDto } from './dtos/admin-update-user.dto';
 import { CreateUserDto } from './dtos/create-user.dto';
 import { GetUserDto } from './dtos/get-user.dto';
 import { UpdateUserDto } from './dtos/update-user.dto';
+import { UserParamDto } from './dtos/user-param.dto';
+import { UserQueryDto } from './dtos/user-query.dto';
 import { UserService } from './user.service';
 
 @ApiTags('Users')
@@ -82,8 +84,8 @@ export class UserController {
   @Delete(':id')
   @ApiParam({ name: 'id', description: 'User id to delete' })
   @UseGuards(SuperAdminAuthGuard)
-  async adminDeleteUser(@Param() { id }): Promise<UserEntity> {
-    return await this.userService.deleteUserById(id);
+  async adminDeleteUser(@Param() params: UserParamDto): Promise<UserEntity> {
+    return await this.userService.deleteUserById(params.id);
   }
 
   @ApiBearerAuth()
@@ -96,14 +98,14 @@ export class UserController {
   @ApiBearerAuth()
   @Patch('/admin/:id')
   @UseGuards(SuperAdminAuthGuard)
-  async adminUpdateUser(@Param() { id }, @Body() adminUpdateUserDto: AdminUpdateUserDto) {
-    return await this.userService.adminUpdateUser(adminUpdateUserDto, id);
+  async adminUpdateUser(@Param() params: UserParamDto, @Body() adminUpdateUserDto: AdminUpdateUserDto) {
+    return await this.userService.adminUpdateUser(adminUpdateUserDto, params.id);
   }
 
   @ApiBearerAuth()
   @Get()
   @UseGuards(SuperAdminAuthGuard)
-  async getUsers(@Query() query) {
+  async getUsers(@Query() query: UserQueryDto) {
     let searchQuery;
     try {
       searchQuery = query.searchCriteria ? JSON.parse(query.searchCriteria) : undefined;

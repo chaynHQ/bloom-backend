@@ -1,5 +1,6 @@
 import { CanActivate, ExecutionContext, UnauthorizedException } from '@nestjs/common';
 import { Request } from 'express';
+import { zapierToken } from '../utils/constants';
 
 export class ZapierAuthGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
@@ -11,9 +12,9 @@ export class ZapierAuthGuard implements CanActivate {
       throw new UnauthorizedException('Unauthorized: missing required Basic auth');
     }
 
-    const zapierToken = authorization.split('Basic ')[1];
+    const providedToken = authorization.split('Basic ')[1];
 
-    if (zapierToken !== zapierToken) {
+    if (providedToken !== zapierToken) {
       throw new UnauthorizedException('Unauthorized: invalid auth token');
     }
 

@@ -17,13 +17,13 @@ export class EventLoggerController {
   })
   @ApiBearerAuth('access-token')
   @UseGuards(FirebaseAuthGuard)
-  async createEventLog(@Req() req: Request, @Body() { event, metadata }: CreateEventLogDto) {
+  async createEventLog(@Req() req: Request, @Body() createEventLogDto: CreateEventLogDto) {
     const now = new Date();
     return await this.eventLoggerService.createEventLog({
       userId: req['userEntity'].id,
-      event,
+      event: createEventLogDto.event,
       date: now,
-      metadata,
+      metadata: createEventLogDto.metadata,
     });
   }
 }

@@ -1,15 +1,14 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsEnum, IsOptional } from 'class-validator';
 import { RESOURCE_CATEGORIES, STORYBLOK_STORY_STATUS_ENUM } from 'src/utils/constants';
+import { SecureInput } from '../../utils/sanitization.decorators';
 
 export class CreateResourceDto {
-  @IsNotEmpty()
-  @IsString()
+  @SecureInput('text', { required: true, maxLength: 255 })
   @ApiProperty({ type: String })
   name: string;
 
-  @IsNotEmpty()
-  @IsString()
+  @SecureInput('text', { required: true, maxLength: 255 })
   @ApiProperty({ type: String })
   slug: string;
 
@@ -23,8 +22,7 @@ export class CreateResourceDto {
   @ApiProperty({ enum: RESOURCE_CATEGORIES, type: String, required: false })
   category: RESOURCE_CATEGORIES;
 
-  @IsOptional()
-  @IsString()
+  @SecureInput('text', { maxLength: 100 })
   @ApiProperty({ type: String, required: false })
   storyblokUuid?: string;
 }

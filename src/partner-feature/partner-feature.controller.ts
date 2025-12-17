@@ -4,6 +4,7 @@ import { SuperAdminAuthGuard } from 'src/partner-admin/super-admin-auth.guard';
 import { ControllerDecorator } from 'src/utils/controller.decorator';
 import { CreatePartnerFeatureDto } from './dtos/create-partner-feature.dto';
 import { UpdatePartnerFeatureDto } from './dtos/update-partner-feature.dto';
+import { PartnerFeatureParamDto, PartnerNameParamDto } from './dtos/partner-feature-param.dto';
 import { PartnerFeatureService } from './partner-feature.service';
 
 @ApiTags('Partner Feature')
@@ -30,10 +31,10 @@ export class PartnerFeatureController {
   @ApiParam({ name: 'id', description: 'Updates partner feature by id' })
   @UseGuards(SuperAdminAuthGuard)
   async updatePartnerFeature(
-    @Param() { id },
+    @Param() params: PartnerFeatureParamDto,
     @Body() updatePartnerFeatureDto: UpdatePartnerFeatureDto,
   ) {
-    return await this.partnerFeatureService.updatePartnerFeature(id, updatePartnerFeatureDto);
+    return await this.partnerFeatureService.updatePartnerFeature(params.id, updatePartnerFeatureDto);
   }
 
   @Get('/automatic-access-code/:partnerName')
@@ -42,7 +43,7 @@ export class PartnerFeatureController {
     description: 'Gets partner Feature record for assign access code on sign up .',
   })
   @ApiParam({ name: 'partnerName', description: 'Updates partner feature by id' })
-  async getAutomaticAccessCodeFeatureForPartner(@Param() { partnerName }) {
-    return await this.partnerFeatureService.getAutomaticAccessCodeFeatureForPartner(partnerName);
+  async getAutomaticAccessCodeFeatureForPartner(@Param() params: PartnerNameParamDto) {
+    return await this.partnerFeatureService.getAutomaticAccessCodeFeatureForPartner(params.partnerName);
   }
 }

@@ -1,14 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsEmail, IsString } from 'class-validator';
+import { SecureInput } from '../../utils/sanitization.decorators';
 
 export class UserAuthDto {
-  @IsNotEmpty()
-  @IsEmail()
+  @SecureInput('email', { required: true, maxLength: 255 })
   @ApiProperty({ type: String })
   email: string;
 
-  @IsNotEmpty()
-  @IsString()
+  @SecureInput('password', { required: true, maxLength: 128 })
   @ApiProperty({ type: String })
   password: string;
 }

@@ -22,7 +22,7 @@ import {
   SIMPLYBOOK_ACTION_ENUM,
   mailchimpMarketingPermissionId,
 } from '../utils/constants';
-import { getAcronym } from '../utils/utils';
+import { getAcronym, isCypressTestEmail } from '../utils/utils';
 
 // Functionality for syncing user profiles for Crisp and Mailchimp communications services.
 // User data must be serialized to handle service-specific data structure and different key names
@@ -45,6 +45,12 @@ export class ServiceUserProfilesService {
     partnerAccess?: PartnerAccessEntity | null,
   ) {
     const { email } = user;
+
+    if (isCypressTestEmail(email)) {
+      logger.log('Skipping service user profile creation for Cypress test email');
+      return;
+    }
+
     try {
       const userData = this.serializeUserData(user);
 
@@ -82,9 +88,9 @@ export class ServiceUserProfilesService {
         merge_fields: mailchimpMergeFields,
       });
 
-      logger.log(`Create user: updated service user profiles. User: ${email}`);
+      logger.log('Create user: updated service user profiles');
     } catch (error) {
-      logger.error(`Create service user profiles error - ${error}. User: ${email}`);
+      logger.error(`Create service user profiles error: ${error.message || 'unknown error'}`);
     }
   }
 
@@ -95,6 +101,11 @@ export class ServiceUserProfilesService {
     existingEmail: string,
   ) {
     const email = isEmailUpdateRequired ? user.email : existingEmail;
+
+    if (isCypressTestEmail(email) || isCypressTestEmail(existingEmail)) {
+      logger.log('Skipping service user profile update for Cypress test email');
+      return;
+    }
 
     try {
       if (isCrispBaseUpdateRequired) {
@@ -120,20 +131,8 @@ export class ServiceUserProfilesService {
         },
         existingEmail,
       );
-      logger.log(`Updated service user profiles user. Email: ${email}`);
+      logger.log('Updated service user profiles user');
     } catch (error) {
-      if (error.toString() === 'Error: Not found') {
-        // mailchimp account not found, create one
-        const userWithRelations = await this.userRepository.findOne({
-          where: { id: user.id },
-          relations: {
-            partnerAccess: { partner: true, therapySession: true },
-            courseUser: { course: true, sessionUser: { session: true } },
-          },
-        });
-        this.createCompleteMailchimpUserProfile(userWithRelations);
-        logger.log(`Created and updated service user profiles user. Email: ${email}`);
-      }
       logger.error(`Update service user profiles user error - ${JSON.stringify(error)}`);
     }
   }
@@ -142,6 +141,11 @@ export class ServiceUserProfilesService {
     partnerAccesses: PartnerAccessEntity[],
     email: string,
   ) {
+    if (isCypressTestEmail(email)) {
+      logger.log('Skipping service user profile partner access update for Cypress test email');
+      return;
+    }
+
     try {
       const partners = partnerAccesses.map((pa) => pa.partner);
       await this.crispService.updateCrispProfileBase(
@@ -160,6 +164,11 @@ export class ServiceUserProfilesService {
   }
 
   async updateServiceUserProfilesTherapy(partnerAccesses: PartnerAccessEntity[], email) {
+    if (isCypressTestEmail(email)) {
+      logger.log('Skipping service user profile therapy update for Cypress test email');
+      return;
+    }
+
     try {
       const therapyData = this.serializeTherapyData(partnerAccesses);
       await this.crispService.updateCrispPeopleData(therapyData.crispSchema, email);
@@ -170,6 +179,11 @@ export class ServiceUserProfilesService {
   }
 
   async updateServiceUserProfilesCourse(courseUser: CourseUserEntity, email: string) {
+    if (isCypressTestEmail(email)) {
+      logger.log('Skipping service user profile course update for Cypress test email');
+      return;
+    }
+
     try {
       const courseData = this.serializeCourseData(courseUser);
       await this.crispService.updateCrispPeopleData(courseData.crispSchema, email);

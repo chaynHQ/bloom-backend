@@ -77,13 +77,13 @@ export class FirebaseAuthGuard implements CanActivate {
           status: HttpStatus.INTERNAL_SERVER_ERROR,
         });
         throw new HttpException(
-          `FirebaseAuthGuard - Firebase user exists but user no record in bloom database for ${user.email}: ${error}`,
+          'FirebaseAuthGuard - User authentication failed',
           HttpStatus.INTERNAL_SERVER_ERROR,
         );
       }
 
       throw new HttpException(
-        `FirebaseAuthGuard - Firebase user exists but error retrieving from bloom database for ${user.email}: ${error}`,
+        'FirebaseAuthGuard - Database authentication error',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }

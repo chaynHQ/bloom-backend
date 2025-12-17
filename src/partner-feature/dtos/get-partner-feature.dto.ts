@@ -1,19 +1,19 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsBoolean, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsOptional, IsUUID } from 'class-validator';
 
 export class GetPartnerFeatureDto {
   @IsOptional()
-  @IsString()
+  @IsUUID(4, { message: 'partnerFeatureId must be a valid UUID' })
   @ApiProperty({ type: String })
   partnerFeatureId: string;
 
   @IsOptional()
-  @IsString()
+  @IsUUID(4, { message: 'featureId must be a valid UUID' })
   @ApiProperty({ type: String })
   featureId: string;
 
   @IsOptional()
-  @IsString()
+  @IsUUID(4, { message: 'partnerId must be a valid UUID' })
   @ApiProperty({ type: String })
   partnerId: string;
 

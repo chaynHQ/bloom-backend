@@ -1,28 +1,23 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsDefined, IsEnum, IsNotEmpty, IsString } from 'class-validator';
+import { IsDefined, IsEnum } from 'class-validator';
 import { STORYBLOK_STORY_STATUS_ENUM } from 'src/utils/constants';
+import { SecureInput } from '../../utils/sanitization.decorators';
 
 export class CourseDto {
-  @IsNotEmpty()
-  @IsString()
-  @IsDefined()
+  @SecureInput('text', { required: true, maxLength: 255 })
   @ApiProperty({ type: String })
   name: string;
 
-  @IsNotEmpty()
-  @IsString()
-  @IsDefined()
+  @SecureInput('text', { required: true, maxLength: 255 })
   @ApiProperty({ type: String })
   slug: string;
 
-  @IsEnum(STORYBLOK_STORY_STATUS_ENUM)
-  @IsNotEmpty()
   @IsDefined()
+  @IsEnum(STORYBLOK_STORY_STATUS_ENUM)
   @ApiProperty({ type: String })
   status: STORYBLOK_STORY_STATUS_ENUM;
 
-  @IsNotEmpty()
-  @IsDefined()
+  @SecureInput('text', { required: true, maxLength: 100 })
   @ApiProperty({ type: String })
   storyblokUuid: string;
 }

@@ -26,3 +26,7 @@ export const getAcronym = (text: string) => {
 };
 
 export const getYesterdaysDate = () => sub(new Date(), { days: 1 });
+
+export const isCypressTestEmail = (email: string): boolean => {
+  return email.includes('cypresstestemail');
+};
