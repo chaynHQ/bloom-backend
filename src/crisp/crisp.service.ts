@@ -4,6 +4,7 @@ import { EventLoggerService } from 'src/event-logger/event-logger.service';
 import { crispPluginId, crispPluginKey, crispWebsiteId } from 'src/utils/constants';
 import { isCypressTestEmail } from 'src/utils/utils';
 import {
+  CrispPeopleDataUpdateParams,
   CrispProfileBase,
   CrispProfileBaseResponse,
   CrispProfileCustomFields,
@@ -19,6 +20,19 @@ const CrispClient = new Crisp();
 export class CrispService {
   constructor(private eventLoggerService: EventLoggerService) {
     CrispClient.authenticateTier('plugin', crispPluginId, crispPluginKey);
+  }
+
+  // Convert CrispProfileCustomFields to the format crisp-api expects (primitive values only)
+  private toCrispDataParams(
+    peopleData: CrispProfileCustomFields,
+  ): CrispPeopleDataUpdateParams {
+    const data: CrispPeopleDataUpdateParams = {};
+    for (const [key, value] of Object.entries(peopleData)) {
+      if (value !== undefined && value !== null) {
+        data[key] = value;
+      }
+    }
+    return data;
   }
 
   private isProfileNotFoundError(error: unknown): boolean {
@@ -143,19 +157,21 @@ export class CrispService {
       return null;
     }
 
+    const params = this.toCrispDataParams(peopleData);
+
     try {
-      const crispPeopleData = CrispClient.website.updatePeopleData(crispWebsiteId, email, {
-        data: peopleData,
-      });
+      const crispPeopleData = CrispClient.website.updatePeopleData(
+        crispWebsiteId,
+        email,
+        params,
+      );
       return crispPeopleData;
     } catch (error) {
       // Only handle profile not found errors (404, not_found, or profile-related errors)
       if (this.isProfileNotFoundError(error)) {
         try {
           await this.createCrispProfile({ email });
-          return await CrispClient.website.updatePeopleData(crispWebsiteId, email, {
-            data: peopleData,
-          });
+          return await CrispClient.website.updatePeopleData(crispWebsiteId, email, params);
         } catch {
           throw new Error(`Update crisp profile API call failed: ${error}`);
         }

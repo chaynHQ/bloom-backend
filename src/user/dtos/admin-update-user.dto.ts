@@ -28,15 +28,15 @@ export class AdminUpdateUserDto {
 
   @IsOptional()
   @IsDate()
-  @ApiProperty({ type: 'date' })
+  @ApiProperty({ type: Date })
   lastActiveAt: Date;
 
   @SecureInput('email', { required: false, maxLength: 255 })
-  @ApiProperty({ type: 'email' })
+  @ApiProperty({ type: String, format: 'email' })
   email: string;
 
   @IsOptional()
   @IsBoolean({})
-  @ApiProperty({ type: 'boolean' })
+  @ApiProperty({ type: Boolean })
   isSuperAdmin: boolean;
 }

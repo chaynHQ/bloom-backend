@@ -46,7 +46,10 @@ import { WebhooksModule } from './webhooks/webhooks.module';
       middleware: {
         mount: true,
         generateId: true,
-        idGenerator: (req: Request) => req.headers['X-Request-Id'] ?? uuidv4(),
+        idGenerator: (req: Request) => {
+          const requestId = req.headers['x-request-id'];
+          return (Array.isArray(requestId) ? requestId[0] : requestId) ?? uuidv4();
+        },
       },
     }),
     LoggerModule,
