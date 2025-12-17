@@ -15,7 +15,7 @@ export class CrispEventDto {
   @ApiProperty({ type: String })
   website_id: string;
 
-  @SecureInput('id', { required: true, maxLength: 36 })
+  @SecureInput('text', { required: true, maxLength: 100 })
   @IsDefined()
   @ApiProperty({ type: String })
   session_id: string;

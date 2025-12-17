@@ -25,12 +25,19 @@ export class LoggingInterceptor implements NestInterceptor {
         this.logger.log(`Completed ${commonMessage} in ${Date.now() - now}ms`);
       }),
       catchError((err) => {
+        const getDetailedMessage = () => {
+          if (err.response && Array.isArray(err.response.message)) {
+            return `${err.message} - Details: ${JSON.stringify(err.response.message)}`;
+          }
+          return err.message;
+        };
+
         this.logger.error(
-          `Failed ${commonMessage} - status: ${err.status}, message: ${err.message} - in ${
+          `Failed ${commonMessage} - status: ${err.status}, message: ${getDetailedMessage()} - in ${
             Date.now() - now
           }ms`,
         );
-        return throwError(err);
+        return throwError(() => err);
       }),
     );
   }
