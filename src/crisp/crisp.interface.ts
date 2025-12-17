@@ -60,8 +60,10 @@ export interface NewCrispProfileBaseResponse {
   data: CrispProfileBaseResponse;
 }
 
+// Response type from crisp-api getPeopleData - matches PeopleData type
 export interface CrispProfileDataResponse {
-  error: boolean;
-  reason: string;
-  data: { data: CrispProfileCustomFields };
+  data?: CrispProfileCustomFields;
 }
+
+// Type for updatePeopleData params - crisp-api expects flat Record, not nested object
+export type CrispPeopleDataUpdateParams = Record<string, string | number | boolean>;
