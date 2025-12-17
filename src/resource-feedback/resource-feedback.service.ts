@@ -38,7 +38,7 @@ export class ResourceFeedbackService {
   ) {
     try {
       this.slackMessageClient.sendMessageToBloomUserChannel(
-        `*${resource.name}* in *${resource.name}* was rated *_${resourceFeedbackDto.feedbackTags}_* ${resourceFeedbackDto.feedbackDescription.length > 0 ? `with the comment: \n> _${resourceFeedbackDto.feedbackDescription}_` : ''}`,
+        `*${resource.name}* resource was rated *_${resourceFeedbackDto.feedbackTags}_* ${resourceFeedbackDto.feedbackDescription.length > 0 ? `with the comment: \n> _${resourceFeedbackDto.feedbackDescription}_` : ''}`,
       );
     } catch (error) {
       logger.error(`Failed to send Slack message for resource feedback: ${error.message}`);
