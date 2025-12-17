@@ -1,12 +1,14 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { SecureInput } from '../../utils/sanitization.decorators';
+import { IsUUID, IsDefined } from 'class-validator';
 
 export class CourseUserDto {
-  @SecureInput('id', { required: true, maxLength: 36 })
+  @IsUUID(4, { message: 'userId must be a valid UUID' })
+  @IsDefined()
   @ApiProperty({ type: String })
   userId: string;
 
-  @SecureInput('id', { required: true, maxLength: 36 })
+  @IsUUID(4, { message: 'courseId must be a valid UUID' })
+  @IsDefined()
   @ApiProperty({ type: String })
   courseId: string;
 }

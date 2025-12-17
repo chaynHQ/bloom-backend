@@ -8,13 +8,13 @@ export class AdminUpdateUserDto {
   @ApiProperty({ type: String })
   name: string;
 
-  @IsBoolean()
   @IsOptional()
+  @IsBoolean()
   @ApiProperty({ type: Boolean })
   contactPermission: boolean;
 
-  @IsBoolean()
   @IsOptional()
+  @IsBoolean()
   @ApiProperty({ type: Boolean })
   serviceEmailsPermission: boolean;
 
@@ -26,8 +26,8 @@ export class AdminUpdateUserDto {
   @ApiProperty({ type: String })
   signUpLanguage: string;
 
-  @IsDate()
   @IsOptional()
+  @IsDate()
   @ApiProperty({ type: 'date' })
   lastActiveAt: Date;
 
@@ -35,8 +35,8 @@ export class AdminUpdateUserDto {
   @ApiProperty({ type: 'email' })
   email: string;
 
-  @IsBoolean({})
   @IsOptional()
+  @IsBoolean({})
   @ApiProperty({ type: 'boolean' })
   isSuperAdmin: boolean;
 }

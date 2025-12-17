@@ -17,7 +17,7 @@ export class CourseDto {
   @ApiProperty({ type: String })
   status: STORYBLOK_STORY_STATUS_ENUM;
 
-  @SecureInput('id', { required: true, maxLength: 36 })
+  @SecureInput('text', { required: true, maxLength: 100 })
   @ApiProperty({ type: String })
   storyblokUuid: string;
 }

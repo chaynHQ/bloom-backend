@@ -1,14 +1,16 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsDefined, IsEnum } from 'class-validator';
+import { IsDefined, IsEnum, IsUUID } from 'class-validator';
 import { FEEDBACK_TAGS_ENUM } from 'src/utils/constants';
 import { SecureInput } from '../../utils/sanitization.decorators';
 
 export class ResourceFeedbackDto {
-  @SecureInput('id', { required: true, maxLength: 36 })
+  @IsUUID(4, { message: 'id must be a valid UUID' })
+  @IsDefined()
   @ApiProperty({ type: String })
   id: string;
 
-  @SecureInput('id', { required: true, maxLength: 36 })
+  @IsUUID(4, { message: 'resourceId must be a valid UUID' })
+  @IsDefined()
   @ApiProperty({ type: String })
   resourceId: string;
 

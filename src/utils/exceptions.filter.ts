@@ -1,7 +1,6 @@
 import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { Logger } from '../logger/logger';
-import { isProduction } from './constants';
 
 @Catch()
 export class ExceptionsFilter implements ExceptionFilter {
@@ -12,8 +11,6 @@ export class ExceptionsFilter implements ExceptionFilter {
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
 
-    const now = Date.now();
-
     const httpStatus =
       exception instanceof HttpException ? exception.getStatus() : HttpStatus.INTERNAL_SERVER_ERROR;
 
@@ -21,14 +18,6 @@ export class ExceptionsFilter implements ExceptionFilter {
       exception instanceof HttpException
         ? exception['response'].message || exception.message
         : 'Internal server error';
-
-    if (isProduction) {
-      this.logger.error(
-        `Failed ${request.url} - status: ${httpStatus}, message: ${message} - in ${
-          Date.now() - now
-        }ms`,
-      );
-    }
 
     response.status(httpStatus).json({
       statusCode: httpStatus,

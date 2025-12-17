@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsDate, IsDefined } from 'class-validator';
+import { IsDate, IsDefined, IsUUID, IsOptional } from 'class-validator';
 import { EVENT_NAME } from '../../event-logger/event-logger.interface';
 import { SecureInput } from '../../utils/sanitization.decorators';
 
@@ -18,7 +18,8 @@ export class WebhookCreateEventLogDto {
   @ApiProperty({ type: String })
   email?: string;
 
-  @SecureInput('id', { maxLength: 36 })
+  @IsOptional()
+  @IsUUID(4, { message: 'userId must be a valid UUID' })
   @ApiProperty({ type: String })
   userId?: string;
 }
