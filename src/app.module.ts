@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { ClsModule } from 'nestjs-cls';
 import { dataSourceOptions } from 'src/typeorm.config';
@@ -32,13 +34,22 @@ import { WebhooksModule } from './webhooks/webhooks.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60000, // 60 seconds
+        limit: 100, // 100 requests per TTL window
+      },
+    ]),
     TypeOrmModule.forRoot(dataSourceOptions as TypeOrmModuleOptions),
     ClsModule.forRoot({
       global: true,
       middleware: {
         mount: true,
         generateId: true,
-        idGenerator: (req: Request) => req.headers['X-Request-Id'] ?? uuidv4(),
+        idGenerator: (req: Request) => {
+          const requestId = req.headers['x-request-id'];
+          return (Array.isArray(requestId) ? requestId[0] : requestId) ?? uuidv4();
+        },
       },
     }),
     LoggerModule,
@@ -65,6 +76,12 @@ import { WebhooksModule } from './webhooks/webhooks.module';
     ResourceUserModule,
     ResourceFeedbackModule,
     TherapySessionModule,
+  ],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
   ],
 })
 export class AppModule {}

@@ -230,7 +230,7 @@ describe('CrispService', () => {
       expect(mockWebsite.updatePeopleData).toHaveBeenCalledWith(
         crispWebsiteId,
         'test@example.com',
-        { data: customFields },
+        customFields,
       );
       expect(response).toEqual(expectedResponse);
     });
