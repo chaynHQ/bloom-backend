@@ -49,7 +49,7 @@
     "firebase": "^12.7.0",
     "firebase-admin": "^13.6.0",
     "jsdom": "^27.3.0",
-    "lodash": "^4.17.21",
+    "lodash": "^4.17.23",
     "nestjs-cls": "^6.1.0",
     "newrelic": "^13.8.1",
     "pg": "^8.16.3",
