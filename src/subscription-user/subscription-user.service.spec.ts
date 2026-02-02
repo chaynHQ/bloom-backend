@@ -1,5 +1,6 @@
 /* eslint-disable */
 import { DeepMocked, createMock } from '@golevelup/ts-jest/lib/mocks';
+import { Logger } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { ZapierWebhookClient } from 'src/api/zapier/zapier-webhook-client';
@@ -16,7 +17,6 @@ import {
 } from 'test/utils/mockedServices';
 import { Repository } from 'typeorm/repository/Repository';
 import { SubscriptionUserService } from './subscription-user.service';
-import { Logger } from '@nestjs/common';
 
 describe('SubscriptionUserService', () => {
   let service: SubscriptionUserService;
@@ -71,10 +71,7 @@ describe('SubscriptionUserService', () => {
 
   describe('softDeleteSubscriptions', () => {
     it('when supplied with correct data should delete number from respond.io and redact number', async () => {
-      const response = await service.softDeleteSubscriptionsForUser(
-        mockUserEntity.id,
-        mockUserEntity.email,
-      );
+      const response = await service.softDeleteSubscriptionsForUser(mockUserEntity.id);
       expect(response).toMatchObject([
         { ...mockSubscriptionUserEntity, subscriptionInfo: 'Number Redacted' },
       ]);

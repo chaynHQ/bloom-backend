@@ -397,10 +397,7 @@ describe('UserService', () => {
 
       expect(repoSpySave).toHaveBeenCalled();
       expect(mockTherapySessionServiceSpy).toHaveBeenCalled();
-      expect(mockSubscriptionUserServiceSpy).toHaveBeenCalledWith(
-        mockUserEntity.id,
-        mockUserEntity.email,
-      );
+      expect(mockSubscriptionUserServiceSpy).toHaveBeenCalledWith(mockUserEntity.id);
       expect(mockAuthServiceSpy).toHaveBeenCalledWith(mockUserEntity.firebaseUid);
     });
   });
@@ -436,10 +433,7 @@ describe('UserService', () => {
 
       expect(repoSpySave).toHaveBeenCalled();
       expect(mockTherapySessionServiceSpy).toHaveBeenCalled();
-      expect(mockSubscriptionUserServiceSpy).toHaveBeenCalledWith(
-        mockUserEntity.id,
-        mockUserEntity.email,
-      );
+      expect(mockSubscriptionUserServiceSpy).toHaveBeenCalledWith(mockUserEntity.id);
       expect(mockAuthServiceSpy).toHaveBeenCalledWith(mockUserEntity.firebaseUid);
     });
 
