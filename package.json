@@ -63,7 +63,7 @@
     "validator": "^13.15.26"
   },
   "devDependencies": {
-    "@eslint/js": "^9.39.2",
+    "@eslint/js": "^10.0.1",
     "@golevelup/ts-jest": "^1.2.0",
     "@nestjs/cli": "^11.0.16",
     "@nestjs/schematics": "^11.0.9",
