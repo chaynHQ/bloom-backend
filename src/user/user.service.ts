@@ -169,13 +169,13 @@ export class UserService {
     } catch (err) {
       // Continue to delete user, even if firebase request fails
       this.logger.error(
-        `deleteUser - firebase error. Unable to delete user due to error: ${err.code || 'unknown error'}`,
+        `deleteUser - firebase error. Unable to delete user due to error: ${err.message || 'unknown error'}`,
       );
     }
 
     try {
       // If they have subscriptions,redact the number
-      await this.subscriptionUserService.softDeleteSubscriptionsForUser(user.id, user.email);
+      await this.subscriptionUserService.softDeleteSubscriptionsForUser(user.id);
       // If they have therapy sessions redact email and delete client from therapy sessions
       await this.therapySessionService.softDeleteTherapySessions(user.id, user.email, randomString);
 

@@ -7,8 +7,8 @@ import { FirebaseAuthGuard } from '../firebase/firebase-auth.guard';
 import { ControllerDecorator } from '../utils/controller.decorator';
 import { CreateSubscriptionUserDto } from './dto/create-subscription-user.dto';
 import { GetSubscriptionUserDto } from './dto/get-subscription-user.dto';
-import { UpdateSubscriptionUserDto } from './dto/update-subscription-user.dto';
 import { SubscriptionParamDto } from './dto/subscription-param.dto';
+import { UpdateSubscriptionUserDto } from './dto/update-subscription-user.dto';
 import { ISubscriptionUser } from './subscription-user.interface';
 import { SubscriptionUserService } from './subscription-user.service';
 
@@ -66,7 +66,6 @@ export class SubscriptionUserController {
   ): Promise<ISubscriptionUser | undefined> {
     return this.subscriptionUserService.cancelWhatsappSubscription(
       req['userEntity'].id,
-      req['userEntity'].email,
       updateSubscriptionsDto,
       params.id,
     );

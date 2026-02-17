@@ -44,4 +44,25 @@ export class SlackMessageClient {
       return err;
     }
   }
+
+  public async sendMessageToDeletedUsersSlackChannel(
+    text: string,
+  ): Promise<AxiosResponse | string> {
+    if (!isProduction) return; // only send messages in production environment
+
+    try {
+      const response = await apiCall({
+        url: process.env.SLACK_BLOOM_DELETED_USERS_WEBHOOK_URL,
+        type: 'post',
+        data: {
+          text: text,
+        },
+      });
+      this.logger.log('Message sent to slack Deleted Users Channel');
+      return response;
+    } catch (err) {
+      this.logger.error('Unable to sendMessageToDeletedUsersSlackChannel', err);
+      return err;
+    }
+  }
 }

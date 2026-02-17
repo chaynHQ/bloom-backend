@@ -67,7 +67,6 @@ export class SubscriptionUserService {
 
   async cancelWhatsappSubscription(
     userId: string,
-    userEmail: string,
     { cancelledAt }: UpdateSubscriptionUserDto,
     id: string,
   ) {
@@ -90,8 +89,6 @@ export class SubscriptionUserService {
         await this.subscriptionUserRepository.save(subscription);
 
         return this.getFullSubscriptionInfo({ id: subscription.id, userId });
-      } else {
-        throw new HttpException('Subscription has already been cancelled', HttpStatus.CONFLICT);
       }
     } else {
       throw new HttpException('Could not find subscription', HttpStatus.BAD_REQUEST);
@@ -119,7 +116,7 @@ export class SubscriptionUserService {
     return phonenumber.replace(/\s/g, ''); // remove spaces
   };
 
-  async softDeleteSubscriptionsForUser(userId, userEmail): Promise<SubscriptionUserEntity[]> {
+  async softDeleteSubscriptionsForUser(userId): Promise<SubscriptionUserEntity[]> {
     try {
       const subscriptions = await this.subscriptionUserRepository.find({
         where: { userId: userId },
@@ -129,7 +126,7 @@ export class SubscriptionUserService {
       const updatedSubscriptions: SubscriptionUserEntity[] = await Promise.all(
         subscriptions.map(async (subs): Promise<SubscriptionUserEntity> => {
           if (subs.cancelledAt !== null) {
-            await this.cancelWhatsappSubscription(userId, userEmail, { cancelledAt }, subs.id);
+            await this.cancelWhatsappSubscription(userId, { cancelledAt }, subs.id);
           }
           const subscription = await this.subscriptionUserRepository.findOne({
             where: { id: subs.id },
@@ -142,9 +139,7 @@ export class SubscriptionUserService {
           return await this.subscriptionUserRepository.save(updatedSubscription);
         }),
       );
-      this.logger.log(
-        `Redacted number for ${updatedSubscriptions.length} subscription(s)`,
-      );
+      this.logger.log(`Redacted number for ${updatedSubscriptions.length} subscription(s)`);
       return updatedSubscriptions;
     } catch (err) {
       throw new HttpException(

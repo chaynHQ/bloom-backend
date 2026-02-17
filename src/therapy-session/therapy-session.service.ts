@@ -96,7 +96,7 @@ export class TherapySessionService {
         return emailArr.indexOf(email) === index;
       });
 
-    await this.slackMessageClient.sendMessageToTherapySlackChannel(
+    await this.slackMessageClient.sendMessageToDeletedUsersSlackChannel(
       `User has been deleted from bloom - please remove the accounts associated with ${userEmail + emails.join(', ')} from Simplybook, Crisp and from Mailchimp`,
     );
 
