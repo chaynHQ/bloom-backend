@@ -104,13 +104,8 @@ export class SessionUserService {
       });
     }
 
-    let sessionUser = await this.getSessionUser({
-      sessionId: id,
-      courseUserId: courseUser.id,
-    });
-
-    if (!sessionUser) {
-      sessionUser = await this.createSessionUserRecord({
+    if (!await this.getSessionUser({ sessionId: id, courseUserId: courseUser.id })) {
+      await this.createSessionUserRecord({
         sessionId: id,
         courseUserId: courseUser.id,
         completed: false,
