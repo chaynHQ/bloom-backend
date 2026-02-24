@@ -11,9 +11,9 @@ updates:
       time: "09:00"
       timezone: "Europe/London"
     assignees:
-      - kyleecodes
+      - bl00dymarie
     reviewers:
-      - kyleecodes
+      - bl00dymarie
     groups:
       dev-deps:
         dependency-type: "development"
@@ -37,9 +37,9 @@ updates:
       time: "09:00"
       timezone: "Europe/London"
     assignees:
-      - kyleecodes
+      - bl00dymarie
     reviewers:
-      - kyleecodes
+      - bl00dymarie
     groups:
       actions-deps:
         patterns:
