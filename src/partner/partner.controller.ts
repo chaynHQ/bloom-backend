@@ -36,8 +36,7 @@ export class PartnerController {
   }
 
   @Get(':name')
-  @ApiOperation({ description: 'Returns profile data for a partner' })
-  @UseGuards(SuperAdminAuthGuard)
+  @ApiOperation({ description: 'Returns profile data for a partner (public endpoint)' })
   @ApiParam({ name: 'name', description: 'Gets partner by name' })
   async getPartner(@Param() params: PartnerParamDto): Promise<IPartner> {
     const partnerResponse = await this.partnerService.getPartnerWithPartnerFeaturesByName(params.name);
