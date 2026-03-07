@@ -7,7 +7,6 @@ import { ControllerDecorator } from '../utils/controller.decorator';
 import { CreatePartnerDto } from './dtos/create-partner.dto';
 import { UpdatePartnerDto } from './dtos/update-partner.dto';
 import { PartnerParamDto, PartnerIdParamDto } from './dtos/partner-param.dto';
-import { IPartner } from './partner.interface';
 import { PartnerService } from './partner.service';
 
 @ApiTags('Partner')
@@ -39,7 +38,7 @@ export class PartnerController {
   @ApiOperation({ description: 'Returns profile data for a partner' })
   @UseGuards(SuperAdminAuthGuard)
   @ApiParam({ name: 'name', description: 'Gets partner by name' })
-  async getPartner(@Param() params: PartnerParamDto): Promise<IPartner> {
+  async getPartner(@Param() params: PartnerParamDto): Promise<Partial<PartnerEntity>> {
     const partnerResponse = await this.partnerService.getPartnerWithPartnerFeaturesByName(params.name);
     return formatPartnerObject(partnerResponse);
   }

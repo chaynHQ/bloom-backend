@@ -1,4 +1,4 @@
-import { IPartner } from '../partner/partner.interface';
+import { PartnerEntity } from 'src/entities/partner.entity';
 
 export interface IPartnerAccess {
   id?: string;
@@ -12,5 +12,5 @@ export interface IPartnerAccess {
 }
 
 export interface IPartnerAccessWithPartner extends IPartnerAccess {
-  partner?: IPartner;
+  partner?: Partial<PartnerEntity>;
 }
