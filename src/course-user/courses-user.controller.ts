@@ -1,11 +1,11 @@
 import { Controller, Get, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { ICoursesWithSessions } from 'src/course/course.interface';
 import { UserEntity } from 'src/entities/user.entity';
 import { ControllerDecorator } from 'src/utils/controller.decorator';
 import { FirebaseAuthGuard } from '../firebase/firebase-auth.guard';
 import { formatCourseUserObjects } from '../utils/serialize';
 import { CourseUserService } from './course-user.service';
+import { GetCourseUserDto } from './dto/get-course-user.dto';
 
 @ApiTags('Courses User')
 @ControllerDecorator()
@@ -19,7 +19,7 @@ export class CoursesUserController {
     description: 'Returns user courses and session data.',
   })
   @UseGuards(FirebaseAuthGuard)
-  async getCourseUserByUserId(@Req() req: Request): Promise<ICoursesWithSessions[]> {
+  async getCourseUserByUserId(@Req() req: Request): Promise<GetCourseUserDto[]> {
     const user = req['userEntity'] as UserEntity;
     const coursesUser = await this.courseUserService.getCourseUserByUserId(user.id);
     return formatCourseUserObjects(coursesUser);
