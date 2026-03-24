@@ -19,7 +19,7 @@ export const getAcronym = (text: string) => {
   const exclude = ['in', 'and', 'the', 'from', 'as', 'or', 'to'];
   const string = text.split(' ').filter((word) => !exclude.includes(word));
   const abbreviatedString = string
-    .reduce((response, word) => (response += word.slice(0, 1)), '')
+    .reduce((response, word) => (response + word.slice(0, 1)), '')
     .toUpperCase();
 
   return abbreviatedString;

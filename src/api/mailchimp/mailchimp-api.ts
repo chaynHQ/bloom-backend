@@ -38,7 +38,7 @@ export const createMailchimpProfile = async (
   try {
     return await mailchimp.lists.addListMember(mailchimpAudienceId, profileData);
   } catch (error) {
-    throw new Error(`Create mailchimp profile API call failed: ${JSON.stringify(error)}`);
+    throw new Error(`Create mailchimp profile API call failed: ${JSON.stringify(error)}`, { cause: error });
   }
 };
 
@@ -76,7 +76,7 @@ export const batchCreateMailchimpProfiles = async (
       logger.log(`Mailchimp batch response: ${batchResponse}`);
     }, 120000);
   } catch (error) {
-    throw new Error(`Batch create mailchimp profiles API call failed: ${JSON.stringify(error)}`);
+    throw new Error(`Batch create mailchimp profiles API call failed: ${JSON.stringify(error)}`, { cause: error });
   }
 };
 
@@ -114,7 +114,7 @@ export const batchUpdateMailchimpProfiles = async (
       logger.log(`Mailchimp batch response: ${batchResponse}`);
     }, 120000);
   } catch (error) {
-    throw new Error(`Batch update mailchimp profiles API call failed: ${JSON.stringify(error)}`);
+    throw new Error(`Batch update mailchimp profiles API call failed: ${JSON.stringify(error)}`, { cause: error });
   }
 };
 
@@ -123,7 +123,7 @@ export const getMailchimpProfile = async (email: string): Promise<ListMember> =>
   try {
     return await mailchimp.lists.getListMember(mailchimpAudienceId, getEmailMD5Hash(email));
   } catch (error) {
-    throw new Error(`Get mailchimp profile API call failed: ${error}`);
+    throw new Error(`Get mailchimp profile API call failed: ${error}`, { cause: error });
   }
 };
 
@@ -152,7 +152,7 @@ export const updateMailchimpProfile = async (
       };
       return await createMailchimpProfile(createData);
     }
-    throw new Error(`Update mailchimp profile API call failed: ${error}`);
+    throw new Error(`Update mailchimp profile API call failed: ${error}`, { cause: error });
   }
 };
 
@@ -169,7 +169,7 @@ export const createMailchimpMergeField = async (
       required: false,
     });
   } catch (error) {
-    throw new Error(`Create mailchimp merge field API call failed: ${error}`);
+    throw new Error(`Create mailchimp merge field API call failed: ${error}`, { cause: error });
   }
 };
 
@@ -196,7 +196,7 @@ export const deleteCypressMailchimpProfiles = async () => {
       members: ListMember[];
     };
   } catch (error) {
-    throw new Error(`Delete cypress mailchimp profiles API call failed to get users: ${error}`);
+    throw new Error(`Delete cypress mailchimp profiles API call failed to get users: ${error}`, { cause: error });
   }
 
   logger.log(`Deleting ${cypressProfiles.members.length} mailchimp profiles`);
@@ -205,7 +205,7 @@ export const deleteCypressMailchimpProfiles = async () => {
     try {
       await deleteMailchimpProfile(profile.email_address);
     } catch (error) {
-      throw new Error(`Delete cypress mailchimp profiles API call failed: ${error}`);
+      throw new Error(`Delete cypress mailchimp profiles API call failed: ${error}`, { cause: error });
     }
   });
 };
@@ -216,6 +216,6 @@ export const sendMailchimpUserEvent = async (email: string, event: MAILCHIMP_CUS
       name: event,
     });
   } catch (error) {
-    throw new Error(`Send mailchimp user event failed: ${error}`);
+    throw new Error(`Send mailchimp user event failed: ${error}`, { cause: error });
   }
 };
