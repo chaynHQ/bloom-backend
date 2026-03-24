@@ -71,7 +71,7 @@ export class TherapySessionService {
       return updatedTherapySession;
     } catch (error) {
       this.logger.error(`Error cancelling therapy session: ${error}`);
-      throw new Error(`Error cancelling therapy session: ${error}`);
+      throw new Error(`Error cancelling therapy session: ${error}`, { cause: error });
     }
   }
 

@@ -70,7 +70,7 @@ export class CrispService {
         sessionMetaData.email,
       );
     } catch (error) {
-      throw new Error(`Failed to handle crisp event for ${eventName}: ${error}`);
+      throw new Error(`Failed to handle crisp event for ${eventName}: ${error}`, { cause: error });
     }
   }
 
@@ -89,7 +89,7 @@ export class CrispService {
       );
       return crispProfile;
     } catch (error) {
-      throw new Error(`Create crisp profile API call failed: ${error}`);
+      throw new Error(`Create crisp profile API call failed: ${error}`, { cause: error });
     }
   }
 
@@ -99,7 +99,7 @@ export class CrispService {
       const crispProfile = CrispClient.website.getPeopleProfile(crispWebsiteId, email);
       return crispProfile;
     } catch (error) {
-      throw new Error(`Get crisp profile base API call failed: ${error}`);
+      throw new Error(`Get crisp profile base API call failed: ${error}`, { cause: error });
     }
   }
 
@@ -109,7 +109,7 @@ export class CrispService {
       const crispPeopleData = CrispClient.website.getPeopleData(crispWebsiteId, email);
       return crispPeopleData;
     } catch (error) {
-      throw new Error(`Get crisp profile API call failed: ${error}`);
+      throw new Error(`Get crisp profile API call failed: ${error}`, { cause: error });
     }
   }
 
@@ -144,7 +144,7 @@ export class CrispService {
         }
       }
       // Re-throw non-profile-not-found errors (rate limits, auth, network, etc.)
-      throw new Error(`Update crisp profile base API call failed: ${error}`);
+      throw new Error(`Update crisp profile base API call failed: ${error}`, { cause: error });
     }
   }
 
@@ -177,7 +177,7 @@ export class CrispService {
         }
       }
       // Re-throw non-profile-not-found errors (rate limits, auth, network, etc.)
-      throw new Error(`Update crisp profile API call failed: ${error}`);
+      throw new Error(`Update crisp profile API call failed: ${error}`, { cause: error });
     }
   }
 
@@ -185,7 +185,7 @@ export class CrispService {
     try {
       await CrispClient.website.removePeopleProfile(crispWebsiteId, email);
     } catch (error) {
-      throw new Error(`Delete crisp profile API call failed: ${error}`);
+      throw new Error(`Delete crisp profile API call failed: ${error}`, { cause: error });
     }
   }
 
@@ -207,7 +207,7 @@ export class CrispService {
         await CrispClient.website.removePeopleProfile(crispWebsiteId, profile.email);
       });
     } catch (error) {
-      throw new Error(`Delete cypress crisp profiles API call failed: ${error}`);
+      throw new Error(`Delete cypress crisp profiles API call failed: ${error}`, { cause: error });
     }
   }
 
