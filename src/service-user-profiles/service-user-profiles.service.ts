@@ -276,7 +276,7 @@ export class ServiceUserProfilesService {
         `Created batch mailchimp profiles for ${users.length} users, created before ${filterStartDate}`,
       );
     } catch (error) {
-      throw new Error(`Bulk upload mailchimp profiles API call failed: ${error}`);
+      throw new Error(`Bulk upload mailchimp profiles API call failed: ${error}`, { cause: error });
     }
   }
   // Static bulk update function to be used in specific cases e.g. bug prevented a subset of users from being updated
@@ -310,7 +310,7 @@ export class ServiceUserProfilesService {
         `Updated batch mailchimp profiles for ${users.length} users, updated before ${filterStartDate}`,
       );
     } catch (error) {
-      throw new Error(`Bulk update mailchimp profiles API call failed: ${error}`);
+      throw new Error(`Bulk update mailchimp profiles API call failed: ${error}`, { cause: error });
     }
   }
 
