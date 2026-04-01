@@ -289,6 +289,7 @@ export class ServiceUserProfilesService {
     } catch (error) {
       throw new Error(
         `Bulk upload mailchimp profiles API call failed: ${error?.message || 'unknown error'}`,
+        { cause: error },
       );
     }
   }
@@ -325,6 +326,7 @@ export class ServiceUserProfilesService {
     } catch (error) {
       throw new Error(
         `Bulk update mailchimp profiles API call failed: ${error?.message || 'unknown error'}`,
+        { cause: error },
       );
     }
   }

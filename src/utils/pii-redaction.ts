@@ -7,7 +7,7 @@
  *                        dumping the full object (which may contain PII).
  */
 
-const EMAIL_PATTERN = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
+const EMAIL_PATTERN = /[a-zA-Z0-9._%+-]{1,64}@(?:[a-zA-Z0-9-]{1,63}\.)+[a-zA-Z]{2,63}/g;
 const PHONE_PATTERN = /\+?\d[\d\s\-()]{7,}\d/g;
 
 export function maskEmail(email: string): string {

@@ -41,6 +41,7 @@ export const createMailchimpProfile = async (
   } catch (error) {
     throw new Error(
       `Create mailchimp profile API call failed: ${error?.message || 'unknown error'}`,
+      { cause: error },
     );
   }
 };
@@ -86,6 +87,7 @@ export const batchCreateMailchimpProfiles = async (
   } catch (error) {
     throw new Error(
       `Batch create mailchimp profiles API call failed: ${error?.message || 'unknown error'}`,
+      { cause: error },
     );
   }
 };
@@ -131,6 +133,7 @@ export const batchUpdateMailchimpProfiles = async (
   } catch (error) {
     throw new Error(
       `Batch update mailchimp profiles API call failed: ${error?.message || 'unknown error'}`,
+      { cause: error },
     );
   }
 };
@@ -140,7 +143,9 @@ export const getMailchimpProfile = async (email: string): Promise<ListMember> =>
   try {
     return await mailchimp.lists.getListMember(mailchimpAudienceId, getEmailMD5Hash(email));
   } catch (error) {
-    throw new Error(`Get mailchimp profile API call failed: ${error?.message || 'unknown error'}`);
+    throw new Error(`Get mailchimp profile API call failed: ${error?.message || 'unknown error'}`, {
+      cause: error,
+    });
   }
 };
 
@@ -171,6 +176,7 @@ export const updateMailchimpProfile = async (
     }
     throw new Error(
       `Update mailchimp profile API call failed: ${error?.message || 'unknown error'}`,
+      { cause: error },
     );
   }
 };
@@ -190,6 +196,7 @@ export const createMailchimpMergeField = async (
   } catch (error) {
     throw new Error(
       `Create mailchimp merge field API call failed: ${error?.message || 'unknown error'}`,
+      { cause: error },
     );
   }
 };
@@ -219,6 +226,7 @@ export const deleteCypressMailchimpProfiles = async () => {
   } catch (error) {
     throw new Error(
       `Delete cypress mailchimp profiles API call failed to get users: ${error?.message || 'unknown error'}`,
+      { cause: error },
     );
   }
 
@@ -230,6 +238,7 @@ export const deleteCypressMailchimpProfiles = async () => {
     } catch (error) {
       throw new Error(
         `Delete cypress mailchimp profiles API call failed: ${error?.message || 'unknown error'}`,
+        { cause: error },
       );
     }
   });
@@ -241,6 +250,8 @@ export const sendMailchimpUserEvent = async (email: string, event: MAILCHIMP_CUS
       name: event,
     });
   } catch (error) {
-    throw new Error(`Send mailchimp user event failed: ${error?.message || 'unknown error'}`);
+    throw new Error(`Send mailchimp user event failed: ${error?.message || 'unknown error'}`, {
+      cause: error,
+    });
   }
 };

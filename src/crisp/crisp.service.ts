@@ -72,6 +72,7 @@ export class CrispService {
     } catch (error) {
       throw new Error(
         `Failed to handle crisp event for ${eventName}: ${error?.message || 'unknown error'}`,
+        { cause: error },
       );
     }
   }
@@ -91,7 +92,9 @@ export class CrispService {
       );
       return crispProfile;
     } catch (error) {
-      throw new Error(`Create crisp profile API call failed: ${error?.message || 'unknown error'}`);
+      throw new Error(`Create crisp profile API call failed: ${error?.message || 'unknown error'}`, {
+        cause: error,
+      });
     }
   }
 
@@ -103,6 +106,7 @@ export class CrispService {
     } catch (error) {
       throw new Error(
         `Get crisp profile base API call failed: ${error?.message || 'unknown error'}`,
+        { cause: error },
       );
     }
   }
@@ -113,7 +117,9 @@ export class CrispService {
       const crispPeopleData = CrispClient.website.getPeopleData(crispWebsiteId, email);
       return crispPeopleData;
     } catch (error) {
-      throw new Error(`Get crisp profile API call failed: ${error?.message || 'unknown error'}`);
+      throw new Error(`Get crisp profile API call failed: ${error?.message || 'unknown error'}`, {
+        cause: error,
+      });
     }
   }
 
@@ -152,6 +158,7 @@ export class CrispService {
       // Re-throw non-profile-not-found errors (rate limits, auth, network, etc.)
       throw new Error(
         `Update crisp profile base API call failed: ${error?.message || 'unknown error'}`,
+        { cause: error },
       );
     }
   }
@@ -183,7 +190,9 @@ export class CrispService {
         }
       }
       // Re-throw non-profile-not-found errors (rate limits, auth, network, etc.)
-      throw new Error(`Update crisp profile API call failed: ${error?.message || 'unknown error'}`);
+      throw new Error(`Update crisp profile API call failed: ${error?.message || 'unknown error'}`, {
+        cause: error,
+      });
     }
   }
 
@@ -191,7 +200,9 @@ export class CrispService {
     try {
       await CrispClient.website.removePeopleProfile(crispWebsiteId, email);
     } catch (error) {
-      throw new Error(`Delete crisp profile API call failed: ${error?.message || 'unknown error'}`);
+      throw new Error(`Delete crisp profile API call failed: ${error?.message || 'unknown error'}`, {
+        cause: error,
+      });
     }
   }
 
@@ -215,6 +226,7 @@ export class CrispService {
     } catch (error) {
       throw new Error(
         `Delete cypress crisp profiles API call failed: ${error?.message || 'unknown error'}`,
+        { cause: error },
       );
     }
   }

@@ -72,7 +72,9 @@ export class TherapySessionService {
       return updatedTherapySession;
     } catch (error) {
       this.logger.error(`Error cancelling therapy session: ${error?.message || 'unknown error'}`);
-      throw new Error(`Error cancelling therapy session: ${error?.message || 'unknown error'}`);
+      throw new Error(`Error cancelling therapy session: ${error?.message || 'unknown error'}`, {
+        cause: error,
+      });
     }
   }
 
@@ -90,12 +92,6 @@ export class TherapySessionService {
         userId: userId,
       })
       .getMany();
-
-    const emails = therapySessions
-      .map((ts) => ts.clientEmail)
-      .filter((email, index, emailArr) => {
-        return emailArr.indexOf(email) === index;
-      });
 
     await this.slackMessageClient.sendMessageToDeletedUsersSlackChannel(
       `User (userId: ${userId}) has been deleted from bloom - please remove associated accounts from Simplybook, Crisp and Mailchimp`,
