@@ -1,4 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { Logger } from 'src/logger/logger';
 import { AxiosResponse } from 'axios';
 import { isProduction } from 'src/utils/constants';
 import apiCall from '../apiCalls';
@@ -21,7 +22,7 @@ export class SlackMessageClient {
       this.logger.log('Message sent to slack Therapy Channel');
       return response;
     } catch (err) {
-      this.logger.error('Unable to sendMessageToTherapySlackChannel');
+      this.logger.error(`Unable to sendMessageToTherapySlackChannel: ${err?.message || 'unknown error'}`);
       return err;
     }
   }
@@ -37,10 +38,10 @@ export class SlackMessageClient {
           text: text,
         },
       });
-      this.logger.log({ event: 'SESSION_FEEDBACK_SLACK_MESSAGE_SENT' });
+      this.logger.log('Message sent to slack Bloom User Channel');
       return response;
     } catch (err) {
-      this.logger.error('Unable to sendMessageToBloomUserSlackChannel', err);
+      this.logger.error(`Unable to sendMessageToBloomUserSlackChannel: ${err?.message || 'unknown error'}`);
       return err;
     }
   }
@@ -61,7 +62,7 @@ export class SlackMessageClient {
       this.logger.log('Message sent to slack Deleted Users Channel');
       return response;
     } catch (err) {
-      this.logger.error('Unable to sendMessageToDeletedUsersSlackChannel', err);
+      this.logger.error(`Unable to sendMessageToDeletedUsersSlackChannel: ${err?.message || 'unknown error'}`);
       return err;
     }
   }

@@ -1,4 +1,5 @@
-import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { Logger } from 'src/logger/logger';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EventLogEntity } from 'src/entities/event-log.entity';
 import { UserEntity } from 'src/entities/user.entity';
@@ -57,7 +58,7 @@ export class EventLoggerService {
       return await this.eventLoggerRepository.save({ userId, event, date, metadata });
     } catch (err) {
       throw new HttpException(
-        `createEventLog - failed to create event log ${err}`,
+        `createEventLog - failed to create event log: ${err?.message || 'unknown error'}`,
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }

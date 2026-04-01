@@ -81,7 +81,7 @@ export const getBookingId: (bookingCode: string) => Promise<number> = async (
     );
 
     if (!bookingsResponse || !bookingsResponse.data.data || !bookingsResponse.data.data[0]?.id) {
-      throw new Error(`No data returned from Simplybook API. Response: ${bookingsResponse}`);
+      throw new Error('No data returned from Simplybook API for booking lookup');
     }
 
     return bookingsResponse.data.data[0].id;
@@ -122,9 +122,7 @@ export const cancelBooking: (id: number) => Promise<BookingResponse[]> = async (
       },
     });
     if (!bookingsResponse || !bookingsResponse.data) {
-      throw new Error(
-        `No data returned from Simplybook API. Response: ${JSON.stringify(bookingsResponse)}`,
-      );
+      throw new Error('No data returned from Simplybook API for cancel booking');
     }
     return bookingsResponse.data;
   } catch (error) {
@@ -168,6 +166,7 @@ export const updateSimplybookClient = async (clientId: string, clientData: { ema
 };
 
 const handleError = (message: string, error) => {
-  logger.error(message, error);
-  throw new Error(`${message}: ${error})`);
+  const errorDetail = error?.message || error?.code || 'unknown error';
+  logger.error(`${message}: ${errorDetail}`);
+  throw new Error(`${message}: ${errorDetail}`);
 };

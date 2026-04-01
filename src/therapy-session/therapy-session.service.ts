@@ -1,9 +1,10 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { cancelBooking, getBookingId } from 'src/api/simplybook/simplybook-api';
 import { SlackMessageClient } from 'src/api/slack/slack-api';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
+import { Logger } from 'src/logger/logger';
 import { ServiceUserProfilesService } from 'src/service-user-profiles/service-user-profiles.service';
 import { SIMPLYBOOK_ACTION_ENUM } from 'src/utils/constants';
 import { Repository } from 'typeorm';
@@ -70,8 +71,8 @@ export class TherapySessionService {
 
       return updatedTherapySession;
     } catch (error) {
-      this.logger.error(`Error cancelling therapy session: ${error}`);
-      throw new Error(`Error cancelling therapy session: ${error}`, { cause: error });
+      this.logger.error(`Error cancelling therapy session: ${error?.message || 'unknown error'}`);
+      throw new Error(`Error cancelling therapy session: ${error?.message || 'unknown error'}`);
     }
   }
 
@@ -97,7 +98,7 @@ export class TherapySessionService {
       });
 
     await this.slackMessageClient.sendMessageToDeletedUsersSlackChannel(
-      `User has been deleted from bloom - please remove the accounts associated with ${userEmail + emails.join(', ')} from Simplybook, Crisp and from Mailchimp`,
+      `User (userId: ${userId}) has been deleted from bloom - please remove associated accounts from Simplybook, Crisp and Mailchimp`,
     );
 
     // redact email from therapy sessions
@@ -114,7 +115,7 @@ export class TherapySessionService {
       }),
     );
     this.logger.log(
-      `Redacted ${redactedTherapySessions.length} therapy sessions for user  + ${userId}`,
+      `Redacted ${redactedTherapySessions.length} therapy sessions for user ${userId}`,
     );
 
     return redactedTherapySessions;
