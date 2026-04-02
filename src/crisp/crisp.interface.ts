@@ -48,18 +48,6 @@ export interface CrispProfileBase {
   // company?: {}
 }
 
-export interface CrispProfileBaseResponse {
-  error: boolean;
-  reason: string;
-  data: CrispProfileBase & {
-    people_id: string;
-  };
-}
-
-export interface NewCrispProfileBaseResponse {
-  data: CrispProfileBaseResponse;
-}
-
 // Response type from crisp-api getPeopleData - matches PeopleData type
 export interface CrispProfileDataResponse {
   data?: CrispProfileCustomFields;
