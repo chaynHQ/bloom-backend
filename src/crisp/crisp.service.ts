@@ -3,14 +3,13 @@ import Crisp from 'crisp-api';
 import { EventLoggerService } from 'src/event-logger/event-logger.service';
 import { crispPluginId, crispPluginKey, crispWebsiteId } from 'src/utils/constants';
 import { isCypressTestEmail } from 'src/utils/utils';
+import { PeopleProfile } from 'crisp-api';
 import {
   CrispPeopleDataUpdateParams,
   CrispProfileBase,
-  CrispProfileBaseResponse,
   CrispProfileCustomFields,
   CrispProfileDataResponse,
   EVENT_NAME,
-  NewCrispProfileBaseResponse,
 } from './crisp.interface';
 import { CrispEventDto } from './dtos/crisp.dto';
 
@@ -70,13 +69,11 @@ export class CrispService {
         sessionMetaData.email,
       );
     } catch (error) {
-      throw new Error(`Failed to handle crisp event for ${eventName}: ${error}`);
+      throw new Error(`Failed to handle crisp event for ${eventName}: ${error}`, { cause: error });
     }
   }
 
-  async createCrispProfile(
-    newPeopleProfile: CrispProfileBase,
-  ): Promise<NewCrispProfileBaseResponse> {
+  async createCrispProfile(newPeopleProfile: CrispProfileBase) {
     if (isCypressTestEmail(newPeopleProfile.email)) {
       console.log('Skipping Crisp profile creation for Cypress test email');
       return null;
@@ -89,17 +86,17 @@ export class CrispService {
       );
       return crispProfile;
     } catch (error) {
-      throw new Error(`Create crisp profile API call failed: ${error}`);
+      throw new Error(`Create crisp profile API call failed: ${error}`, { cause: error });
     }
   }
 
   // Note getCrispProfile is not currently used
-  async getCrispProfile(email: string): Promise<CrispProfileBaseResponse> {
+  async getCrispProfile(email: string): Promise<PeopleProfile> {
     try {
       const crispProfile = CrispClient.website.getPeopleProfile(crispWebsiteId, email);
       return crispProfile;
     } catch (error) {
-      throw new Error(`Get crisp profile base API call failed: ${error}`);
+      throw new Error(`Get crisp profile base API call failed: ${error}`, { cause: error });
     }
   }
 
@@ -109,14 +106,14 @@ export class CrispService {
       const crispPeopleData = CrispClient.website.getPeopleData(crispWebsiteId, email);
       return crispPeopleData;
     } catch (error) {
-      throw new Error(`Get crisp profile API call failed: ${error}`);
+      throw new Error(`Get crisp profile API call failed: ${error}`, { cause: error });
     }
   }
 
   async updateCrispProfileBase(
     peopleProfile: CrispProfileBase,
     email: string,
-  ): Promise<CrispProfileBaseResponse> {
+  ) {
     if (isCypressTestEmail(email)) {
       console.log('Skipping Crisp profile base update for Cypress test email');
       return null;
@@ -144,7 +141,7 @@ export class CrispService {
         }
       }
       // Re-throw non-profile-not-found errors (rate limits, auth, network, etc.)
-      throw new Error(`Update crisp profile base API call failed: ${error}`);
+      throw new Error(`Update crisp profile base API call failed: ${error}`, { cause: error });
     }
   }
 
@@ -177,7 +174,7 @@ export class CrispService {
         }
       }
       // Re-throw non-profile-not-found errors (rate limits, auth, network, etc.)
-      throw new Error(`Update crisp profile API call failed: ${error}`);
+      throw new Error(`Update crisp profile API call failed: ${error}`, { cause: error });
     }
   }
 
@@ -185,7 +182,7 @@ export class CrispService {
     try {
       await CrispClient.website.removePeopleProfile(crispWebsiteId, email);
     } catch (error) {
-      throw new Error(`Delete crisp profile API call failed: ${error}`);
+      throw new Error(`Delete crisp profile API call failed: ${error}`, { cause: error });
     }
   }
 
@@ -207,7 +204,7 @@ export class CrispService {
         await CrispClient.website.removePeopleProfile(crispWebsiteId, profile.email);
       });
     } catch (error) {
-      throw new Error(`Delete cypress crisp profiles API call failed: ${error}`);
+      throw new Error(`Delete cypress crisp profiles API call failed: ${error}`, { cause: error });
     }
   }
 
