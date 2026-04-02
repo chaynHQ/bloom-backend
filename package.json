@@ -65,8 +65,8 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@golevelup/ts-jest": "^1.2.1",
-    "@nestjs/cli": "^11.0.16",
-    "@nestjs/schematics": "^11.0.9",
+    "@nestjs/cli": "^11.0.17",
+    "@nestjs/schematics": "^11.0.10",
     "@nestjs/testing": "^11.1.17",
     "@types/date-fns": "^2.6.0",
     "@types/dompurify": "^3.2.0",
@@ -88,7 +88,7 @@
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
     "typescript": "^5.9.2",
-    "typescript-eslint": "^8.57.2"
+    "typescript-eslint": "^8.58.0"
   },
   "engines": {
     "node": "22.x",
