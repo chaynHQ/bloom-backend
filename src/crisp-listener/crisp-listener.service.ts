@@ -1,4 +1,5 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Logger } from 'src/logger/logger';
 import Crisp from 'crisp-api';
 import { EVENT_NAME } from 'src/crisp/crisp.interface';
 import { CrispService } from 'src/crisp/crisp.service';
@@ -29,7 +30,7 @@ export class CrispListenerService implements OnModuleInit {
           logger.log('Crisp service listening to sent messages');
         })
         .catch(function (error) {
-          logger.error('Crisp service failed listening to sent messages:', error);
+          logger.error(`Crisp service failed listening to sent messages: ${error?.message || 'unknown error'}`);
         });
 
       CrispClient.on('message:received', function (message: CrispEventDto) {
@@ -39,10 +40,10 @@ export class CrispListenerService implements OnModuleInit {
           logger.log('Crisp service listening to received messages');
         })
         .catch(function (error) {
-          logger.error('Crisp service failed listening to sent messages:', error);
+          logger.error(`Crisp service failed listening to received messages: ${error?.message || 'unknown error'}`);
         });
     } catch (error) {
-      logger.error('Crisp service failed to initiate:', error);
+      logger.error(`Crisp service failed to initiate: ${error?.message || 'unknown error'}`);
     }
   }
 }

@@ -151,7 +151,7 @@ export class PartnerAccessService {
       });
     } catch (error) {
       throw new HttpException(
-        `updatePartnerAccess - Unable to update partner access ${error}`,
+        `updatePartnerAccess - Unable to update partner access: ${error?.message || 'unknown error'}`,
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
@@ -182,7 +182,9 @@ export class PartnerAccessService {
         user.email,
       );
     } catch (error) {
-      this.logger.error(`Error: Unable to update crisp profile. Error: ${error.message}`, error);
+      this.logger.error(
+        `Error: Unable to update crisp profile: ${error?.message || 'unknown error'}`,
+      );
     }
 
     return assignedPartnerAccess;
@@ -201,17 +203,13 @@ export class PartnerAccessService {
             await this.partnerAccessRepository.delete(access.id); //permanently delete the access code
             return access;
           } catch (error) {
-            this.logger.error(
-              `Unable to delete access code: ${access.id} - ${error?.message || 'unknown error'}`,
-            );
+            this.logger.error(`Unable to delete access code: ${access.id} - ${error?.message || 'unknown error'}`);
           }
         }),
       );
     } catch (error) {
       // If this fails we don't want to break cypress tests but we want to be alerted
-      this.logger.error(
-        `deleteCypressTestAccessCodes - Unable to delete access code: ${error?.message || 'unknown error'}`,
-      );
+      this.logger.error(`deleteCypressTestAccessCodes - Unable to delete access code: ${error?.message || 'unknown error'}`);
     }
   }
 }

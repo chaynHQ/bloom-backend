@@ -50,7 +50,7 @@ export class SessionUserService {
           courseIsComplete,
         );
       } catch (error) {
-        this.logger.error(`Error updating: ${error}`);
+        this.logger.error(`Error updating course completion: ${error?.message || 'unknown error'}`);
       }
     }
 

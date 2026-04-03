@@ -1,6 +1,7 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import Crisp from 'crisp-api';
 import { EventLoggerService } from 'src/event-logger/event-logger.service';
+import { Logger } from 'src/logger/logger';
 import { crispPluginId, crispPluginKey, crispWebsiteId } from 'src/utils/constants';
 import { isCypressTestEmail } from 'src/utils/utils';
 import {
@@ -22,9 +23,7 @@ export class CrispService {
   }
 
   // Convert CrispProfileCustomFields to the format crisp-api expects (primitive values only)
-  private toCrispDataParams(
-    peopleData: CrispProfileCustomFields,
-  ): CrispPeopleDataUpdateParams {
+  private toCrispDataParams(peopleData: CrispProfileCustomFields): CrispPeopleDataUpdateParams {
     const data: CrispPeopleDataUpdateParams = {};
     for (const [key, value] of Object.entries(peopleData)) {
       if (value !== undefined && value !== null) {
@@ -37,7 +36,7 @@ export class CrispService {
   private isProfileNotFoundError(error: unknown): boolean {
     // Based on Crisp API docs, error format is: { reason: 'error', message: 'not_found', code: 404 }
     const errorObj = error as Record<string, unknown>;
-    
+
     return (
       errorObj.code === 404 ||
       errorObj.message === 'not_found' ||
@@ -69,7 +68,10 @@ export class CrispService {
         sessionMetaData.email,
       );
     } catch (error) {
-      throw new Error(`Failed to handle crisp event for ${eventName}: ${error}`, { cause: error });
+      throw new Error(
+        `Failed to handle crisp event for ${eventName}: ${error?.message || 'unknown error'}`,
+        { cause: error },
+      );
     }
   }
 
@@ -86,7 +88,9 @@ export class CrispService {
       );
       return crispProfile;
     } catch (error) {
-      throw new Error(`Create crisp profile API call failed: ${error}`, { cause: error });
+      throw new Error(`Create crisp profile API call failed: ${error?.message || 'unknown error'}`, {
+        cause: error,
+      });
     }
   }
 
@@ -117,11 +121,16 @@ export class CrispService {
             peopleProfile,
           );
         } catch {
-          throw new Error(`Update crisp profile base API call failed: ${error}`);
+          throw new Error(
+            `Update crisp profile base API call failed: ${error?.message || 'unknown error'}`,
+          );
         }
       }
       // Re-throw non-profile-not-found errors (rate limits, auth, network, etc.)
-      throw new Error(`Update crisp profile base API call failed: ${error}`, { cause: error });
+      throw new Error(
+        `Update crisp profile base API call failed: ${error?.message || 'unknown error'}`,
+        { cause: error },
+      );
     }
   }
 
@@ -137,11 +146,7 @@ export class CrispService {
     const params = this.toCrispDataParams(peopleData);
 
     try {
-      const crispPeopleData = CrispClient.website.updatePeopleData(
-        crispWebsiteId,
-        email,
-        params,
-      );
+      const crispPeopleData = CrispClient.website.updatePeopleData(crispWebsiteId, email, params);
       return crispPeopleData;
     } catch (error) {
       // Only handle profile not found errors (404, not_found, or profile-related errors)
@@ -150,11 +155,15 @@ export class CrispService {
           await this.createCrispProfile({ email });
           return await CrispClient.website.updatePeopleData(crispWebsiteId, email, params);
         } catch {
-          throw new Error(`Update crisp profile API call failed: ${error}`);
+          throw new Error(
+            `Update crisp profile API call failed: ${error?.message || 'unknown error'}`,
+          );
         }
       }
       // Re-throw non-profile-not-found errors (rate limits, auth, network, etc.)
-      throw new Error(`Update crisp profile API call failed: ${error}`, { cause: error });
+      throw new Error(`Update crisp profile API call failed: ${error?.message || 'unknown error'}`, {
+        cause: error,
+      });
     }
   }
 
@@ -162,7 +171,9 @@ export class CrispService {
     try {
       await CrispClient.website.removePeopleProfile(crispWebsiteId, email);
     } catch (error) {
-      throw new Error(`Delete crisp profile API call failed: ${error}`, { cause: error });
+      throw new Error(`Delete crisp profile API call failed: ${error?.message || 'unknown error'}`, {
+        cause: error,
+      });
     }
   }
 
@@ -184,7 +195,10 @@ export class CrispService {
         await CrispClient.website.removePeopleProfile(crispWebsiteId, profile.email);
       });
     } catch (error) {
-      throw new Error(`Delete cypress crisp profiles API call failed: ${error}`, { cause: error });
+      throw new Error(
+        `Delete cypress crisp profiles API call failed: ${error?.message || 'unknown error'}`,
+        { cause: error },
+      );
     }
   }
 
@@ -203,7 +217,7 @@ export class CrispService {
         sessionIds.push(...conversations);
       } catch (error) {
         // skip
-        logger.error(`Crisp API error: ${error}`);
+        logger.error(`Failed to get conversations for a user: ${error?.message || 'unknown error'}`);
       }
     }
     return sessionIds;
@@ -230,8 +244,9 @@ export class CrispService {
         }
       }
     } catch (error) {
-      // skip
-      console.log(error);
+      logger.warn(
+        `Failed to get message origin for a session: ${error?.message || 'unknown error'}`,
+      );
     }
     const totalMessages = totalEmailOrigin + totalChatOrigin;
     const chatPercentage =

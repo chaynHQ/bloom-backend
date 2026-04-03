@@ -292,15 +292,11 @@ describe('CrispService', () => {
 
     it('should handle API errors when fetching messages', async () => {
       mockWebsite.getMessagesInConversation.mockRejectedValue(new Error('API Error'));
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
 
       const result = await service.getCrispMessageOriginAnalytics(['session1']);
 
-      expect(consoleSpy).toHaveBeenCalled();
       expect(result).toContain('0%) chat widget origin');
       expect(result).toContain('0%) email origin');
-
-      consoleSpy.mockRestore();
     });
 
     it('should calculate correct percentages for multiple sessions', async () => {

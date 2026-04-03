@@ -1,4 +1,4 @@
-import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
   batchCreateMailchimpProfiles,
@@ -16,6 +16,7 @@ import { CourseUserEntity } from 'src/entities/course-user.entity';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { PartnerEntity } from 'src/entities/partner.entity';
 import { UserEntity } from 'src/entities/user.entity';
+import { Logger } from 'src/logger/logger';
 import { And, Raw, Repository } from 'typeorm';
 import {
   LANGUAGE_DEFAULT,
@@ -91,7 +92,7 @@ export class ServiceUserProfilesService {
 
       logger.log('Create user: updated service user profiles');
     } catch (error) {
-      logger.error(`Create service user profiles error: ${error.message || 'unknown error'}`);
+      logger.error(`Create service user profiles error: ${error?.message || 'unknown error'}`);
     }
   }
 
@@ -134,7 +135,9 @@ export class ServiceUserProfilesService {
       );
       logger.log('Updated service user profiles user');
     } catch (error) {
-      logger.error(`Update service user profiles user error - ${JSON.stringify(error)}`);
+      logger.error(
+        `Update service user profiles user error - ${error?.message || 'unknown error'}`,
+      );
     }
   }
 
@@ -160,7 +163,9 @@ export class ServiceUserProfilesService {
       await this.crispService.updateCrispPeopleData(partnerAccessData.crispSchema, email);
       await updateMailchimpProfile(partnerAccessData.mailchimpSchema, email);
     } catch (error) {
-      logger.error(`Update service user profiles partner access error - ${error}`);
+      logger.error(
+        `Update service user profiles partner access error - ${error?.message || 'unknown error'}`,
+      );
     }
   }
 
@@ -175,7 +180,9 @@ export class ServiceUserProfilesService {
       await this.crispService.updateCrispPeopleData(therapyData.crispSchema, email);
       await updateMailchimpProfile(therapyData.mailchimpSchema, email);
     } catch (error) {
-      logger.error(`Update service user profiles therapy error - ${error}`);
+      logger.error(
+        `Update service user profiles therapy error - ${error?.message || 'unknown error'}`,
+      );
     }
   }
 
@@ -190,7 +197,9 @@ export class ServiceUserProfilesService {
       await this.crispService.updateCrispPeopleData(courseData.crispSchema, email);
       await updateMailchimpProfile(courseData.mailchimpSchema, email);
     } catch (error) {
-      logger.error(`Update service user profiles course error - ${error}`);
+      logger.error(
+        `Update service user profiles course error - ${error?.message || 'unknown error'}`,
+      );
     }
   }
 
@@ -215,7 +224,9 @@ export class ServiceUserProfilesService {
         MAILCHIMP_MERGE_FIELD_TYPES.TEXT,
       );
     } catch (error) {
-      logger.error(`Create mailchimp course merge fields error - ${error}`);
+      logger.error(
+        `Create mailchimp course merge fields error - ${error?.message || 'unknown error'}`,
+      );
     }
   }
 
@@ -275,7 +286,7 @@ export class ServiceUserProfilesService {
       );
     } catch (error) {
       throw new HttpException(
-        `Bulk upload mailchimp profiles failed: ${error.message}`,
+        `Bulk upload mailchimp profiles API call failed: ${error?.message || 'unknown error'}`,
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
@@ -308,7 +319,7 @@ export class ServiceUserProfilesService {
       );
     } catch (error) {
       throw new HttpException(
-        `Bulk update mailchimp profiles failed: ${error.message}`,
+        `Bulk update mailchimp profiles API call failed: ${error?.message || 'unknown error'}`,
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
