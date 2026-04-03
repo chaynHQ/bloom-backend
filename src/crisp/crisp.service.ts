@@ -3,14 +3,13 @@ import Crisp from 'crisp-api';
 import { EventLoggerService } from 'src/event-logger/event-logger.service';
 import { crispPluginId, crispPluginKey, crispWebsiteId } from 'src/utils/constants';
 import { isCypressTestEmail } from 'src/utils/utils';
+import { PeopleProfile } from 'crisp-api';
 import {
   CrispPeopleDataUpdateParams,
   CrispProfileBase,
-  CrispProfileBaseResponse,
   CrispProfileCustomFields,
   CrispProfileDataResponse,
   EVENT_NAME,
-  NewCrispProfileBaseResponse,
 } from './crisp.interface';
 import { CrispEventDto } from './dtos/crisp.dto';
 
@@ -75,9 +74,7 @@ export class CrispService {
     }
   }
 
-  async createCrispProfile(
-    newPeopleProfile: CrispProfileBase,
-  ): Promise<NewCrispProfileBaseResponse> {
+  async createCrispProfile(newPeopleProfile: CrispProfileBase) {
     if (isCypressTestEmail(newPeopleProfile.email)) {
       logger.log('Skipping Crisp profile creation for Cypress test email');
       return null;
@@ -97,7 +94,7 @@ export class CrispService {
   async updateCrispProfileBase(
     peopleProfile: CrispProfileBase,
     email: string,
-  ): Promise<CrispProfileBaseResponse> {
+  ) {
     if (isCypressTestEmail(email)) {
       logger.log('Skipping Crisp profile base update for Cypress test email');
       return null;
