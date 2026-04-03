@@ -74,8 +74,8 @@ export const mockPartnerFeatureServiceMethods = {
 };
 
 export const mockFeatureServiceMethods = {
-  createFeature: async (arg): Promise<PartnerFeatureEntity> => {
-    return { ...mockPartnerFeatureEntity, ...arg };
+  createFeature: async (arg): Promise<FeatureEntity> => {
+    return { ...mockFeatureEntity, ...arg };
   },
   getFeatureByName: async (): Promise<FeatureEntity> => {
     return mockFeatureEntity;

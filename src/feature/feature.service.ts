@@ -9,7 +9,7 @@ export class FeatureService {
   constructor(
     @InjectRepository(FeatureEntity) private featureRepository: Repository<FeatureEntity>,
   ) {}
-  async createFeature(createFeatureDto: CreateFeatureDto): Promise<FeatureEntity | unknown> {
+  async createFeature(createFeatureDto: CreateFeatureDto): Promise<FeatureEntity> {
     try {
       const featureObject = this.featureRepository.create(createFeatureDto);
       return await this.featureRepository.save(featureObject);

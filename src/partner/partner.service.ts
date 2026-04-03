@@ -19,7 +19,7 @@ export class PartnerService {
     @InjectRepository(UserEntity) private userRepository: Repository<UserEntity>,
   ) {}
 
-  async createPartner(createPartnerDto: CreatePartnerDto): Promise<PartnerEntity | unknown> {
+  async createPartner(createPartnerDto: CreatePartnerDto): Promise<PartnerEntity> {
     try {
       const partnerObject = this.partnerRepository.create(createPartnerDto);
       return await this.partnerRepository.save(partnerObject);

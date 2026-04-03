@@ -1,11 +1,10 @@
 import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { FeatureEntity } from 'src/entities/feature.entity';
 import { SuperAdminAuthGuard } from '../partner-admin/super-admin-auth.guard';
 import { ControllerDecorator } from '../utils/controller.decorator';
 import { CreateFeatureDto } from './dtos/create-feature.dto';
 import { FeatureParamDto } from './dtos/feature-param.dto';
-import { GetFeatureDto } from './dtos/get-feature.dto';
 import { FeatureService } from './feature.service';
 
 @ApiTags('Feature')
@@ -17,17 +16,15 @@ export class FeatureController {
   @Post()
   @ApiBearerAuth('access-token')
   @ApiOperation({ description: 'Creates feature' })
-  @ApiResponse({ type: GetFeatureDto })
   @UseGuards(SuperAdminAuthGuard)
   async createFeature(
     @Body() createFeatureDto: CreateFeatureDto,
-  ): Promise<FeatureEntity | unknown> {
+  ): Promise<FeatureEntity> {
     return this.featureService.createFeature(createFeatureDto);
   }
 
   @ApiBearerAuth('access-token')
   @ApiOperation({ description: 'Returns profile data for all Features' })
-  @ApiResponse({ type: [GetFeatureDto] })
   @UseGuards(SuperAdminAuthGuard)
   @Get()
   async getFeatures(): Promise<FeatureEntity[]> {
@@ -37,7 +34,6 @@ export class FeatureController {
   @Get(':id')
   @ApiBearerAuth('access-token')
   @ApiOperation({ description: 'Returns feature' })
-  @ApiResponse({ type: GetFeatureDto })
   @ApiParam({ name: 'id', description: 'Gets feature by id' })
   async getFeature(@Param() params: FeatureParamDto): Promise<FeatureEntity> {
     return this.featureService.getFeature(params.id);
