@@ -19,7 +19,7 @@ export class FeatureController {
   @UseGuards(SuperAdminAuthGuard)
   async createFeature(
     @Body() createFeatureDto: CreateFeatureDto,
-  ): Promise<FeatureEntity | unknown> {
+  ): Promise<FeatureEntity> {
     return this.featureService.createFeature(createFeatureDto);
   }
 

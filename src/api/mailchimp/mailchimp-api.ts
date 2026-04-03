@@ -22,12 +22,6 @@ export function getEmailMD5Hash(email: string) {
   return createHash('md5').update(email.toLowerCase().trim()).digest('hex');
 }
 
-export async function ping() {
-  const response = await mailchimp.ping.get();
-  logger.log('Mailchimp ping successful');
-  return response;
-}
-
 export const createMailchimpProfile = async (
   profileData: Partial<UpdateListMemberRequest>,
 ): Promise<ListMember> => {
@@ -39,10 +33,9 @@ export const createMailchimpProfile = async (
   try {
     return await mailchimp.lists.addListMember(mailchimpAudienceId, profileData);
   } catch (error) {
-    throw new Error(
-      `Create mailchimp profile API call failed: ${error?.message || 'unknown error'}`,
-      { cause: error },
-    );
+    throw new Error(`Create mailchimp profile API call failed: ${error?.message || 'unknown error'}`, {
+      cause: error,
+    });
   }
 };
 
@@ -131,19 +124,7 @@ export const batchUpdateMailchimpProfiles = async (
       );
     }, 120000);
   } catch (error) {
-    throw new Error(
-      `Batch update mailchimp profiles API call failed: ${error?.message || 'unknown error'}`,
-      { cause: error },
-    );
-  }
-};
-
-// Note getMailchimpProfile is not currently used
-export const getMailchimpProfile = async (email: string): Promise<ListMember> => {
-  try {
-    return await mailchimp.lists.getListMember(mailchimpAudienceId, getEmailMD5Hash(email));
-  } catch (error) {
-    throw new Error(`Get mailchimp profile API call failed: ${error?.message || 'unknown error'}`, {
+    throw new Error(`Batch update mailchimp profiles API call failed: ${error?.message || 'unknown error'}`, {
       cause: error,
     });
   }

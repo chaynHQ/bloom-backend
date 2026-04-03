@@ -5,8 +5,8 @@ import { UserEntity } from 'src/entities/user.entity';
 import { ResourceService } from 'src/resource/resource.service';
 import { formatResourceUserObject } from 'src/utils/serialize';
 import { Repository } from 'typeorm';
+import { CreateResourceUserRecordDto } from './dtos/create-resource-user-record.dto';
 import { ResourceUserDto } from './dtos/resource-user.dto';
-import { UpdateResourceUserDto } from './dtos/update-resource-user.dto';
 
 @Injectable()
 export class ResourceUserService {
@@ -19,7 +19,7 @@ export class ResourceUserService {
   private async getResourceUser({
     resourceId,
     userId,
-  }: ResourceUserDto): Promise<ResourceUserEntity> {
+  }: CreateResourceUserRecordDto): Promise<ResourceUserEntity> {
     return await this.resourceUserRepository
       .createQueryBuilder('resource_user')
       .leftJoinAndSelect('resource_user.resource', 'resource')
@@ -31,7 +31,7 @@ export class ResourceUserService {
   async createResourceUserRecord({
     resourceId,
     userId,
-  }: ResourceUserDto): Promise<ResourceUserEntity> {
+  }: CreateResourceUserRecordDto): Promise<ResourceUserEntity> {
     return await this.resourceUserRepository.save({
       resourceId,
       userId,
@@ -39,7 +39,7 @@ export class ResourceUserService {
     });
   }
 
-  public async createResourceUser(user: UserEntity, { storyblokUuid }: UpdateResourceUserDto) {
+  public async createResourceUser(user: UserEntity, { storyblokUuid }: ResourceUserDto) {
     const resource = await this.resourceService.getResourceByStoryblokUuid(storyblokUuid);
 
     if (!resource) {
@@ -63,7 +63,7 @@ export class ResourceUserService {
 
   public async setResourceUserCompleted(
     user: UserEntity,
-    { storyblokUuid }: UpdateResourceUserDto,
+    { storyblokUuid }: ResourceUserDto,
     completed: boolean,
   ) {
     const resource = await this.resourceService.getResourceByStoryblokUuid(storyblokUuid);

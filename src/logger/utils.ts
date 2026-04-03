@@ -8,9 +8,3 @@ export type ErrorLog = {
   requestUserId?: string;
 };
 
-export type EventLog = {
-  event: string;
-  fields?: string[];
-  userId?: string;
-  requestUserId?: string;
-};

@@ -24,7 +24,7 @@ export class PartnerAdminController {
   @ApiBody({ type: CreatePartnerAdminDto })
   async createPartnerAdmin(
     @Body() createPartnerAdminDto: CreatePartnerAdminDto,
-  ): Promise<PartnerAdminEntity | unknown> {
+  ): Promise<PartnerAdminEntity> {
     return this.partnerAdminService.createPartnerAdmin(createPartnerAdminDto);
   }
 
@@ -39,7 +39,7 @@ export class PartnerAdminController {
   @ApiBody({ type: CreatePartnerAdminUserDto })
   async createPartnerAdminUser(
     @Body() createPartnerAdminUserDto: CreatePartnerAdminUserDto,
-  ): Promise<PartnerAdminEntity | unknown> {
+  ): Promise<PartnerAdminEntity> {
     return this.partnerAdminService.createPartnerAdminUser(createPartnerAdminUserDto);
   }
 
@@ -51,7 +51,7 @@ export class PartnerAdminController {
   async updatePartnerAdminById(
     @Param('id') partnerAdminId: string,
     @Body() updatePartnerAdminDto: UpdatePartnerAdminDto,
-  ): Promise<PartnerAdminEntity | unknown> {
+  ): Promise<PartnerAdminEntity> {
     return this.partnerAdminService.updatePartnerAdminById(partnerAdminId, updatePartnerAdminDto);
   }
 }

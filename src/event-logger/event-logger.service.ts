@@ -17,10 +17,6 @@ export class EventLoggerService {
     private userRepository: Repository<UserEntity>,
   ) {}
 
-  async getEventLog(id: string): Promise<EventLogEntity> {
-    return await this.eventLoggerRepository.findOneBy({ id });
-  }
-
   async getMessageSentEventLogs(): Promise<EventLogEntity[]> {
     return await this.eventLoggerRepository.find({
       where: { event: EVENT_NAME.CHAT_MESSAGE_SENT },

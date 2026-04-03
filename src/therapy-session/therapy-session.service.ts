@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { cancelBooking, getBookingId } from 'src/api/simplybook/simplybook-api';
 import { SlackMessageClient } from 'src/api/slack/slack-api';
@@ -71,10 +71,12 @@ export class TherapySessionService {
 
       return updatedTherapySession;
     } catch (error) {
+
       this.logger.error(`Error cancelling therapy session: ${error?.message || 'unknown error'}`);
-      throw new Error(`Error cancelling therapy session: ${error?.message || 'unknown error'}`, {
-        cause: error,
-      });
+      throw new HttpException(
+        `Error cancelling therapy session: ${error.message || 'unknown error'}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 

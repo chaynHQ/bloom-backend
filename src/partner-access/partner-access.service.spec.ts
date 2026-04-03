@@ -275,30 +275,6 @@ describe('PartnerAccessService', () => {
     });
   });
 
-  describe('getUserTherapySessions', () => {
-    it('should return user emails with their total therapy sessions available and an associated access code id', async () => {
-      const repoSpyCreateQueryBuilder = jest.spyOn(repo, 'createQueryBuilder');
-      // Mocks the raw results
-      const mockResults = [
-        {
-          useremail: 'test@test.com',
-          partneraccesscode: 'ABCDEF',
-          therapytotal: '2',
-        },
-        {
-          useremail: 'test2@test2.com',
-          partneraccesscode: 'GHIJKL',
-          therapytotal: '5',
-        },
-      ];
-      repoSpyCreateQueryBuilder.mockImplementation(
-        createQueryBuilderMock({ getRawMany: jest.fn().mockResolvedValue(mockResults) }) as never,
-      );
-      const userTherapySessions = await service.getUserTherapySessions();
-      expect(userTherapySessions.length).toBeGreaterThan(0);
-    });
-  });
-
   describe('updatePartnerAccess', () => {
     it('should update the number of therapy sessions remaining on an access code', async () => {
       // Mocks updating an access record

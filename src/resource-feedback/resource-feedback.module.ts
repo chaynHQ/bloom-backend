@@ -47,7 +47,6 @@ import { ResourceFeedbackService } from './resource-feedback.service';
     PartnerAccessService,
     ServiceUserProfilesService,
     CrispService,
-    SubscriptionUserService,
     SubscriptionService,
     ZapierWebhookClient,
     SlackMessageClient,

@@ -1,10 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import Crisp from 'crisp-api';
 import { EventLoggerService } from 'src/event-logger/event-logger.service';
 import { Logger } from 'src/logger/logger';
 import { crispPluginId, crispPluginKey, crispWebsiteId } from 'src/utils/constants';
 import { isCypressTestEmail } from 'src/utils/utils';
-import { PeopleProfile } from 'crisp-api';
 import {
   CrispPeopleDataUpdateParams,
   CrispProfileBase,
@@ -90,31 +89,6 @@ export class CrispService {
       return crispProfile;
     } catch (error) {
       throw new Error(`Create crisp profile API call failed: ${error?.message || 'unknown error'}`, {
-        cause: error,
-      });
-    }
-  }
-
-  // Note getCrispProfile is not currently used
-  async getCrispProfile(email: string): Promise<PeopleProfile> {
-    try {
-      const crispProfile = CrispClient.website.getPeopleProfile(crispWebsiteId, email);
-      return crispProfile;
-    } catch (error) {
-      throw new Error(
-        `Get crisp profile base API call failed: ${error?.message || 'unknown error'}`,
-        { cause: error },
-      );
-    }
-  }
-
-  // Note getCrispPeopleData is not currently used
-  async getCrispPeopleData(email: string): Promise<CrispProfileDataResponse> {
-    try {
-      const crispPeopleData = CrispClient.website.getPeopleData(crispWebsiteId, email);
-      return crispPeopleData;
-    } catch (error) {
-      throw new Error(`Get crisp profile API call failed: ${error?.message || 'unknown error'}`, {
         cause: error,
       });
     }
@@ -242,7 +216,8 @@ export class CrispService {
         );
         sessionIds.push(...conversations);
       } catch (error) {
-        logger.warn(`Failed to get conversations for a user: ${error?.message || 'unknown error'}`);
+        // skip
+        logger.error(`Failed to get conversations for a user: ${error?.message || 'unknown error'}`);
       }
     }
     return sessionIds;

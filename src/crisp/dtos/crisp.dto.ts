@@ -3,7 +3,7 @@ import { IsBoolean, IsDefined, IsNumber, IsOptional } from 'class-validator';
 import { SecureInput } from '../../utils/sanitization.decorators';
 import { CrispProfileCustomFields } from '../crisp.interface';
 
-export interface CrispUserData extends CrispProfileCustomFields {
+interface CrispUserData extends CrispProfileCustomFields {
   email: string;
   nickname: string;
   user_id: string;
