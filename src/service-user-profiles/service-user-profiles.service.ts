@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
   batchCreateMailchimpProfiles,
@@ -18,6 +18,7 @@ import { PartnerEntity } from 'src/entities/partner.entity';
 import { UserEntity } from 'src/entities/user.entity';
 import { And, Raw, Repository } from 'typeorm';
 import {
+  LANGUAGE_DEFAULT,
   PROGRESS_STATUS,
   SIMPLYBOOK_ACTION_ENUM,
   mailchimpMarketingPermissionId,
@@ -60,7 +61,7 @@ export class ServiceUserProfilesService {
 
       await this.crispService.createCrispProfile({
         email: email,
-        person: { nickname: user.name, locales: [user.signUpLanguage || 'en'] },
+        person: { nickname: user.name, locales: [user.signUpLanguage || LANGUAGE_DEFAULT] },
         segments: this.serializeCrispPartnerSegments(partner ? [partner] : []),
       });
 
@@ -115,7 +116,7 @@ export class ServiceUserProfilesService {
             ...(isEmailUpdateRequired && { email: email }),
             person: {
               nickname: user.name,
-              locales: [user.signUpLanguage || 'en'],
+              locales: [user.signUpLanguage || LANGUAGE_DEFAULT],
             },
           },
           existingEmail,
@@ -248,18 +249,15 @@ export class ServiceUserProfilesService {
     return profileData;
   }
 
-  // Static bulk upload function to be used in specific cases e.g. bug prevented a subset of new users from being created
-  // UPDATE THE FILTERS to the current requirements
-  public async bulkUploadMailchimpProfiles() {
+  // Bulk upload function to be used in specific cases e.g. bug prevented a subset of new users from being created
+  // Filters by createdAt date range
+  public async bulkUploadMailchimpProfiles(startDate: string, endDate: string) {
     try {
-      const filterStartDate = '2024-10-29'; // UPDATE
-      const filterEndDate = '2025-01-06'; // UPDATE
       const users = await this.userRepository.find({
         where: {
-          // UPDATE TO ANY FILTERS
           createdAt: And(
-            Raw((alias) => `${alias} >= :filterStartDate`, { filterStartDate: filterStartDate }),
-            Raw((alias) => `${alias} < :filterEndDate`, { filterEndDate: filterEndDate }),
+            Raw((alias) => `${alias} >= :startDate`, { startDate }),
+            Raw((alias) => `${alias} < :endDate`, { endDate }),
           ),
         },
         relations: {
@@ -273,28 +271,27 @@ export class ServiceUserProfilesService {
 
       await batchCreateMailchimpProfiles(mailchimpUserProfiles);
       logger.log(
-        `Created batch mailchimp profiles for ${users.length} users, created before ${filterStartDate}`,
+        `Created batch mailchimp profiles for ${users.length} users, created between ${startDate} and ${endDate}`,
       );
     } catch (error) {
-      throw new Error(`Bulk upload mailchimp profiles API call failed: ${error}`, { cause: error });
+      throw new HttpException(
+        `Bulk upload mailchimp profiles failed: ${error.message}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
   }
-  // Static bulk update function to be used in specific cases e.g. bug prevented a subset of users from being updated
-  // UPDATE THE FILTERS to the current requirements
-  public async bulkUpdateMailchimpProfiles() {
+
+  // Bulk update function to be used in specific cases e.g. bug prevented a subset of users from being updated
+  // Filters by updatedAt date range, excluding users created after startDate
+  public async bulkUpdateMailchimpProfiles(startDate: string, endDate: string) {
     try {
-      const filterStartDate = '2024-10-29'; // UPDATE
-      const filterEndDate = '2025-01-06'; // UPDATE
       const users = await this.userRepository.find({
         where: {
-          // UPDATE TO ANY FILTERS
           updatedAt: And(
-            Raw((alias) => `${alias} >= :filterStartDate`, { filterStartDate: filterStartDate }),
-            Raw((alias) => `${alias} < :filterEndDate`, { filterEndDate: filterEndDate }),
+            Raw((alias) => `${alias} >= :startDate`, { startDate }),
+            Raw((alias) => `${alias} < :endDate`, { endDate }),
           ),
-          createdAt: Raw((alias) => `${alias} < :filterStartDate`, {
-            filterStartDate: filterStartDate,
-          }),
+          createdAt: Raw((alias) => `${alias} < :startDate`, { startDate }),
         },
         relations: {
           partnerAccess: { partner: true, therapySession: true },
@@ -307,10 +304,13 @@ export class ServiceUserProfilesService {
 
       await batchUpdateMailchimpProfiles(mailchimpUserProfiles);
       logger.log(
-        `Updated batch mailchimp profiles for ${users.length} users, updated before ${filterStartDate}`,
+        `Updated batch mailchimp profiles for ${users.length} users, updated between ${startDate} and ${endDate}`,
       );
     } catch (error) {
-      throw new Error(`Bulk update mailchimp profiles API call failed: ${error}`, { cause: error });
+      throw new HttpException(
+        `Bulk update mailchimp profiles failed: ${error.message}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
@@ -353,7 +353,7 @@ export class ServiceUserProfilesService {
           enabled: contactPermission,
         },
       ],
-      language: signUpLanguage || 'en',
+      language: signUpLanguage || LANGUAGE_DEFAULT,
       merge_fields: {
         NAME: name,
         LACTIVED: lastActiveAtString,

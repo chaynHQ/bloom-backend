@@ -35,6 +35,6 @@ async function bootstrap() {
   app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
   app.useGlobalFilters(new ExceptionsFilter());
   await app.listen(PORT);
-  console.log(`Listening on localhost:${PORT}, CTRL+C to stop`);
+  logger.log(`Listening on localhost:${PORT}, CTRL+C to stop`);
 }
 bootstrap();

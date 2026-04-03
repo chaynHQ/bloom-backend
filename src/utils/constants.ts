@@ -1,22 +1,19 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
-export enum ENVIRONMENTS {
+enum ENVIRONMENTS {
   DEVELOPMENT = 'development',
   STAGING = 'staging',
   PRODUCTION = 'production',
   TEST = 'test',
 }
 
+export const LANGUAGE_DEFAULT = 'en';
+
 export enum SIGNUP_TYPE {
   PUBLIC_USER = 'PUBLIC_USER',
   PARTNER_USER_WITH_CODE = 'PARTNER_USER_WITH_CODE',
   PARTNER_USER_WITHOUT_CODE = 'PARTNER_USER_WITHOUT_CODE',
-}
-
-export enum LANGUAGE_DEFAULT {
-  EN = 'en',
-  ES = 'es',
 }
 
 export enum RESOURCE_CATEGORIES {
@@ -56,9 +53,9 @@ export enum FEATURES {
 }
 
 export enum PROGRESS_STATUS {
+  NOT_STARTED = 'Not Started',
   STARTED = 'Started',
   COMPLETED = 'Completed',
-  NOT_STARTED = 'Not Started',
 }
 
 export enum SIMPLYBOOK_ACTION_ENUM {
@@ -91,11 +88,6 @@ export enum WhatsappSubscriptionStatusEnum {
   ALREADY_EXISTS = 'ALREADY_EXISTS',
 }
 
-export enum COMMUNICATION_SERVICE {
-  CRISP = 'CRISP',
-  MAILCHIMP = 'MAILCHIMP',
-}
-
 const getEnv = (env: string, envName: string): string => {
   if (!env) {
     if (nodeEnv !== ENVIRONMENTS.TEST) {
@@ -106,7 +98,7 @@ const getEnv = (env: string, envName: string): string => {
   return env;
 };
 
-export const nodeEnv = getEnv(process.env.NODE_ENV, 'NODE_ENV');
+const nodeEnv = getEnv(process.env.NODE_ENV, 'NODE_ENV');
 export const isProduction = nodeEnv === ENVIRONMENTS.PRODUCTION;
 export const frontendAppUrl = getEnv(process.env.FRONTEND_APP_URL, 'FRONTEND_APP_URL');
 
@@ -151,10 +143,17 @@ export const zapierToken = getEnv(process.env.ZAPIER_TOKEN, 'ZAPIER_TOKEN');
 
 export const crispPluginId = getEnv(process.env.CRISP_PLUGIN_ID, 'CRISP_PLUGIN_ID');
 export const crispPluginKey = getEnv(process.env.CRISP_PLUGIN_KEY, 'CRISP_PLUGIN_KEY');
-export const crispToken = getEnv(process.env.CRISP_TOKEN, 'CRISP_TOKEN');
 export const crispWebsiteId = getEnv(process.env.CRISP_WEBSITE_ID, 'CRISP_WEBSITE_ID');
 
 export const slackWebhookUrl = getEnv(process.env.SLACK_WEBHOOK_URL, 'SLACK_WEBHOOK_URL');
+export const slackBloomUsersWebhookUrl = getEnv(
+  process.env.SLACK_BLOOM_USERS_WEBHOOK_URL,
+  'SLACK_BLOOM_USERS_WEBHOOK_URL',
+);
+export const slackDeletedUsersWebhookUrl = getEnv(
+  process.env.SLACK_BLOOM_DELETED_USERS_WEBHOOK_URL,
+  'SLACK_BLOOM_DELETED_USERS_WEBHOOK_URL',
+);
 
 export const storyblokToken = getEnv(process.env.STORYBLOK_PUBLIC_TOKEN, 'STORYBLOK_PUBLIC_TOKEN');
 

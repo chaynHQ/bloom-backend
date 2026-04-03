@@ -4,7 +4,7 @@ import { Request } from 'express';
 import { ControllerDecorator } from 'src/utils/controller.decorator';
 import { UserEntity } from '../entities/user.entity';
 import { FirebaseAuthGuard } from '../firebase/firebase-auth.guard';
-import { UpdateResourceUserDto } from './dtos/update-resource-user.dto';
+import { ResourceUserDto } from './dtos/resource-user.dto';
 import { ResourceUserService } from './resource-user.service';
 
 @ApiTags('Resource User')
@@ -22,7 +22,7 @@ export class ResourceUserController {
   @UseGuards(FirebaseAuthGuard)
   async createResourceUser(
     @Req() req: Request,
-    @Body() createResourceUserDto: UpdateResourceUserDto,
+    @Body() createResourceUserDto: ResourceUserDto,
   ) {
     return await this.resourceUserService.createResourceUser(
       req['userEntity'] as UserEntity,
@@ -36,7 +36,7 @@ export class ResourceUserController {
   })
   @ApiBearerAuth('access-token')
   @UseGuards(FirebaseAuthGuard)
-  async complete(@Req() req: Request, @Body() updateResourceUserDto: UpdateResourceUserDto) {
+  async complete(@Req() req: Request, @Body() updateResourceUserDto: ResourceUserDto) {
     return await this.resourceUserService.setResourceUserCompleted(
       req['userEntity'] as UserEntity,
       updateResourceUserDto,
@@ -51,7 +51,7 @@ export class ResourceUserController {
   })
   @ApiBearerAuth('access-token')
   @UseGuards(FirebaseAuthGuard)
-  async incomplete(@Req() req: Request, @Body() updateResourceUserDto: UpdateResourceUserDto) {
+  async incomplete(@Req() req: Request, @Body() updateResourceUserDto: ResourceUserDto) {
     return await this.resourceUserService.setResourceUserCompleted(
       req['userEntity'] as UserEntity,
       updateResourceUserDto,

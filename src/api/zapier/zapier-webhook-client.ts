@@ -55,11 +55,11 @@ export class ZapierWebhookClient {
   }
 }
 
-export type AddContactParams = {
+type AddContactParams = {
   phonenumber: string;
   name: string;
 };
 
-export type DeleteContactParams = {
+type DeleteContactParams = {
   phonenumber: string;
 };

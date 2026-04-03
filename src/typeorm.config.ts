@@ -2,6 +2,7 @@ import { ConfigService } from '@nestjs/config';
 import { config } from 'dotenv';
 import * as PostgressConnectionStringParser from 'pg-connection-string';
 import { DataSource, DataSourceOptions } from 'typeorm';
+import { databaseUrl } from './utils/constants';
 import { CoursePartnerEntity } from './entities/course-partner.entity';
 import { CourseUserEntity } from './entities/course-user.entity';
 import { CourseEntity } from './entities/course.entity';
@@ -66,7 +67,7 @@ const isProduction = configService.get('NODE_ENV') === 'production';
 const isStaging = configService.get('NODE_ENV') === 'staging';
 
 const { host, port, user, password, database } = PostgressConnectionStringParser.parse(
-  configService.get('DATABASE_URL'),
+  databaseUrl,
 );
 
 export const dataSourceOptions = {

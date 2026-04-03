@@ -90,15 +90,20 @@ describe('PartnerFeatureService', () => {
   });
   describe('getAutomaticAccessCodeFeatureForPartner', () => {
     it('when supplied with correct data should return automatic access code partner feature', async () => {
+      const mockAutomaticAccessCodeFeature = {
+        ...mockFeatureEntity,
+        name: FEATURES.AUTOMATIC_ACCESS_CODE,
+      };
       const mockAutomaticAccessCodePartnerFeatureEntity = {
         ...mockPartnerFeatureEntity,
-        feature: { ...mockFeatureEntity, name: FEATURES.AUTOMATIC_ACCESS_CODE },
+        feature: mockAutomaticAccessCodeFeature,
       };
-      jest.spyOn(mockPartnerFeatureRepository, 'createQueryBuilder').mockImplementationOnce(
-        createQueryBuilderMock({
-          getOne: jest.fn().mockResolvedValue(mockAutomaticAccessCodePartnerFeatureEntity),
-        }) as never, // TODO resolve this typescript issue
-      );
+      jest
+        .spyOn(mockFeatureService, 'getFeatureByName')
+        .mockResolvedValueOnce(mockAutomaticAccessCodeFeature as never);
+      jest
+        .spyOn(mockPartnerFeatureRepository, 'findOne')
+        .mockResolvedValueOnce(mockAutomaticAccessCodePartnerFeatureEntity as never);
       const response = await service.getAutomaticAccessCodeFeatureForPartner('Badoo');
       expect(response).toMatchObject(mockAutomaticAccessCodePartnerFeatureEntity);
     });
