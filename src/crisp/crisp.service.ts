@@ -3,7 +3,6 @@ import Crisp from 'crisp-api';
 import { EventLoggerService } from 'src/event-logger/event-logger.service';
 import { crispPluginId, crispPluginKey, crispWebsiteId } from 'src/utils/constants';
 import { isCypressTestEmail } from 'src/utils/utils';
-import { PeopleProfile } from 'crisp-api';
 import {
   CrispPeopleDataUpdateParams,
   CrispProfileBase,

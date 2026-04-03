@@ -17,7 +17,6 @@ import { SessionEntity } from 'src/entities/session.entity';
 import { SubscriptionUserEntity } from 'src/entities/subscription-user.entity';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
 import { UserEntity } from 'src/entities/user.entity';
-import { EventLoggerService } from 'src/event-logger/event-logger.service';
 import { CreateUserDto } from 'src/user/dtos/create-user.dto';
 import { UpdateUserDto } from 'src/user/dtos/update-user.dto';
 import { WebhooksService } from 'src/webhooks/webhooks.service';
