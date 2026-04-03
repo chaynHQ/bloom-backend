@@ -6,14 +6,6 @@ export enum EVENT_NAME {
   GROUNDING_EXERCISE_STARTED = 'GROUNDING_EXERCISE_STARTED',
 }
 
-export interface CreateEventLog {
-  email?: string;
-  userId?: string;
-  date: Date | string;
-  event: EVENT_NAME;
-  metadata?: EventLogMetadata;
-}
-
 export interface EventLogMetadata {
   title?: string;
 }

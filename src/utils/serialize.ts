@@ -57,7 +57,7 @@ export const formatResourceUserObject = (resourceUsers: ResourceUserEntity[]) =>
   });
 };
 
-export const formatPartnerAdminObjects = (partnerAdminObject: PartnerAdminEntity) => {
+const formatPartnerAdminObjects = (partnerAdminObject: PartnerAdminEntity) => {
   return {
     id: partnerAdminObject.id,
     active: partnerAdminObject.active,
@@ -67,7 +67,7 @@ export const formatPartnerAdminObjects = (partnerAdminObject: PartnerAdminEntity
   };
 };
 
-export const formatPartnerAccessObjects = (partnerAccessObjects: PartnerAccessEntity[]) => {
+const formatPartnerAccessObjects = (partnerAccessObjects: PartnerAccessEntity[]) => {
   return partnerAccessObjects.map((partnerAccess) => {
     return {
       id: partnerAccess.id,
@@ -129,37 +129,6 @@ export const formatUserObject = (userObject: UserEntity): GetUserDto => {
       ? formatPartnerAdminObjects(userObject.partnerAdmin)
       : null,
     resources: userObject.resourceUser ? formatResourceUserObject(userObject.resourceUser) : [],
-  };
-};
-
-// Use if you don't want loads of null keys on the object and have only what you want to
-export const formatGetUsersObject = (userObject: UserEntity): GetUserDto => {
-  return {
-    user: {
-      id: userObject.id,
-      createdAt: userObject.createdAt,
-      updatedAt: userObject.updatedAt,
-      deletedAt: userObject.deletedAt,
-      name: userObject.name,
-      email: userObject.email,
-      firebaseUid: userObject.firebaseUid,
-      isActive: userObject.isActive,
-      lastActiveAt: userObject.lastActiveAt,
-      crispTokenId: userObject.crispTokenId,
-      isSuperAdmin: userObject.isSuperAdmin,
-      signUpLanguage: userObject.signUpLanguage,
-      emailRemindersFrequency: userObject.emailRemindersFrequency,
-      contactPermission: userObject.contactPermission,
-      serviceEmailsPermission: userObject.serviceEmailsPermission,
-    },
-    ...(userObject.partnerAccess
-      ? {
-          partnerAccesses: userObject.partnerAccess
-            ? formatPartnerAccessObjects(userObject.partnerAccess)
-            : null,
-        }
-      : {}),
-    ...(userObject.partnerAdmin ? formatPartnerAdminObjects(userObject.partnerAdmin) : {}),
   };
 };
 

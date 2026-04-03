@@ -96,7 +96,7 @@ export class PartnerService {
 
       return updatedPartnerResponse;
     } else {
-      throw new Error('Failed to update partner');
+      throw new HttpException('Failed to update partner', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 }

@@ -77,6 +77,9 @@ export const mockFeatureServiceMethods = {
   createFeature: async (arg): Promise<PartnerFeatureEntity> => {
     return { ...mockPartnerFeatureEntity, ...arg };
   },
+  getFeatureByName: async (): Promise<FeatureEntity> => {
+    return mockFeatureEntity;
+  },
 };
 
 export const mockAuthServiceMethods = {
@@ -296,12 +299,6 @@ export const mockFeatureRepositoryMethods: PartialFuncReturn<Repository<FeatureE
     return [{ ...mockFeatureEntity, ...(arg ? { ...arg } : {}) }] as FeatureEntity[];
   },
   save: async (arg) => arg as FeatureEntity,
-};
-
-export const mockEventLoggerServiceMethods: PartialFuncReturn<EventLoggerService> = {
-  createEventLog: async ({ userId, event, date }) => {
-    return { userId, event, date, id: 'eventLogId1ß' } as EventLogEntity;
-  },
 };
 
 export const mockEventLoggerRepositoryMethods: PartialFuncReturn<Repository<EventLogEntity>> = {

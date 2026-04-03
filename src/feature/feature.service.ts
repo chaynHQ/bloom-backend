@@ -26,10 +26,10 @@ export class FeatureService {
       .where('Feature.featureId = :featureId', { featureId })
       .getOne();
   }
-  public async getFeatureByName(name: string): Promise<FeatureEntity> {
+  async getFeatureByName(name: string): Promise<FeatureEntity> {
     return await this.featureRepository
       .createQueryBuilder('Feature')
-      .where('Feature.name = :name', { name })
+      .where('LOWER(Feature.name) LIKE LOWER(:name)', { name })
       .getOne();
   }
 

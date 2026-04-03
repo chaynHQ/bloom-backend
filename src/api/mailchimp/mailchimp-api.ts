@@ -22,11 +22,6 @@ export function getEmailMD5Hash(email: string) {
   return createHash('md5').update(email.toLowerCase().trim()).digest('hex');
 }
 
-export async function ping() {
-  const response = await mailchimp.ping.get();
-  console.log(response);
-}
-
 export const createMailchimpProfile = async (
   profileData: Partial<UpdateListMemberRequest>,
 ): Promise<ListMember> => {
@@ -38,7 +33,9 @@ export const createMailchimpProfile = async (
   try {
     return await mailchimp.lists.addListMember(mailchimpAudienceId, profileData);
   } catch (error) {
-    throw new Error(`Create mailchimp profile API call failed: ${JSON.stringify(error)}`, { cause: error });
+    throw new Error(`Create mailchimp profile API call failed: ${JSON.stringify(error)}`, {
+      cause: error,
+    });
   }
 };
 
@@ -47,8 +44,10 @@ export const batchCreateMailchimpProfiles = async (
 ) => {
   try {
     // Filter out Cypress test emails
-    const filteredProfiles = userProfiles.filter(profile => !isCypressTestEmail(profile.email_address));
-    
+    const filteredProfiles = userProfiles.filter(
+      (profile) => !isCypressTestEmail(profile.email_address),
+    );
+
     if (filteredProfiles.length === 0) {
       logger.log('No profiles to create after filtering out Cypress test emails');
       return;
@@ -76,7 +75,9 @@ export const batchCreateMailchimpProfiles = async (
       logger.log(`Mailchimp batch response: ${batchResponse}`);
     }, 120000);
   } catch (error) {
-    throw new Error(`Batch create mailchimp profiles API call failed: ${JSON.stringify(error)}`, { cause: error });
+    throw new Error(`Batch create mailchimp profiles API call failed: ${JSON.stringify(error)}`, {
+      cause: error,
+    });
   }
 };
 
@@ -85,8 +86,10 @@ export const batchUpdateMailchimpProfiles = async (
 ) => {
   try {
     // Filter out Cypress test emails
-    const filteredProfiles = userProfiles.filter(profile => !isCypressTestEmail(profile.email_address));
-    
+    const filteredProfiles = userProfiles.filter(
+      (profile) => !isCypressTestEmail(profile.email_address),
+    );
+
     if (filteredProfiles.length === 0) {
       logger.log('No profiles to update after filtering out Cypress test emails');
       return;
@@ -114,16 +117,9 @@ export const batchUpdateMailchimpProfiles = async (
       logger.log(`Mailchimp batch response: ${batchResponse}`);
     }, 120000);
   } catch (error) {
-    throw new Error(`Batch update mailchimp profiles API call failed: ${JSON.stringify(error)}`, { cause: error });
-  }
-};
-
-// Note getMailchimpProfile is not currently used
-export const getMailchimpProfile = async (email: string): Promise<ListMember> => {
-  try {
-    return await mailchimp.lists.getListMember(mailchimpAudienceId, getEmailMD5Hash(email));
-  } catch (error) {
-    throw new Error(`Get mailchimp profile API call failed: ${error}`, { cause: error });
+    throw new Error(`Batch update mailchimp profiles API call failed: ${JSON.stringify(error)}`, {
+      cause: error,
+    });
   }
 };
 
@@ -196,7 +192,9 @@ export const deleteCypressMailchimpProfiles = async () => {
       members: ListMember[];
     };
   } catch (error) {
-    throw new Error(`Delete cypress mailchimp profiles API call failed to get users: ${error}`, { cause: error });
+    throw new Error(`Delete cypress mailchimp profiles API call failed to get users: ${error}`, {
+      cause: error,
+    });
   }
 
   logger.log(`Deleting ${cypressProfiles.members.length} mailchimp profiles`);
@@ -205,7 +203,9 @@ export const deleteCypressMailchimpProfiles = async () => {
     try {
       await deleteMailchimpProfile(profile.email_address);
     } catch (error) {
-      throw new Error(`Delete cypress mailchimp profiles API call failed: ${error}`, { cause: error });
+      throw new Error(`Delete cypress mailchimp profiles API call failed: ${error}`, {
+        cause: error,
+      });
     }
   });
 };

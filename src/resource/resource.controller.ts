@@ -1,8 +1,9 @@
 import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { SuperAdminAuthGuard } from 'src/partner-admin/super-admin-auth.guard';
 import { ControllerDecorator } from 'src/utils/controller.decorator';
 import { CreateResourceDto } from './dtos/create-resource.dto';
+import { GetResourceDto } from './dtos/get-resource.dto';
 import { ResourceService } from './resource.service';
 
 @ApiTags('Resources')
@@ -12,6 +13,7 @@ export class ResourceController {
   constructor(private readonly resourceService: ResourceService) {}
 
   @Get(':id')
+  @ApiResponse({ type: GetResourceDto })
   async getResource(@Param('id') id: string) {
     return this.resourceService.findOne(id);
   }
@@ -19,6 +21,7 @@ export class ResourceController {
   @Post()
   @ApiBearerAuth('access-token')
   @ApiOperation({ description: 'Creates resource' })
+  @ApiResponse({ type: GetResourceDto })
   @UseGuards(SuperAdminAuthGuard)
   async createResource(@Body() createResourceDto: CreateResourceDto) {
     return this.resourceService.create(createResourceDto);

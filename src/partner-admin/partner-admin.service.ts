@@ -117,7 +117,7 @@ export class PartnerAdminService {
     if (updatedPartnerAdminResponse.raw.length > 0) {
       return updatedPartnerAdminResponse.raw[0];
     } else {
-      throw new Error('Failed to update partner admin');
+      throw new HttpException('Failed to update partner admin', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 }
