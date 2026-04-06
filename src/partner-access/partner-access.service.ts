@@ -136,32 +136,6 @@ export class PartnerAccessService {
     });
   }
 
-  // TODO Potentially delete service method as it was not used for purpose it was made for
-  async getUserTherapySessions(): Promise<PartnerAccessEntity[]> {
-    try {
-      const response = await this.partnerAccessRepository
-        .createQueryBuilder('partnerAccess')
-        .leftJoin('partnerAccess.user', 'user') //get user associated with access code
-        .select([
-          'max(user.email) as userEmail', //get first user email. This will also return nulls as there is no way to add a condition to a joined column apparently
-          'sum(partnerAccess.therapySessionsRemaining) as therapyTotal', //get total therapy sessions available
-          'sum(partnerAccess.therapySessionsRedeemed) as therapyRedeemed', //get total therapy sessions available
-          'max(partnerAccess.accessCode) as partnerAccessCode', //get any access code - this will be used as an identifier to update. Uuids do not have aggregate functions in postgres so its a bit annoying to get that instead
-        ])
-        .where('partnerAccess.featureTherapy=true') //only get access codes with feature therapy turned on
-        .andWhere('partnerAccess.userId is not null') //only get access codes with a user id
-        .andWhere('partnerAccess.active=true')
-        .groupBy('partnerAccess.userId') //group by user as we can have users with multiple access codes
-        .getRawMany(); //use instead of getMany as the columns are derived
-      return response;
-    } catch (error) {
-      throw new HttpException(
-        `Unable to get users with access codes! Error: ${error}`,
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
-  }
-
   async updatePartnerAccess(
     id: string,
     updates: UpdatePartnerAccessDto,
@@ -177,7 +151,7 @@ export class PartnerAccessService {
       });
     } catch (error) {
       throw new HttpException(
-        `updatePartnerAccess - Unable to update partner access ${error}`,
+        `updatePartnerAccess - Unable to update partner access: ${error?.message || 'unknown error'}`,
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
@@ -209,8 +183,7 @@ export class PartnerAccessService {
       );
     } catch (error) {
       this.logger.error(
-        `Error: Unable to update crisp profile. Error: ${error.message}`,
-        error,
+        `Error: Unable to update crisp profile: ${error?.message || 'unknown error'}`,
       );
     }
 
@@ -230,13 +203,13 @@ export class PartnerAccessService {
             await this.partnerAccessRepository.delete(access.id); //permanently delete the access code
             return access;
           } catch (error) {
-            this.logger.error(`Unable to delete access code: ${access.id} ${error}`);
+            this.logger.error(`Unable to delete access code: ${access.id} - ${error?.message || 'unknown error'}`);
           }
         }),
       );
     } catch (error) {
       // If this fails we don't want to break cypress tests but we want to be alerted
-      this.logger.error(`deleteCypressTestAccessCodes - Unable to delete access code`, error);
+      this.logger.error(`deleteCypressTestAccessCodes - Unable to delete access code: ${error?.message || 'unknown error'}`);
     }
   }
 }

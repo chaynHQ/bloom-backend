@@ -7,9 +7,33 @@ import { Logger } from './logger/logger';
 import { LoggingInterceptor } from './logger/logging.interceptor';
 import { ExceptionsFilter } from './utils/exceptions.filter';
 
+function getCorsOrigin(): (string | RegExp)[] {
+  const frontendAppUrl = process.env.FRONTEND_APP_URL;
+
+  if (!frontendAppUrl) {
+    throw new Error('FRONTEND_APP_URL environment variable must be set');
+  }
+
+  const allowedOrigins: (string | RegExp)[] = [frontendAppUrl];
+
+  if (process.env.NODE_ENV !== 'production') {
+    // Allow Vercel preview branch URLs in non-production environments
+    allowedOrigins.push(/^https:\/\/bloom-frontend-[\w-]+-chaynhq\.vercel\.app$/);
+  }
+
+  return allowedOrigins;
+}
+
 async function bootstrap() {
   const PORT = process.env.PORT || 35001;
-  const app = await NestFactory.create(AppModule, { cors: true, rawBody: true });
+  const app = await NestFactory.create(AppModule, {
+    cors: {
+      origin: getCorsOrigin(),
+      methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+      credentials: true,
+    },
+    rawBody: true,
+  });
 
   app.setGlobalPrefix('api');
 
@@ -35,6 +59,6 @@ async function bootstrap() {
   app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
   app.useGlobalFilters(new ExceptionsFilter());
   await app.listen(PORT);
-  console.log(`Listening on localhost:${PORT}, CTRL+C to stop`);
+  logger.log(`Listening on localhost:${PORT}, CTRL+C to stop`);
 }
 bootstrap();

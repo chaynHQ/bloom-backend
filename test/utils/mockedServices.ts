@@ -17,7 +17,6 @@ import { SessionEntity } from 'src/entities/session.entity';
 import { SubscriptionUserEntity } from 'src/entities/subscription-user.entity';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
 import { UserEntity } from 'src/entities/user.entity';
-import { EventLoggerService } from 'src/event-logger/event-logger.service';
 import { CreateUserDto } from 'src/user/dtos/create-user.dto';
 import { UpdateUserDto } from 'src/user/dtos/update-user.dto';
 import { WebhooksService } from 'src/webhooks/webhooks.service';
@@ -74,8 +73,11 @@ export const mockPartnerFeatureServiceMethods = {
 };
 
 export const mockFeatureServiceMethods = {
-  createFeature: async (arg): Promise<PartnerFeatureEntity> => {
-    return { ...mockPartnerFeatureEntity, ...arg };
+  createFeature: async (arg): Promise<FeatureEntity> => {
+    return { ...mockFeatureEntity, ...arg };
+  },
+  getFeatureByName: async (): Promise<FeatureEntity> => {
+    return mockFeatureEntity;
   },
 };
 
@@ -296,12 +298,6 @@ export const mockFeatureRepositoryMethods: PartialFuncReturn<Repository<FeatureE
     return [{ ...mockFeatureEntity, ...(arg ? { ...arg } : {}) }] as FeatureEntity[];
   },
   save: async (arg) => arg as FeatureEntity,
-};
-
-export const mockEventLoggerServiceMethods: PartialFuncReturn<EventLoggerService> = {
-  createEventLog: async ({ userId, event, date }) => {
-    return { userId, event, date, id: 'eventLogId1ß' } as EventLogEntity;
-  },
 };
 
 export const mockEventLoggerRepositoryMethods: PartialFuncReturn<Repository<EventLogEntity>> = {

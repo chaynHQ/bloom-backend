@@ -10,9 +10,9 @@ import { SuperAdminAuthGuard } from '../partner-admin/super-admin-auth.guard';
 import { ControllerDecorator } from '../utils/controller.decorator';
 import { CreatePartnerAccessDto } from './dtos/create-partner-access.dto';
 import { GetPartnerAccessesDto } from './dtos/get-partner-access.dto';
+import { PartnerAccessParamDto } from './dtos/partner-access-param.dto';
 import { UpdatePartnerAccessDto } from './dtos/update-partner-access.dto';
 import { ValidatePartnerAccessCodeDto } from './dtos/validate-partner-access.dto';
-import { PartnerAccessParamDto } from './dtos/partner-access-param.dto';
 import { PartnerAccessService } from './partner-access.service';
 
 @ApiTags('Partner Access')
@@ -62,18 +62,6 @@ export class PartnerAccessController {
     return this.partnerAccessService.getPartnerAccessCodes(getPartnerAccessDto);
   }
 
-  // TODO - Not in use - leaving as the bones might be reused
-  @ApiBearerAuth('access-token')
-  @ApiOperation({
-    description:
-      'Returns a list of users with an access code and the number of therapy sessions available to them',
-  })
-  @UseGuards(SuperAdminAuthGuard)
-  @Get('users')
-  async getPartnerAccessCodesWithUsers(): Promise<PartnerAccessEntity[]> {
-    return await this.partnerAccessService.getUserTherapySessions();
-  }
-
   @ApiBearerAuth('access-token')
   @ApiOperation({
     description: 'Updates number of therapy sessions available to an access code',
@@ -81,7 +69,10 @@ export class PartnerAccessController {
   @Patch(':id')
   @ApiParam({ name: 'id', description: 'Updates partner access by id' })
   @UseGuards(SuperAdminAuthGuard)
-  async updatePartnerAccess(@Param() params: PartnerAccessParamDto, @Body() updates: UpdatePartnerAccessDto) {
+  async updatePartnerAccess(
+    @Param() params: PartnerAccessParamDto,
+    @Body() updates: UpdatePartnerAccessDto,
+  ) {
     return await this.partnerAccessService.updatePartnerAccess(params.id, updates);
   }
 

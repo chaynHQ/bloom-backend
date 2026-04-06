@@ -1,5 +1,5 @@
 import { createMock, DeepMocked } from '@golevelup/ts-jest';
-import { Logger } from '@nestjs/common';
+import { Logger } from 'src/logger/logger';
 import { Test, TestingModule } from '@nestjs/testing';
 import { EVENT_NAME } from 'src/crisp/crisp.interface';
 import { CrispEventDto } from 'src/crisp/dtos/crisp.dto';
@@ -54,7 +54,7 @@ describe('CrispListenerService', () => {
     // Add the helper method for testing error handling
     service.logErrorOnListenerFailed = (type, error) => {
       const logger = new Logger('CrispLogger');
-      logger.error(`Crisp service failed listening to ${type} messages:`, error);
+      logger.error(`Crisp service failed listening to ${type} messages: ${error?.message || 'unknown error'}`);
     };
   });
 
@@ -103,8 +103,7 @@ describe('CrispListenerService', () => {
 
           // Verify error was logged correctly
           expect(errorSpy).toHaveBeenCalledWith(
-            'Crisp service failed listening to sent messages:',
-            error,
+            'Crisp service failed listening to sent messages: Failed to register listener',
           );
         }
         return Promise.resolve();
@@ -191,10 +190,9 @@ describe('CrispListenerService', () => {
       // Call the helper method directly to test error logging
       service.logErrorOnListenerFailed('sent', error);
 
-      // Verify error was logged with correct message
+      // Verify error was logged with correct message (no raw error object)
       expect(errorSpy).toHaveBeenCalledWith(
-        'Crisp service failed listening to sent messages:',
-        error,
+        'Crisp service failed listening to sent messages: Registration failed',
       );
     });
 
@@ -206,10 +204,9 @@ describe('CrispListenerService', () => {
       // Call the helper method with 'received' type
       service.logErrorOnListenerFailed('received', error);
 
-      // Verify error was logged with the correct message for received events
+      // Verify error was logged with the correct message for received events (no raw error object)
       expect(errorSpy).toHaveBeenCalledWith(
-        'Crisp service failed listening to received messages:',
-        error,
+        'Crisp service failed listening to received messages: Registration failed',
       );
     });
 
@@ -223,8 +220,8 @@ describe('CrispListenerService', () => {
       // Initialize the service
       await service.onModuleInit();
 
-      // Verify error was logged
-      expect(errorSpy).toHaveBeenCalledWith('Crisp service failed to initiate:', expect.any(Error));
+      // Verify error was logged (no raw error object)
+      expect(errorSpy).toHaveBeenCalledWith('Crisp service failed to initiate: Critical error');
     });
   });
 });

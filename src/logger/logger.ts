@@ -1,6 +1,7 @@
 import { ConsoleLogger } from '@nestjs/common';
 import Rollbar from 'rollbar';
 import { FIREBASE_ERRORS } from 'src/utils/errors';
+import { redactPii, safeErrorMessage } from 'src/utils/pii-redaction';
 import { isProduction, rollbarEnv, rollbarToken } from '../utils/constants';
 import { ErrorLog } from './utils';
 import { ClsService, ClsServiceManager } from 'nestjs-cls';
@@ -44,7 +45,7 @@ export class Logger extends ConsoleLogger {
   log(message: string | LogMessage): void {
     const formattedMessage = typeof message === 'string' ? message : JSON.stringify(message);
     const requestContext = this.getRequestContext();
-    const decoratedMessage = `[Request ID: ${requestContext.requestId}, Session ID: ${requestContext.sessionId}] ${formattedMessage}`;
+    const decoratedMessage = `[Request ID: ${requestContext.requestId}, Session ID: ${requestContext.sessionId}] ${redactPii(formattedMessage)}`;
     super.log(decoratedMessage);
   }
 
@@ -52,7 +53,7 @@ export class Logger extends ConsoleLogger {
     try {
       const formattedMessage = typeof message === 'string' ? message : JSON.stringify(message);
       const requestContext = this.getRequestContext();
-      const decoratedMessage = `[Request ID: ${requestContext.requestId}, Session ID: ${requestContext.sessionId}] ${formattedMessage}`;
+      const decoratedMessage = `[Request ID: ${requestContext.requestId}, Session ID: ${requestContext.sessionId}] ${redactPii(formattedMessage)}`;
       const taggedMessage = `[warn] ${decoratedMessage}`;
       super.warn(taggedMessage, trace);
     } catch {
@@ -61,16 +62,22 @@ export class Logger extends ConsoleLogger {
   }
 
   error(message: string | ErrorLog, trace?: string): void {
-    if (this.rollbar) {
-      this.rollbar.error(message);
-    }
     const formattedMessage = typeof message === 'string' ? message : JSON.stringify(message);
+    const sanitizedMessage = redactPii(formattedMessage);
+
+    if (this.rollbar) {
+      this.rollbar.error(sanitizedMessage);
+    }
+
     const requestContext = this.getRequestContext();
-    const decoratedMessage = `[Request ID: ${requestContext.requestId}, Session ID: ${requestContext.sessionId}] ${formattedMessage}`;
+    const decoratedMessage = `[Request ID: ${requestContext.requestId}, Session ID: ${requestContext.sessionId}] ${sanitizedMessage}`;
 
     const taggedMessage = `[error] ${decoratedMessage}`;
     super.error(taggedMessage, trace);
   }
+
+  /** Safely extract a loggable string from an error without dumping the full object. */
+  static safeErrorMessage = safeErrorMessage;
 
   private initialiseRollbar() {
     // Values MUST be set in production mode.

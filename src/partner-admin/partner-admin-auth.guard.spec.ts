@@ -125,16 +125,15 @@ describe('PartnerAdminAuthGuard', () => {
   });
 
   it('should return false when the authtoken cannot be resolved', async () => {
-    const badAuthMessage = 'bad auth token';
     jest
       .spyOn(mockAuthService, 'parseAuth')
-      .mockImplementation(() => Promise.reject(badAuthMessage));
+      .mockImplementation(() => Promise.reject(new Error('bad auth token')));
     try {
       await guard.canActivate(context);
       fail('it should not reach here');
     } catch (error) {
       expect(error.message).toBe(
-        `PartnerAdminAuthGuard - Error parsing firebase user: ${badAuthMessage}`,
+        'PartnerAdminAuthGuard - Error parsing firebase user: bad auth token',
       );
     }
   });

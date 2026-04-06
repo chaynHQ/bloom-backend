@@ -103,7 +103,7 @@ export class UserService {
       return userDto;
     } catch (error) {
       if (!Object.values(FIREBASE_ERRORS).includes(error)) {
-        this.logger.error(`Create user: Error creating user: ${error.message || 'unknown error'}`);
+        this.logger.error(`Create user: Error creating user: ${error?.message || 'unknown error'}`);
       }
       throw error;
     }
@@ -169,7 +169,7 @@ export class UserService {
     } catch (err) {
       // Continue to delete user, even if firebase request fails
       this.logger.error(
-        `deleteUser - firebase error. Unable to delete user due to error: ${err.message || 'unknown error'}`,
+        `deleteUser - firebase error. Unable to delete user due to error: ${err?.message || 'unknown error'}`,
       );
     }
 
@@ -191,7 +191,7 @@ export class UserService {
       return await this.userRepository.save(updateUser);
     } catch (error) {
       throw new HttpException(
-        `Unable to complete deleting user due to error: ${error.message || 'unknown error'}`,
+        `Unable to complete deleting user due to error: ${error?.message || 'unknown error'}`,
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
@@ -298,24 +298,21 @@ export class UserService {
             await this.crispService.deleteCrispProfile(user.email);
           } catch (error) {
             this.logger.warn(
-              `deleteCypressTestUsers - unable to delete crisp profile for user ${user.id}`,
-              error,
+              `deleteCypressTestUsers - unable to delete crisp profile for user ${user.id}: ${error?.message || 'unknown error'}`,
             );
           }
           try {
             await deleteMailchimpProfile(user.email);
           } catch (error) {
             this.logger.warn(
-              `deleteCypressTestUsers - unable to delete mailchimp profile for user ${user.id}`,
-              error,
+              `deleteCypressTestUsers - unable to delete mailchimp profile for user ${user.id}: ${error?.message || 'unknown error'}`,
             );
           }
           try {
             await this.authService.deleteFirebaseUser(user.firebaseUid);
           } catch (error) {
             this.logger.warn(
-              `deleteCypressTestUsers - unable to delete firebase profile for user ${user.id}`,
-              error,
+              `deleteCypressTestUsers - unable to delete firebase profile for user ${user.id}: ${error?.message || 'unknown error'}`,
             );
           }
           try {
@@ -323,8 +320,7 @@ export class UserService {
             deletedUsers.push(user);
           } catch (error) {
             this.logger.error(
-              `deleteCypressTestUsers - Unable to delete db record for user ${user.id}`,
-              error,
+              `deleteCypressTestUsers - Unable to delete db record for user ${user.id}: ${error?.message || 'unknown error'}`,
             );
           }
         }),
@@ -350,7 +346,7 @@ export class UserService {
       deletedUsers = await this.batchDeleteUsers(users);
     } catch (error) {
       // If this fails we don't want to break cypress tests but we want to be alerted
-      this.logger.error(`deleteCypressTestUsers - Unable to delete all cypress users`, error);
+      this.logger.error(`deleteCypressTestUsers - Unable to delete all cypress users: ${error?.message || 'unknown error'}`);
     }
 
     try {
@@ -368,7 +364,7 @@ export class UserService {
       }
     } catch (error) {
       // If this fails we don't want to break cypress tests but we want to be alerted
-      this.logger.error(`deleteCypressTestUsers - Unable to clean all cypress users`, error);
+      this.logger.error(`deleteCypressTestUsers - Unable to clean all cypress users: ${error?.message || 'unknown error'}`);
     }
 
     return deletedUsers;
@@ -410,9 +406,9 @@ export class UserService {
       });
       return users.map((u) => formatUserObject(u));
     } catch (error) {
-      this.logger.error(`getUsers - Unable to get users with filters ${filters}`, error);
+      this.logger.error(`getUsers - Unable to get users: ${error?.message || 'unknown error'}`);
       throw new HttpException(
-        `Unable to get users with filters ${filters} due to error - ${error}`,
+        `Unable to get users due to error: ${error?.message || 'unknown error'}`,
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }

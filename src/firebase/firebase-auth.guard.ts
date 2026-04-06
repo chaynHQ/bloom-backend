@@ -58,7 +58,7 @@ export class FirebaseAuthGuard implements CanActivate {
       });
 
       throw new HttpException(
-        `FirebaseAuthGuard - Error parsing firebase user: ${error}`,
+        `FirebaseAuthGuard - Error parsing firebase user: ${error?.message || 'unknown error'}`,
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }

@@ -7,7 +7,4 @@ import { CourseEntity } from '../entities/course.entity';
 export class CourseService {
   constructor(@InjectRepository(CourseEntity) private courseRepository: Repository<CourseEntity>) {}
 
-  async getCourse(id: string): Promise<CourseEntity> {
-    return await this.courseRepository.findOneBy({ id });
-  }
 }

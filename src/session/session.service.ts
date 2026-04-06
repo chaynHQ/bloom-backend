@@ -9,10 +9,6 @@ export class SessionService {
     @InjectRepository(SessionEntity) private sessionRepository: Repository<SessionEntity>,
   ) {}
 
-  async getSession(id: string): Promise<SessionEntity> {
-    return await this.sessionRepository.findOneBy({ id });
-  }
-
   async getSessionAndCourse(id: string): Promise<SessionEntity> {
     return await this.sessionRepository
       .createQueryBuilder('session')

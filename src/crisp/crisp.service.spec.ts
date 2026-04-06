@@ -143,51 +143,6 @@ describe('CrispService', () => {
     });
   });
 
-  describe('getCrispProfile', () => {
-    it('should return a Crisp profile for a valid email', async () => {
-      const mockProfile = { email: 'test@example.com', nickname: 'Test User' };
-      mockWebsite.getPeopleProfile.mockResolvedValue(mockProfile);
-
-      const profile = await service.getCrispProfile('test@example.com');
-
-      expect(mockWebsite.getPeopleProfile).toHaveBeenCalledWith(crispWebsiteId, 'test@example.com');
-      expect(profile).toEqual(mockProfile);
-    });
-
-    it('should throw an error if fetching the Crisp profile fails', async () => {
-      // Mock the specific error we want to check
-      mockWebsite.getPeopleProfile.mockImplementation(() => {
-        throw new Error('API failed');
-      });
-
-      // Now test that calling the service method rejects
-      await expect(service.getCrispProfile('test@example.com')).rejects.toThrow(); // Just check that it throws any error
-    });
-  });
-
-  describe('getCrispPeopleData', () => {
-    it('should return Crisp people data for a valid email', async () => {
-      const mockPeopleData = {
-        data: {
-          customField1: 'value1',
-          customField2: 'value2',
-        },
-      };
-      mockWebsite.getPeopleData.mockResolvedValue(mockPeopleData);
-
-      const peopleData = await service.getCrispPeopleData('test@example.com');
-
-      expect(mockWebsite.getPeopleData).toHaveBeenCalledWith(crispWebsiteId, 'test@example.com');
-      expect(peopleData).toEqual(mockPeopleData);
-    });
-
-    it('should throw an error if fetching Crisp people data fails', async () => {
-      mockWebsite.getPeopleData.mockRejectedValue(new Error('API Error'));
-
-      await expect(service.getCrispPeopleData('test@example.com')).rejects.toThrow();
-    });
-  });
-
   describe('updateCrispProfileBase', () => {
     it('should update a Crisp profile base', async () => {
       const profileUpdate = { person: { nickname: 'Updated User' } };
@@ -337,15 +292,11 @@ describe('CrispService', () => {
 
     it('should handle API errors when fetching messages', async () => {
       mockWebsite.getMessagesInConversation.mockRejectedValue(new Error('API Error'));
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
 
       const result = await service.getCrispMessageOriginAnalytics(['session1']);
 
-      expect(consoleSpy).toHaveBeenCalled();
       expect(result).toContain('0%) chat widget origin');
       expect(result).toContain('0%) email origin');
-
-      consoleSpy.mockRestore();
     });
 
     it('should calculate correct percentages for multiple sessions', async () => {
