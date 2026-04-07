@@ -5,8 +5,8 @@ import { PartnerEntity } from '../entities/partner.entity';
 import { SuperAdminAuthGuard } from '../partner-admin/super-admin-auth.guard';
 import { ControllerDecorator } from '../utils/controller.decorator';
 import { CreatePartnerDto } from './dtos/create-partner.dto';
+import { PartnerIdParamDto, PartnerParamDto } from './dtos/partner-param.dto';
 import { UpdatePartnerDto } from './dtos/update-partner.dto';
-import { PartnerParamDto, PartnerIdParamDto } from './dtos/partner-param.dto';
 import { IPartner } from './partner.interface';
 import { PartnerService } from './partner.service';
 
@@ -21,9 +21,7 @@ export class PartnerController {
   @UseGuards(SuperAdminAuthGuard)
   @Post()
   @ApiBody({ type: CreatePartnerDto })
-  async createPartner(
-    @Body() createPartnerDto: CreatePartnerDto,
-  ): Promise<PartnerEntity> {
+  async createPartner(@Body() createPartnerDto: CreatePartnerDto): Promise<PartnerEntity> {
     return this.partnerService.createPartner(createPartnerDto);
   }
 
@@ -36,11 +34,12 @@ export class PartnerController {
   }
 
   @Get(':name')
-  @ApiOperation({ description: 'Returns profile data for a partner' })
-  @UseGuards(SuperAdminAuthGuard)
+  @ApiOperation({ description: 'Returns profile data for a partner (public endpoint)' })
   @ApiParam({ name: 'name', description: 'Gets partner by name' })
   async getPartner(@Param() params: PartnerParamDto): Promise<IPartner> {
-    const partnerResponse = await this.partnerService.getPartnerWithPartnerFeaturesByName(params.name);
+    const partnerResponse = await this.partnerService.getPartnerWithPartnerFeaturesByName(
+      params.name,
+    );
     return formatPartnerObject(partnerResponse);
   }
 
@@ -49,7 +48,10 @@ export class PartnerController {
   @Patch(':id')
   @ApiOperation({ description: 'Update a partner profile to make partner active or inactive' })
   @ApiBody({ type: UpdatePartnerDto })
-  async updatePartnerActiveStatus(@Param() params: PartnerIdParamDto, @Body() updatePartnerDto: UpdatePartnerDto) {
+  async updatePartnerActiveStatus(
+    @Param() params: PartnerIdParamDto,
+    @Body() updatePartnerDto: UpdatePartnerDto,
+  ) {
     return this.partnerService.updatePartnerActiveStatus(params.id, updatePartnerDto);
   }
 }
