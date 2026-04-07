@@ -14,7 +14,7 @@ function getCorsOrigin(): (string | RegExp)[] {
     throw new Error('FRONTEND_APP_URL environment variable must be set');
   }
 
-  const allowedOrigins: (string | RegExp)[] = [frontendAppUrl];
+  const allowedOrigins: (string | RegExp)[] = [frontendAppUrl.replace(/\/+$/, '')];
 
   if (process.env.NODE_ENV !== 'production') {
     // Allow Vercel preview branch URLs in non-production environments
