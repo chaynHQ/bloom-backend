@@ -4,7 +4,7 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import apiCall from 'src/api/apiCalls';
 import { SlackMessageClient } from 'src/api/slack/slack-api';
 import { CoursePartnerService } from 'src/course-partner/course-partner.service';
-import { CrispService } from 'src/crisp/crisp.service';
+import { FrontChatService } from 'src/front-chat/front-chat.service';
 import { CoursePartnerEntity } from 'src/entities/course-partner.entity';
 import { CourseEntity } from 'src/entities/course.entity';
 import { EventLogEntity } from 'src/entities/event-log.entity';
@@ -51,6 +51,7 @@ import {
   mockUserRepositoryMethods,
 } from 'test/utils/mockedServices';
 import { ILike, Repository } from 'typeorm';
+import { EVENT_NAME } from 'src/event-logger/event-logger.interface';
 import { WebhooksService } from './webhooks.service';
 
 jest.mock('src/api/apiCalls');
@@ -100,7 +101,7 @@ describe('WebhooksService', () => {
     mockPartnerAdminRepositoryMethods,
   );
   const mockedServiceUserProfilesService = createMock<ServiceUserProfilesService>();
-  const mockCrispService = createMock<CrispService>();
+  const mockFrontChatService = createMock<FrontChatService>();
   const mockEventLoggerService = createMock<EventLoggerService>();
   const mockEventLogRepository = createMock<Repository<EventLogEntity>>(
     mockEventLoggerRepositoryMethods,
@@ -167,7 +168,7 @@ describe('WebhooksService', () => {
           provide: getRepositoryToken(EventLogEntity),
           useValue: mockEventLogRepository,
         },
-        { provide: CrispService, useValue: mockCrispService },
+        { provide: FrontChatService, useValue: mockFrontChatService },
         { provide: EventLoggerService, useValue: mockEventLoggerService },
       ],
     }).compile();
@@ -832,6 +833,64 @@ describe('WebhooksService', () => {
         }),
       ).resolves.toHaveProperty('action', SIMPLYBOOK_ACTION_ENUM.UPDATED_BOOKING);
       expect(therapySessionFindOneSpy).toHaveBeenCalled();
+    });
+  });
+
+  describe('handleFrontChatWebhook', () => {
+    const inboundPayload = {
+      id: 'evt_123',
+      type: 'inbound',
+      emitted_at: 1700000000,
+      conversation: {
+        id: 'cnv_abc',
+        recipient: { handle: 'user@example.com', role: 'to' },
+      },
+    };
+
+    it('should log CHAT_MESSAGE_SENT for inbound events', async () => {
+      await service.handleFrontChatWebhook(inboundPayload);
+
+      expect(mockEventLoggerService.createEventLog).toHaveBeenCalledWith(
+        { event: EVENT_NAME.CHAT_MESSAGE_SENT, date: new Date(1700000000 * 1000) },
+        'user@example.com',
+      );
+    });
+
+    it('should log CHAT_MESSAGE_RECEIVED for outbound events', async () => {
+      await service.handleFrontChatWebhook({ ...inboundPayload, type: 'outbound' });
+
+      expect(mockEventLoggerService.createEventLog).toHaveBeenCalledWith(
+        { event: EVENT_NAME.CHAT_MESSAGE_RECEIVED, date: new Date(1700000000 * 1000) },
+        'user@example.com',
+      );
+    });
+
+    it('should log CHAT_MESSAGE_RECEIVED for out_reply events', async () => {
+      await service.handleFrontChatWebhook({ ...inboundPayload, type: 'out_reply' });
+
+      expect(mockEventLoggerService.createEventLog).toHaveBeenCalledWith(
+        { event: EVENT_NAME.CHAT_MESSAGE_RECEIVED, date: expect.any(Date) },
+        'user@example.com',
+      );
+    });
+
+    it('should skip untracked event types', async () => {
+      await service.handleFrontChatWebhook({ ...inboundPayload, type: 'tag' });
+      expect(mockEventLoggerService.createEventLog).not.toHaveBeenCalled();
+    });
+
+    it('should skip events with no recipient email', async () => {
+      await service.handleFrontChatWebhook({
+        ...inboundPayload,
+        conversation: { id: 'cnv_abc' },
+      });
+      expect(mockEventLoggerService.createEventLog).not.toHaveBeenCalled();
+    });
+
+    it('should not throw if event logging fails', async () => {
+      mockEventLoggerService.createEventLog.mockRejectedValueOnce(new Error('User not found'));
+
+      await expect(service.handleFrontChatWebhook(inboundPayload)).resolves.not.toThrow();
     });
   });
 });

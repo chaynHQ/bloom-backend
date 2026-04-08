@@ -10,6 +10,9 @@ import { ResourceEntity } from 'src/entities/resource.entity';
 import { SessionEntity } from 'src/entities/session.entity';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
 import { UserEntity } from 'src/entities/user.entity';
+import { EVENT_NAME } from 'src/event-logger/event-logger.interface';
+import { EventLoggerService } from 'src/event-logger/event-logger.service';
+import { FRONT_WEBHOOK_EVENT_TYPE } from 'src/front-chat/front-chat.interface';
 import { ZapierSimplybookBodyDto } from 'src/partner-access/dtos/zapier-body.dto';
 import { ServiceUserProfilesService } from 'src/service-user-profiles/service-user-profiles.service';
 import { IUser } from 'src/user/user.interface';
@@ -24,6 +27,7 @@ import {
   STORYBLOK_STORY_STATUS_ENUM,
   storyblokToken,
 } from '../utils/constants';
+import { FrontChatWebhookDto } from 'src/webhooks/dto/front-chat-webhook.dto';
 import { StoryWebhookDto } from './dto/story.dto';
 
 @Injectable()
@@ -42,6 +46,7 @@ export class WebhooksService {
     private therapySessionRepository: Repository<TherapySessionEntity>,
     private serviceUserProfilesService: ServiceUserProfilesService,
     private slackMessageClient: SlackMessageClient,
+    private eventLoggerService: EventLoggerService,
   ) {}
 
   async updatePartnerAccessTherapy(
@@ -445,5 +450,47 @@ export class WebhooksService {
 
     // Create or update the resource/course/session record in our database
     return this.updateOrCreateStoryData(story, status);
+  }
+
+  async handleFrontChatWebhook(data: FrontChatWebhookDto): Promise<void> {
+    const email = data.conversation?.recipient?.handle;
+    if (!email) {
+      this.logger.warn(`Front webhook ${data.type} event ${data.id}: no recipient email, skipping`);
+      return;
+    }
+
+    const eventName = this.mapFrontEventToEventName(data.type);
+    if (!eventName) {
+      this.logger.log(`Front webhook event type "${data.type}" is not tracked, skipping`);
+      return;
+    }
+
+    try {
+      await this.eventLoggerService.createEventLog(
+        {
+          event: eventName,
+          date: new Date(data.emitted_at * 1000),
+        },
+        email,
+      );
+      this.logger.log(`Front webhook: logged ${eventName} for ${email}`);
+    } catch (error) {
+      // Don't fail the webhook response if event logging fails (e.g. user not found)
+      this.logger.warn(
+        `Front webhook: failed to log ${eventName} for ${email}: ${error?.message || 'unknown error'}`,
+      );
+    }
+  }
+
+  private mapFrontEventToEventName(type: string): EVENT_NAME | null {
+    switch (type) {
+      case FRONT_WEBHOOK_EVENT_TYPE.INBOUND:
+        return EVENT_NAME.CHAT_MESSAGE_SENT;
+      case FRONT_WEBHOOK_EVENT_TYPE.OUTBOUND:
+      case FRONT_WEBHOOK_EVENT_TYPE.OUT_REPLY:
+        return EVENT_NAME.CHAT_MESSAGE_RECEIVED;
+      default:
+        return null;
+    }
   }
 }

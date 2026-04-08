@@ -2,7 +2,7 @@ import { createMock } from '@golevelup/ts-jest';
 import { HttpException, HttpStatus } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { createHmac } from 'crypto';
-import { storyblokWebhookSecret } from 'src/utils/constants';
+import { frontChatWebhookSecret, storyblokWebhookSecret } from 'src/utils/constants';
 import {
   mockSessionEntity,
   mockSimplybookBodyBase,
@@ -74,6 +74,64 @@ describe('AppController', () => {
             generateMockHeaders(mockStoryWebhookDto),
           ),
         ).resolves.toBe(mockSessionEntity);
+      });
+    });
+
+    describe('handleFrontChatWebhook', () => {
+      const frontChatPayload = {
+        id: 'evt_123',
+        type: 'inbound',
+        emitted_at: 1700000000,
+        conversation: {
+          id: 'cnv_abc',
+          recipient: { handle: 'user@example.com', role: 'to' },
+        },
+      };
+
+      const createFrontChatSignature = (body) =>
+        createHmac('sha1', frontChatWebhookSecret)
+          .update('' + body)
+          .digest('base64');
+
+      const createFrontChatRequest = (body) => ({
+        rawBody: '' + body,
+        setEncoding: () => {},
+      });
+
+      const createFrontChatHeaders = (body) => ({
+        'x-front-signature': createFrontChatSignature(body),
+      });
+
+      it('should call service handleFrontChatWebhook with valid signature', async () => {
+        const body = JSON.stringify(frontChatPayload);
+
+        await webhooksController.handleFrontChatWebhook(
+          createFrontChatRequest(body),
+          frontChatPayload,
+          createFrontChatHeaders(body),
+        );
+
+        expect(mockWebhooksService.handleFrontChatWebhook).toHaveBeenCalledWith(frontChatPayload);
+      });
+
+      it('should reject requests with missing signature', async () => {
+        await expect(
+          webhooksController.handleFrontChatWebhook(
+            createFrontChatRequest(JSON.stringify(frontChatPayload)),
+            frontChatPayload,
+            {},
+          ),
+        ).rejects.toThrow('Front Chat webhook error - no signature provided');
+      });
+
+      it('should reject requests with invalid signature', async () => {
+        await expect(
+          webhooksController.handleFrontChatWebhook(
+            createFrontChatRequest(JSON.stringify(frontChatPayload)),
+            frontChatPayload,
+            { 'x-front-signature': 'invalid' },
+          ),
+        ).rejects.toThrow('Front Chat webhook error - signature mismatch');
       });
     });
   });

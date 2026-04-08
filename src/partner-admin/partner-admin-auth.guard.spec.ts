@@ -21,7 +21,6 @@ const userEntity: UserEntity = {
   serviceEmailsPermission: true,
   emailRemindersFrequency: EMAIL_REMINDERS_FREQUENCY.TWO_MONTHS,
   isSuperAdmin: false,
-  crispTokenId: '123',
   partnerAccess: [],
   partnerAdmin: { id: 'partnerAdminId', active: true, partner: {} } as PartnerAdminEntity,
   isActive: true,
