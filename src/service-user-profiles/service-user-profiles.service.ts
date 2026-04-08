@@ -11,11 +11,11 @@ import {
   ListMemberPartial,
   MAILCHIMP_MERGE_FIELD_TYPES,
 } from 'src/api/mailchimp/mailchimp-api.interfaces';
-import { CrispService } from 'src/crisp/crisp.service';
 import { CourseUserEntity } from 'src/entities/course-user.entity';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { PartnerEntity } from 'src/entities/partner.entity';
 import { UserEntity } from 'src/entities/user.entity';
+import { FrontChatService } from 'src/front-chat/front-chat.service';
 import { Logger } from 'src/logger/logger';
 import { And, Raw, Repository } from 'typeorm';
 import {
@@ -26,7 +26,7 @@ import {
 } from '../utils/constants';
 import { getAcronym, isCypressTestEmail } from '../utils/utils';
 
-// Functionality for syncing user profiles for Crisp and Mailchimp communications services.
+// Functionality for syncing user profiles for Front Chat and Mailchimp communications services.
 // User data must be serialized to handle service-specific data structure and different key names
 // due to mailchimp field name restrictions allowing only max 10 uppercase characters
 
@@ -38,7 +38,7 @@ const logger = new Logger('ServiceUserProfiles');
 export class ServiceUserProfilesService {
   constructor(
     @InjectRepository(UserEntity) private userRepository: Repository<UserEntity>,
-    private crispService: CrispService,
+    private frontChatService: FrontChatService,
   ) {}
 
   async createServiceUserProfiles(
@@ -60,17 +60,16 @@ export class ServiceUserProfilesService {
     const userSignedUpAt = user.createdAt?.toISOString();
 
     try {
-      await this.crispService.createCrispProfile({
+      await this.frontChatService.createContact({
         email: email,
-        person: { nickname: user.name, locales: [user.signUpLanguage || LANGUAGE_DEFAULT] },
-        segments: this.serializeCrispPartnerSegments(partner ? [partner] : []),
+        name: user.name,
       });
 
-      await this.crispService.updateCrispPeopleData(
+      await this.frontChatService.updateContactCustomFields(
         {
           signed_up_at: userSignedUpAt,
-          ...userData.crispSchema,
-          ...partnerData.crispSchema,
+          ...userData.frontChatSchema,
+          ...partnerData.frontChatSchema,
         },
         email,
       );
@@ -102,7 +101,7 @@ export class ServiceUserProfilesService {
 
   async updateServiceUserProfilesUser(
     user: UserEntity,
-    isCrispBaseUpdateRequired: boolean,
+    isProfileUpdateRequired: boolean,
     isEmailUpdateRequired: boolean,
     existingEmail: string,
   ) {
@@ -116,27 +115,18 @@ export class ServiceUserProfilesService {
     const userData = this.serializeUserData(user);
 
     try {
-      if (isCrispBaseUpdateRequired) {
-        // Extra call required to update crisp "base" profile when name or sign up language is changed
-        await this.crispService.updateCrispProfileBase(
+      if (isProfileUpdateRequired) {
+        // Extra call required to update contact profile when name or sign up language is changed
+        await this.frontChatService.updateContactProfile(
           {
             ...(isEmailUpdateRequired && { email: email }),
-            person: {
-              nickname: user.name,
-              locales: [user.signUpLanguage || LANGUAGE_DEFAULT],
-            },
+            name: user.name,
           },
           existingEmail,
         );
       }
 
-      await this.crispService.updateCrispPeopleData(userData.crispSchema, email);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'unknown error';
-      logger.error(`Update Crisp user profile error - ${message}`);
-    }
-
-    try {
+      await this.frontChatService.updateContactCustomFields(userData.frontChatSchema, email);
       await updateMailchimpProfile(
         {
           ...userData.mailchimpSchema,
@@ -164,21 +154,10 @@ export class ServiceUserProfilesService {
     const partnerAccessData = this.serializePartnerAccessData(partnerAccesses);
 
     try {
-      const partners = partnerAccesses.map((pa) => pa.partner);
-      await this.crispService.updateCrispProfileBase(
-        {
-          segments: this.serializeCrispPartnerSegments(partners),
-        },
+      await this.frontChatService.updateContactCustomFields(
+        partnerAccessData.frontChatSchema,
         email,
       );
-
-      await this.crispService.updateCrispPeopleData(partnerAccessData.crispSchema, email);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'unknown error';
-      logger.error(`Update Crisp partner access error - ${message}`);
-    }
-
-    try {
       await updateMailchimpProfile(partnerAccessData.mailchimpSchema, email);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'unknown error';
@@ -195,13 +174,7 @@ export class ServiceUserProfilesService {
     const therapyData = this.serializeTherapyData(partnerAccesses);
 
     try {
-      await this.crispService.updateCrispPeopleData(therapyData.crispSchema, email);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'unknown error';
-      logger.error(`Update Crisp therapy error - ${message}`);
-    }
-
-    try {
+      await this.frontChatService.updateContactCustomFields(therapyData.frontChatSchema, email);
       await updateMailchimpProfile(therapyData.mailchimpSchema, email);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'unknown error';
@@ -218,13 +191,7 @@ export class ServiceUserProfilesService {
     const courseData = this.serializeCourseData(courseUser);
 
     try {
-      await this.crispService.updateCrispPeopleData(courseData.crispSchema, email);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'unknown error';
-      logger.error(`Update Crisp course error - ${message}`);
-    }
-
-    try {
+      await this.frontChatService.updateContactCustomFields(courseData.frontChatSchema, email);
       await updateMailchimpProfile(courseData.mailchimpSchema, email);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'unknown error';
@@ -360,11 +327,6 @@ export class ServiceUserProfilesService {
     return partnersString;
   }
 
-  serializeCrispPartnerSegments(partners: PartnerEntity[]) {
-    if (!partners.length) return ['public'];
-    return partners.map((p) => p.name.toLowerCase());
-  }
-
   serializeUserData(user: UserEntity) {
     const {
       name,
@@ -376,12 +338,12 @@ export class ServiceUserProfilesService {
     } = user;
     const lastActiveAtString = lastActiveAt?.toISOString() || '';
 
-    const crispSchema = {
+    const frontChatSchema = {
       marketing_permission: contactPermission,
       service_emails_permission: serviceEmailsPermission,
       last_active_at: lastActiveAtString,
       email_reminders_frequency: emailRemindersFrequency,
-      // Name and language handled on base level profile for crisp
+      // Name and language handled on base level contact profile for Front Chat
     };
 
     const mailchimpSchema = {
@@ -401,7 +363,7 @@ export class ServiceUserProfilesService {
       },
     } as ListMemberPartial;
 
-    return { crispSchema, mailchimpSchema };
+    return { frontChatSchema, mailchimpSchema };
   }
 
   serializePartnerAccessData(partnerAccesses: PartnerAccessEntity[]) {
@@ -427,7 +389,7 @@ export class ServiceUserProfilesService {
             .reduce((a, b) => a + b, 0),
         };
 
-    const crispSchema = {
+    const frontChatSchema = {
       partners: data.partners,
       feature_live_chat: data.featureLiveChat,
       feature_therapy: data.featureTherapy,
@@ -445,7 +407,7 @@ export class ServiceUserProfilesService {
       },
     } as ListMemberPartial;
 
-    return { crispSchema, mailchimpSchema };
+    return { frontChatSchema, mailchimpSchema };
   }
 
   serializeTherapyData(partnerAccesses: PartnerAccessEntity[]) {
@@ -480,7 +442,7 @@ export class ServiceUserProfilesService {
       ),
     };
 
-    const crispSchema = {
+    const frontChatSchema = {
       therapy_sessions_remaining: data.therapySessionsRemaining,
       therapy_sessions_redeemed: data.therapySessionsRedeemed,
       therapy_session_first_at: firstTherapySessionAt,
@@ -498,7 +460,7 @@ export class ServiceUserProfilesService {
       },
     };
 
-    return { crispSchema, mailchimpSchema };
+    return { frontChatSchema, mailchimpSchema };
   }
 
   serializeCourseData(courseUser: CourseUserEntity) {
@@ -515,7 +477,7 @@ export class ServiceUserProfilesService {
         .join('; '),
     };
 
-    const crispSchema = {
+    const frontChatSchema = {
       [`course_${courseAcronymLowercase}`]: data.course,
       [`course_${courseAcronymLowercase}_sessions`]: data.sessions,
     };
@@ -527,6 +489,6 @@ export class ServiceUserProfilesService {
       },
     } as ListMemberPartial;
 
-    return { crispSchema, mailchimpSchema };
+    return { frontChatSchema, mailchimpSchema };
   }
 }

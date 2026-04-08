@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { SlackMessageClient } from 'src/api/slack/slack-api';
 import { ZapierWebhookClient } from 'src/api/zapier/zapier-webhook-client';
-import { CrispService } from 'src/crisp/crisp.service';
+import { FrontChatService } from 'src/front-chat/front-chat.service';
 import { EventLogEntity } from 'src/entities/event-log.entity';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { PartnerAdminEntity } from 'src/entities/partner-admin.entity';
@@ -45,7 +45,7 @@ import { UserService } from './user.service';
     SubscriptionService,
     SubscriptionUserService,
     TherapySessionService,
-    CrispService,
+    FrontChatService,
     EventLoggerService,
     ZapierWebhookClient,
     SlackMessageClient,

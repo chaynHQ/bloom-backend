@@ -10,7 +10,7 @@ export interface IUser {
   email: string;
   isActive: boolean;
   lastActiveAt: Date | string;
-  crispTokenId: string;
+  frontChatUserHash?: string;
   isSuperAdmin: boolean;
   signUpLanguage: string;
   emailRemindersFrequency: EMAIL_REMINDERS_FREQUENCY;

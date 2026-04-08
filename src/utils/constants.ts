@@ -141,9 +141,15 @@ export const firebaseMeasurementId = getEnv(
 
 export const zapierToken = getEnv(process.env.ZAPIER_TOKEN, 'ZAPIER_TOKEN');
 
-export const crispPluginId = getEnv(process.env.CRISP_PLUGIN_ID, 'CRISP_PLUGIN_ID');
-export const crispPluginKey = getEnv(process.env.CRISP_PLUGIN_KEY, 'CRISP_PLUGIN_KEY');
-export const crispWebsiteId = getEnv(process.env.CRISP_WEBSITE_ID, 'CRISP_WEBSITE_ID');
+export const frontChatApiToken = getEnv(process.env.FRONT_CHAT_API_TOKEN, 'FRONT_CHAT_API_TOKEN');
+export const frontChatIdentitySecret = getEnv(
+  process.env.FRONT_CHAT_IDENTITY_SECRET,
+  'FRONT_CHAT_IDENTITY_SECRET',
+);
+export const frontChatWebhookSecret = getEnv(
+  process.env.FRONT_CHAT_WEBHOOK_SECRET,
+  'FRONT_CHAT_WEBHOOK_SECRET',
+);
 
 export const slackWebhookUrl = getEnv(process.env.SLACK_WEBHOOK_URL, 'SLACK_WEBHOOK_URL');
 export const slackBloomUsersWebhookUrl = getEnv(
