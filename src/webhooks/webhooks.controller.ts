@@ -20,8 +20,8 @@ import {
 import { ControllerDecorator } from 'src/utils/controller.decorator';
 import { ZapierSimplybookBodyDto } from '../partner-access/dtos/zapier-body.dto';
 import { ZapierAuthGuard } from '../partner-access/zapier-auth.guard';
-import { FrontChatWebhookDto } from './dto/front-chat-webhook.dto';
 import { isChannelApiRequest } from './dto/front-channel-webhook.dto';
+import { FrontChatWebhookDto } from './dto/front-chat-webhook.dto';
 import { StoryWebhookDto } from './dto/story.dto';
 import { WebhooksService } from './webhooks.service';
 
@@ -175,10 +175,7 @@ export class WebhooksController {
       .digest('base64');
     const expectedBuf = Buffer.from(expectedDigest);
     const providedBuf = Buffer.from(signature);
-    if (
-      expectedBuf.length !== providedBuf.length ||
-      !timingSafeEqual(expectedBuf, providedBuf)
-    ) {
+    if (expectedBuf.length !== providedBuf.length || !timingSafeEqual(expectedBuf, providedBuf)) {
       this.logger.error(
         `Front Channel webhook - signature mismatch. received="${signature}" ` +
           `expected="${expectedDigest}" rawBodyBytes=${rawBody.length} ts=${timestamp}`,

@@ -4,11 +4,11 @@ import {
   deleteCypressMailchimpProfiles,
   deleteMailchimpProfile,
 } from 'src/api/mailchimp/mailchimp-api';
-import { FrontChatService } from 'src/front-chat/front-chat.service';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { PartnerEntity } from 'src/entities/partner.entity';
 import { UserEntity } from 'src/entities/user.entity';
 import { IFirebaseUser } from 'src/firebase/firebase-user.interface';
+import { FrontChatService } from 'src/front-chat/front-chat.service';
 import { Logger } from 'src/logger/logger';
 import { ServiceUserProfilesService } from 'src/service-user-profiles/service-user-profiles.service';
 import { SubscriptionUserService } from 'src/subscription-user/subscription-user.service';
@@ -346,7 +346,9 @@ export class UserService {
       deletedUsers = await this.batchDeleteUsers(users);
     } catch (error) {
       // If this fails we don't want to break cypress tests but we want to be alerted
-      this.logger.error(`deleteCypressTestUsers - Unable to delete all cypress users: ${error?.message || 'unknown error'}`);
+      this.logger.error(
+        `deleteCypressTestUsers - Unable to delete all cypress users: ${error?.message || 'unknown error'}`,
+      );
     }
 
     try {
@@ -364,7 +366,9 @@ export class UserService {
       }
     } catch (error) {
       // If this fails we don't want to break cypress tests but we want to be alerted
-      this.logger.error(`deleteCypressTestUsers - Unable to clean all cypress users: ${error?.message || 'unknown error'}`);
+      this.logger.error(
+        `deleteCypressTestUsers - Unable to clean all cypress users: ${error?.message || 'unknown error'}`,
+      );
     }
 
     return deletedUsers;

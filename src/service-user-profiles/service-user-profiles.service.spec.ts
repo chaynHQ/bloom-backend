@@ -6,9 +6,8 @@ import {
   createMailchimpProfile,
   updateMailchimpProfile,
 } from 'src/api/mailchimp/mailchimp-api';
-import { ChatUserEntity } from 'src/entities/chat-user.entity';
-import { FrontChatService } from 'src/front-chat/front-chat.service';
 import { UserEntity } from 'src/entities/user.entity';
+import { FrontChatService } from 'src/front-chat/front-chat.service';
 import { ServiceUserProfilesService } from 'src/service-user-profiles/service-user-profiles.service';
 import {
   mockAltPartnerAccessEntity,

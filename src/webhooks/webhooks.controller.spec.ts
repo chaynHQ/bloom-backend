@@ -150,11 +150,9 @@ describe('AppController', () => {
       it('returns 401 when X-Front-Signature header is missing', async () => {
         const timestamp = buildRecentTimestamp();
         await expect(
-          webhooksController.handleFrontChatWebhook(
-            buildRequest(rawBodyStr),
-            channelPayload,
-            { 'x-front-request-timestamp': timestamp },
-          ),
+          webhooksController.handleFrontChatWebhook(buildRequest(rawBodyStr), channelPayload, {
+            'x-front-request-timestamp': timestamp,
+          }),
         ).rejects.toMatchObject({ status: HttpStatus.UNAUTHORIZED });
       });
 
@@ -162,11 +160,9 @@ describe('AppController', () => {
         const timestamp = buildRecentTimestamp();
         const signature = buildChannelSignature(timestamp, rawBodyStr);
         await expect(
-          webhooksController.handleFrontChatWebhook(
-            buildRequest(rawBodyStr),
-            channelPayload,
-            { 'x-front-signature': signature },
-          ),
+          webhooksController.handleFrontChatWebhook(buildRequest(rawBodyStr), channelPayload, {
+            'x-front-signature': signature,
+          }),
         ).rejects.toMatchObject({ status: HttpStatus.UNAUTHORIZED });
       });
 
@@ -174,35 +170,29 @@ describe('AppController', () => {
         const staleTs = String(Date.now() - 6 * 60 * 1000); // 6 min ago in ms
         const signature = buildChannelSignature(staleTs, rawBodyStr);
         await expect(
-          webhooksController.handleFrontChatWebhook(
-            buildRequest(rawBodyStr),
-            channelPayload,
-            {
-              'x-front-signature': signature,
-              'x-front-request-timestamp': staleTs,
-            },
-          ),
+          webhooksController.handleFrontChatWebhook(buildRequest(rawBodyStr), channelPayload, {
+            'x-front-signature': signature,
+            'x-front-request-timestamp': staleTs,
+          }),
         ).rejects.toMatchObject({ status: HttpStatus.UNAUTHORIZED });
       });
 
       it('returns 401 when the signature does not match the computed HMAC', async () => {
         const timestamp = buildRecentTimestamp();
         await expect(
-          webhooksController.handleFrontChatWebhook(
-            buildRequest(rawBodyStr),
-            channelPayload,
-            {
-              'x-front-signature': 'aW52YWxpZHNpZ25hdHVyZQ==', // wrong base64 value
-              'x-front-request-timestamp': timestamp,
-            },
-          ),
+          webhooksController.handleFrontChatWebhook(buildRequest(rawBodyStr), channelPayload, {
+            'x-front-signature': 'aW52YWxpZHNpZ25hdHVyZQ==', // wrong base64 value
+            'x-front-request-timestamp': timestamp,
+          }),
         ).rejects.toMatchObject({ status: HttpStatus.UNAUTHORIZED });
       });
 
       it('returns success when signature, timestamp and body all match', async () => {
-        jest
-          .spyOn(mockWebhooksService, 'handleFrontChannelOutbound')
-          .mockResolvedValueOnce({ type: 'success', external_id: 'ext_1', external_conversation_id: 'conv_1' });
+        jest.spyOn(mockWebhooksService, 'handleFrontChannelOutbound').mockResolvedValueOnce({
+          type: 'success',
+          external_id: 'ext_1',
+          external_conversation_id: 'conv_1',
+        });
 
         const timestamp = buildRecentTimestamp();
         const signature = buildChannelSignature(timestamp, rawBodyStr);

@@ -1,5 +1,4 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
-import { Logger } from 'src/logger/logger';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ISbStoryData } from '@storyblok/js';
 import apiCall from 'src/api/apiCalls';
@@ -14,11 +13,18 @@ import { EVENT_NAME } from 'src/event-logger/event-logger.interface';
 import { EventLoggerService } from 'src/event-logger/event-logger.service';
 import { FrontChatGateway } from 'src/front-chat/front-chat.gateway';
 import { FRONT_WEBHOOK_EVENT_TYPE } from 'src/front-chat/front-chat.interface';
-import { FrontChatService } from 'src/front-chat/front-chat.service';
+import { buildThreadRef, FrontChatService } from 'src/front-chat/front-chat.service';
+import { Logger } from 'src/logger/logger';
 import { ZapierSimplybookBodyDto } from 'src/partner-access/dtos/zapier-body.dto';
 import { ServiceUserProfilesService } from 'src/service-user-profiles/service-user-profiles.service';
 import { IUser } from 'src/user/user.interface';
+import { formatAuthorName, stripHtml } from 'src/utils/html';
 import { serializeZapierSimplyBookDtoToTherapySessionEntity } from 'src/utils/serialize';
+import { FrontChannelOutboundPayload } from 'src/webhooks/dto/front-channel-webhook.dto';
+import {
+  FrontChatWebhookDto,
+  FrontWebhookMessageAuthor,
+} from 'src/webhooks/dto/front-chat-webhook.dto';
 import { ILike, MoreThan, Repository } from 'typeorm';
 import { CoursePartnerService } from '../course-partner/course-partner.service';
 import {
@@ -29,13 +35,6 @@ import {
   STORYBLOK_STORY_STATUS_ENUM,
   storyblokToken,
 } from '../utils/constants';
-import {
-  FrontChatWebhookDto,
-  FrontWebhookMessageAuthor,
-} from 'src/webhooks/dto/front-chat-webhook.dto';
-import { FrontChannelOutboundPayload } from 'src/webhooks/dto/front-channel-webhook.dto';
-import { buildThreadRef } from 'src/front-chat/front-chat.service';
-import { formatAuthorName, stripHtml } from 'src/utils/html';
 import { StoryWebhookDto } from './dto/story.dto';
 
 @Injectable()
@@ -537,8 +536,9 @@ export class WebhooksService {
     const payload = (data as FrontChannelOutboundPayload).payload ?? {};
     // Front Channel API sends `recipients`; fall back to `to` for legacy variants.
     const recipients = payload.recipients ?? payload.to ?? [];
-    const recipientEmail = recipients.find((r) => r?.role === 'to' && r?.handle)?.handle
-      ?? recipients.find((r) => r?.handle)?.handle;
+    const recipientEmail =
+      recipients.find((r) => r?.role === 'to' && r?.handle)?.handle ??
+      recipients.find((r) => r?.handle)?.handle;
     const messageBody = payload.text ?? payload.body ?? '';
     const externalId = payload.id || `front-${Date.now()}`;
     const chatUser = recipientEmail
@@ -554,9 +554,7 @@ export class WebhooksService {
         id: payload.id,
         body: messageBody,
         authorEmail: payload.author?.email,
-        authorName: formatAuthorName(
-          payload.author as FrontWebhookMessageAuthor | undefined,
-        ),
+        authorName: formatAuthorName(payload.author as FrontWebhookMessageAuthor | undefined),
         emittedAt: Date.now(),
       });
       this.logger.log(`Front Channel: forwarded agent reply to ${recipientEmail}`);

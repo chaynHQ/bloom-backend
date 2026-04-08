@@ -1,12 +1,12 @@
-import * as https from 'https';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import * as https from 'https';
 import { ChatUserEntity } from 'src/entities/chat-user.entity';
 import { UserEntity } from 'src/entities/user.entity';
 import { Logger } from 'src/logger/logger';
 import { frontChannelId, frontChatApiToken, frontContactListId } from 'src/utils/constants';
-import { isCypressTestEmail } from 'src/utils/utils';
 import { formatAuthorName, stripHtml } from 'src/utils/html';
+import { isCypressTestEmail } from 'src/utils/utils';
 import { ILike, Repository } from 'typeorm';
 import { FrontChatContactCustomFields, FrontChatContactProfile } from './front-chat.interface';
 
@@ -119,9 +119,7 @@ export class FrontChatService {
 
     // Never overwrite an existing conversation ID with a new one
     const { frontConversationId, ...rest } = partial;
-    const updates = chatUser.frontConversationId
-      ? rest
-      : { frontConversationId, ...rest };
+    const updates = chatUser.frontConversationId ? rest : { frontConversationId, ...rest };
 
     return this.chatUserRepository.save({ ...chatUser, ...updates });
   }
@@ -144,9 +142,7 @@ export class FrontChatService {
     }
 
     const { frontConversationId, ...rest } = partial;
-    const updates = chatUser.frontConversationId
-      ? rest
-      : { frontConversationId, ...rest };
+    const updates = chatUser.frontConversationId ? rest : { frontConversationId, ...rest };
 
     return this.chatUserRepository.save({ ...chatUser, ...updates });
   }
@@ -166,9 +162,7 @@ export class FrontChatService {
       .innerJoinAndSelect('cu.user', 'u')
       .where('cu.lastMessageReceivedAt IS NOT NULL')
       .andWhere('cu.lastMessageReceivedAt < :cutoff', { cutoff })
-      .andWhere(
-        '(cu.lastMessageReadAt IS NULL OR cu.lastMessageReadAt < cu.lastMessageReceivedAt)',
-      )
+      .andWhere('(cu.lastMessageReadAt IS NULL OR cu.lastMessageReadAt < cu.lastMessageReceivedAt)')
       .andWhere(
         '(cu.lastUnreadNotifiedAt IS NULL OR cu.lastUnreadNotifiedAt < cu.lastMessageReceivedAt)',
       )
@@ -220,7 +214,7 @@ export class FrontChatService {
       throw new Error(`Front incoming_messages failed (${response.status}): ${errorBody}`);
     }
 
-    const data = await response.json() as { message_uid?: string };
+    const data = (await response.json()) as { message_uid?: string };
 
     const now = new Date();
     this.getOrCreateChatUser(user.id)
@@ -265,7 +259,7 @@ export class FrontChatService {
       throw new Error(`Front attachment upload failed (${response.status}): ${errorBody}`);
     }
 
-    const data = await response.json() as { message_uid?: string };
+    const data = (await response.json()) as { message_uid?: string };
 
     const now = new Date();
     this.getOrCreateChatUser(user.id)
@@ -322,10 +316,7 @@ export class FrontChatService {
     while (nextPath) {
       let page: FrontApiPaginated<FrontApiMessage>;
       try {
-        page = (await this.frontApiRequest(
-          'GET',
-          nextPath,
-        )) as FrontApiPaginated<FrontApiMessage>;
+        page = (await this.frontApiRequest('GET', nextPath)) as FrontApiPaginated<FrontApiMessage>;
       } catch (error) {
         if (this.isContactNotFoundError(error)) return allMessages;
         throw new Error(
@@ -352,7 +343,7 @@ export class FrontChatService {
           text: imageAttachment
             ? (imageAttachment.filename ?? 'image')
             : audioAttachment
-              ? (text || 'Voice note')
+              ? text || 'Voice note'
               : text,
           authorName: formatAuthorName(m.author ?? undefined),
           createdAt: (m.created_at ?? Date.now() / 1000) * 1000,
@@ -541,23 +532,27 @@ export class FrontChatService {
     contentType?: string;
   }> {
     return new Promise((resolve, reject) => {
-      const req = https.get(url, { headers: { Authorization: `Bearer ${frontChatApiToken}` } }, (res) => {
-        const statusCode = res.statusCode ?? 0;
-        if (statusCode >= 300 && statusCode < 400) {
-          res.resume();
-          return resolve({ statusCode, location: res.headers.location as string | undefined });
-        }
-        const chunks: Buffer[] = [];
-        res.on('data', (chunk: Buffer) => chunks.push(chunk));
-        res.on('end', () =>
-          resolve({
-            statusCode,
-            buffer: Buffer.concat(chunks),
-            contentType: res.headers['content-type'] as string | undefined,
-          }),
-        );
-        res.on('error', reject);
-      });
+      const req = https.get(
+        url,
+        { headers: { Authorization: `Bearer ${frontChatApiToken}` } },
+        (res) => {
+          const statusCode = res.statusCode ?? 0;
+          if (statusCode >= 300 && statusCode < 400) {
+            res.resume();
+            return resolve({ statusCode, location: res.headers.location as string | undefined });
+          }
+          const chunks: Buffer[] = [];
+          res.on('data', (chunk: Buffer) => chunks.push(chunk));
+          res.on('end', () =>
+            resolve({
+              statusCode,
+              buffer: Buffer.concat(chunks),
+              contentType: res.headers['content-type'] as string | undefined,
+            }),
+          );
+          res.on('error', reject);
+        },
+      );
       req.on('error', reject);
     });
   }
@@ -570,7 +565,10 @@ export class FrontChatService {
     const initial = await this.frontAttachmentRequest(url);
 
     if (initial.statusCode >= 200 && initial.statusCode < 300 && initial.buffer) {
-      return { buffer: initial.buffer, contentType: initial.contentType ?? 'application/octet-stream' };
+      return {
+        buffer: initial.buffer,
+        contentType: initial.contentType ?? 'application/octet-stream',
+      };
     }
 
     if (initial.statusCode >= 300 && initial.statusCode < 400 && initial.location) {
@@ -619,9 +617,11 @@ export class FrontChatService {
     try {
       resolvedId =
         contactId ??
-        ((await this.frontApiRequest('GET', `/contacts/${this.getContactAlias(email)}`)) as {
-          id: string;
-        }).id;
+        (
+          (await this.frontApiRequest('GET', `/contacts/${this.getContactAlias(email)}`)) as {
+            id: string;
+          }
+        ).id;
       await this.frontApiRequest('POST', `/contact_lists/${frontContactListId}/contacts`, {
         contact_ids: [resolvedId],
       });

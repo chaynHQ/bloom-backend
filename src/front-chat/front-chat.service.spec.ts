@@ -1,5 +1,5 @@
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
 import { ChatUserEntity } from 'src/entities/chat-user.entity';
 import { UserEntity } from 'src/entities/user.entity';
 import { FrontChatService } from './front-chat.service';
@@ -51,7 +51,10 @@ describe('FrontChatService', () => {
     // Default: no existing chatUser
     mockChatUserRepository.findOneBy.mockResolvedValue(null);
     mockChatUserRepository.create.mockImplementation((data) => ({ ...data }));
-    mockChatUserRepository.save.mockImplementation(async (data) => ({ ...buildChatUser(), ...data }));
+    mockChatUserRepository.save.mockImplementation(async (data) => ({
+      ...buildChatUser(),
+      ...data,
+    }));
     mockChatUserRepository.update.mockResolvedValue({ affected: 1 });
     mockUserRepository.findOneBy.mockResolvedValue(null);
 
@@ -352,9 +355,9 @@ describe('FrontChatService', () => {
         })
         .mockResolvedValueOnce({ ok: false, status: 500, text: async () => 'oops' });
 
-      await expect(
-        service.createContact({ email: 'user@example.com' }),
-      ).resolves.toEqual({ id: 'cnt_123' });
+      await expect(service.createContact({ email: 'user@example.com' })).resolves.toEqual({
+        id: 'cnt_123',
+      });
     });
 
     it('should skip creation for Cypress test emails', async () => {
@@ -501,7 +504,9 @@ describe('FrontChatService', () => {
     });
 
     it('returns empty array when ChatUser exists but frontConversationId is null', async () => {
-      mockChatUserRepository.findOneBy.mockResolvedValueOnce(buildChatUser({ frontConversationId: null }));
+      mockChatUserRepository.findOneBy.mockResolvedValueOnce(
+        buildChatUser({ frontConversationId: null }),
+      );
       const result = await service.getConversationHistory(user);
       expect(mockFetch).not.toHaveBeenCalled();
       expect(result).toEqual([]);
@@ -542,7 +547,13 @@ describe('FrontChatService', () => {
         status: 200,
         json: async () => ({
           _results: [
-            { id: 'msg_2', is_inbound: false, text: 'Hi there', created_at: now, author: { first_name: 'Agent', last_name: 'One' } },
+            {
+              id: 'msg_2',
+              is_inbound: false,
+              text: 'Hi there',
+              created_at: now,
+              author: { first_name: 'Agent', last_name: 'One' },
+            },
             { id: 'msg_1', is_inbound: true, text: 'Hello', created_at: now - 10 },
           ],
           _pagination: {},
@@ -553,7 +564,12 @@ describe('FrontChatService', () => {
 
       expect(messages).toHaveLength(2);
       expect(messages[0]).toMatchObject({ id: 'msg_1', direction: 'user', text: 'Hello' });
-      expect(messages[1]).toMatchObject({ id: 'msg_2', direction: 'agent', text: 'Hi there', authorName: 'Agent One' });
+      expect(messages[1]).toMatchObject({
+        id: 'msg_2',
+        direction: 'agent',
+        text: 'Hi there',
+        authorName: 'Agent One',
+      });
     });
 
     it('paginates through all messages when _pagination.next is set', async () => {
@@ -567,7 +583,9 @@ describe('FrontChatService', () => {
           status: 200,
           json: async () => ({
             _results: [{ id: 'msg_1', is_inbound: true, text: 'First', created_at: now - 20 }],
-            _pagination: { next: 'https://api2.frontapp.com/conversations/cnv_abc/messages?limit=100&after=cursor1' },
+            _pagination: {
+              next: 'https://api2.frontapp.com/conversations/cnv_abc/messages?limit=100&after=cursor1',
+            },
           }),
         })
         .mockResolvedValueOnce({
@@ -612,7 +630,9 @@ describe('FrontChatService', () => {
               body: 'Attachment',
               text: 'Attachment',
               created_at: now,
-              attachments: [{ url: attachmentUrl, filename: 'photo.jpg', content_type: 'image/jpeg' }],
+              attachments: [
+                { url: attachmentUrl, filename: 'photo.jpg', content_type: 'image/jpeg' },
+              ],
             },
           ],
           _pagination: {},
@@ -639,9 +659,7 @@ describe('FrontChatService', () => {
         ok: true,
         status: 200,
         json: async () => ({
-          _results: [
-            { id: 'msg_1', is_inbound: true, body: '', text: '', created_at: now },
-          ],
+          _results: [{ id: 'msg_1', is_inbound: true, body: '', text: '', created_at: now }],
           _pagination: {},
         }),
       });
@@ -695,7 +713,9 @@ describe('FrontChatService', () => {
         statusCode: 403,
       });
 
-      await expect(service.fetchAttachment(url)).rejects.toThrow('Front attachment fetch failed (403)');
+      await expect(service.fetchAttachment(url)).rejects.toThrow(
+        'Front attachment fetch failed (403)',
+      );
     });
 
     it('throws when CDN returns non-ok status', async () => {
@@ -737,7 +757,9 @@ describe('FrontChatService', () => {
               body: 'Voice note',
               text: 'Voice note',
               created_at: now,
-              attachments: [{ url: audioUrl, filename: 'voice-note.webm', content_type: 'audio/webm' }],
+              attachments: [
+                { url: audioUrl, filename: 'voice-note.webm', content_type: 'audio/webm' },
+              ],
             },
           ],
           _pagination: {},
@@ -857,10 +879,7 @@ describe('FrontChatService', () => {
     });
 
     it('skips for Cypress test emails', async () => {
-      await service.sendChannelAttachment(
-        { id: 'u', email: 'cypresstestemail+1@chayn.co' },
-        file,
-      );
+      await service.sendChannelAttachment({ id: 'u', email: 'cypresstestemail+1@chayn.co' }, file);
       expect(mockFetch).not.toHaveBeenCalled();
     });
 

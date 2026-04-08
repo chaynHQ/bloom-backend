@@ -4,7 +4,6 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import apiCall from 'src/api/apiCalls';
 import { SlackMessageClient } from 'src/api/slack/slack-api';
 import { CoursePartnerService } from 'src/course-partner/course-partner.service';
-import { FrontChatService } from 'src/front-chat/front-chat.service';
 import { CoursePartnerEntity } from 'src/entities/course-partner.entity';
 import { CourseEntity } from 'src/entities/course.entity';
 import { EventLogEntity } from 'src/entities/event-log.entity';
@@ -15,7 +14,10 @@ import { ResourceEntity } from 'src/entities/resource.entity';
 import { SessionEntity } from 'src/entities/session.entity';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
 import { UserEntity } from 'src/entities/user.entity';
+import { EVENT_NAME } from 'src/event-logger/event-logger.interface';
 import { EventLoggerService } from 'src/event-logger/event-logger.service';
+import { FrontChatGateway } from 'src/front-chat/front-chat.gateway';
+import { FrontChatService } from 'src/front-chat/front-chat.service';
 import { PartnerService } from 'src/partner/partner.service';
 import { ServiceUserProfilesService } from 'src/service-user-profiles/service-user-profiles.service';
 import {
@@ -51,8 +53,6 @@ import {
   mockUserRepositoryMethods,
 } from 'test/utils/mockedServices';
 import { ILike, Repository } from 'typeorm';
-import { EVENT_NAME } from 'src/event-logger/event-logger.interface';
-import { FrontChatGateway } from 'src/front-chat/front-chat.gateway';
 import { WebhooksService } from './webhooks.service';
 
 jest.mock('src/api/apiCalls');

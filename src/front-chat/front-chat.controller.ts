@@ -14,9 +14,9 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import { Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiTags } from '@nestjs/swagger';
+import { Response } from 'express';
 import { memoryStorage } from 'multer';
 import { FirebaseAuthGuard } from 'src/firebase/firebase-auth.guard';
 import { ServiceUserProfilesService } from 'src/service-user-profiles/service-user-profiles.service';
@@ -68,22 +68,22 @@ export class FrontChatController {
       },
     }),
   )
-  async uploadAttachment(
-    @Request() req,
-    @UploadedFile() file: Express.Multer.File,
-  ): Promise<void> {
+  async uploadAttachment(@Request() req, @UploadedFile() file: Express.Multer.File): Promise<void> {
     if (!file) throw new BadRequestException('No file provided');
     await this.serviceUserProfilesService.ensureFrontContact(req.userEntity);
     await this.frontChatService.sendChannelAttachment(req.userEntity, file);
 
     // Fire-and-forget: sync updated chat activity timestamps to external services.
-    this.frontChatService.getChatUser(req.userEntity.id).then((chatUser) => {
-      if (chatUser) {
-        return this.serviceUserProfilesService
-          .updateServiceUserProfilesChatActivity(chatUser, req.userEntity.email)
-          .catch(() => {});
-      }
-    }).catch(() => {});
+    this.frontChatService
+      .getChatUser(req.userEntity.id)
+      .then((chatUser) => {
+        if (chatUser) {
+          return this.serviceUserProfilesService
+            .updateServiceUserProfilesChatActivity(chatUser, req.userEntity.email)
+            .catch(() => {});
+        }
+      })
+      .catch(() => {});
   }
 
   @Get('attachment-proxy')
