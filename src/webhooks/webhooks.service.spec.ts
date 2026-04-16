@@ -4,7 +4,7 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import apiCall from 'src/api/apiCalls';
 import { SlackMessageClient } from 'src/api/slack/slack-api';
 import { CoursePartnerService } from 'src/course-partner/course-partner.service';
-import { CrispService } from 'src/crisp/crisp.service';
+import { TrengoService } from 'src/trengo/trengo.service';
 import { CoursePartnerEntity } from 'src/entities/course-partner.entity';
 import { CourseEntity } from 'src/entities/course.entity';
 import { EventLogEntity } from 'src/entities/event-log.entity';
@@ -100,7 +100,7 @@ describe('WebhooksService', () => {
     mockPartnerAdminRepositoryMethods,
   );
   const mockedServiceUserProfilesService = createMock<ServiceUserProfilesService>();
-  const mockCrispService = createMock<CrispService>();
+  const mockTrengoService = createMock<TrengoService>();
   const mockEventLoggerService = createMock<EventLoggerService>();
   const mockEventLogRepository = createMock<Repository<EventLogEntity>>(
     mockEventLoggerRepositoryMethods,
@@ -167,7 +167,7 @@ describe('WebhooksService', () => {
           provide: getRepositoryToken(EventLogEntity),
           useValue: mockEventLogRepository,
         },
-        { provide: CrispService, useValue: mockCrispService },
+        { provide: TrengoService, useValue: mockTrengoService },
         { provide: EventLoggerService, useValue: mockEventLoggerService },
       ],
     }).compile();

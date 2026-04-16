@@ -4,7 +4,7 @@ import {
   deleteCypressMailchimpProfiles,
   deleteMailchimpProfile,
 } from 'src/api/mailchimp/mailchimp-api';
-import { CrispService } from 'src/crisp/crisp.service';
+import { TrengoService } from 'src/trengo/trengo.service';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { PartnerEntity } from 'src/entities/partner.entity';
 import { UserEntity } from 'src/entities/user.entity';
@@ -42,7 +42,7 @@ export class UserService {
     private readonly therapySessionService: TherapySessionService,
     private readonly partnerAccessService: PartnerAccessService,
     private readonly serviceUserProfilesService: ServiceUserProfilesService,
-    private readonly crispService: CrispService,
+    private readonly trengoService: TrengoService,
   ) {}
 
   public async createUser(createUserDto: CreateUserDto): Promise<GetUserDto> {
@@ -244,13 +244,13 @@ export class UserService {
     ) {
       // Do nothing, prevent unnecessay updates to service profiles when last active date is same date
     } else {
-      const isCrispBaseUpdateRequired =
+      const isContactBaseUpdateRequired =
         isEmailUpdateRequired ||
         user.signUpLanguage !== updateUserDto.signUpLanguage ||
         user.name !== updateUserDto.name;
       this.serviceUserProfilesService.updateServiceUserProfilesUser(
         newUserData,
-        isCrispBaseUpdateRequired,
+        isContactBaseUpdateRequired,
         isEmailUpdateRequired,
         user.email,
       );
@@ -295,10 +295,10 @@ export class UserService {
       await Promise.all(
         batch.map(async (user) => {
           try {
-            await this.crispService.deleteCrispProfile(user.email);
+            await this.trengoService.deleteTrengoContact(user.email);
           } catch (error) {
             this.logger.warn(
-              `deleteCypressTestUsers - unable to delete crisp profile for user ${user.id}: ${error?.message || 'unknown error'}`,
+              `deleteCypressTestUsers - unable to delete Trengo contact for user ${user.id}: ${error?.message || 'unknown error'}`,
             );
           }
           try {
@@ -350,17 +350,17 @@ export class UserService {
     }
 
     try {
-      // Clean remaining user accounts in firebase and crisp that do not have a user record in the db
+      // Clean remaining user accounts in firebase and Trengo that do not have a user record in the db
       // These rogue accounts may be left over from incomplete signups or errors
       if (clean) {
         // Delete all remaining cypress firebase users (e.g. from failed user creations)
         await this.authService.deleteCypressFirebaseUsers();
 
-        // Delete all remaining crisp accounts
+        // Delete all remaining mailchimp test profiles
         await deleteCypressMailchimpProfiles();
 
-        // Delete all remaining crisp accounts
-        await this.crispService.deleteCypressCrispProfiles();
+        // Delete all remaining Trengo test contacts
+        await this.trengoService.deleteCypressTrengoContacts();
       }
     } catch (error) {
       // If this fails we don't want to break cypress tests but we want to be alerted

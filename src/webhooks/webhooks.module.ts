@@ -2,7 +2,8 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { SlackMessageClient } from 'src/api/slack/slack-api';
 import { CoursePartnerService } from 'src/course-partner/course-partner.service';
-import { CrispService } from 'src/crisp/crisp.service';
+import { TrengoWebhookGuard } from 'src/trengo/trengo-webhook.guard';
+import { TrengoService } from 'src/trengo/trengo.service';
 import { CoursePartnerEntity } from 'src/entities/course-partner.entity';
 import { CourseEntity } from 'src/entities/course.entity';
 import { EventLogEntity } from 'src/entities/event-log.entity';
@@ -41,7 +42,8 @@ import { WebhooksService } from './webhooks.service';
     PartnerService,
     ServiceUserProfilesService,
     SlackMessageClient,
-    CrispService,
+    TrengoService,
+    TrengoWebhookGuard,
     EventLoggerService,
     ResourceService,
   ],

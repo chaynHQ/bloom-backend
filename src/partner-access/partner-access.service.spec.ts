@@ -4,7 +4,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { sub } from 'date-fns';
 import * as mailchimpApi from 'src/api/mailchimp/mailchimp-api';
-import { CrispService } from 'src/crisp/crisp.service';
+import { TrengoService } from 'src/trengo/trengo.service';
 import { EventLogEntity } from 'src/entities/event-log.entity';
 import { PartnerEntity } from 'src/entities/partner.entity';
 import { EventLoggerService } from 'src/event-logger/event-logger.service';
@@ -52,7 +52,7 @@ jest.mock('src/api/mailchimp/mailchimp-api', () => ({
   createMailchimpProfile: jest.fn(),
   updateMailchimpProfile: jest.fn(),
 }));
-const mockCrispServiceMethods = {};
+const mockTrengoServiceMethods = {};
 
 describe('PartnerAccessService', () => {
   let service: PartnerAccessService;
@@ -60,7 +60,7 @@ describe('PartnerAccessService', () => {
   let mockPartnerRepository: DeepMocked<Repository<PartnerEntity>>;
   let mockPartnerAccessRepository: DeepMocked<Repository<PartnerAccessEntity>>;
   let mockServiceUserProfilesService: DeepMocked<ServiceUserProfilesService>;
-  let mockCrispService: DeepMocked<CrispService>;
+  let mockTrengoService: DeepMocked<TrengoService>;
   let mockEventLoggerService: DeepMocked<EventLoggerService>;
   let mockEventLogRepository: DeepMocked<Repository<EventLogEntity>>;
 
@@ -72,7 +72,7 @@ describe('PartnerAccessService', () => {
       mockPartnerAccessRepositoryMethods,
     );
     mockServiceUserProfilesService = createMock<ServiceUserProfilesService>();
-    mockCrispService = createMock<CrispService>(mockCrispServiceMethods);
+    mockTrengoService = createMock<TrengoService>(mockTrengoServiceMethods);
     mockEventLoggerService = createMock<EventLoggerService>();
     mockEventLogRepository = createMock<Repository<EventLogEntity>>(mockEventLogRepository);
 
@@ -92,7 +92,7 @@ describe('PartnerAccessService', () => {
           useValue: mockEventLogRepository,
         },
         { provide: ServiceUserProfilesService, useValue: mockServiceUserProfilesService },
-        { provide: CrispService, useValue: mockCrispService },
+        { provide: TrengoService, useValue: mockTrengoService },
         { provide: EventLoggerService, useValue: mockEventLoggerService },
       ],
     }).compile();
@@ -175,11 +175,11 @@ describe('PartnerAccessService', () => {
       ).toHaveBeenCalledWith([mockPartnerAccessEntity], mockUserEntity.email);
     });
 
-    it('should assign partner access even if crisp profile api fails', async () => {
+    it('should assign partner access even if Trengo contact api fails', async () => {
       // Mocks that the accesscode already exists
       jest.spyOn(repo, 'findOne').mockResolvedValueOnce(mockPartnerAccessEntity);
 
-      jest.spyOn(mockCrispService, 'updateCrispPeopleData').mockImplementationOnce(async () => {
+      jest.spyOn(mockTrengoService, 'updateTrengoContactCustomFields').mockImplementationOnce(async () => {
         throw new Error('Test throw');
       });
 

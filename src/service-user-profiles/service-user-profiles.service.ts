@@ -11,7 +11,7 @@ import {
   ListMemberPartial,
   MAILCHIMP_MERGE_FIELD_TYPES,
 } from 'src/api/mailchimp/mailchimp-api.interfaces';
-import { CrispService } from 'src/crisp/crisp.service';
+import { TrengoService } from 'src/trengo/trengo.service';
 import { CourseUserEntity } from 'src/entities/course-user.entity';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { PartnerEntity } from 'src/entities/partner.entity';
@@ -26,7 +26,7 @@ import {
 } from '../utils/constants';
 import { getAcronym, isCypressTestEmail } from '../utils/utils';
 
-// Functionality for syncing user profiles for Crisp and Mailchimp communications services.
+// Functionality for syncing user profiles for Trengo and Mailchimp communications services.
 // User data must be serialized to handle service-specific data structure and different key names
 // due to mailchimp field name restrictions allowing only max 10 uppercase characters
 
@@ -38,7 +38,7 @@ const logger = new Logger('ServiceUserProfiles');
 export class ServiceUserProfilesService {
   constructor(
     @InjectRepository(UserEntity) private userRepository: Repository<UserEntity>,
-    private crispService: CrispService,
+    private trengoService: TrengoService,
   ) {}
 
   async createServiceUserProfiles(
@@ -60,23 +60,24 @@ export class ServiceUserProfilesService {
     const userSignedUpAt = user.createdAt?.toISOString();
 
     try {
-      await this.crispService.createCrispProfile({
+      await this.trengoService.createTrengoContact({
         email: email,
-        person: { nickname: user.name, locales: [user.signUpLanguage || LANGUAGE_DEFAULT] },
-        segments: this.serializeCrispPartnerSegments(partner ? [partner] : []),
+        name: user.name,
+        language: user.signUpLanguage || LANGUAGE_DEFAULT,
       });
 
-      await this.crispService.updateCrispPeopleData(
+      await this.trengoService.updateTrengoContactCustomFields(
         {
           signed_up_at: userSignedUpAt,
-          ...userData.crispSchema,
-          ...partnerData.crispSchema,
+          language: user.signUpLanguage || LANGUAGE_DEFAULT,
+          ...userData.trengoSchema,
+          ...partnerData.trengoSchema,
         },
         email,
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : 'unknown error';
-      logger.error(`Create Crisp user profile error: ${message}`);
+      logger.error(`Create Trengo user profile error: ${message}`);
     }
 
     try {
@@ -102,7 +103,7 @@ export class ServiceUserProfilesService {
 
   async updateServiceUserProfilesUser(
     user: UserEntity,
-    isCrispBaseUpdateRequired: boolean,
+    isContactBaseUpdateRequired: boolean,
     isEmailUpdateRequired: boolean,
     existingEmail: string,
   ) {
@@ -116,24 +117,27 @@ export class ServiceUserProfilesService {
     const userData = this.serializeUserData(user);
 
     try {
-      if (isCrispBaseUpdateRequired) {
-        // Extra call required to update crisp "base" profile when name or sign up language is changed
-        await this.crispService.updateCrispProfileBase(
+      if (isContactBaseUpdateRequired) {
+        // Extra call required to update contact base when name or sign up language is changed
+        await this.trengoService.updateTrengoContactBase(
           {
             ...(isEmailUpdateRequired && { email: email }),
-            person: {
-              nickname: user.name,
-              locales: [user.signUpLanguage || LANGUAGE_DEFAULT],
-            },
+            name: user.name,
           },
           existingEmail,
         );
       }
 
-      await this.crispService.updateCrispPeopleData(userData.crispSchema, email);
+      await this.trengoService.updateTrengoContactCustomFields(
+        {
+          ...userData.trengoSchema,
+          language: user.signUpLanguage || LANGUAGE_DEFAULT,
+        },
+        email,
+      );
     } catch (error) {
       const message = error instanceof Error ? error.message : 'unknown error';
-      logger.error(`Update Crisp user profile error - ${message}`);
+      logger.error(`Update Trengo user profile error - ${message}`);
     }
 
     try {
@@ -164,18 +168,10 @@ export class ServiceUserProfilesService {
     const partnerAccessData = this.serializePartnerAccessData(partnerAccesses);
 
     try {
-      const partners = partnerAccesses.map((pa) => pa.partner);
-      await this.crispService.updateCrispProfileBase(
-        {
-          segments: this.serializeCrispPartnerSegments(partners),
-        },
-        email,
-      );
-
-      await this.crispService.updateCrispPeopleData(partnerAccessData.crispSchema, email);
+      await this.trengoService.updateTrengoContactCustomFields(partnerAccessData.trengoSchema, email);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'unknown error';
-      logger.error(`Update Crisp partner access error - ${message}`);
+      logger.error(`Update Trengo partner access error - ${message}`);
     }
 
     try {
@@ -195,10 +191,10 @@ export class ServiceUserProfilesService {
     const therapyData = this.serializeTherapyData(partnerAccesses);
 
     try {
-      await this.crispService.updateCrispPeopleData(therapyData.crispSchema, email);
+      await this.trengoService.updateTrengoContactCustomFields(therapyData.trengoSchema, email);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'unknown error';
-      logger.error(`Update Crisp therapy error - ${message}`);
+      logger.error(`Update Trengo therapy error - ${message}`);
     }
 
     try {
@@ -218,10 +214,10 @@ export class ServiceUserProfilesService {
     const courseData = this.serializeCourseData(courseUser);
 
     try {
-      await this.crispService.updateCrispPeopleData(courseData.crispSchema, email);
+      await this.trengoService.updateTrengoContactCustomFields(courseData.trengoSchema, email);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'unknown error';
-      logger.error(`Update Crisp course error - ${message}`);
+      logger.error(`Update Trengo course error - ${message}`);
     }
 
     try {
@@ -360,11 +356,6 @@ export class ServiceUserProfilesService {
     return partnersString;
   }
 
-  serializeCrispPartnerSegments(partners: PartnerEntity[]) {
-    if (!partners.length) return ['public'];
-    return partners.map((p) => p.name.toLowerCase());
-  }
-
   serializeUserData(user: UserEntity) {
     const {
       name,
@@ -376,12 +367,12 @@ export class ServiceUserProfilesService {
     } = user;
     const lastActiveAtString = lastActiveAt?.toISOString() || '';
 
-    const crispSchema = {
+    const trengoSchema = {
       marketing_permission: contactPermission,
       service_emails_permission: serviceEmailsPermission,
       last_active_at: lastActiveAtString,
       email_reminders_frequency: emailRemindersFrequency,
-      // Name and language handled on base level profile for crisp
+      // Name and language handled on base level contact for Trengo
     };
 
     const mailchimpSchema = {
@@ -401,7 +392,7 @@ export class ServiceUserProfilesService {
       },
     } as ListMemberPartial;
 
-    return { crispSchema, mailchimpSchema };
+    return { trengoSchema, mailchimpSchema };
   }
 
   serializePartnerAccessData(partnerAccesses: PartnerAccessEntity[]) {
@@ -427,7 +418,7 @@ export class ServiceUserProfilesService {
             .reduce((a, b) => a + b, 0),
         };
 
-    const crispSchema = {
+    const trengoSchema = {
       partners: data.partners,
       feature_live_chat: data.featureLiveChat,
       feature_therapy: data.featureTherapy,
@@ -445,7 +436,7 @@ export class ServiceUserProfilesService {
       },
     } as ListMemberPartial;
 
-    return { crispSchema, mailchimpSchema };
+    return { trengoSchema, mailchimpSchema };
   }
 
   serializeTherapyData(partnerAccesses: PartnerAccessEntity[]) {
@@ -480,7 +471,7 @@ export class ServiceUserProfilesService {
       ),
     };
 
-    const crispSchema = {
+    const trengoSchema = {
       therapy_sessions_remaining: data.therapySessionsRemaining,
       therapy_sessions_redeemed: data.therapySessionsRedeemed,
       therapy_session_first_at: firstTherapySessionAt,
@@ -498,7 +489,7 @@ export class ServiceUserProfilesService {
       },
     };
 
-    return { crispSchema, mailchimpSchema };
+    return { trengoSchema, mailchimpSchema };
   }
 
   serializeCourseData(courseUser: CourseUserEntity) {
@@ -515,7 +506,7 @@ export class ServiceUserProfilesService {
         .join('; '),
     };
 
-    const crispSchema = {
+    const trengoSchema = {
       [`course_${courseAcronymLowercase}`]: data.course,
       [`course_${courseAcronymLowercase}_sessions`]: data.sessions,
     };
@@ -527,6 +518,6 @@ export class ServiceUserProfilesService {
       },
     } as ListMemberPartial;
 
-    return { crispSchema, mailchimpSchema };
+    return { trengoSchema, mailchimpSchema };
   }
 }

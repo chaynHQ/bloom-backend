@@ -141,9 +141,12 @@ export const firebaseMeasurementId = getEnv(
 
 export const zapierToken = getEnv(process.env.ZAPIER_TOKEN, 'ZAPIER_TOKEN');
 
-export const crispPluginId = getEnv(process.env.CRISP_PLUGIN_ID, 'CRISP_PLUGIN_ID');
-export const crispPluginKey = getEnv(process.env.CRISP_PLUGIN_KEY, 'CRISP_PLUGIN_KEY');
-export const crispWebsiteId = getEnv(process.env.CRISP_WEBSITE_ID, 'CRISP_WEBSITE_ID');
+export const trengoApiKey = getEnv(process.env.TRENGO_API_KEY, 'TRENGO_API_KEY');
+export const trengoChannelId = getEnv(process.env.TRENGO_CHANNEL_ID, 'TRENGO_CHANNEL_ID');
+export const trengoWebhookSigningSecret = getEnv(
+  process.env.TRENGO_WEBHOOK_SIGNING_SECRET,
+  'TRENGO_WEBHOOK_SIGNING_SECRET',
+);
 
 export const slackWebhookUrl = getEnv(process.env.SLACK_WEBHOOK_URL, 'SLACK_WEBHOOK_URL');
 export const slackBloomUsersWebhookUrl = getEnv(

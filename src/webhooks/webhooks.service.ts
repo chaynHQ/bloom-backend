@@ -10,8 +10,12 @@ import { ResourceEntity } from 'src/entities/resource.entity';
 import { SessionEntity } from 'src/entities/session.entity';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
 import { UserEntity } from 'src/entities/user.entity';
+import { EVENT_NAME } from 'src/event-logger/event-logger.interface';
 import { ZapierSimplybookBodyDto } from 'src/partner-access/dtos/zapier-body.dto';
 import { ServiceUserProfilesService } from 'src/service-user-profiles/service-user-profiles.service';
+import { TrengoWebhookDto } from 'src/trengo/dtos/trengo-webhook.dto';
+import { TRENGO_WEBHOOK_EVENT } from 'src/trengo/trengo.interface';
+import { TrengoService } from 'src/trengo/trengo.service';
 import { IUser } from 'src/user/user.interface';
 import { serializeZapierSimplyBookDtoToTherapySessionEntity } from 'src/utils/serialize';
 import { ILike, MoreThan, Repository } from 'typeorm';
@@ -42,7 +46,24 @@ export class WebhooksService {
     private therapySessionRepository: Repository<TherapySessionEntity>,
     private serviceUserProfilesService: ServiceUserProfilesService,
     private slackMessageClient: SlackMessageClient,
+    private trengoService: TrengoService,
   ) {}
+
+  async handleTrengoWebhook(payload: TrengoWebhookDto, eventType: string) {
+    switch (eventType) {
+      case TRENGO_WEBHOOK_EVENT.INBOUND:
+        await this.trengoService.handleTrengoWebhookEvent(payload, EVENT_NAME.CHAT_MESSAGE_SENT);
+        break;
+      case TRENGO_WEBHOOK_EVENT.OUTBOUND:
+        await this.trengoService.handleTrengoWebhookEvent(
+          payload,
+          EVENT_NAME.CHAT_MESSAGE_RECEIVED,
+        );
+        break;
+      default:
+        this.logger.log(`Ignoring Trengo webhook event type: ${eventType}`);
+    }
+  }
 
   async updatePartnerAccessTherapy(
     simplyBookDto: ZapierSimplybookBodyDto,

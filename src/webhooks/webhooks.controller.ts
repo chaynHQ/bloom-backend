@@ -6,13 +6,18 @@ import {
   HttpStatus,
   Logger,
   Post,
+  Req,
   Request,
   UseGuards,
 } from '@nestjs/common';
+import { RawBodyRequest } from '@nestjs/common';
 import { ApiBody, ApiTags } from '@nestjs/swagger';
+import { Request as ExpressRequest } from 'express';
 import { createHmac, timingSafeEqual } from 'crypto';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
 import { storyblokWebhookSecret } from 'src/utils/constants';
+import { TrengoWebhookDto } from 'src/trengo/dtos/trengo-webhook.dto';
+import { TrengoWebhookGuard } from 'src/trengo/trengo-webhook.guard';
 import { ControllerDecorator } from 'src/utils/controller.decorator';
 import { ZapierSimplybookBodyDto } from '../partner-access/dtos/zapier-body.dto';
 import { ZapierAuthGuard } from '../partner-access/zapier-auth.guard';
@@ -56,5 +61,17 @@ export class WebhooksController {
       throw new HttpException(error, HttpStatus.UNAUTHORIZED);
     }
     return this.webhooksService.handleStoryUpdated(data);
+  }
+
+  @Post('trengo')
+  @UseGuards(TrengoWebhookGuard)
+  async handleTrengoWebhook(
+    @Req() req: RawBodyRequest<ExpressRequest>,
+    @Body() body: TrengoWebhookDto,
+  ) {
+    const eventType = req.headers['x-trengo-event'] as string;
+    await this.webhooksService.handleTrengoWebhook(body, eventType);
+    // Always return 200 to acknowledge receipt - Trengo will retry on non-2xx
+    return { status: 'ok' };
   }
 }

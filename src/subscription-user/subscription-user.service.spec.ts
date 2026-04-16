@@ -4,7 +4,7 @@ import { Logger } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { ZapierWebhookClient } from 'src/api/zapier/zapier-webhook-client';
-import { CrispService } from 'src/crisp/crisp.service';
+import { TrengoService } from 'src/trengo/trengo.service';
 import { EventLogEntity } from 'src/entities/event-log.entity';
 import { SubscriptionUserEntity } from 'src/entities/subscription-user.entity';
 import { EventLoggerService } from 'src/event-logger/event-logger.service';
@@ -23,7 +23,7 @@ describe('SubscriptionUserService', () => {
   let mockedSubscriptionUserRepository: DeepMocked<Repository<SubscriptionUserEntity>>;
   let mockSubscriptionService: DeepMocked<SubscriptionService>;
   const mockedZapierWebhookClient = createMock<ZapierWebhookClient>(mockZapierWebhookClientMethods);
-  let mockCrispService: DeepMocked<CrispService>;
+  let mockTrengoService: DeepMocked<TrengoService>;
   let mockEventLoggerService: DeepMocked<EventLoggerService>;
   let mockEventLogRepository: DeepMocked<Repository<EventLogEntity>>;
 
@@ -32,7 +32,7 @@ describe('SubscriptionUserService', () => {
       mockSubscriptionUserRepositoryMethods,
     );
     mockSubscriptionService = createMock<SubscriptionService>(mockSubscriptionService);
-    mockCrispService = createMock<CrispService>();
+    mockTrengoService = createMock<TrengoService>();
     mockEventLoggerService = createMock<EventLoggerService>();
     mockEventLogRepository = createMock<Repository<EventLogEntity>>(mockEventLogRepository);
 
@@ -55,7 +55,7 @@ describe('SubscriptionUserService', () => {
           provide: getRepositoryToken(EventLogEntity),
           useValue: mockEventLogRepository,
         },
-        { provide: CrispService, useValue: mockCrispService },
+        { provide: TrengoService, useValue: mockTrengoService },
         { provide: EventLoggerService, useValue: mockEventLoggerService },
       ],
     }).compile();

@@ -6,7 +6,7 @@ import {
   createMailchimpProfile,
   updateMailchimpProfile,
 } from 'src/api/mailchimp/mailchimp-api';
-import { CrispService } from 'src/crisp/crisp.service';
+import { TrengoService } from 'src/trengo/trengo.service';
 import { UserEntity } from 'src/entities/user.entity';
 import { ServiceUserProfilesService } from 'src/service-user-profiles/service-user-profiles.service';
 import {
@@ -25,12 +25,12 @@ import {
 } from '../utils/constants';
 
 jest.mock('src/api/mailchimp/mailchimp-api');
-const mockCrispServiceMethods = {};
+const mockTrengoServiceMethods = {};
 
 describe('Service user profiles', () => {
   let service: ServiceUserProfilesService;
   const mockedUserRepository = createMock<Repository<UserEntity>>(mockUserRepositoryMethods);
-  const mockCrispService = createMock<CrispService>(mockCrispServiceMethods);
+  const mockTrengoService = createMock<TrengoService>(mockTrengoServiceMethods);
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -42,7 +42,7 @@ describe('Service user profiles', () => {
           provide: getRepositoryToken(UserEntity),
           useValue: mockedUserRepository,
         },
-        { provide: CrispService, useValue: mockCrispService },
+        { provide: TrengoService, useValue: mockTrengoService },
       ],
     }).compile();
 
@@ -54,25 +54,26 @@ describe('Service user profiles', () => {
   });
 
   describe('createServiceUserProfiles', () => {
-    it('should create crisp and mailchimp profiles for a public user', async () => {
+    it('should create Trengo and mailchimp profiles for a public user', async () => {
       await service.createServiceUserProfiles(mockUserEntity);
 
-      expect(mockCrispService.createCrispProfile).toHaveBeenCalledWith({
+      expect(mockTrengoService.createTrengoContact).toHaveBeenCalledWith({
         email: mockUserEntity.email,
-        person: { nickname: mockUserEntity.name, locales: [mockUserEntity.signUpLanguage] },
-        segments: ['public'],
+        name: mockUserEntity.name,
+        language: mockUserEntity.signUpLanguage,
       });
 
       const createdAt = mockUserEntity.createdAt.toISOString();
       const lastActiveAt = mockUserEntity.lastActiveAt.toISOString();
 
-      expect(mockCrispService.updateCrispPeopleData).toHaveBeenCalledWith(
+      expect(mockTrengoService.updateTrengoContactCustomFields).toHaveBeenCalledWith(
         {
           marketing_permission: mockUserEntity.contactPermission,
           service_emails_permission: mockUserEntity.serviceEmailsPermission,
           email_reminders_frequency: EMAIL_REMINDERS_FREQUENCY.TWO_MONTHS,
           signed_up_at: createdAt,
           last_active_at: lastActiveAt,
+          language: mockUserEntity.signUpLanguage,
           feature_live_chat: true,
           feature_therapy: false,
           partners: '',
@@ -107,7 +108,7 @@ describe('Service user profiles', () => {
       });
     });
 
-    it('should create crisp and mailchimp profiles for a partner user', async () => {
+    it('should create Trengo and mailchimp profiles for a partner user', async () => {
       await service.createServiceUserProfiles(
         mockUserEntity,
         mockPartnerEntity,
@@ -118,13 +119,13 @@ describe('Service user profiles', () => {
       const createdAt = mockUserEntity.createdAt.toISOString();
       const lastActiveAt = mockUserEntity.lastActiveAt.toISOString();
 
-      expect(mockCrispService.createCrispProfile).toHaveBeenCalledWith({
+      expect(mockTrengoService.createTrengoContact).toHaveBeenCalledWith({
         email: mockUserEntity.email,
-        person: { nickname: mockUserEntity.name, locales: [mockUserEntity.signUpLanguage] },
-        segments: [partnerName],
+        name: mockUserEntity.name,
+        language: mockUserEntity.signUpLanguage,
       });
 
-      expect(mockCrispService.updateCrispPeopleData).toHaveBeenCalledWith(
+      expect(mockTrengoService.updateTrengoContactCustomFields).toHaveBeenCalledWith(
         {
           signed_up_at: createdAt,
           marketing_permission: mockUserEntity.contactPermission,
@@ -132,6 +133,7 @@ describe('Service user profiles', () => {
           email_reminders_frequency: EMAIL_REMINDERS_FREQUENCY.TWO_MONTHS,
           partners: partnerName,
           last_active_at: lastActiveAt,
+          language: mockUserEntity.signUpLanguage,
           feature_live_chat: mockPartnerAccessEntity.featureLiveChat,
           feature_therapy: mockPartnerAccessEntity.featureTherapy,
           therapy_sessions_remaining: mockPartnerAccessEntity.therapySessionsRemaining,
@@ -166,15 +168,15 @@ describe('Service user profiles', () => {
     });
 
     it('should not propagate external api call errors', async () => {
-      const mocked = jest.mocked(mockCrispService.createCrispProfile);
-      mocked.mockRejectedValue(new Error('Crisp API call failed'));
+      const mocked = jest.mocked(mockTrengoService.createTrengoContact);
+      mocked.mockRejectedValue(new Error('Trengo API call failed'));
       await expect(service.createServiceUserProfiles(mockUserEntity)).resolves.not.toThrow();
       mocked.mockReset();
     });
   });
 
   describe('updateServiceUserProfilesUser', () => {
-    it('should update crisp and mailchimp profile user data', async () => {
+    it('should update Trengo and mailchimp profile user data', async () => {
       await service.updateServiceUserProfilesUser(
         mockUserEntity,
         false,
@@ -184,13 +186,14 @@ describe('Service user profiles', () => {
 
       const lastActiveAt = mockUserEntity.lastActiveAt.toISOString();
 
-      expect(mockCrispService.updateCrispPeopleData).toHaveBeenCalledTimes(1);
-      expect(mockCrispService.updateCrispPeopleData).toHaveBeenCalledWith(
+      expect(mockTrengoService.updateTrengoContactCustomFields).toHaveBeenCalledTimes(1);
+      expect(mockTrengoService.updateTrengoContactCustomFields).toHaveBeenCalledWith(
         {
           marketing_permission: mockUserEntity.contactPermission,
           service_emails_permission: mockUserEntity.serviceEmailsPermission,
           email_reminders_frequency: EMAIL_REMINDERS_FREQUENCY.TWO_MONTHS,
           last_active_at: lastActiveAt,
+          language: mockUserEntity.signUpLanguage,
         },
         mockUserEntity.email,
       );
@@ -217,7 +220,7 @@ describe('Service user profiles', () => {
       );
     });
 
-    it('should update crisp and mailchimp profiles contact permissions', async () => {
+    it('should update Trengo and mailchimp profiles contact permissions', async () => {
       const mockUser: UserEntity = {
         ...mockUserEntity,
         contactPermission: false,
@@ -227,12 +230,13 @@ describe('Service user profiles', () => {
 
       await service.updateServiceUserProfilesUser(mockUser, false, false, mockUser.email);
 
-      expect(mockCrispService.updateCrispPeopleData).toHaveBeenCalledWith(
+      expect(mockTrengoService.updateTrengoContactCustomFields).toHaveBeenCalledWith(
         {
           marketing_permission: false,
           service_emails_permission: false,
           last_active_at: lastActiveAt,
           email_reminders_frequency: EMAIL_REMINDERS_FREQUENCY.TWO_MONTHS,
+          language: mockUser.signUpLanguage,
         },
         mockUser.email,
       );
@@ -258,7 +262,7 @@ describe('Service user profiles', () => {
       );
     });
 
-    it('should additionally call crisp base profile update if required', async () => {
+    it('should additionally call Trengo contact base update if required', async () => {
       await service.updateServiceUserProfilesUser(
         mockUserEntity,
         true,
@@ -266,21 +270,18 @@ describe('Service user profiles', () => {
         mockUserEntity.email,
       );
 
-      expect(mockCrispService.updateCrispPeopleData).toHaveBeenCalled();
+      expect(mockTrengoService.updateTrengoContactCustomFields).toHaveBeenCalled();
       expect(updateMailchimpProfile).toHaveBeenCalled();
 
-      expect(mockCrispService.updateCrispProfileBase).toHaveBeenCalledWith(
+      expect(mockTrengoService.updateTrengoContactBase).toHaveBeenCalledWith(
         {
-          person: {
-            nickname: mockUserEntity.name,
-            locales: [mockUserEntity.signUpLanguage],
-          },
+          name: mockUserEntity.name,
         },
         mockUserEntity.email,
       );
     });
 
-    it("should update the user's email in crisp and mailchimp", async () => {
+    it("should update the user's email in Trengo and mailchimp", async () => {
       const oldEmail = mockUserEntity.email;
       const newEmail = 'newemail@test.com';
       await service.updateServiceUserProfilesUser(
@@ -290,17 +291,18 @@ describe('Service user profiles', () => {
         oldEmail,
       );
       const serialisedMockUserData = service.serializeUserData(mockUserEntity);
-      expect(mockCrispService.updateCrispProfileBase).toHaveBeenCalledWith(
-        { email: newEmail, person: { locales: ['en'], nickname: 'name' } },
+      expect(mockTrengoService.updateTrengoContactBase).toHaveBeenCalledWith(
+        { email: newEmail, name: 'name' },
         oldEmail,
       );
-      expect(mockCrispService.updateCrispPeopleData).toHaveBeenCalledTimes(1);
-      expect(mockCrispService.updateCrispPeopleData).toHaveBeenCalledWith(
+      expect(mockTrengoService.updateTrengoContactCustomFields).toHaveBeenCalledTimes(1);
+      expect(mockTrengoService.updateTrengoContactCustomFields).toHaveBeenCalledWith(
         {
           email_reminders_frequency: EMAIL_REMINDERS_FREQUENCY.TWO_MONTHS,
           last_active_at: mockUserEntity.lastActiveAt.toISOString(),
           marketing_permission: true,
           service_emails_permission: true,
+          language: mockUserEntity.signUpLanguage,
         },
         newEmail,
       );
@@ -321,7 +323,7 @@ describe('Service user profiles', () => {
   });
 
   describe('updateServiceUserProfilesPartnerAccess', () => {
-    it('should update crisp and mailchimp profile partner access data', async () => {
+    it('should update Trengo and mailchimp profile partner access data', async () => {
       await service.updateServiceUserProfilesPartnerAccess(
         [mockPartnerAccessEntity],
         mockUserEntity.email,
@@ -329,14 +331,7 @@ describe('Service user profiles', () => {
 
       const partnerString = mockPartnerAccessEntity.partner.name.toLowerCase();
 
-      expect(mockCrispService.updateCrispProfileBase).toHaveBeenCalledWith(
-        {
-          segments: [partnerString],
-        },
-        mockUserEntity.email,
-      );
-
-      expect(mockCrispService.updateCrispPeopleData).toHaveBeenCalledWith(
+      expect(mockTrengoService.updateTrengoContactCustomFields).toHaveBeenCalledWith(
         {
           partners: partnerString,
           feature_live_chat: mockPartnerAccessEntity.featureLiveChat,
@@ -361,20 +356,13 @@ describe('Service user profiles', () => {
       );
     });
 
-    it('should update crisp and mailchimp profile multiple partner accesses data', async () => {
+    it('should update Trengo and mailchimp profile multiple partner accesses data', async () => {
       const partnerAccesses = [mockPartnerAccessEntity, mockAltPartnerAccessEntity];
       await service.updateServiceUserProfilesPartnerAccess(partnerAccesses, mockUserEntity.email);
 
       const partnerString = service.serializePartnersString(partnerAccesses);
 
-      expect(mockCrispService.updateCrispProfileBase).toHaveBeenCalledWith(
-        {
-          segments: partnerString.split('; '),
-        },
-        mockUserEntity.email,
-      );
-
-      expect(mockCrispService.updateCrispPeopleData).toHaveBeenCalledWith(
+      expect(mockTrengoService.updateTrengoContactCustomFields).toHaveBeenCalledWith(
         {
           partners: partnerString,
           feature_live_chat: true,
@@ -400,8 +388,8 @@ describe('Service user profiles', () => {
     });
 
     it('should not propagate external api call errors', async () => {
-      const mocked = jest.mocked(mockCrispService.updateCrispPeopleData);
-      mocked.mockRejectedValue(new Error('Crisp API call failed'));
+      const mocked = jest.mocked(mockTrengoService.updateTrengoContactCustomFields);
+      mocked.mockRejectedValue(new Error('Trengo API call failed'));
       await expect(
         service.updateServiceUserProfilesPartnerAccess(
           [mockPartnerAccessEntity],
@@ -413,7 +401,7 @@ describe('Service user profiles', () => {
   });
 
   describe('updateServiceUserProfilesTherapy', () => {
-    it('should update crisp and mailchimp profile for first therapy booking', async () => {
+    it('should update Trengo and mailchimp profile for first therapy booking', async () => {
       const therapySession = mockAltPartnerAccessEntity.therapySession[1];
       const partnerAccesses = [
         {
@@ -430,7 +418,7 @@ describe('Service user profiles', () => {
       const nextTherapySessionAt = therapySession.startDateTime.toISOString();
       const lastTherapySessionAt = '';
 
-      expect(mockCrispService.updateCrispPeopleData).toHaveBeenCalledWith(
+      expect(mockTrengoService.updateTrengoContactCustomFields).toHaveBeenCalledWith(
         {
           therapy_sessions_remaining: 5,
           therapy_sessions_redeemed: 1,
@@ -455,7 +443,7 @@ describe('Service user profiles', () => {
       );
     });
 
-    it('should update crisp and mailchimp profile combined therapy data for new booking', async () => {
+    it('should update Trengo and mailchimp profile combined therapy data for new booking', async () => {
       const partnerAccesses = [mockPartnerAccessEntity, mockAltPartnerAccessEntity];
 
       await service.updateServiceUserProfilesTherapy(partnerAccesses, mockUserEntity.email);
@@ -467,7 +455,7 @@ describe('Service user profiles', () => {
       const lastTherapySessionAt =
         mockAltPartnerAccessEntity.therapySession[0].startDateTime.toISOString();
 
-      expect(mockCrispService.updateCrispPeopleData).toHaveBeenCalledWith(
+      expect(mockTrengoService.updateTrengoContactCustomFields).toHaveBeenCalledWith(
         {
           therapy_sessions_remaining: 9,
           therapy_sessions_redeemed: 3,
@@ -492,7 +480,7 @@ describe('Service user profiles', () => {
       );
     });
 
-    it('should update crisp and mailchimp profile combined therapy data for updated booking', async () => {
+    it('should update Trengo and mailchimp profile combined therapy data for updated booking', async () => {
       const partnerAccesses = [mockPartnerAccessEntity, mockAltPartnerAccessEntity];
 
       await service.updateServiceUserProfilesTherapy(partnerAccesses, mockUserEntity.email);
@@ -504,7 +492,7 @@ describe('Service user profiles', () => {
       const lastTherapySessionAt =
         mockAltPartnerAccessEntity.therapySession[0].startDateTime.toISOString();
 
-      expect(mockCrispService.updateCrispPeopleData).toHaveBeenCalledWith(
+      expect(mockTrengoService.updateTrengoContactCustomFields).toHaveBeenCalledWith(
         {
           therapy_sessions_remaining: 9,
           therapy_sessions_redeemed: 3,
@@ -529,7 +517,7 @@ describe('Service user profiles', () => {
       );
     });
 
-    it('should update crisp and mailchimp profile combined therapy data for cancelled booking', async () => {
+    it('should update Trengo and mailchimp profile combined therapy data for cancelled booking', async () => {
       mockAltPartnerAccessEntity.therapySession[1].action =
         SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING;
       const partnerAccesses = [mockPartnerAccessEntity, mockAltPartnerAccessEntity];
@@ -541,7 +529,7 @@ describe('Service user profiles', () => {
       const lastTherapySessionAt =
         mockAltPartnerAccessEntity.therapySession[0].startDateTime.toISOString();
 
-      expect(mockCrispService.updateCrispPeopleData).toHaveBeenCalledWith(
+      expect(mockTrengoService.updateTrengoContactCustomFields).toHaveBeenCalledWith(
         {
           therapy_sessions_remaining: 9,
           therapy_sessions_redeemed: 3,
@@ -580,10 +568,10 @@ describe('Service user profiles', () => {
   });
 
   describe('updateServiceUserProfilesCourse', () => {
-    it('should update crisp and mailchimp profile course data', async () => {
+    it('should update Trengo and mailchimp profile course data', async () => {
       await service.updateServiceUserProfilesCourse(mockCourseUserEntity, mockUserEntity.email);
 
-      expect(mockCrispService.updateCrispPeopleData).toHaveBeenCalledWith(
+      expect(mockTrengoService.updateTrengoContactCustomFields).toHaveBeenCalledWith(
         {
           course_cn: 'Started',
           course_cn_sessions: 'WAB:C',
@@ -603,8 +591,8 @@ describe('Service user profiles', () => {
     });
 
     it('should not propagate external api call errors', async () => {
-      const mocked = jest.mocked(mockCrispService.updateCrispPeopleData);
-      mocked.mockRejectedValue(new Error('Crisp API call failed'));
+      const mocked = jest.mocked(mockTrengoService.updateTrengoContactCustomFields);
+      mocked.mockRejectedValue(new Error('Trengo API call failed'));
       await expect(
         service.updateServiceUserProfilesCourse(mockCourseUserEntity, mockUserEntity.email),
       ).resolves.not.toThrow();

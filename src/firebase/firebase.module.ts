@@ -3,7 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { SlackMessageClient } from 'src/api/slack/slack-api';
 import { ZapierWebhookClient } from 'src/api/zapier/zapier-webhook-client';
 import { CourseUserService } from 'src/course-user/course-user.service';
-import { CrispService } from 'src/crisp/crisp.service';
+import { TrengoService } from 'src/trengo/trengo.service';
 import { CourseUserEntity } from 'src/entities/course-user.entity';
 import { EventLogEntity } from 'src/entities/event-log.entity';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
@@ -49,7 +49,7 @@ import { FIREBASE, firebaseFactory } from './firebase-factory';
     TherapySessionService,
     ZapierWebhookClient,
     SlackMessageClient,
-    CrispService,
+    TrengoService,
     EventLoggerService,
   ],
   exports: [FIREBASE],

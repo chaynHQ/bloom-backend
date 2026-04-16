@@ -10,6 +10,7 @@ import {
   mockTherapySessionEntity,
 } from 'test/utils/mockData';
 import { mockWebhooksServiceMethods } from 'test/utils/mockedServices';
+import { TrengoWebhookGuard } from 'src/trengo/trengo-webhook.guard';
 import { WebhooksController } from './webhooks.controller';
 import { WebhooksService } from './webhooks.service';
 
@@ -41,7 +42,10 @@ describe('AppController', () => {
     const webhooks: TestingModule = await Test.createTestingModule({
       controllers: [WebhooksController],
       providers: [{ provide: WebhooksService, useValue: mockWebhooksService }],
-    }).compile();
+    })
+      .overrideGuard(TrengoWebhookGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
 
     webhooksController = webhooks.get<WebhooksController>(WebhooksController);
   });
