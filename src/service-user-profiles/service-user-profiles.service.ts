@@ -75,25 +75,23 @@ export class ServiceUserProfilesService {
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : 'unknown error';
-      logger.error(`Create Crisp user profile error: ${message}`);
+      logger.error(`Create Front Chat profile error: ${message}`);
     }
 
     try {
-      const mailchimpMergeFields = {
-        SIGNUPD: userSignedUpAt,
-        ...userData.mailchimpSchema.merge_fields,
-        ...partnerData.mailchimpSchema.merge_fields,
-      };
-
       await createMailchimpProfile({
         email_address: email,
         ...userData.mailchimpSchema,
         ...partnerData.mailchimpSchema,
-        merge_fields: mailchimpMergeFields,
+        merge_fields: {
+          SIGNUPD: userSignedUpAt,
+          ...userData.mailchimpSchema.merge_fields,
+          ...partnerData.mailchimpSchema.merge_fields,
+        },
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'unknown error';
-      logger.error(`Create Mailchimp user profile error: ${message}`);
+      logger.error(`Create Mailchimp profile error: ${message}`);
     }
 
     logger.log('Create user: updated service user profiles');
@@ -116,7 +114,6 @@ export class ServiceUserProfilesService {
 
     try {
       if (isProfileUpdateRequired) {
-        // Extra call required to update contact profile when name or sign up language is changed
         await this.frontChatService.updateContactProfile(
           {
             ...(isEmailUpdateRequired && { email: email }),
@@ -127,6 +124,12 @@ export class ServiceUserProfilesService {
       }
 
       await this.frontChatService.updateContactCustomFields(userData.frontChatSchema, email);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'unknown error';
+      logger.error(`Update Front Chat user profile error - ${message}`);
+    }
+
+    try {
       await updateMailchimpProfile(
         {
           ...userData.mailchimpSchema,
@@ -158,6 +161,12 @@ export class ServiceUserProfilesService {
         partnerAccessData.frontChatSchema,
         email,
       );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'unknown error';
+      logger.error(`Update Front Chat partner access error - ${message}`);
+    }
+
+    try {
       await updateMailchimpProfile(partnerAccessData.mailchimpSchema, email);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'unknown error';
@@ -175,6 +184,12 @@ export class ServiceUserProfilesService {
 
     try {
       await this.frontChatService.updateContactCustomFields(therapyData.frontChatSchema, email);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'unknown error';
+      logger.error(`Update Front Chat therapy error - ${message}`);
+    }
+
+    try {
       await updateMailchimpProfile(therapyData.mailchimpSchema, email);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'unknown error';
@@ -192,6 +207,12 @@ export class ServiceUserProfilesService {
 
     try {
       await this.frontChatService.updateContactCustomFields(courseData.frontChatSchema, email);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'unknown error';
+      logger.error(`Update Front Chat course error - ${message}`);
+    }
+
+    try {
       await updateMailchimpProfile(courseData.mailchimpSchema, email);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'unknown error';

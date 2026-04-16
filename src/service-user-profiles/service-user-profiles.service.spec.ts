@@ -169,6 +169,16 @@ describe('Service user profiles', () => {
       await expect(service.createServiceUserProfiles(mockUserEntity)).resolves.not.toThrow();
       mocked.mockReset();
     });
+
+    it('should still create mailchimp profile when Front Chat fails', async () => {
+      const mocked = jest.mocked(mockFrontChatService.createContact);
+      mocked.mockRejectedValue(new Error('Front Chat API call failed'));
+
+      await service.createServiceUserProfiles(mockUserEntity);
+
+      expect(createMailchimpProfile).toHaveBeenCalled();
+      mocked.mockReset();
+    });
   });
 
   describe('updateServiceUserProfilesUser', () => {
@@ -311,6 +321,21 @@ describe('Service user profiles', () => {
       await expect(
         service.updateServiceUserProfilesUser(mockUserEntity, false, false, mockUserEntity.email),
       ).resolves.not.toThrow();
+      mocked.mockReset();
+    });
+
+    it('should still update mailchimp when Front Chat fails', async () => {
+      const mocked = jest.mocked(mockFrontChatService.updateContactCustomFields);
+      mocked.mockRejectedValue(new Error('Front Chat API call failed'));
+
+      await service.updateServiceUserProfilesUser(
+        mockUserEntity,
+        false,
+        false,
+        mockUserEntity.email,
+      );
+
+      expect(updateMailchimpProfile).toHaveBeenCalled();
       mocked.mockReset();
     });
   });
