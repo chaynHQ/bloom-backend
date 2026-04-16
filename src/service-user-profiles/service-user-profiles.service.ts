@@ -11,11 +11,11 @@ import {
   ListMemberPartial,
   MAILCHIMP_MERGE_FIELD_TYPES,
 } from 'src/api/mailchimp/mailchimp-api.interfaces';
-import { FrontChatService } from 'src/front-chat/front-chat.service';
 import { CourseUserEntity } from 'src/entities/course-user.entity';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { PartnerEntity } from 'src/entities/partner.entity';
 import { UserEntity } from 'src/entities/user.entity';
+import { FrontChatService } from 'src/front-chat/front-chat.service';
 import { Logger } from 'src/logger/logger';
 import { And, Raw, Repository } from 'typeorm';
 import {
@@ -157,7 +157,10 @@ export class ServiceUserProfilesService {
     const partnerAccessData = this.serializePartnerAccessData(partnerAccesses);
 
     try {
-      await this.frontChatService.updateContactCustomFields(partnerAccessData.frontChatSchema, email);
+      await this.frontChatService.updateContactCustomFields(
+        partnerAccessData.frontChatSchema,
+        email,
+      );
     } catch (error) {
       const message = error instanceof Error ? error.message : 'unknown error';
       logger.error(`Update Front Chat partner access error - ${message}`);
