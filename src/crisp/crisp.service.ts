@@ -82,11 +82,7 @@ export class CrispService {
     }
 
     try {
-      const crispProfile = CrispClient.website.addNewPeopleProfile(
-        crispWebsiteId,
-        newPeopleProfile,
-      );
-      return crispProfile;
+      return await CrispClient.website.addNewPeopleProfile(crispWebsiteId, newPeopleProfile);
     } catch (error) {
       throw new Error(`Create crisp profile API call failed: ${error?.message || 'unknown error'}`, {
         cause: error,
@@ -104,12 +100,7 @@ export class CrispService {
     }
 
     try {
-      const crispProfile = CrispClient.website.updatePeopleProfile(
-        crispWebsiteId,
-        email,
-        peopleProfile,
-      );
-      return crispProfile;
+      return await CrispClient.website.updatePeopleProfile(crispWebsiteId, email, peopleProfile);
     } catch (error) {
       // Only handle profile not found errors (404, not_found, or profile-related errors)
       if (this.isProfileNotFoundError(error)) {
@@ -144,16 +135,18 @@ export class CrispService {
     }
 
     const params = this.toCrispDataParams(peopleData);
+    // crisp-api's typings incorrectly expect a flat object, but the REST API and crisp-api
+    // EXAMPLES.md both require the payload wrapped in { data: ... }. Cast to bypass the wrong type.
+    const body = { data: params } as unknown as Record<string, string | number | boolean>;
 
     try {
-      const crispPeopleData = CrispClient.website.updatePeopleData(crispWebsiteId, email, params);
-      return crispPeopleData;
+      return await CrispClient.website.updatePeopleData(crispWebsiteId, email, body);
     } catch (error) {
       // Only handle profile not found errors (404, not_found, or profile-related errors)
       if (this.isProfileNotFoundError(error)) {
         try {
           await this.createCrispProfile({ email });
-          return await CrispClient.website.updatePeopleData(crispWebsiteId, email, params);
+          return await CrispClient.website.updatePeopleData(crispWebsiteId, email, body);
         } catch {
           throw new Error(
             `Update crisp profile API call failed: ${error?.message || 'unknown error'}`,
