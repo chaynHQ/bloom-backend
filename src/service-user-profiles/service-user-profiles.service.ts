@@ -153,6 +153,8 @@ export class ServiceUserProfilesService {
         logger.error(`ensureFrontContact custom fields update failed for ${email}: ${message}`);
       }
     }
+
+    logger.log('Create user: updated service user profiles');
   }
 
   async updateServiceUserProfilesUser(
