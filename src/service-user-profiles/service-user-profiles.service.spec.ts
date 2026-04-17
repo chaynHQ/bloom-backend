@@ -173,6 +173,16 @@ describe('Service user profiles', () => {
       await expect(service.createServiceUserProfiles(mockUserEntity)).resolves.not.toThrow();
       mocked.mockReset();
     });
+
+    it('should still create mailchimp profile when Trengo fails', async () => {
+      const mocked = jest.mocked(mockTrengoService.createTrengoContact);
+      mocked.mockRejectedValue(new Error('Trengo API call failed'));
+
+      await service.createServiceUserProfiles(mockUserEntity);
+
+      expect(createMailchimpProfile).toHaveBeenCalled();
+      mocked.mockReset();
+    });
   });
 
   describe('updateServiceUserProfilesUser', () => {
@@ -318,6 +328,21 @@ describe('Service user profiles', () => {
       await expect(
         service.updateServiceUserProfilesUser(mockUserEntity, false, false, mockUserEntity.email),
       ).resolves.not.toThrow();
+      mocked.mockReset();
+    });
+
+    it('should still update mailchimp when Trengo fails', async () => {
+      const mocked = jest.mocked(mockTrengoService.updateTrengoContactCustomFields);
+      mocked.mockRejectedValue(new Error('Trengo API call failed'));
+
+      await service.updateServiceUserProfilesUser(
+        mockUserEntity,
+        false,
+        false,
+        mockUserEntity.email,
+      );
+
+      expect(updateMailchimpProfile).toHaveBeenCalled();
       mocked.mockReset();
     });
   });

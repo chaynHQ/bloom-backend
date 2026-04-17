@@ -3,7 +3,12 @@ import axios, { AxiosInstance } from 'axios';
 import { EventLoggerService } from 'src/event-logger/event-logger.service';
 import { EVENT_NAME } from 'src/event-logger/event-logger.interface';
 import { Logger } from 'src/logger/logger';
-import { trengoApiKey, trengoChannelId, trengoWebhookSigningSecret } from 'src/utils/constants';
+import {
+  trengoApiKey,
+  trengoChannelId,
+  trengoInboundWebhookSigningSecret,
+  trengoOutboundWebhookSigningSecret,
+} from 'src/utils/constants';
 import { isCypressTestEmail } from 'src/utils/utils';
 import {
   TrengoContactBase,
@@ -58,7 +63,7 @@ export class TrengoService implements OnModuleInit {
   // --- Webhook signature verification ---
 
   verifyWebhookSignature(rawBody: Buffer, signatureHeader: string): boolean {
-    if (!trengoWebhookSigningSecret || !signatureHeader) {
+    if (!signatureHeader) {
       return false;
     }
 
@@ -68,12 +73,25 @@ export class TrengoService implements OnModuleInit {
     }
 
     const payload = `${timestamp}.${rawBody.toString('utf8')}`;
-    const expectedHash = crypto
-      .createHmac('sha256', trengoWebhookSigningSecret)
-      .update(payload)
-      .digest('hex');
+    const providedHash = Buffer.from(hash, 'hex');
 
-    return crypto.timingSafeEqual(Buffer.from(expectedHash, 'hex'), Buffer.from(hash, 'hex'));
+    // Trengo only allows one event per webhook, so we register separate inbound and outbound
+    // webhooks, each with its own signing secret. Verify against both.
+    for (const secret of [trengoInboundWebhookSigningSecret, trengoOutboundWebhookSigningSecret]) {
+      if (!secret) continue;
+      const expectedHash = Buffer.from(
+        crypto.createHmac('sha256', secret).update(payload).digest('hex'),
+        'hex',
+      );
+      if (
+        expectedHash.length === providedHash.length &&
+        crypto.timingSafeEqual(expectedHash, providedHash)
+      ) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   // --- Event handling (webhook) ---

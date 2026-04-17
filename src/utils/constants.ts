@@ -143,9 +143,13 @@ export const zapierToken = getEnv(process.env.ZAPIER_TOKEN, 'ZAPIER_TOKEN');
 
 export const trengoApiKey = getEnv(process.env.TRENGO_API_KEY, 'TRENGO_API_KEY');
 export const trengoChannelId = getEnv(process.env.TRENGO_CHANNEL_ID, 'TRENGO_CHANNEL_ID');
-export const trengoWebhookSigningSecret = getEnv(
-  process.env.TRENGO_WEBHOOK_SIGNING_SECRET,
-  'TRENGO_WEBHOOK_SIGNING_SECRET',
+export const trengoInboundWebhookSigningSecret = getEnv(
+  process.env.TRENGO_INBOUND_WEBHOOK_SIGNING_SECRET,
+  'TRENGO_INBOUND_WEBHOOK_SIGNING_SECRET',
+);
+export const trengoOutboundWebhookSigningSecret = getEnv(
+  process.env.TRENGO_OUTBOUND_WEBHOOK_SIGNING_SECRET,
+  'TRENGO_OUTBOUND_WEBHOOK_SIGNING_SECRET',
 );
 
 export const slackWebhookUrl = getEnv(process.env.SLACK_WEBHOOK_URL, 'SLACK_WEBHOOK_URL');
