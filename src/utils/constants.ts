@@ -165,8 +165,10 @@ export const slackReportingWebhookUrl = getEnv(
   'SLACK_REPORTING_WEBHOOK_URL',
 );
 
-export const reportingTimezone =
-  getEnv(process.env.REPORTING_TIMEZONE, 'REPORTING_TIMEZONE') || 'Europe/London';
+// Optional with a default — read process.env directly rather than via
+// getEnv() which would log a misleading "Missing required variable" warning
+// on every boot when the var isn't set (it isn't required).
+export const reportingTimezone = process.env.REPORTING_TIMEZONE || 'Europe/London';
 
 export const ga4PropertyId = getEnv(process.env.GA4_PROPERTY_ID, 'GA4_PROPERTY_ID');
 export const ga4ServiceAccountKeyJson = getEnv(

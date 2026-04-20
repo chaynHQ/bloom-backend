@@ -73,12 +73,19 @@ export class SlackMessageClient {
     }
   }
 
+  /**
+   * Unlike the other Slack channels above (which gate on `isProduction` to
+   * avoid accidentally messaging real user-facing channels from
+   * dev/staging), the reporting channel is explicitly operational — it's
+   * where the reporting digest lands and staging runs need to land there
+   * too so scheduled-run tests are end-to-end visible. No environment gate.
+   * The apiCall will simply 4xx/5xx if `slackReportingWebhookUrl` is
+   * missing locally, caught below.
+   */
   public async sendMessageToReportingChannel(
     blocks: unknown[],
-    opts: { force?: boolean; fallbackText?: string } = {},
+    opts: { fallbackText?: string } = {},
   ): Promise<AxiosResponse | string> {
-    if (!isProduction && !opts.force) return;
-
     try {
       const response = await apiCall({
         url: slackReportingWebhookUrl,
