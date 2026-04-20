@@ -53,20 +53,18 @@ export class ServiceUserProfilesService {
       return;
     }
 
+    const userData = this.serializeUserData(user);
+    const partnerData = this.serializePartnerAccessData(
+      partnerAccess ? [{ ...partnerAccess, partner }] : [],
+    );
+    const userSignedUpAt = user.createdAt?.toISOString();
+
     try {
-      const userData = this.serializeUserData(user);
-
-      const partnerData = this.serializePartnerAccessData(
-        partnerAccess ? [{ ...partnerAccess, partner }] : [],
-      );
-
       await this.crispService.createCrispProfile({
         email: email,
         person: { nickname: user.name, locales: [user.signUpLanguage || LANGUAGE_DEFAULT] },
         segments: this.serializeCrispPartnerSegments(partner ? [partner] : []),
       });
-
-      const userSignedUpAt = user.createdAt?.toISOString();
 
       await this.crispService.updateCrispPeopleData(
         {
@@ -76,7 +74,12 @@ export class ServiceUserProfilesService {
         },
         email,
       );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'unknown error';
+      logger.error(`Create Crisp user profile error: ${message}`);
+    }
 
+    try {
       const mailchimpMergeFields = {
         SIGNUPD: userSignedUpAt,
         ...userData.mailchimpSchema.merge_fields,
@@ -89,11 +92,12 @@ export class ServiceUserProfilesService {
         ...partnerData.mailchimpSchema,
         merge_fields: mailchimpMergeFields,
       });
-
-      logger.log('Create user: updated service user profiles');
     } catch (error) {
-      logger.error(`Create service user profiles error: ${error?.message || 'unknown error'}`);
+      const message = error instanceof Error ? error.message : 'unknown error';
+      logger.error(`Create Mailchimp user profile error: ${message}`);
     }
+
+    logger.log('Create user: updated service user profiles');
   }
 
   async updateServiceUserProfilesUser(
@@ -108,6 +112,8 @@ export class ServiceUserProfilesService {
       logger.log('Skipping service user profile update for Cypress test email');
       return;
     }
+
+    const userData = this.serializeUserData(user);
 
     try {
       if (isCrispBaseUpdateRequired) {
@@ -124,8 +130,13 @@ export class ServiceUserProfilesService {
         );
       }
 
-      const userData = this.serializeUserData(user);
       await this.crispService.updateCrispPeopleData(userData.crispSchema, email);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'unknown error';
+      logger.error(`Update Crisp user profile error - ${message}`);
+    }
+
+    try {
       await updateMailchimpProfile(
         {
           ...userData.mailchimpSchema,
@@ -133,12 +144,12 @@ export class ServiceUserProfilesService {
         },
         existingEmail,
       );
-      logger.log('Updated service user profiles user');
     } catch (error) {
-      logger.error(
-        `Update service user profiles user error - ${error?.message || 'unknown error'}`,
-      );
+      const message = error instanceof Error ? error.message : 'unknown error';
+      logger.error(`Update Mailchimp user profile error - ${message}`);
     }
+
+    logger.log('Updated service user profiles user');
   }
 
   async updateServiceUserProfilesPartnerAccess(
@@ -150,6 +161,8 @@ export class ServiceUserProfilesService {
       return;
     }
 
+    const partnerAccessData = this.serializePartnerAccessData(partnerAccesses);
+
     try {
       const partners = partnerAccesses.map((pa) => pa.partner);
       await this.crispService.updateCrispProfileBase(
@@ -159,13 +172,17 @@ export class ServiceUserProfilesService {
         email,
       );
 
-      const partnerAccessData = this.serializePartnerAccessData(partnerAccesses);
       await this.crispService.updateCrispPeopleData(partnerAccessData.crispSchema, email);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'unknown error';
+      logger.error(`Update Crisp partner access error - ${message}`);
+    }
+
+    try {
       await updateMailchimpProfile(partnerAccessData.mailchimpSchema, email);
     } catch (error) {
-      logger.error(
-        `Update service user profiles partner access error - ${error?.message || 'unknown error'}`,
-      );
+      const message = error instanceof Error ? error.message : 'unknown error';
+      logger.error(`Update Mailchimp partner access error - ${message}`);
     }
   }
 
@@ -175,14 +192,20 @@ export class ServiceUserProfilesService {
       return;
     }
 
+    const therapyData = this.serializeTherapyData(partnerAccesses);
+
     try {
-      const therapyData = this.serializeTherapyData(partnerAccesses);
       await this.crispService.updateCrispPeopleData(therapyData.crispSchema, email);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'unknown error';
+      logger.error(`Update Crisp therapy error - ${message}`);
+    }
+
+    try {
       await updateMailchimpProfile(therapyData.mailchimpSchema, email);
     } catch (error) {
-      logger.error(
-        `Update service user profiles therapy error - ${error?.message || 'unknown error'}`,
-      );
+      const message = error instanceof Error ? error.message : 'unknown error';
+      logger.error(`Update Mailchimp therapy error - ${message}`);
     }
   }
 
@@ -192,14 +215,20 @@ export class ServiceUserProfilesService {
       return;
     }
 
+    const courseData = this.serializeCourseData(courseUser);
+
     try {
-      const courseData = this.serializeCourseData(courseUser);
       await this.crispService.updateCrispPeopleData(courseData.crispSchema, email);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'unknown error';
+      logger.error(`Update Crisp course error - ${message}`);
+    }
+
+    try {
       await updateMailchimpProfile(courseData.mailchimpSchema, email);
     } catch (error) {
-      logger.error(
-        `Update service user profiles course error - ${error?.message || 'unknown error'}`,
-      );
+      const message = error instanceof Error ? error.message : 'unknown error';
+      logger.error(`Update Mailchimp course error - ${message}`);
     }
   }
 
