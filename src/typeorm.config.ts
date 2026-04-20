@@ -12,6 +12,7 @@ import { PartnerAccessEntity } from './entities/partner-access.entity';
 import { PartnerAdminEntity } from './entities/partner-admin.entity';
 import { PartnerFeatureEntity } from './entities/partner-feature.entity';
 import { PartnerEntity } from './entities/partner.entity';
+import { ReportingRunEntity } from './entities/reporting-run.entity';
 import { ResourceFeedbackEntity } from './entities/resource-feedback.entity';
 import { ResourceUserEntity } from './entities/resource-user.entity';
 import { ResourceEntity } from './entities/resource.entity';
@@ -59,6 +60,7 @@ import { BloomBackend1743510885507 } from './migrations/1743510885507-bloom-back
 import { BloomBackend1744450013565 } from './migrations/1744450013565-bloom-backend';
 import { BloomBackend1748540025892 } from './migrations/1748540025892-bloom-backend';
 import { BloomBackend1756987770157 } from './migrations/1756987770157-bloom-backend';
+import { BloomBackend1776686083659 } from './migrations/1776686083659-bloom-backend';
 
 config();
 const configService = new ConfigService();
@@ -100,6 +102,7 @@ export const dataSourceOptions = {
     ResourceUserEntity,
     ResourceEntity,
     ResourceFeedbackEntity,
+    ReportingRunEntity,
   ],
   migrations: [
     bloomBackend1637704119795,
@@ -139,6 +142,7 @@ export const dataSourceOptions = {
     BloomBackend1744450013565,
     BloomBackend1748540025892,
     BloomBackend1756987770157,
+    BloomBackend1776686083659,
   ],
   subscribers: [],
   ssl: isProduction || isStaging,

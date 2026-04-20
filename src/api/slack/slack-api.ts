@@ -5,6 +5,7 @@ import {
   isProduction,
   slackBloomUsersWebhookUrl,
   slackDeletedUsersWebhookUrl,
+  slackReportingWebhookUrl,
   slackWebhookUrl,
 } from 'src/utils/constants';
 import apiCall from '../apiCalls';
@@ -68,6 +69,31 @@ export class SlackMessageClient {
       return response;
     } catch (err) {
       this.logger.error(`Unable to sendMessageToDeletedUsersSlackChannel: ${err?.message || 'unknown error'}`);
+      return err;
+    }
+  }
+
+  public async sendMessageToReportingChannel(
+    blocks: unknown[],
+    opts: { force?: boolean; fallbackText?: string } = {},
+  ): Promise<AxiosResponse | string> {
+    if (!isProduction && !opts.force) return;
+
+    try {
+      const response = await apiCall({
+        url: slackReportingWebhookUrl,
+        type: 'post',
+        data: {
+          text: opts.fallbackText ?? 'Bloom reporting digest',
+          blocks,
+        },
+      });
+      this.logger.log('Message sent to slack Reporting Channel');
+      return response;
+    } catch (err) {
+      this.logger.error(
+        `Unable to sendMessageToReportingChannel: ${err?.message || 'unknown error'}`,
+      );
       return err;
     }
   }

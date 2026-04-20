@@ -1,0 +1,335 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`buildReportBlocks renders a full weekly digest (snapshot) — DB, GA4 overview, grouped events, per-line breakdowns, global breakdowns 1`] = `
+[
+  {
+    "text": {
+      "text": "Bloom weekly digest — 2026-W16 (2026-04-12 → 2026-04-19)",
+      "type": "plain_text",
+    },
+    "type": "header",
+  },
+  {
+    "elements": [
+      {
+        "text": "trigger: *manual* · tz: Europe/London · run: run-123",
+        "type": "mrkdwn",
+      },
+    ],
+    "type": "context",
+  },
+  {
+    "type": "divider",
+  },
+  {
+    "text": {
+      "text": "*:bar_chart: Bloom database activity*",
+      "type": "mrkdwn",
+    },
+    "type": "section",
+  },
+  {
+    "fields": [
+      {
+        "text": "*New users*
+12",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Deleted users*
+1",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Courses started*
+8",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Courses completed*
+3",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Sessions started*
+24",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Sessions completed*
+9",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Therapy bookings made*
+5",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Therapy cancellations*
+1",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Therapy scheduled in period*
+7",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Partner access grants*
+4",
+        "type": "mrkdwn",
+      },
+    ],
+    "type": "section",
+  },
+  {
+    "fields": [
+      {
+        "text": "*Partner access activations*
+2",
+        "type": "mrkdwn",
+      },
+    ],
+    "type": "section",
+  },
+  {
+    "type": "divider",
+  },
+  {
+    "text": {
+      "text": "*:bar_chart: GA4 overview*",
+      "type": "mrkdwn",
+    },
+    "type": "section",
+  },
+  {
+    "fields": [
+      {
+        "text": "*Active users*
+1,234",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*New users (GA4)*
+210",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Sessions*
+1,890",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Screen/page views*
+4,212",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Avg session duration (s)*
+123.4",
+        "type": "mrkdwn",
+      },
+    ],
+    "type": "section",
+  },
+  {
+    "type": "divider",
+  },
+  {
+    "text": {
+      "text": "*:chart_with_upwards_trend: Conversion funnels*
+• *Signup flow* — Registrations 28 → About-you viewed 0 (0%) → Survey completed 0 (0%)
+• *Session flow* — Viewed 56 → Started 0 (0%) → Completed 0 (0%) → Feedback 0 (0%)",
+      "type": "mrkdwn",
+    },
+    "type": "section",
+  },
+  {
+    "type": "divider",
+  },
+  {
+    "text": {
+      "text": "*:sparkles: App activity by area*",
+      "type": "mrkdwn",
+    },
+    "type": "section",
+  },
+  {
+    "text": {
+      "text": "*:key: Auth & onboarding*
+• Logins — 142
+• Registrations — 28
+• Password resets — 0
+• Logouts — 0
+• Create-account link — 0
+• Signup survey — completed (0) · skipped (0)
+• About you form — viewed (0) · demographics submitted (0) · SETA submitted (0)
+• Apply-a-code page viewed — 0
+• Partner access codes — redeemed (0) · invalid (client) (0) · new partner assigned (0) · invalid (server) (0)",
+      "type": "mrkdwn",
+    },
+    "type": "section",
+  },
+  {
+    "text": {
+      "text": "*:books: Courses*
+• Course list viewed — 0
+• Course overview viewed — 0
+• Course intro video — started (0) · finished (0)
+• Course intro transcript — 0",
+      "type": "mrkdwn",
+    },
+    "type": "section",
+  },
+  {
+    "text": {
+      "text": "*:movie_camera: Sessions*
+• Session viewed — 56
+• Session video — started (32) · finished (20)
+    ↳ by session: Healing from trauma (18)
+• Session progression — started (0) · completed (0)
+• Session transcript — 0
+• Session feedback — 0
+• Session chat CTA — 0",
+      "type": "mrkdwn",
+    },
+    "type": "section",
+  },
+  {
+    "text": {
+      "text": "*:speech_balloon: Therapy*
+• My bookings list viewed — 0
+• Book-a-session flow — page views (0) · booking opened (0) · confirmed (0)
+• Therapy cancellations — dialog opened (0) · confirmed (0) · cancelled (0)
+• Therapy joining — 0
+• Therapy FAQ — 0",
+      "type": "mrkdwn",
+    },
+    "type": "section",
+  },
+  {
+    "text": {
+      "text": "*:headphones: Resources*
+• Conversations — viewed (0) · started (0) · finished (0) · completed (0)
+• Short videos — viewed (0) · started (0) · finished (0) · completed (0)
+• Single videos — viewed (0) · started (0) · finished (0) · completed (0)
+• Resource feedback — 0
+• Resource → session navigation — from short (0) · from single (0)",
+      "type": "mrkdwn",
+    },
+    "type": "section",
+  },
+  {
+    "text": {
+      "text": "*:left_speech_bubble: Chat*
+• Chat — opened (0) · composed (0) · sent (0)",
+      "type": "mrkdwn",
+    },
+    "type": "section",
+  },
+  {
+    "text": {
+      "text": "*:iphone: WhatsApp*
+• WhatsApp — subscribed (20) · unsubscribed (0)",
+      "type": "mrkdwn",
+    },
+    "type": "section",
+  },
+  {
+    "text": {
+      "text": "*:rocket: App & install*
+• App loads — PWA (0) · Web (0)
+• PWA install — install clicked (0) · installed (0) · dismiss clicked (0) · dismissed (0)
+• PWA desktop banner viewed — 0",
+      "type": "mrkdwn",
+    },
+    "type": "section",
+  },
+  {
+    "text": {
+      "text": "*:cookie: Preferences & consent*
+• Cookies — accepted (0) · rejected (0)
+• Service emails — 0
+• Email reminders — set (0) · unset (0)",
+      "type": "mrkdwn",
+    },
+    "type": "section",
+  },
+  {
+    "text": {
+      "text": "*:compass: Navigation & engagement*
+• FAQ opened — 0
+• Accordion opened — 0
+• Promo CTA — 0
+• Social links — social (0) · partner (0)
+• Leave site button — 0
+• Meet the team viewed — 0
+• Related content card — 0
+• Language menu opened — 0
+• Language switches — EN (0) · DE (0) · FR (0) · ES (0) · PT (0) · HI (0)",
+      "type": "mrkdwn",
+    },
+    "type": "section",
+  },
+  {
+    "text": {
+      "text": "*:loudspeaker: Promo & banners*
+• Sign-up-today banner — 0
+• Notes-from-Bloom promo — 0
+• User-research banner — interested (0) · dismissed (0)
+• Fruitz retirement banner — 0",
+      "type": "mrkdwn",
+    },
+    "type": "section",
+  },
+  {
+    "text": {
+      "text": "*:gear: Admin activity*
+• Admin dashboard viewed — 0
+• Partner access codes created — 0
+• Partner admin changes — created (0) · updated (0)
+• Partner active toggles — 0
+• Therapy sessions adjusted — 0",
+      "type": "mrkdwn",
+    },
+    "type": "section",
+  },
+  {
+    "text": {
+      "text": "*:rotating_light: Errors*
+• Login errors — 3",
+      "type": "mrkdwn",
+    },
+    "type": "section",
+  },
+  {
+    "text": {
+      "text": "*:grey_question: Uncategorised events*
+_Events firing in GA4 that aren't in the report config — consider categorising them._
+• \`CUSTOM_FRONTEND_EVENT_NOT_IN_CONFIG\` — 17",
+      "type": "mrkdwn",
+    },
+    "type": "section",
+  },
+  {
+    "type": "divider",
+  },
+  {
+    "text": {
+      "text": "*:mag: GA4 breakdowns*",
+      "type": "mrkdwn",
+    },
+    "type": "section",
+  },
+  {
+    "text": {
+      "text": "*Top pages*
+• /courses — 500 (200 users)
+• /therapy — 300 (180 users)",
+      "type": "mrkdwn",
+    },
+    "type": "section",
+  },
+]
+`;
