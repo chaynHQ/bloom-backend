@@ -22,7 +22,7 @@ export class AuthService {
       const userCredential = await this.firebase.auth.signInWithEmailAndPassword(email, password);
       return userCredential;
     } catch (error) {
-      this.logger.log(error);
+      this.logger.log(`Login failed: ${error.code || 'unknown error'}`);
       if (error.code === 'auth/multi-factor-auth-required') {
         throw new HttpException(
           'Multi-factor authentication required - login via frontend and complete 2FA to get access token',
@@ -167,7 +167,7 @@ export class AuthService {
               }
               if (deleteUsersResult.errors.length > 0) {
                 this.logger.error(
-                  `Errors deleting cypress firebase users - ${deleteUsersResult.errors}`,
+                  `Errors deleting cypress firebase users - ${deleteUsersResult.errors.map((e) => e.error?.message || 'unknown error').join(', ')}`,
                 );
               }
             });

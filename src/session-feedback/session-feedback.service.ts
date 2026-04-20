@@ -1,4 +1,5 @@
-import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { Logger } from 'src/logger/logger';
 import { InjectRepository } from '@nestjs/typeorm';
 import { SlackMessageClient } from 'src/api/slack/slack-api';
 import { SessionFeedbackEntity } from 'src/entities/session-feedback.entity';
@@ -39,7 +40,7 @@ export class SessionFeedbackService {
         `*${session.name}* in *${session.course?.name}* was rated *_${sessionFeedbackDto.feedbackTags}_* ${sessionFeedbackDto.feedbackDescription.length > 0 ? `with the comment: \n> _${sessionFeedbackDto.feedbackDescription}_` : ''}`,
       );
     } catch (error) {
-      logger.error(`Failed to send Slack message for session feedback: ${error.message}`);
+      logger.error(`Failed to send Slack message for session feedback: ${error?.message || 'unknown error'}`);
     }
   }
 }

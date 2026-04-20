@@ -19,7 +19,7 @@ export class PartnerService {
     @InjectRepository(UserEntity) private userRepository: Repository<UserEntity>,
   ) {}
 
-  async createPartner(createPartnerDto: CreatePartnerDto): Promise<PartnerEntity | unknown> {
+  async createPartner(createPartnerDto: CreatePartnerDto): Promise<PartnerEntity> {
     try {
       const partnerObject = this.partnerRepository.create(createPartnerDto);
       return await this.partnerRepository.save(partnerObject);
@@ -96,7 +96,7 @@ export class PartnerService {
 
       return updatedPartnerResponse;
     } else {
-      throw new Error('Failed to update partner');
+      throw new HttpException('Failed to update partner', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 }

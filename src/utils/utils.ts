@@ -1,5 +1,4 @@
 import { webcrypto } from 'crypto';
-import { sub } from 'date-fns';
 const crypto = webcrypto as unknown as Crypto;
 
 export const generateRandomString = (length: number) => {
@@ -19,13 +18,11 @@ export const getAcronym = (text: string) => {
   const exclude = ['in', 'and', 'the', 'from', 'as', 'or', 'to'];
   const string = text.split(' ').filter((word) => !exclude.includes(word));
   const abbreviatedString = string
-    .reduce((response, word) => (response += word.slice(0, 1)), '')
+    .reduce((response, word) => (response + word.slice(0, 1)), '')
     .toUpperCase();
 
   return abbreviatedString;
 };
-
-export const getYesterdaysDate = () => sub(new Date(), { days: 1 });
 
 export const isCypressTestEmail = (email: string): boolean => {
   return email.includes('cypresstestemail');

@@ -1,4 +1,5 @@
-import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { Logger } from 'src/logger/logger';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ISbStoryData } from '@storyblok/js';
 import apiCall from 'src/api/apiCalls';
@@ -100,7 +101,7 @@ export class WebhooksService {
 
         existingTherapySession.cancelledAt = new Date();
       } catch (err) {
-        const error = `UpdatePartnerAccessTherapy - error updating partner access for ${action} - userId ${user.id} - ${err.message || 'unknown error'}`;
+        const error = `UpdatePartnerAccessTherapy - error updating partner access for ${action} - userId ${user.id} - ${err?.message || 'unknown error'}`;
         this.logger.error(error);
         throw new HttpException(error, HttpStatus.INTERNAL_SERVER_ERROR);
       }
@@ -133,7 +134,7 @@ export class WebhooksService {
       );
       return therapySession;
     } catch (err) {
-      const error = `UpdatePartnerAccessTherapy - error updating therapy session for ${action} - userId ${user.id} - ${err.message || 'unknown error'}`;
+      const error = `UpdatePartnerAccessTherapy - error updating therapy session for ${action} - userId ${user.id} - ${err?.message || 'unknown error'}`;
       this.logger.error(error);
       throw new HttpException(error, HttpStatus.INTERNAL_SERVER_ERROR);
     }
@@ -161,7 +162,7 @@ export class WebhooksService {
           }
         }
       } catch (err) {
-        const error = `UpdatePartnerAccessTherapy - error finding user in therapyRepository or userRepository - ${err.message || 'unknown error'}`;
+        const error = `UpdatePartnerAccessTherapy - error finding user in therapyRepository or userRepository - ${err?.message || 'unknown error'}`;
         this.logger.error(error);
         throw new HttpException(error, HttpStatus.INTERNAL_SERVER_ERROR);
       }
@@ -180,13 +181,13 @@ export class WebhooksService {
 
       // No user record found for userId, throw error
       await this.slackMessageClient.sendMessageToTherapySlackChannel(
-        `Unknown user made a therapy booking with email ${client_email}, userID ${userId} 🚨`,
+        `Unknown user made a therapy booking, userID ${userId} 🚨`,
       );
       const error = `User not found`;
       this.logger.error(error);
       throw new HttpException(error, HttpStatus.BAD_REQUEST);
     } catch (err) {
-      const error = `UpdatePartnerAccessTherapy - error finding user with userID ${userId} - ${err.message || 'unknown error'}`;
+      const error = `UpdatePartnerAccessTherapy - error finding user with userID ${userId} - ${err?.message || 'unknown error'}`;
       this.logger.error(error);
       throw new HttpException(error, HttpStatus.INTERNAL_SERVER_ERROR);
     }
@@ -207,7 +208,7 @@ export class WebhooksService {
 
     if (!partnerAccesses.length) {
       await this.slackMessageClient.sendMessageToTherapySlackChannel(
-        `User booked therapy with no partner therapy access, please email user ${user.email} to confirm the booking has not been made and fix the account access`,
+        `User (userId: ${user.id}) booked therapy with no partner therapy access, please confirm the booking has not been made and fix the account access`,
       );
       const error = `newPartnerAccessTherapy - no partner therapy access - userId ${user.id}`;
       this.logger.error(error);
@@ -223,7 +224,7 @@ export class WebhooksService {
 
     if (!partnerAccess) {
       await this.slackMessageClient.sendMessageToTherapySlackChannel(
-        `User booked therapy with no therapy sessions remaining, please email user ${user.email} to confirm the booking has not been made`,
+        `User (userId: ${user.id}) booked therapy with no therapy sessions remaining, please confirm the booking has not been made`,
       );
       const error = `newPartnerAccessTherapy - user has partner therapy access but has 0 therapy sessions remaining - userId ${user.id}`;
       this.logger.error(error);
@@ -258,7 +259,7 @@ export class WebhooksService {
       );
       return therapySession;
     } catch (err) {
-      const error = `newPartnerAccessTherapy - error saving new therapy session and partner access - userId ${user.id} - ${err.message || 'unknown error'}`;
+      const error = `newPartnerAccessTherapy - error saving new therapy session and partner access - userId ${user.id} - ${err?.message || 'unknown error'}`;
       this.logger.error(error);
       throw new HttpException(error, HttpStatus.INTERNAL_SERVER_ERROR);
     }
@@ -349,7 +350,7 @@ export class WebhooksService {
       }
       return undefined; // Story wasn't a course, session or resource story. No sync or updates completed
     } catch (err) {
-      const error = `Storyblok webhook failed - error updating or creating ${status} ${storyPageComponent} story record ${storyData.uuid} - ${err}`;
+      const error = `Storyblok webhook failed - error updating or creating ${status} ${storyPageComponent} story record ${storyData.uuid} - ${err?.message || 'unknown error'}`;
       this.logger.error(error);
       throw new HttpException(error, HttpStatus.INTERNAL_SERVER_ERROR);
     }
@@ -422,7 +423,7 @@ export class WebhooksService {
         this.logger.error(error);
         throw new HttpException(error, HttpStatus.NOT_FOUND);
       }
-      const error = `Storyblok webhook failed - error getting story from storyblok - ${err.message}}`;
+      const error = `Storyblok webhook failed - error getting story from storyblok - ${err?.message || 'unknown error'}`;
       this.logger.error(error);
       throw new HttpException(error, HttpStatus.INTERNAL_SERVER_ERROR);
     }

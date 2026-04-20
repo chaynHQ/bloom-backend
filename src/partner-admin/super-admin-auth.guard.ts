@@ -53,7 +53,7 @@ export class SuperAdminAuthGuard implements CanActivate {
         status: HttpStatus.INTERNAL_SERVER_ERROR,
       });
       throw new HttpException(
-        `SuperAdminAuthGuard - Error parsing firebase user: ${error}`,
+        `SuperAdminAuthGuard - Error parsing firebase user: ${error?.message || 'unknown error'}`,
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
@@ -76,7 +76,7 @@ export class SuperAdminAuthGuard implements CanActivate {
       request['userEntity'] = user;
     } catch (error) {
       throw new HttpException(
-        `SuperAdminAuthGuard - Error finding user: ${error}`,
+        `SuperAdminAuthGuard - Error finding user: ${error?.message || 'unknown error'}`,
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
@@ -94,9 +94,9 @@ export class SuperAdminAuthGuard implements CanActivate {
         );
       }
     } catch (error) {
-      this.logger.error('Error checking superadmin access', error);
+      this.logger.error(`Error checking superadmin access: ${error?.message || 'unknown error'}`);
       throw new HttpException(
-        `SuperAdminAuthGuard - error checking superadmin access: ${error}`,
+        `SuperAdminAuthGuard - error checking superadmin access: ${error?.message || 'unknown error'}`,
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }

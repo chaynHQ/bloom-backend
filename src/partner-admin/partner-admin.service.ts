@@ -23,7 +23,7 @@ export class PartnerAdminService {
 
   async createPartnerAdmin(
     createPartnerAdminDto: CreatePartnerAdminDto,
-  ): Promise<PartnerAdminEntity | unknown> {
+  ): Promise<PartnerAdminEntity> {
     try {
       const createPartnerAdminObject = this.partnerAdminRepository.create(createPartnerAdminDto);
       return await this.partnerAdminRepository.save(createPartnerAdminObject);
@@ -39,7 +39,7 @@ export class PartnerAdminService {
     email,
     partnerId,
     name,
-  }: CreatePartnerAdminUserDto): Promise<PartnerAdminEntity | unknown> {
+  }: CreatePartnerAdminUserDto): Promise<PartnerAdminEntity> {
     try {
       const partnerResponse = await this.partnerService.getPartnerById(partnerId);
 
@@ -98,7 +98,7 @@ export class PartnerAdminService {
   async updatePartnerAdminById(
     partnerAdminId: string,
     updatePartnerAdminDto: UpdatePartnerAdminDto,
-  ): Promise<PartnerAdminEntity | unknown> {
+  ): Promise<PartnerAdminEntity> {
     const partnerAdminResponse = await this.partnerAdminRepository.findOneBy({
       id: partnerAdminId,
     });
@@ -117,7 +117,7 @@ export class PartnerAdminService {
     if (updatedPartnerAdminResponse.raw.length > 0) {
       return updatedPartnerAdminResponse.raw[0];
     } else {
-      throw new Error('Failed to update partner admin');
+      throw new HttpException('Failed to update partner admin', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 }

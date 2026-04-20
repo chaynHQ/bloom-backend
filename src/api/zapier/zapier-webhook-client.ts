@@ -1,4 +1,5 @@
-import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { Logger } from 'src/logger/logger';
 import { AxiosResponse } from 'axios';
 import {
   respondIoCreateContactWebhook,
@@ -23,10 +24,10 @@ export class ZapierWebhookClient {
           name,
         },
       });
-      this.logger.log(`Triggered webhook to add contact to respond.io for number ${phonenumber}`);
+      this.logger.log('Triggered webhook to add contact to respond.io');
       return response;
     } catch (err) {
-      this.logger.error(`Unable to add contact to respond.io for number ${phonenumber}`);
+      this.logger.error(`Unable to add contact to respond.io: ${err?.message || 'unknown error'}`);
       throw err;
     }
   }
@@ -42,24 +43,20 @@ export class ZapierWebhookClient {
           phonenumber,
         },
       });
-      this.logger.log(
-        `Triggered webhook to delete contact from respond.io with number ${phonenumber}`,
-      );
+      this.logger.log('Triggered webhook to delete contact from respond.io');
       return response;
     } catch (err) {
-      this.logger.error(
-        `Unable to delete contact from respond.io with number ${phonenumber} - ${err}`,
-      );
+      this.logger.error(`Unable to delete contact from respond.io: ${err?.message || 'unknown error'}`);
       throw new HttpException('Unable to delete contact from respond.io', HttpStatus.BAD_REQUEST);
     }
   }
 }
 
-export type AddContactParams = {
+type AddContactParams = {
   phonenumber: string;
   name: string;
 };
 
-export type DeleteContactParams = {
+type DeleteContactParams = {
   phonenumber: string;
 };

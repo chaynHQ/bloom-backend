@@ -23,7 +23,7 @@ export class PartnerController {
   @ApiBody({ type: CreatePartnerDto })
   async createPartner(
     @Body() createPartnerDto: CreatePartnerDto,
-  ): Promise<PartnerEntity | unknown> {
+  ): Promise<PartnerEntity> {
     return this.partnerService.createPartner(createPartnerDto);
   }
 

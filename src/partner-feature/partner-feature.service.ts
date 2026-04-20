@@ -69,7 +69,7 @@ export class PartnerFeatureService {
     if (updatedPartnerFeatureResponse.raw.length > 0) {
       return updatedPartnerFeatureResponse.raw[0];
     } else {
-      throw new Error('Failed to update partner feature');
+      throw new HttpException('Failed to update partner feature', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -78,14 +78,14 @@ export class PartnerFeatureService {
     if (!partner) {
       throw new HttpException('Unable to find partner with that name', HttpStatus.BAD_REQUEST);
     }
-    const partnerFeature = await this.partnerFeatureRepository
-      .createQueryBuilder('partnerFeature')
-      .leftJoinAndSelect('partnerFeature.feature', 'feature')
-      .where('LOWER(feature.name) LIKE LOWER(:name)', {
-        name: FEATURES.AUTOMATIC_ACCESS_CODE,
-      })
-      .andWhere('partnerFeature.partnerId = :partnerId', { partnerId: partner.id })
-      .getOne();
+    const feature = await this.featureService.getFeatureByName(FEATURES.AUTOMATIC_ACCESS_CODE);
+    if (!feature) {
+      return null;
+    }
+    const partnerFeature = await this.partnerFeatureRepository.findOne({
+      where: { partnerId: partner.id, featureId: feature.id },
+      relations: ['feature'],
+    });
     return partnerFeature;
   }
 }

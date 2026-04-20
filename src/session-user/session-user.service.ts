@@ -11,8 +11,8 @@ import { Logger } from '../logger/logger';
 import { SessionService } from '../session/session.service';
 import { STORYBLOK_STORY_STATUS_ENUM } from '../utils/constants';
 import { formatCourseUserObject, formatCourseUserObjects } from '../utils/serialize';
+import { CreateSessionUserRecordDto } from './dtos/create-session-user-record.dto';
 import { SessionUserDto } from './dtos/session-user.dto';
-import { UpdateSessionUserDto } from './dtos/update-session-user.dto';
 
 @Injectable()
 export class SessionUserService {
@@ -50,7 +50,7 @@ export class SessionUserService {
           courseIsComplete,
         );
       } catch (error) {
-        this.logger.error(`Error updating: ${error}`);
+        this.logger.error(`Error updating course completion: ${error?.message || 'unknown error'}`);
       }
     }
 
@@ -60,7 +60,7 @@ export class SessionUserService {
   private async getSessionUser({
     courseUserId,
     sessionId,
-  }: SessionUserDto): Promise<SessionUserEntity> {
+  }: Pick<CreateSessionUserRecordDto, 'courseUserId' | 'sessionId'>): Promise<SessionUserEntity> {
     return await this.sessionUserRepository
       .createQueryBuilder('session_user')
       .leftJoinAndSelect('session_user.session', 'session')
@@ -74,7 +74,7 @@ export class SessionUserService {
     courseUserId,
     completed,
     completedAt,
-  }: SessionUserDto): Promise<SessionUserEntity> {
+  }: CreateSessionUserRecordDto): Promise<SessionUserEntity> {
     return await this.sessionUserRepository.save({
       sessionId,
       courseUserId,
@@ -83,7 +83,7 @@ export class SessionUserService {
     });
   }
 
-  public async createSessionUser(user: UserEntity, { storyblokUuid }: UpdateSessionUserDto) {
+  public async createSessionUser(user: UserEntity, { storyblokUuid }: SessionUserDto) {
     const session = await this.sessionService.getSessionByStoryblokUuid(storyblokUuid);
 
     if (!session) {
@@ -104,13 +104,8 @@ export class SessionUserService {
       });
     }
 
-    let sessionUser = await this.getSessionUser({
-      sessionId: id,
-      courseUserId: courseUser.id,
-    });
-
-    if (!sessionUser) {
-      sessionUser = await this.createSessionUserRecord({
+    if (!await this.getSessionUser({ sessionId: id, courseUserId: courseUser.id })) {
+      await this.createSessionUserRecord({
         sessionId: id,
         courseUserId: courseUser.id,
         completed: false,
@@ -130,7 +125,7 @@ export class SessionUserService {
 
   public async setSessionUserCompleted(
     user: UserEntity,
-    { storyblokUuid }: UpdateSessionUserDto,
+    { storyblokUuid }: SessionUserDto,
     completed: boolean,
   ) {
     const session = await this.sessionService.getSessionByStoryblokUuid(storyblokUuid);

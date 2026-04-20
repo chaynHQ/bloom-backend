@@ -9,7 +9,7 @@ export class FeatureService {
   constructor(
     @InjectRepository(FeatureEntity) private featureRepository: Repository<FeatureEntity>,
   ) {}
-  async createFeature(createFeatureDto: CreateFeatureDto): Promise<FeatureEntity | unknown> {
+  async createFeature(createFeatureDto: CreateFeatureDto): Promise<FeatureEntity> {
     try {
       const featureObject = this.featureRepository.create(createFeatureDto);
       return await this.featureRepository.save(featureObject);
@@ -26,10 +26,10 @@ export class FeatureService {
       .where('Feature.featureId = :featureId', { featureId })
       .getOne();
   }
-  public async getFeatureByName(name: string): Promise<FeatureEntity> {
+  async getFeatureByName(name: string): Promise<FeatureEntity> {
     return await this.featureRepository
       .createQueryBuilder('Feature')
-      .where('Feature.name = :name', { name })
+      .where('LOWER(Feature.name) LIKE LOWER(:name)', { name })
       .getOne();
   }
 

@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
   batchCreateMailchimpProfiles,
@@ -16,8 +16,10 @@ import { CourseUserEntity } from 'src/entities/course-user.entity';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { PartnerEntity } from 'src/entities/partner.entity';
 import { UserEntity } from 'src/entities/user.entity';
+import { Logger } from 'src/logger/logger';
 import { And, Raw, Repository } from 'typeorm';
 import {
+  LANGUAGE_DEFAULT,
   PROGRESS_STATUS,
   SIMPLYBOOK_ACTION_ENUM,
   mailchimpMarketingPermissionId,
@@ -51,20 +53,18 @@ export class ServiceUserProfilesService {
       return;
     }
 
+    const userData = this.serializeUserData(user);
+    const partnerData = this.serializePartnerAccessData(
+      partnerAccess ? [{ ...partnerAccess, partner }] : [],
+    );
+    const userSignedUpAt = user.createdAt?.toISOString();
+
     try {
-      const userData = this.serializeUserData(user);
-
-      const partnerData = this.serializePartnerAccessData(
-        partnerAccess ? [{ ...partnerAccess, partner }] : [],
-      );
-
       await this.crispService.createCrispProfile({
         email: email,
-        person: { nickname: user.name, locales: [user.signUpLanguage || 'en'] },
+        person: { nickname: user.name, locales: [user.signUpLanguage || LANGUAGE_DEFAULT] },
         segments: this.serializeCrispPartnerSegments(partner ? [partner] : []),
       });
-
-      const userSignedUpAt = user.createdAt?.toISOString();
 
       await this.crispService.updateCrispPeopleData(
         {
@@ -74,7 +74,12 @@ export class ServiceUserProfilesService {
         },
         email,
       );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'unknown error';
+      logger.error(`Create Crisp user profile error: ${message}`);
+    }
 
+    try {
       const mailchimpMergeFields = {
         SIGNUPD: userSignedUpAt,
         ...userData.mailchimpSchema.merge_fields,
@@ -87,11 +92,12 @@ export class ServiceUserProfilesService {
         ...partnerData.mailchimpSchema,
         merge_fields: mailchimpMergeFields,
       });
-
-      logger.log('Create user: updated service user profiles');
     } catch (error) {
-      logger.error(`Create service user profiles error: ${error.message || 'unknown error'}`);
+      const message = error instanceof Error ? error.message : 'unknown error';
+      logger.error(`Create Mailchimp user profile error: ${message}`);
     }
+
+    logger.log('Create user: updated service user profiles');
   }
 
   async updateServiceUserProfilesUser(
@@ -107,6 +113,8 @@ export class ServiceUserProfilesService {
       return;
     }
 
+    const userData = this.serializeUserData(user);
+
     try {
       if (isCrispBaseUpdateRequired) {
         // Extra call required to update crisp "base" profile when name or sign up language is changed
@@ -115,15 +123,20 @@ export class ServiceUserProfilesService {
             ...(isEmailUpdateRequired && { email: email }),
             person: {
               nickname: user.name,
-              locales: [user.signUpLanguage || 'en'],
+              locales: [user.signUpLanguage || LANGUAGE_DEFAULT],
             },
           },
           existingEmail,
         );
       }
 
-      const userData = this.serializeUserData(user);
       await this.crispService.updateCrispPeopleData(userData.crispSchema, email);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'unknown error';
+      logger.error(`Update Crisp user profile error - ${message}`);
+    }
+
+    try {
       await updateMailchimpProfile(
         {
           ...userData.mailchimpSchema,
@@ -131,10 +144,12 @@ export class ServiceUserProfilesService {
         },
         existingEmail,
       );
-      logger.log('Updated service user profiles user');
     } catch (error) {
-      logger.error(`Update service user profiles user error - ${JSON.stringify(error)}`);
+      const message = error instanceof Error ? error.message : 'unknown error';
+      logger.error(`Update Mailchimp user profile error - ${message}`);
     }
+
+    logger.log('Updated service user profiles user');
   }
 
   async updateServiceUserProfilesPartnerAccess(
@@ -146,6 +161,8 @@ export class ServiceUserProfilesService {
       return;
     }
 
+    const partnerAccessData = this.serializePartnerAccessData(partnerAccesses);
+
     try {
       const partners = partnerAccesses.map((pa) => pa.partner);
       await this.crispService.updateCrispProfileBase(
@@ -155,11 +172,17 @@ export class ServiceUserProfilesService {
         email,
       );
 
-      const partnerAccessData = this.serializePartnerAccessData(partnerAccesses);
       await this.crispService.updateCrispPeopleData(partnerAccessData.crispSchema, email);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'unknown error';
+      logger.error(`Update Crisp partner access error - ${message}`);
+    }
+
+    try {
       await updateMailchimpProfile(partnerAccessData.mailchimpSchema, email);
     } catch (error) {
-      logger.error(`Update service user profiles partner access error - ${error}`);
+      const message = error instanceof Error ? error.message : 'unknown error';
+      logger.error(`Update Mailchimp partner access error - ${message}`);
     }
   }
 
@@ -169,12 +192,20 @@ export class ServiceUserProfilesService {
       return;
     }
 
+    const therapyData = this.serializeTherapyData(partnerAccesses);
+
     try {
-      const therapyData = this.serializeTherapyData(partnerAccesses);
       await this.crispService.updateCrispPeopleData(therapyData.crispSchema, email);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'unknown error';
+      logger.error(`Update Crisp therapy error - ${message}`);
+    }
+
+    try {
       await updateMailchimpProfile(therapyData.mailchimpSchema, email);
     } catch (error) {
-      logger.error(`Update service user profiles therapy error - ${error}`);
+      const message = error instanceof Error ? error.message : 'unknown error';
+      logger.error(`Update Mailchimp therapy error - ${message}`);
     }
   }
 
@@ -184,12 +215,20 @@ export class ServiceUserProfilesService {
       return;
     }
 
+    const courseData = this.serializeCourseData(courseUser);
+
     try {
-      const courseData = this.serializeCourseData(courseUser);
       await this.crispService.updateCrispPeopleData(courseData.crispSchema, email);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'unknown error';
+      logger.error(`Update Crisp course error - ${message}`);
+    }
+
+    try {
       await updateMailchimpProfile(courseData.mailchimpSchema, email);
     } catch (error) {
-      logger.error(`Update service user profiles course error - ${error}`);
+      const message = error instanceof Error ? error.message : 'unknown error';
+      logger.error(`Update Mailchimp course error - ${message}`);
     }
   }
 
@@ -214,7 +253,9 @@ export class ServiceUserProfilesService {
         MAILCHIMP_MERGE_FIELD_TYPES.TEXT,
       );
     } catch (error) {
-      logger.error(`Create mailchimp course merge fields error - ${error}`);
+      logger.error(
+        `Create mailchimp course merge fields error - ${error?.message || 'unknown error'}`,
+      );
     }
   }
 
@@ -248,18 +289,15 @@ export class ServiceUserProfilesService {
     return profileData;
   }
 
-  // Static bulk upload function to be used in specific cases e.g. bug prevented a subset of new users from being created
-  // UPDATE THE FILTERS to the current requirements
-  public async bulkUploadMailchimpProfiles() {
+  // Bulk upload function to be used in specific cases e.g. bug prevented a subset of new users from being created
+  // Filters by createdAt date range
+  public async bulkUploadMailchimpProfiles(startDate: string, endDate: string) {
     try {
-      const filterStartDate = '2024-10-29'; // UPDATE
-      const filterEndDate = '2025-01-06'; // UPDATE
       const users = await this.userRepository.find({
         where: {
-          // UPDATE TO ANY FILTERS
           createdAt: And(
-            Raw((alias) => `${alias} >= :filterStartDate`, { filterStartDate: filterStartDate }),
-            Raw((alias) => `${alias} < :filterEndDate`, { filterEndDate: filterEndDate }),
+            Raw((alias) => `${alias} >= :startDate`, { startDate }),
+            Raw((alias) => `${alias} < :endDate`, { endDate }),
           ),
         },
         relations: {
@@ -273,28 +311,27 @@ export class ServiceUserProfilesService {
 
       await batchCreateMailchimpProfiles(mailchimpUserProfiles);
       logger.log(
-        `Created batch mailchimp profiles for ${users.length} users, created before ${filterStartDate}`,
+        `Created batch mailchimp profiles for ${users.length} users, created between ${startDate} and ${endDate}`,
       );
     } catch (error) {
-      throw new Error(`Bulk upload mailchimp profiles API call failed: ${error}`);
+      throw new HttpException(
+        `Bulk upload mailchimp profiles API call failed: ${error?.message || 'unknown error'}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
   }
-  // Static bulk update function to be used in specific cases e.g. bug prevented a subset of users from being updated
-  // UPDATE THE FILTERS to the current requirements
-  public async bulkUpdateMailchimpProfiles() {
+
+  // Bulk update function to be used in specific cases e.g. bug prevented a subset of users from being updated
+  // Filters by updatedAt date range, excluding users created after startDate
+  public async bulkUpdateMailchimpProfiles(startDate: string, endDate: string) {
     try {
-      const filterStartDate = '2024-10-29'; // UPDATE
-      const filterEndDate = '2025-01-06'; // UPDATE
       const users = await this.userRepository.find({
         where: {
-          // UPDATE TO ANY FILTERS
           updatedAt: And(
-            Raw((alias) => `${alias} >= :filterStartDate`, { filterStartDate: filterStartDate }),
-            Raw((alias) => `${alias} < :filterEndDate`, { filterEndDate: filterEndDate }),
+            Raw((alias) => `${alias} >= :startDate`, { startDate }),
+            Raw((alias) => `${alias} < :endDate`, { endDate }),
           ),
-          createdAt: Raw((alias) => `${alias} < :filterStartDate`, {
-            filterStartDate: filterStartDate,
-          }),
+          createdAt: Raw((alias) => `${alias} < :startDate`, { startDate }),
         },
         relations: {
           partnerAccess: { partner: true, therapySession: true },
@@ -307,10 +344,13 @@ export class ServiceUserProfilesService {
 
       await batchUpdateMailchimpProfiles(mailchimpUserProfiles);
       logger.log(
-        `Updated batch mailchimp profiles for ${users.length} users, updated before ${filterStartDate}`,
+        `Updated batch mailchimp profiles for ${users.length} users, updated between ${startDate} and ${endDate}`,
       );
     } catch (error) {
-      throw new Error(`Bulk update mailchimp profiles API call failed: ${error}`);
+      throw new HttpException(
+        `Bulk update mailchimp profiles API call failed: ${error?.message || 'unknown error'}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
@@ -353,7 +393,7 @@ export class ServiceUserProfilesService {
           enabled: contactPermission,
         },
       ],
-      language: signUpLanguage || 'en',
+      language: signUpLanguage || LANGUAGE_DEFAULT,
       merge_fields: {
         NAME: name,
         LACTIVED: lastActiveAtString,
