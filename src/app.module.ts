@@ -19,6 +19,7 @@ import { PartnerAccessModule } from './partner-access/partner-access.module';
 import { PartnerAdminModule } from './partner-admin/partner-admin.module';
 import { PartnerFeatureModule } from './partner-feature/partner-feature.module';
 import { PartnerModule } from './partner/partner.module';
+import { ReportingModule } from './reporting/reporting.module';
 import { ResourceFeedbackModule } from './resource-feedback/resource-feedback.module';
 import { ResourceUserModule } from './resource-user/resource-user.module';
 import { ResourceModule } from './resource/resource.module';
@@ -74,6 +75,7 @@ import { WebhooksModule } from './webhooks/webhooks.module';
     ResourceUserModule,
     ResourceFeedbackModule,
     TherapySessionModule,
+    ReportingModule,
   ],
   providers: [
     {

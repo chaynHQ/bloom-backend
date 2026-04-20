@@ -160,6 +160,19 @@ export const slackDeletedUsersWebhookUrl = getEnv(
   process.env.SLACK_BLOOM_DELETED_USERS_WEBHOOK_URL,
   'SLACK_BLOOM_DELETED_USERS_WEBHOOK_URL',
 );
+export const slackReportingWebhookUrl = getEnv(
+  process.env.SLACK_REPORTING_WEBHOOK_URL,
+  'SLACK_REPORTING_WEBHOOK_URL',
+);
+
+export const reportingTimezone =
+  getEnv(process.env.REPORTING_TIMEZONE, 'REPORTING_TIMEZONE') || 'Europe/London';
+
+export const ga4PropertyId = getEnv(process.env.GA4_PROPERTY_ID, 'GA4_PROPERTY_ID');
+export const ga4ServiceAccountKeyJson = getEnv(
+  process.env.GA4_SERVICE_ACCOUNT_KEY_JSON,
+  'GA4_SERVICE_ACCOUNT_KEY_JSON',
+);
 
 export const storyblokToken = getEnv(process.env.STORYBLOK_PUBLIC_TOKEN, 'STORYBLOK_PUBLIC_TOKEN');
 
