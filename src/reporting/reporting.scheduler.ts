@@ -39,7 +39,7 @@ export class ReportingScheduler {
   }
 
   private async fire(period: ReportPeriod): Promise<void> {
-    this.logger.log(`ReportingScheduler: firing ${period} at ${reportingTimezone} 09:00`);
+    this.logger.log(`ReportingScheduler: firing ${period} (tz=${reportingTimezone})`);
     try {
       await this.reportingService.run(period, { trigger: 'scheduled' });
     } catch (err) {

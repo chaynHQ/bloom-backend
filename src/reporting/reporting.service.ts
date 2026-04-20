@@ -103,7 +103,6 @@ export class ReportingService {
 
     try {
       const slackResponse = await this.slackMessageClient.sendMessageToReportingChannel(blocks, {
-        force: opts.force === true,
         fallbackText,
       });
       await this.markSent(runId, payload, slackResponse);
