@@ -26,9 +26,10 @@ function getCorsOrigin(): (string | RegExp)[] {
 
 async function bootstrap() {
   const PORT = process.env.PORT || 35001;
+  const isDevelopment = process.env.NODE_ENV === 'development';
   const app = await NestFactory.create(AppModule, {
     cors: {
-      origin: getCorsOrigin(),
+      origin: isDevelopment ? true : getCorsOrigin(),
       methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
       credentials: true,
     },
