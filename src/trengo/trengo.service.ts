@@ -31,6 +31,17 @@ let cacheInitialized = false;
 
 const TRENGO_API_BASE = 'https://app.trengo.com/api/v2';
 
+// Surface Trengo's response body (status + data) so 4xx validation errors are debuggable.
+function formatTrengoError(error: unknown): string {
+  const err = error as { message?: string; response?: { status?: number; data?: unknown } };
+  if (err?.response) {
+    const { status, data } = err.response;
+    const body = typeof data === 'string' ? data : JSON.stringify(data);
+    return `${status} ${err.message} — ${body}`;
+  }
+  return err?.message || 'unknown error';
+}
+
 @Injectable()
 export class TrengoService implements OnModuleInit {
   private httpClient: AxiosInstance;
@@ -138,15 +149,16 @@ export class TrengoService implements OnModuleInit {
     }
 
     try {
-      // Trengo creates a new contact or returns the existing one if the identifier already exists
+      // Trengo requires a non-empty name; fall back to the email local-part if missing.
+      const name = profile.name?.trim() || profile.email.split('@')[0];
       const response = await this.httpClient.post(`/channels/${trengoChannelId}/contacts`, {
         identifier: profile.email,
-        name: profile.name || '',
+        name,
       });
       return response.data;
     } catch (error) {
       throw new Error(
-        `Create Trengo contact API call failed: ${error?.message || 'unknown error'}`,
+        `Create Trengo contact API call failed: ${formatTrengoError(error)}`,
         { cause: error },
       );
     }
