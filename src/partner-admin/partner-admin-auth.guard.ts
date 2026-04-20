@@ -52,7 +52,7 @@ export class PartnerAdminAuthGuard implements CanActivate {
       });
 
       throw new HttpException(
-        `PartnerAdminAuthGuard - Error parsing firebase user: ${error}`,
+        `PartnerAdminAuthGuard - Error parsing firebase user: ${error?.message || 'unknown error'}`,
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }

@@ -1,4 +1,5 @@
-import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { Logger } from 'src/logger/logger';
 import { InjectRepository } from '@nestjs/typeorm';
 import { SlackMessageClient } from 'src/api/slack/slack-api';
 import { ResourceEntity } from 'src/entities/resource.entity';
@@ -41,7 +42,7 @@ export class ResourceFeedbackService {
         `*${resource.name}* resource was rated *_${resourceFeedbackDto.feedbackTags}_* ${resourceFeedbackDto.feedbackDescription.length > 0 ? `with the comment: \n> _${resourceFeedbackDto.feedbackDescription}_` : ''}`,
       );
     } catch (error) {
-      logger.error(`Failed to send Slack message for resource feedback: ${error.message}`);
+      logger.error(`Failed to send Slack message for resource feedback: ${error?.message || 'unknown error'}`);
     }
   }
 }

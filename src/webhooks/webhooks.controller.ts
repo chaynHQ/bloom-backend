@@ -10,7 +10,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBody, ApiTags } from '@nestjs/swagger';
-import { createHmac } from 'crypto';
+import { createHmac, timingSafeEqual } from 'crypto';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
 import { storyblokWebhookSecret } from 'src/utils/constants';
 import { ControllerDecorator } from 'src/utils/controller.decorator';
@@ -48,7 +48,9 @@ export class WebhooksController {
     req.setEncoding('utf8');
 
     const bodyHmac = createHmac('sha1', storyblokWebhookSecret).update(req.rawBody).digest('hex');
-    if (bodyHmac !== signature) {
+    const expected = Buffer.from(bodyHmac);
+    const provided = Buffer.from(signature);
+    if (expected.length !== provided.length || !timingSafeEqual(expected, provided)) {
       const error = `Storyblok webhook error - signature mismatch`;
       this.logger.error(error);
       throw new HttpException(error, HttpStatus.UNAUTHORIZED);

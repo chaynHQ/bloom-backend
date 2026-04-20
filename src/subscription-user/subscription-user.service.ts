@@ -45,9 +45,7 @@ export class SubscriptionUserService {
         createSubscriptionUserDto.subscriptionInfo,
       );
 
-      this.logger.log(
-        `Triggering zapier to add contact (number: ${sanitizedPhonenumber}) to respond.io`,
-      );
+      this.logger.log('Triggering zapier to add contact to respond.io');
       await this.zapierClient.addContactToRespondIO({
         phonenumber: sanitizedPhonenumber,
         name: user.name,
@@ -78,9 +76,7 @@ export class SubscriptionUserService {
 
     if (subscription) {
       if (!subscription.cancelledAt) {
-        this.logger.log(
-          `Triggering zapier to remove contact (number: ${subscription.subscriptionInfo}) from respond.io`,
-        );
+        this.logger.log('Triggering zapier to remove contact from respond.io');
         await this.zapierClient.deleteContactFromRespondIO({
           phonenumber: subscription.subscriptionInfo,
         });
@@ -143,7 +139,7 @@ export class SubscriptionUserService {
       return updatedSubscriptions;
     } catch (err) {
       throw new HttpException(
-        `softDeleteSubscriptionUser error - ${err}`,
+        `softDeleteSubscriptionUser error - ${err?.message || 'unknown error'}`,
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
@@ -160,7 +156,7 @@ export class SubscriptionUserService {
 
       return userSubscriptions;
     } catch (err) {
-      throw new HttpException(`getSubscriptions error - ${err}`, HttpStatus.INTERNAL_SERVER_ERROR);
+      throw new HttpException(`getSubscriptions error - ${err?.message || 'unknown error'}`, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 }

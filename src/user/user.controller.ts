@@ -123,14 +123,37 @@ export class UserController {
 
   @ApiBearerAuth()
   @Get('/bulk-upload-mailchimp-profiles')
+  @ApiOperation({ description: 'Bulk creates Mailchimp profiles for users created within date range' })
   @UseGuards(SuperAdminAuthGuard)
-  async bulkUploadMailchimpProfiles() {}
+  async bulkUploadMailchimpProfiles(
+    @Query('startDate') startDate: string,
+    @Query('endDate') endDate: string,
+  ) {
+    if (!startDate || !endDate) {
+      throw new HttpException(
+        'startDate and endDate query params are required (YYYY-MM-DD)',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    await this.serviceUserProfilesService.bulkUploadMailchimpProfiles(startDate, endDate);
+    return 'ok';
+  }
 
   @ApiBearerAuth()
   @Get('/bulk-update-mailchimp-profiles')
+  @ApiOperation({ description: 'Bulk updates Mailchimp profiles for users updated within date range' })
   @UseGuards(SuperAdminAuthGuard)
-  async bulkUpdateMailchimpProfiles() {
-    await this.serviceUserProfilesService.bulkUpdateMailchimpProfiles();
+  async bulkUpdateMailchimpProfiles(
+    @Query('startDate') startDate: string,
+    @Query('endDate') endDate: string,
+  ) {
+    if (!startDate || !endDate) {
+      throw new HttpException(
+        'startDate and endDate query params are required (YYYY-MM-DD)',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    await this.serviceUserProfilesService.bulkUpdateMailchimpProfiles(startDate, endDate);
     return 'ok';
   }
 }

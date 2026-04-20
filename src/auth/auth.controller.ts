@@ -8,7 +8,7 @@ import { UserAuthDto } from './dto/user-auth.dto';
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  // This api is to be removed in the future.
+  // Used for remote sign in e.g. on Postman
   @Post('/signin')
   @ApiExcludeEndpoint()
   async signin(@Body() userAuthDto: UserAuthDto) {

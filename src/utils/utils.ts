@@ -1,5 +1,4 @@
 import { webcrypto } from 'crypto';
-import { sub } from 'date-fns';
 const crypto = webcrypto as unknown as Crypto;
 
 export const generateRandomString = (length: number) => {
@@ -24,8 +23,6 @@ export const getAcronym = (text: string) => {
 
   return abbreviatedString;
 };
-
-export const getYesterdaysDate = () => sub(new Date(), { days: 1 });
 
 export const isCypressTestEmail = (email: string): boolean => {
   return email.includes('cypresstestemail');
