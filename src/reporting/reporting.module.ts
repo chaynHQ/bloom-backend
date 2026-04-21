@@ -8,7 +8,9 @@ import { AuthModule } from 'src/auth/auth.module';
 import { CourseUserEntity } from 'src/entities/course-user.entity';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { ReportingRunEntity } from 'src/entities/reporting-run.entity';
+import { ResourceFeedbackEntity } from 'src/entities/resource-feedback.entity';
 import { ResourceUserEntity } from 'src/entities/resource-user.entity';
+import { SessionFeedbackEntity } from 'src/entities/session-feedback.entity';
 import { SessionUserEntity } from 'src/entities/session-user.entity';
 import { SubscriptionUserEntity } from 'src/entities/subscription-user.entity';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
@@ -31,6 +33,8 @@ import { ReportingService } from './reporting.service';
       TherapySessionEntity,
       PartnerAccessEntity,
       SubscriptionUserEntity,
+      SessionFeedbackEntity,
+      ResourceFeedbackEntity,
       ReportingRunEntity,
     ]),
   ],

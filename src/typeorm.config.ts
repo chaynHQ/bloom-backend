@@ -61,6 +61,7 @@ import { BloomBackend1748540025892 } from './migrations/1748540025892-bloom-back
 import { BloomBackend1756987770157 } from './migrations/1756987770157-bloom-backend';
 import { BloomBackend1776686083659 } from './migrations/1776686083659-bloom-backend';
 import { BloomBackend1777046400000 } from './migrations/1777046400000-bloom-backend';
+import { BloomBackend1777593600000 } from './migrations/1777593600000-bloom-backend';
 import { databaseUrl } from './utils/constants';
 
 config();
@@ -143,6 +144,7 @@ export const dataSourceOptions = {
     BloomBackend1756987770157,
     BloomBackend1776686083659,
     BloomBackend1777046400000,
+    BloomBackend1777593600000,
   ],
   subscribers: [],
   ssl: isProduction || isStaging,
