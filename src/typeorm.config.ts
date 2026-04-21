@@ -2,7 +2,6 @@ import { ConfigService } from '@nestjs/config';
 import { config } from 'dotenv';
 import * as PostgressConnectionStringParser from 'pg-connection-string';
 import { DataSource, DataSourceOptions } from 'typeorm';
-import { databaseUrl } from './utils/constants';
 import { CoursePartnerEntity } from './entities/course-partner.entity';
 import { CourseUserEntity } from './entities/course-user.entity';
 import { CourseEntity } from './entities/course.entity';
@@ -61,6 +60,8 @@ import { BloomBackend1744450013565 } from './migrations/1744450013565-bloom-back
 import { BloomBackend1748540025892 } from './migrations/1748540025892-bloom-backend';
 import { BloomBackend1756987770157 } from './migrations/1756987770157-bloom-backend';
 import { BloomBackend1776686083659 } from './migrations/1776686083659-bloom-backend';
+import { BloomBackend1777046400000 } from './migrations/1777046400000-bloom-backend';
+import { databaseUrl } from './utils/constants';
 
 config();
 const configService = new ConfigService();
@@ -68,9 +69,7 @@ const configService = new ConfigService();
 const isProduction = configService.get('NODE_ENV') === 'production';
 const isStaging = configService.get('NODE_ENV') === 'staging';
 
-const { host, port, user, password, database } = PostgressConnectionStringParser.parse(
-  databaseUrl,
-);
+const { host, port, user, password, database } = PostgressConnectionStringParser.parse(databaseUrl);
 
 export const dataSourceOptions = {
   type: 'postgres',
@@ -143,6 +142,7 @@ export const dataSourceOptions = {
     BloomBackend1748540025892,
     BloomBackend1756987770157,
     BloomBackend1776686083659,
+    BloomBackend1777046400000,
   ],
   subscribers: [],
   ssl: isProduction || isStaging,
