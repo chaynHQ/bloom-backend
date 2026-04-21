@@ -225,4 +225,27 @@ describe('ReportingService', () => {
     expect(dbMetrics.collectTotals).not.toHaveBeenCalled();
     expect(daily.dbTotals).toBeUndefined();
   });
+
+  it('off-prod default bypasses the unique-slot lock so repeat staging runs overwrite and re-post', async () => {
+    // NODE_ENV during jest is 'test' → isProduction === false → bypass default.
+    // The bypass path uses findOne + save/update rather than the orIgnore insert.
+    reportingRunRepo.findOne.mockResolvedValue({ id: 'existing-run' } as ReportingRunEntity);
+    reportingRunRepo.find.mockResolvedValue([]);
+    dbMetrics.collect.mockResolvedValue(fakeDb);
+    ga4Metrics.collect.mockResolvedValue(fakeGa4);
+    slack.sendMessageToReportingChannel.mockResolvedValue({ status: 200 } as never);
+
+    const payload = await service.run('weekly');
+
+    expect(payload.runId).toBe('existing-run');
+    // orIgnore insert path is NOT taken on staging default.
+    expect(insertBuilder.execute).not.toHaveBeenCalled();
+    // Existing row flipped back to pending so the re-run can replay cleanly.
+    expect(reportingRunRepo.update).toHaveBeenCalledWith(
+      { id: 'existing-run' },
+      { status: 'pending', error: null },
+    );
+    // Slack still posts on the replay — that's the whole point of the bypass.
+    expect(slack.sendMessageToReportingChannel).toHaveBeenCalledTimes(1);
+  });
 });

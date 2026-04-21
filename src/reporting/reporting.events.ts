@@ -5,6 +5,8 @@
  * the group.
  */
 
+import { FUNNELS } from './reporting.funnels';
+
 interface EventItem {
   event: string;
   label: string;
@@ -585,12 +587,11 @@ export const BREAKDOWNS: BreakdownSpec[] = [
 
 /** Events the Slack message references via EVENT_GROUPS / FUNNELS. Used by
  *  persistence to trim daily ga4Events rows; weekly+ keeps the full
- *  literal copy. Computed lazily — FUNNELS imports cycle if loaded at init. */
+ *  literal copy. Memoised because the iteration is ~200 items across fn
+ *  calls but the result never changes at runtime. */
 let _renderedNames: Set<string> | null = null;
 export function renderedEventNames(): ReadonlySet<string> {
   if (_renderedNames) return _renderedNames;
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { FUNNELS } = require('./reporting.funnels') as typeof import('./reporting.funnels');
   const set = new Set<string>();
   for (const g of EVENT_GROUPS) for (const l of g.lines) for (const i of l.items) set.add(i.event);
   for (const f of FUNNELS) for (const s of f.steps) set.add(s.event);
