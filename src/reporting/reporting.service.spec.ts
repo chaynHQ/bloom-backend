@@ -25,6 +25,23 @@ const fakeDb: DbMetrics = {
   partnerAccessActivations: 0,
   whatsappSubscribed: 0,
   whatsappUnsubscribed: 0,
+  sessionFeedbackSubmitted: 0,
+  resourceFeedbackSubmitted: 0,
+  activationRate: 0,
+  partnerActivationRate: 0,
+};
+
+const emptyDbBreakdowns = {
+  courses: [],
+  resources: [],
+  newUsersByPartner: [],
+  partnerAccessGrantsByPartner: [],
+  partnerAccessActivationsByPartner: [],
+  newUsersByLanguage: [],
+  sessionFeedbackByTag: [],
+  resourceFeedbackByTag: [],
+  therapyByTherapist: [],
+  therapyByPartner: [],
 };
 
 const fakeGa4: Ga4Metrics = {
@@ -81,46 +98,63 @@ describe('ReportingService', () => {
     service = module.get(ReportingService);
   });
 
-  it('claims an idempotency slot, collects both sources, posts to Slack, persists the metric snapshot', async () => {
+  it('claims an idempotency slot, collects both sources, posts to Slack, persists the metric snapshot + JSONB blobs', async () => {
     insertBuilder.execute.mockResolvedValue({ raw: [{ id: 'run-1' }] });
     reportingRunRepo.find.mockResolvedValue([]);
     dbMetrics.collect.mockResolvedValue({ ...fakeDb, newUsers: 7 });
     dbMetrics.collectBreakdowns.mockResolvedValue({
-      completedCourses: [
+      ...emptyDbBreakdowns,
+      courses: [
         {
           name: 'Foundations',
-          sessionCompletions: 5,
-          courseCompletions: 1,
-          sessions: [{ name: 'Intro', count: 5 }],
+          coursesStarted: 3,
+          coursesCompleted: 1,
+          sessionsStarted: 9,
+          sessionsCompleted: 5,
+          sessions: [{ name: 'Intro', started: 9, completed: 5 }],
         },
       ],
-      completedResources: [],
     });
     ga4Metrics.collect.mockResolvedValue(fakeGa4);
     slack.sendMessageToReportingChannel.mockResolvedValue({ status: 200 } as never);
 
-    const payload = await service.run('daily');
+    const payload = await service.run('weekly', { bypassIdempotency: false });
 
     expect(payload.runId).toBe('run-1');
-    expect(payload.dbBreakdowns?.completedCourses[0].name).toBe('Foundations');
-    expect(payload.dbBreakdowns?.completedCourses[0].sessions[0]).toEqual({
-      name: 'Intro',
-      count: 5,
-    });
+    expect(payload.dbBreakdowns?.courses[0].name).toBe('Foundations');
     expect(dbMetrics.collect).toHaveBeenCalledTimes(1);
     expect(dbMetrics.collectBreakdowns).toHaveBeenCalledTimes(1);
-    expect(ga4Metrics.collect).toHaveBeenCalledWith(payload.window, 'daily');
+    expect(ga4Metrics.collect).toHaveBeenCalledWith(payload.window, 'weekly');
     expect(slack.sendMessageToReportingChannel).toHaveBeenCalledTimes(1);
+    // Typed metric col + new JSONB snapshots all written.
     expect(reportingRunRepo.update).toHaveBeenCalledWith(
       { id: 'run-1' },
-      expect.objectContaining({ status: 'sent', newUsers: 7 }),
+      expect.objectContaining({
+        status: 'sent',
+        newUsers: 7,
+        periodTimezone: payload.window.timezone,
+        dbBreakdowns: expect.objectContaining({ courses: expect.any(Array) }),
+        ga4Overview: expect.any(Object),
+      }),
     );
+  });
+
+  it('skips collectBreakdowns on daily (the JOINs are heavy and daily strips topic detail)', async () => {
+    insertBuilder.execute.mockResolvedValue({ raw: [{ id: 'run-d' }] });
+    reportingRunRepo.find.mockResolvedValue([]);
+    dbMetrics.collect.mockResolvedValue(fakeDb);
+    ga4Metrics.collect.mockResolvedValue(fakeGa4);
+    slack.sendMessageToReportingChannel.mockResolvedValue({ status: 200 } as never);
+
+    await service.run('daily', { bypassIdempotency: false });
+
+    expect(dbMetrics.collectBreakdowns).not.toHaveBeenCalled();
   });
 
   it('short-circuits when the idempotency slot is already claimed (no collection, no Slack)', async () => {
     insertBuilder.execute.mockResolvedValue({ raw: [] });
 
-    const payload = await service.run('daily');
+    const payload = await service.run('daily', { bypassIdempotency: false });
 
     expect(payload.db).toMatchObject({ unavailable: true });
     expect(dbMetrics.collect).not.toHaveBeenCalled();
@@ -134,7 +168,7 @@ describe('ReportingService', () => {
     ga4Metrics.collect.mockResolvedValue(fakeGa4);
     slack.sendMessageToReportingChannel.mockRejectedValue(new Error('webhook 500'));
 
-    await service.run('weekly');
+    await service.run('weekly', { bypassIdempotency: false });
 
     expect(reportingRunRepo.update).toHaveBeenCalledWith(
       { id: 'run-err' },
@@ -157,7 +191,7 @@ describe('ReportingService', () => {
     ga4Metrics.collect.mockResolvedValue(fakeGa4);
     slack.sendMessageToReportingChannel.mockResolvedValue({ status: 200 } as never);
 
-    const payload = await service.run('monthly');
+    const payload = await service.run('monthly', { bypassIdempotency: false });
 
     expect(payload.baseline).toBeDefined();
     expect(payload.baseline?.db.sessionsStarted?.mean).toBeCloseTo(50);
