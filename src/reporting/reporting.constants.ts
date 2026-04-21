@@ -1,22 +1,12 @@
-// ============================================================================
-// ⚠️  TEMPORARY TEST CONFIGURATION — DO NOT MERGE
-// ----------------------------------------------------------------------------
-// All four period crons are set to fire at 19:28 Europe/London on every day
-// for a one-off end-to-end test (all four digests will post simultaneously
-// to Slack). This also means the idempotency guard will kick in after the
-// first fire — only the first minute-match per period-slot actually posts,
-// subsequent fires log `already claimed` and exit. That's expected and
-// validates the idempotency path.
-//
-// REVERT before merge — original values are commented beside each line.
-// ============================================================================
+// All digests fire at 09:00 Europe/London — late enough that GA4 "yesterday"
+// data has stabilised (GA4 takes up to ~8h to finalise intraday data).
 export const CRON_EXPRESSIONS = {
-  daily: '42 22 * * *', // ORIGINAL: '0 9 * * *'
-  weekly: '42 22 * * *', // ORIGINAL: '0 9 * * MON'
-  monthly: '42 22 * * *', // ORIGINAL: '0 9 1 * *'
-  quarterly: '42 22 * * *', // ORIGINAL: '0 9 1 1,4,7,10 *'
+  daily: '0 9 * * *',
+  weekly: '0 9 * * MON',
+  monthly: '0 9 1 * *',
+  quarterly: '0 9 1 1,4,7,10 *',
+  yearly: '0 9 1 1 *',
 } as const;
 
-// Slack's absolute cap is 50 blocks per message; stop short at 45 so the
-// "truncated" notice itself can fit.
+// Slack caps at 50 blocks per message; leave headroom for the truncation notice.
 export const SLACK_BLOCK_SAFETY_MARGIN = 45;

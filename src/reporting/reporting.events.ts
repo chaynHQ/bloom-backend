@@ -1,15 +1,8 @@
 /**
- * Curated event groups for the Slack digest.
- *
- * Each group renders as one Slack block. Lines with multiple items render
- * inline (e.g. "Session videos — started (32) · finished (20)"). Zero-count
- * items are dropped from each line; lines where every item is zero are
- * dropped entirely — so a clean day produces no Errors section at all.
- *
- * Event names match the frontend `logEvent()` calls in
- * `bloom-frontend/lib/constants/events.ts`. Add new events here to surface
- * them in the digest; unlisted events still land in GA4 but aren't rendered
- * (they appear under "Uncategorised events" as a prompt to classify them).
+ * Curated event groups for the Slack digest. Event names must match the
+ * values of `logEvent()` calls in `bloom-frontend/lib/constants/events.ts`.
+ * Unlisted events surface under "Uncategorised events" instead of the
+ * curated groups.
  */
 
 interface EventItem {
@@ -17,14 +10,8 @@ interface EventItem {
   label: string;
 }
 
-/**
- * A renderable line in the digest.
- *
- * `breakdownParam` opts a line into an inline "by X: A (n), B (n), C (n)"
- * sub-line showing the top values of a GA4 custom dimension, filtered to the
- * events in this line. Requires the custom dimension to exist in GA4 (see
- * BREAKDOWNS doc below).
- */
+/** `breakdownParam` adds an inline "by X: A (n), B (n), C (n)" sub-line
+ *  from a GA4 custom dimension. The dimension must exist in GA4. */
 export interface EventLine {
   label: string;
   items: EventItem[];
@@ -36,12 +23,8 @@ export interface EventGroup {
   title: string;
   emoji: string;
   lines: EventLine[];
-  /**
-   * When true, lines with all-zero counts are dropped from the digest so a
-   * clean day produces no Errors section at all. Non-error groups always
-   * render every configured line (including zeros) so the week-over-week
-   * structure of the digest stays identical.
-   */
+  /** When true, all-zero lines are dropped — so a clean day produces no
+   *  Errors section. Non-error groups always render every line. */
   errorsOnly?: boolean;
 }
 
@@ -50,17 +33,17 @@ export const EVENT_GROUPS: EventGroup[] = [
     title: 'Auth & onboarding',
     emoji: ':key:',
     lines: [
+      // LOGIN_SUCCESS / REGISTER_SUCCESS can't carry the `partner` param
+      // reliably at fire time — partner identity isn't known until after the
+      // user record loads. For per-partner growth breakdowns use the DB
+      // (PartnerAccessEntity joins).
       {
         label: 'Logins',
         items: [{ event: 'LOGIN_SUCCESS', label: 'success' }],
-        breakdownParam: 'customEvent:partner',
-        paramLabel: 'partner',
       },
       {
         label: 'Registrations',
         items: [{ event: 'REGISTER_SUCCESS', label: 'completed' }],
-        breakdownParam: 'customEvent:partner',
-        paramLabel: 'partner',
       },
       { label: 'Password resets', items: [{ event: 'RESET_PASSWORD_SUCCESS', label: 'completed' }] },
       { label: 'Logouts', items: [{ event: 'LOGOUT_SUCCESS', label: 'completed' }] },
@@ -108,8 +91,6 @@ export const EVENT_GROUPS: EventGroup[] = [
       {
         label: 'Course overview viewed',
         items: [{ event: 'COURSE_OVERVIEW_VIEWED', label: 'views' }],
-        breakdownParam: 'customEvent:course_name',
-        paramLabel: 'course',
       },
       {
         label: 'Course intro video',
@@ -117,8 +98,6 @@ export const EVENT_GROUPS: EventGroup[] = [
           { event: 'COURSE_INTRO_VIDEO_STARTED', label: 'started' },
           { event: 'COURSE_INTRO_VIDEO_FINISHED', label: 'finished' },
         ],
-        breakdownParam: 'customEvent:course_name',
-        paramLabel: 'course',
       },
       {
         label: 'Course intro transcript',
@@ -126,8 +105,6 @@ export const EVENT_GROUPS: EventGroup[] = [
         // but its VALUE (what reaches GA4) is `COURSE_INTRO_TRANSCRIPT_OPENED`
         // without `_VIDEO_`. Event name here matches the value.
         items: [{ event: 'COURSE_INTRO_TRANSCRIPT_OPENED', label: 'opened' }],
-        breakdownParam: 'customEvent:course_name',
-        paramLabel: 'course',
       },
     ],
   },
@@ -138,8 +115,6 @@ export const EVENT_GROUPS: EventGroup[] = [
       {
         label: 'Session viewed',
         items: [{ event: 'SESSION_VIEWED', label: 'views' }],
-        breakdownParam: 'customEvent:session_name',
-        paramLabel: 'session',
       },
       {
         label: 'Session video',
@@ -147,8 +122,6 @@ export const EVENT_GROUPS: EventGroup[] = [
           { event: 'SESSION_VIDEO_STARTED', label: 'started' },
           { event: 'SESSION_VIDEO_FINISHED', label: 'finished' },
         ],
-        breakdownParam: 'customEvent:session_name',
-        paramLabel: 'session',
       },
       {
         label: 'Session progression',
@@ -156,8 +129,6 @@ export const EVENT_GROUPS: EventGroup[] = [
           { event: 'SESSION_STARTED_SUCCESS', label: 'started' },
           { event: 'SESSION_COMPLETE_SUCCESS', label: 'completed' },
         ],
-        breakdownParam: 'customEvent:session_name',
-        paramLabel: 'session',
       },
       {
         label: 'Session transcript',
@@ -277,19 +248,10 @@ export const EVENT_GROUPS: EventGroup[] = [
       },
     ],
   },
-  {
-    title: 'WhatsApp',
-    emoji: ':iphone:',
-    lines: [
-      {
-        label: 'WhatsApp',
-        items: [
-          { event: 'WHATSAPP_SUBSCRIBE_SUCCESS', label: 'subscribed' },
-          { event: 'WHATSAPP_UNSUBSCRIBE_SUCCESS', label: 'unsubscribed' },
-        ],
-      },
-    ],
-  },
+  // WhatsApp subscribe/unsubscribe success counts are DB-authoritative — see
+  // whatsappSubscribed / whatsappUnsubscribed in DB_METRIC_KEYS. Errors still
+  // live in the Errors group below because those are frontend-side failures
+  // the DB never sees.
   {
     title: 'App & install',
     emoji: ':rocket:',

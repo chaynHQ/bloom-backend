@@ -5,7 +5,10 @@ import {
   Anomaly,
   BaselineStat,
   DB_METRIC_LABELS,
+  DB_TOTALS_LABELS,
+  DbBreakdowns,
   DbMetrics,
+  DbTotals,
   GA4_OVERVIEW_LABELS,
   Ga4Breakdown,
   Ga4EventBreakdown,
@@ -13,10 +16,22 @@ import {
   Ga4Metrics,
   Ga4OverviewMetrics,
   PERIODS_WITH_FULL_DETAIL,
+  PERIODS_WITH_TOTALS,
   ReportBaseline,
   ReportPayload,
   ReportWindow,
 } from './reporting.types';
+
+/** Per-group cap on rendered children (sessions-per-course,
+ *  resources-per-category). Quarterly + yearly render uncapped. */
+const CHILDREN_CAP_PER_GROUP = 8;
+
+/** Humanised labels for ResourceEntity.category values. */
+const RESOURCE_CATEGORY_LABELS: Record<string, string> = {
+  short_video: 'Short videos',
+  single_video: 'Single videos',
+  conversation: 'Conversations',
+};
 
 type Block = Record<string, unknown>;
 
@@ -34,8 +49,20 @@ export function buildReportBlocks(payload: ReportPayload): Block[] {
     blocks.push(...anomaliesSection(anomalies, baseline));
   }
 
+  if (payload.dbTotals) {
+    blocks.push(dividerBlock());
+    blocks.push(...totalsSection(payload.dbTotals));
+  }
+
   blocks.push(dividerBlock());
-  blocks.push(...dbSection(payload.db, baseline));
+  blocks.push(
+    ...dbSection(
+      payload.db,
+      baseline,
+      withDetail ? payload.dbBreakdowns : undefined,
+      payload.period,
+    ),
+  );
 
   blocks.push(dividerBlock());
   blocks.push(...ga4OverviewSection(payload.ga4, baseline));
@@ -120,7 +147,7 @@ function anomaliesSection(
     const qualitative = a.sigma > 0 ? 'unusually high' : 'unusually low';
     const pct = Math.abs(Math.round(((a.current - a.mean) / a.mean) * 100));
     const avg = formatNumber(a.mean);
-    const sourceLabel = a.source === 'db' ? 'DB' : 'GA4';
+    const sourceLabel = a.source === 'db' ? 'DB' : 'Google Analytics Events';
     return `• *${a.label}* (${sourceLabel}) — ${a.current.toLocaleString()} (${arrow} ${pct}% vs avg ${avg}, ${qualitative})`;
   });
   const header = baseline
@@ -129,11 +156,27 @@ function anomaliesSection(
   return [mrkdwnSection(`${header}\n${lines.join('\n')}`)];
 }
 
+// ---------- Bloom totals (state-of-Bloom snapshot) ----------
+
+function totalsSection(totals: DbTotals): Block[] {
+  return [
+    mrkdwnSection('*:cherry_blossom: Bloom totals* _(where we are)_'),
+    fieldsSection(
+      (Object.keys(DB_TOTALS_LABELS) as Array<keyof DbTotals>).map((key) => ({
+        label: DB_TOTALS_LABELS[key],
+        value: formatNumber(totals[key]),
+      })),
+    ),
+  ];
+}
+
 // ---------- DB section ----------
 
 function dbSection(
   db: ReportPayload['db'],
   baseline: ReportBaseline | undefined,
+  breakdowns: DbBreakdowns | undefined,
+  period: ReportPayload['period'],
 ): Block[] {
   if ('unavailable' in db) {
     return [mrkdwnSection(`:warning: *Database metrics unavailable* — ${db.reason}`)];
@@ -144,7 +187,81 @@ function dbSection(
   for (let i = 0; i < fields.length; i += 10) {
     out.push(fieldsSection(fields.slice(i, i + 10)));
   }
+
+  const uncapped = PERIODS_WITH_TOTALS.includes(period);
+  const cap = uncapped ? Infinity : CHILDREN_CAP_PER_GROUP;
+
+  const courseLines = renderCourseBreakdowns(breakdowns, cap);
+  if (courseLines) out.push(mrkdwnSection(courseLines));
+
+  const resourceLines = renderResourceBreakdowns(breakdowns, cap);
+  if (resourceLines) out.push(mrkdwnSection(resourceLines));
+
   return out;
+}
+
+function renderCourseBreakdowns(
+  b: DbBreakdowns | undefined,
+  cap: number,
+): string | null {
+  if (!b || b.completedCourses.length === 0) return null;
+
+  const lines: string[] = ['*Courses & sessions completed*'];
+  for (const course of b.completedCourses) {
+    lines.push(`• ${renderCourseHeader(course)}`);
+    if (course.sessions.length > 0) {
+      lines.push(`    ↳ ${renderChildInline(course.sessions, cap)}`);
+    }
+  }
+  return lines.join('\n');
+}
+
+function renderResourceBreakdowns(
+  b: DbBreakdowns | undefined,
+  cap: number,
+): string | null {
+  if (!b || b.completedResources.length === 0) return null;
+
+  const lines: string[] = ['*Resources completed*'];
+  for (const cat of b.completedResources) {
+    const label = RESOURCE_CATEGORY_LABELS[cat.category] ?? cat.category;
+    const suffix = cat.resourceCompletions > 0
+      ? ` — ${cat.resourceCompletions.toLocaleString()} resource completion${cat.resourceCompletions === 1 ? '' : 's'}`
+      : '';
+    lines.push(`• *${label}*${suffix}`);
+    if (cat.resources.length > 0) {
+      lines.push(`    ↳ ${renderChildInline(cat.resources, cap)}`);
+    }
+  }
+  return lines.join('\n');
+}
+
+function renderCourseHeader(course: DbBreakdowns['completedCourses'][number]): string {
+  const pieces: string[] = [];
+  if (course.courseCompletions > 0) {
+    pieces.push(
+      `${course.courseCompletions.toLocaleString()} course completion${course.courseCompletions === 1 ? '' : 's'}`,
+    );
+  }
+  if (course.sessionCompletions > 0) {
+    pieces.push(
+      `${course.sessionCompletions.toLocaleString()} session completion${course.sessionCompletions === 1 ? '' : 's'}`,
+    );
+  }
+  const suffix = pieces.length > 0 ? ` — ${pieces.join(' · ')}` : '';
+  return `*${truncate(course.name || '(unnamed)', 48)}*${suffix}`;
+}
+
+function renderChildInline(
+  children: Array<{ name: string; count: number }>,
+  cap: number,
+): string {
+  const shown = Number.isFinite(cap) ? children.slice(0, cap) : children;
+  const formatted = shown
+    .map((c) => `${truncate(c.name || '(unnamed)', 32)} (${c.count.toLocaleString()})`)
+    .join(' · ');
+  const remaining = children.length - shown.length;
+  return remaining > 0 ? `${formatted} · +${remaining} more` : formatted;
 }
 
 function dbFields(
@@ -164,12 +281,14 @@ function ga4OverviewSection(
   baseline: ReportBaseline | undefined,
 ): Block[] {
   if ('unavailable' in ga4.overview) {
-    return [mrkdwnSection(`:warning: *GA4 overview unavailable* — ${ga4.overview.reason}`)];
+    return [
+      mrkdwnSection(`:warning: *Google Analytics Events overview unavailable* — ${ga4.overview.reason}`),
+    ];
   }
   const o: Ga4OverviewMetrics = ga4.overview;
   const base = baseline?.ga4Overview;
   return [
-    mrkdwnSection('*:bar_chart: GA4 overview*'),
+    mrkdwnSection('*:busts_in_silhouette: Google Analytics Events overview*'),
     fieldsSection(
       (Object.keys(GA4_OVERVIEW_LABELS) as Array<keyof Ga4OverviewMetrics>).map((key) => ({
         label: GA4_OVERVIEW_LABELS[key],
@@ -206,7 +325,7 @@ function groupedEventsSection(ga4: Ga4Metrics, withDetail: boolean): Block[] {
     );
     blocks.push(
       mrkdwnSection(
-        `*:grey_question: Uncategorised events*\n_Events firing in GA4 that aren't in the report config — consider categorising them._\n${lines.join('\n')}`,
+        `*:grey_question: Uncategorised events*\n_Events firing in Google Analytics that aren't in the report config — consider categorising them._\n${lines.join('\n')}`,
       ),
     );
   }
@@ -328,7 +447,7 @@ function breakdownsSection(ga4: Ga4Metrics): Block[] {
   const populated = ga4.breakdowns.filter((b) => b.rows.length > 0);
   if (populated.length === 0) return [];
 
-  const blocks: Block[] = [mrkdwnSection('*:mag: GA4 breakdowns*')];
+  const blocks: Block[] = [mrkdwnSection('*:mag: Google Analytics Events breakdowns*')];
   for (const b of populated) {
     blocks.push(mrkdwnSection(renderBreakdown(b)));
   }
@@ -360,16 +479,14 @@ function formatNumber(n: number, decimals = 0): string {
 }
 
 /**
- * Render a metric with optional baseline context. Three states:
+ * Three states:
  * - no baseline → raw number
- * - baseline but metric is within 1σ of mean → `N (avg M)` as context only
- * - metric is >=1σ from mean → `N (↑/↓ X% vs avg M)` as percent deviation
+ * - within 1σ of mean → `N (avg M)`
+ * - ≥1σ from mean → `N (↑/↓ X% vs avg M)`
  *
- * Sigma is used only as the "is this worth annotating?" threshold. The
- * deviation shown to the reader is a plain percentage vs the mean — more
- * intuitive than "1.8σ" for a non-statistician reader. A zero baseline
- * mean implies zero stdDev (counts can't be negative), so the stdDev
- * check transitively guards against percent-of-zero.
+ * Sigma is only a threshold; the reader sees plain percent deviation. The
+ * `stdDev === 0` short-circuit also guards percent-of-zero (zero mean
+ * implies zero stdDev since counts can't be negative).
  */
 function formatWithBaseline(
   current: number,
