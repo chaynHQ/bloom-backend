@@ -158,7 +158,7 @@ describe('buildReportBlocks', () => {
     expect(serialized).not.toContain('_no baseline_');
   });
 
-  it('daily strips topic detail (no breakdowns / flows / event detail) but keeps grids + errors', () => {
+  it('daily renders headline + errors only; all topic grids dropped', () => {
     const ga4 = {
       overview: {
         activeUsers: 10,
@@ -184,11 +184,53 @@ describe('buildReportBlocks', () => {
     expect(daily).not.toContain('*Detail (Analytics events)*');
     expect(daily).not.toContain('*Flows (Analytics events)*');
     expect(daily).not.toContain('*Breakdowns*');
-    // Errors always render across cadences.
+    // Headline + Errors render.
+    expect(daily).toContain(':sparkles: Headline');
     expect(daily).toContain('Login errors');
-    // Topic grids render.
-    expect(daily).toContain('Users & accounts');
-    expect(daily).toContain('Resources');
+    // Per-topic grids are dropped on daily.
+    expect(daily).not.toContain('Users & accounts');
+    expect(daily).not.toContain(':headphones: Resources');
+    expect(daily).not.toContain(':books: Courses');
+  });
+
+  it('daily drops the Errors section entirely when there are no errors', () => {
+    const daily = JSON.stringify(
+      buildReportBlocks({
+        period: 'daily',
+        window: baseWindow,
+        db: fullDb,
+        dbBreakdowns: emptyBreakdowns,
+        ga4: {
+          overview: unavailable('x'),
+          events: [],
+          breakdowns: [],
+          eventBreakdowns: [],
+        },
+        trigger: 'scheduled',
+      }),
+    );
+    expect(daily).not.toContain(':rotating_light: Errors');
+    expect(daily).not.toContain('No errors in this period');
+  });
+
+  it('non-daily periods render the Errors placeholder when no errors occurred', () => {
+    const weekly = JSON.stringify(
+      buildReportBlocks({
+        period: 'weekly',
+        window: baseWindow,
+        db: fullDb,
+        dbBreakdowns: emptyBreakdowns,
+        ga4: {
+          overview: unavailable('x'),
+          events: [],
+          breakdowns: [],
+          eventBreakdowns: [],
+        },
+        trigger: 'scheduled',
+      }),
+    );
+    expect(weekly).toContain(':rotating_light: Errors');
+    expect(weekly).toContain('No errors in this period');
   });
 
   it('renders Bloom totals on quarterly + yearly only', () => {

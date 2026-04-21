@@ -24,10 +24,11 @@ export interface Funnel {
 
 export const FUNNELS: Funnel[] = [
   {
+    // ABOUT_YOU_VIEWED fires on every visit to /account/about-you, not just
+    // post-register, so including it produced >100% funnel steps.
     label: 'Signup flow',
     steps: [
       { event: 'REGISTER_SUCCESS', label: 'Registrations' },
-      { event: 'ABOUT_YOU_VIEWED', label: 'About-you viewed' },
       { event: 'SIGNUP_SURVEY_COMPLETED', label: 'Survey completed' },
     ],
   },
@@ -57,11 +58,11 @@ export const FUNNELS: Funnel[] = [
     ],
   },
   {
+    // THERAPY_CONFIRMATION_VIEWED is declared but never fired in the frontend.
     label: 'Therapy flow',
     steps: [
       { event: 'THERAPY_BOOKING_VIEWED', label: 'Page views' },
       { event: 'THERAPY_BOOKING_OPENED', label: 'Booking opened' },
-      { event: 'THERAPY_CONFIRMATION_VIEWED', label: 'Confirmed' },
     ],
   },
   {
@@ -90,11 +91,10 @@ export const FUNNELS: Funnel[] = [
     ],
   },
   {
-    // AUDIO_STARTED because the conversation page uses <Audio>, not <Video>.
     label: 'Resource conversation flow',
     steps: [
       { event: 'RESOURCE_CONVERSATION_VIEWED', label: 'Viewed' },
-      { event: 'RESOURCE_CONVERSATION_AUDIO_STARTED', label: 'Started' },
+      { event: 'RESOURCE_CONVERSATION_STARTED_SUCCESS', label: 'Started' },
       { event: 'RESOURCE_CONVERSATION_COMPLETE_SUCCESS', label: 'Completed' },
     ],
   },
@@ -114,9 +114,12 @@ export const FUNNELS: Funnel[] = [
     ],
   },
   {
+    // LOGIN_SUCCESS fires on any successful auth (auto-login, register
+    // auto-login, returning sessions), not only after HEADER_LOGIN_CLICKED.
+    // LOGIN_REQUEST → LOGIN_SUCCESS is the genuine submission funnel.
     label: 'Login funnel',
     steps: [
-      { event: 'HEADER_LOGIN_CLICKED', label: 'Login clicked' },
+      { event: 'LOGIN_REQUEST', label: 'Login submitted' },
       { event: 'LOGIN_SUCCESS', label: 'Logged in' },
     ],
   },
