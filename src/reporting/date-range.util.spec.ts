@@ -38,4 +38,15 @@ describe('computeRange', () => {
 
     expect(() => computeRange('daily', new Date(), 'Not/A/Zone')).toThrow(/Invalid timezone/);
   });
+
+  it('computes yearly windows as the previous calendar year', () => {
+    const yearly = computeRange(
+      'yearly',
+      new Date('2026-01-05T09:00:00+00:00'),
+      'Europe/London',
+    );
+    expect(yearly.label).toBe('2025');
+    expect(yearly.from.toISOString()).toBe('2025-01-01T00:00:00.000Z');
+    expect(yearly.to.toISOString()).toBe('2025-12-31T23:59:59.999Z');
+  });
 });

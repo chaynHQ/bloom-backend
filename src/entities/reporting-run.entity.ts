@@ -9,7 +9,7 @@ export class ReportingRunEntity extends BaseBloomEntity {
   id: string;
 
   @Column()
-  periodType: 'daily' | 'weekly' | 'monthly' | 'quarterly';
+  periodType: 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly';
 
   @Column({ type: 'timestamptz' })
   periodStart: Date;
@@ -47,6 +47,12 @@ export class ReportingRunEntity extends BaseBloomEntity {
   sessionsCompleted: number | null;
 
   @Column({ type: 'integer', nullable: true })
+  resourcesStarted: number | null;
+
+  @Column({ type: 'integer', nullable: true })
+  resourcesCompleted: number | null;
+
+  @Column({ type: 'integer', nullable: true })
   therapyBookingsBooked: number | null;
 
   @Column({ type: 'integer', nullable: true })
@@ -60,6 +66,12 @@ export class ReportingRunEntity extends BaseBloomEntity {
 
   @Column({ type: 'integer', nullable: true })
   partnerAccessActivations: number | null;
+
+  @Column({ type: 'integer', nullable: true })
+  whatsappSubscribed: number | null;
+
+  @Column({ type: 'integer', nullable: true })
+  whatsappUnsubscribed: number | null;
 
   @Column({ type: 'jsonb', nullable: true })
   ga4Overview: unknown;
