@@ -13,10 +13,13 @@ import {
   BaselineStat,
   DB_METRIC_KEYS,
   DB_METRIC_LABELS,
+  DbBreakdowns,
+  DbTotals,
   GA4_OVERVIEW_KEYS,
   GA4_OVERVIEW_LABELS,
   Ga4OverviewMetrics,
   PERIODS_WITH_BASELINE,
+  PERIODS_WITH_TOTALS,
   ReportBaseline,
   ReportPayload,
   ReportPeriod,
@@ -25,17 +28,9 @@ import {
 } from './reporting.types';
 import { buildReportBlocks } from './slack-blocks.builder';
 
-/** Minimum prior runs required to compute a baseline. Below this, stats are
- *  too noisy to be useful. */
 const MIN_BASELINE_SAMPLES = 3;
-
-/** How many prior runs to pull when computing the rolling baseline. */
 const BASELINE_WINDOW_SIZE = 4;
-
-/** |z| threshold that qualifies as an "anomaly". */
 const ANOMALY_SIGMA_THRESHOLD = 2;
-
-/** How many anomalies to surface at the top of the digest. */
 const ANOMALY_LIMIT = 3;
 
 @Injectable()
@@ -77,8 +72,10 @@ export class ReportingService {
       };
     }
 
-    const [db, ga4, baseline] = await Promise.all([
+    const [db, dbBreakdowns, dbTotals, ga4, baseline] = await Promise.all([
       this.safeCollectDb(window),
+      this.safeCollectDbBreakdowns(window),
+      this.safeCollectDbTotals(period),
       this.safeCollectGa4(window, period),
       this.safeLoadBaseline(period, window),
     ]);
@@ -94,6 +91,8 @@ export class ReportingService {
       ga4,
       trigger,
       runId,
+      ...(dbBreakdowns ? { dbBreakdowns } : {}),
+      ...(dbTotals ? { dbTotals } : {}),
       ...(baseline ? { baseline } : {}),
       ...(anomalies ? { anomalies } : {}),
     };
@@ -232,6 +231,31 @@ export class ReportingService {
     }
   }
 
+  private async safeCollectDbBreakdowns(
+    window: ReportPayload['window'],
+  ): Promise<DbBreakdowns | undefined> {
+    try {
+      return await this.dbMetricsService.collectBreakdowns(window);
+    } catch (err) {
+      this.logger.warn(
+        `Reporting DB breakdowns failed: ${err?.message || 'unknown error'}`,
+      );
+      return undefined;
+    }
+  }
+
+  private async safeCollectDbTotals(period: ReportPeriod): Promise<DbTotals | undefined> {
+    if (!PERIODS_WITH_TOTALS.includes(period)) return undefined;
+    try {
+      return await this.dbMetricsService.collectTotals(new Date());
+    } catch (err) {
+      this.logger.warn(
+        `Reporting DB totals failed: ${err?.message || 'unknown error'}`,
+      );
+      return undefined;
+    }
+  }
+
   private async safeCollectGa4(
     window: ReportPayload['window'],
     period: ReportPeriod,
@@ -249,13 +273,8 @@ export class ReportingService {
     }
   }
 
-  /**
-   * Fetch the last ~4 prior `sent` runs of this cadence and compute per-metric
-   * rolling baselines (mean + stdDev). Skipped for weekly and for any run
-   * without enough prior history. Individual metrics whose column was null on
-   * prior rows (e.g. DB collection failed that day) are simply skipped — the
-   * baseline is per-key so a gap in one metric doesn't poison others.
-   */
+  /** Per-key: a metric that was null on prior rows is skipped, so a gap in
+   *  one metric doesn't poison the baselines of others. */
   private async safeLoadBaseline(
     period: ReportPeriod,
     window: ReportWindow,
@@ -264,10 +283,9 @@ export class ReportingService {
 
     let prior: ReportingRunEntity[];
     try {
-      // Include both 'sent' and 'failed' runs — failed runs persist valid
-      // metric snapshots (Slack failure doesn't invalidate the numbers), so
-      // excluding them would bias the baseline toward days where Slack
-      // happened to be up. 'pending' rows are in-flight and must be skipped.
+      // Include 'failed' runs — Slack send failure doesn't invalidate the
+      // metric snapshot, and excluding them would bias the baseline toward
+      // days Slack was up. 'pending' rows are in-flight, skip those.
       prior = await this.reportingRunRepository.find({
         where: { periodType: period, periodStart: LessThan(window.from), status: Not('pending') },
         order: { periodStart: 'DESC' },
@@ -311,7 +329,6 @@ export class ReportingService {
   }
 }
 
-/** Population mean + stdDev. Requires >= MIN_BASELINE_SAMPLES values. */
 function computeBaseline(values: number[]): BaselineStat | undefined {
   if (values.length < MIN_BASELINE_SAMPLES) return undefined;
   const mean = values.reduce((s, v) => s + v, 0) / values.length;
@@ -319,12 +336,8 @@ function computeBaseline(values: number[]): BaselineStat | undefined {
   return { mean, stdDev: Math.sqrt(variance), sampleSize: values.length };
 }
 
-/**
- * Find the top-N metrics whose current value deviates most from baseline
- * (|z| >= threshold). Empty array if nothing qualifies. Filters out metrics
- * with zero stdDev (no variance → z-score undefined) and metrics whose
- * current value is unavailable.
- */
+/** Top-N metrics with |z| >= threshold. Skips metrics with zero variance
+ *  (z-score undefined) or unavailable current values. */
 function computeAnomalies(
   db: ReportPayload['db'],
   ga4Overview: ReportPayload['ga4']['overview'],

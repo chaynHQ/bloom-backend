@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
-exports[`buildReportBlocks renders a full weekly digest (snapshot) — DB, GA4 overview, grouped events, per-line breakdowns, global breakdowns 1`] = `
+exports[`buildReportBlocks renders a full weekly digest (snapshot) — DB + nested completed courses, Google Analytics Events overview, grouped events, global breakdowns 1`] = `
 [
   {
     "text": {
@@ -61,6 +61,16 @@ exports[`buildReportBlocks renders a full weekly digest (snapshot) — DB, GA4 o
         "type": "mrkdwn",
       },
       {
+        "text": "*Resources started*
+14",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Resources completed*
+7",
+        "type": "mrkdwn",
+      },
+      {
         "text": "*Therapy bookings made*
 5",
         "type": "mrkdwn",
@@ -70,6 +80,11 @@ exports[`buildReportBlocks renders a full weekly digest (snapshot) — DB, GA4 o
 1",
         "type": "mrkdwn",
       },
+    ],
+    "type": "section",
+  },
+  {
+    "fields": [
       {
         "text": "*Therapy scheduled in period*
 7",
@@ -80,17 +95,33 @@ exports[`buildReportBlocks renders a full weekly digest (snapshot) — DB, GA4 o
 4",
         "type": "mrkdwn",
       },
-    ],
-    "type": "section",
-  },
-  {
-    "fields": [
       {
         "text": "*Partner access activations*
 2",
         "type": "mrkdwn",
       },
+      {
+        "text": "*WhatsApp subscribed*
+6",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*WhatsApp unsubscribed*
+1",
+        "type": "mrkdwn",
+      },
     ],
+    "type": "section",
+  },
+  {
+    "text": {
+      "text": "*Courses & sessions completed*
+• *Foundations* — 2 course completions · 8 session completions
+    ↳ Intro (5) · Reflection (3)
+• *Healing from sexual trauma* — 1 course completion · 3 session completions
+    ↳ Safety (3)",
+      "type": "mrkdwn",
+    },
     "type": "section",
   },
   {
@@ -98,7 +129,7 @@ exports[`buildReportBlocks renders a full weekly digest (snapshot) — DB, GA4 o
   },
   {
     "text": {
-      "text": "*:bar_chart: GA4 overview*",
+      "text": "*:busts_in_silhouette: Google Analytics Events overview*",
       "type": "mrkdwn",
     },
     "type": "section",
@@ -111,7 +142,7 @@ exports[`buildReportBlocks renders a full weekly digest (snapshot) — DB, GA4 o
         "type": "mrkdwn",
       },
       {
-        "text": "*New users (GA4)*
+        "text": "*New users (Google Analytics Events)*
 210",
         "type": "mrkdwn",
       },
@@ -187,7 +218,6 @@ exports[`buildReportBlocks renders a full weekly digest (snapshot) — DB, GA4 o
       "text": "*:movie_camera: Sessions*
 • Session viewed — 56
 • Session video — started (32) · finished (20)
-    ↳ by session: Healing from trauma (18)
 • Session progression — started (0) · completed (0)
 • Session transcript — 0
 • Session feedback — 0
@@ -224,14 +254,6 @@ exports[`buildReportBlocks renders a full weekly digest (snapshot) — DB, GA4 o
     "text": {
       "text": "*:left_speech_bubble: Chat*
 • Chat — opened (0) · composed (0) · sent (0)",
-      "type": "mrkdwn",
-    },
-    "type": "section",
-  },
-  {
-    "text": {
-      "text": "*:iphone: WhatsApp*
-• WhatsApp — subscribed (20) · unsubscribed (0)",
       "type": "mrkdwn",
     },
     "type": "section",
@@ -306,7 +328,8 @@ exports[`buildReportBlocks renders a full weekly digest (snapshot) — DB, GA4 o
   {
     "text": {
       "text": "*:grey_question: Uncategorised events*
-_Events firing in GA4 that aren't in the report config — consider categorising them._
+_Events firing in Google Analytics that aren't in the report config — consider categorising them._
+• \`WHATSAPP_SUBSCRIBE_SUCCESS\` — 20
 • \`CUSTOM_FRONTEND_EVENT_NOT_IN_CONFIG\` — 17",
       "type": "mrkdwn",
     },
@@ -317,7 +340,7 @@ _Events firing in GA4 that aren't in the report config — consider categorising
   },
   {
     "text": {
-      "text": "*:mag: GA4 breakdowns*",
+      "text": "*:mag: Google Analytics Events breakdowns*",
       "type": "mrkdwn",
     },
     "type": "section",

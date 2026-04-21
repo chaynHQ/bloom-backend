@@ -16,11 +16,15 @@ const fakeDb: DbMetrics = {
   coursesCompleted: 0,
   sessionsStarted: 0,
   sessionsCompleted: 0,
+  resourcesStarted: 0,
+  resourcesCompleted: 0,
   therapyBookingsBooked: 0,
   therapyBookingsCancelled: 0,
   therapyBookingsScheduledForPeriod: 0,
   partnerAccessGrants: 0,
   partnerAccessActivations: 0,
+  whatsappSubscribed: 0,
+  whatsappUnsubscribed: 0,
 };
 
 const fakeGa4: Ga4Metrics = {
@@ -81,13 +85,30 @@ describe('ReportingService', () => {
     insertBuilder.execute.mockResolvedValue({ raw: [{ id: 'run-1' }] });
     reportingRunRepo.find.mockResolvedValue([]);
     dbMetrics.collect.mockResolvedValue({ ...fakeDb, newUsers: 7 });
+    dbMetrics.collectBreakdowns.mockResolvedValue({
+      completedCourses: [
+        {
+          name: 'Foundations',
+          sessionCompletions: 5,
+          courseCompletions: 1,
+          sessions: [{ name: 'Intro', count: 5 }],
+        },
+      ],
+      completedResources: [],
+    });
     ga4Metrics.collect.mockResolvedValue(fakeGa4);
     slack.sendMessageToReportingChannel.mockResolvedValue({ status: 200 } as never);
 
     const payload = await service.run('daily');
 
     expect(payload.runId).toBe('run-1');
+    expect(payload.dbBreakdowns?.completedCourses[0].name).toBe('Foundations');
+    expect(payload.dbBreakdowns?.completedCourses[0].sessions[0]).toEqual({
+      name: 'Intro',
+      count: 5,
+    });
     expect(dbMetrics.collect).toHaveBeenCalledTimes(1);
+    expect(dbMetrics.collectBreakdowns).toHaveBeenCalledTimes(1);
     expect(ga4Metrics.collect).toHaveBeenCalledWith(payload.window, 'daily');
     expect(slack.sendMessageToReportingChannel).toHaveBeenCalledTimes(1);
     expect(reportingRunRepo.update).toHaveBeenCalledWith(
@@ -143,5 +164,31 @@ describe('ReportingService', () => {
     expect(payload.anomalies?.length).toBeGreaterThan(0);
     expect(payload.anomalies?.[0].label).toBe('Sessions started');
     expect(payload.anomalies?.[0].sigma).toBeLessThan(-1); // directional: below baseline
+  });
+
+  it('collects state-of-Bloom totals for quarterly (and yearly) — skipped on daily/weekly/monthly', async () => {
+    insertBuilder.execute.mockResolvedValue({ raw: [{ id: 'run-totals' }] });
+    reportingRunRepo.find.mockResolvedValue([]);
+    dbMetrics.collect.mockResolvedValue(fakeDb);
+    dbMetrics.collectTotals.mockResolvedValue({
+      liveUsers: 5234,
+      activeWhatsappSubscribers: 312,
+      activatedPartnerAccess: 124,
+      totalSessionsCompleted: 48102,
+      totalCoursesCompleted: 12889,
+      totalResourcesCompleted: 2411,
+      totalTherapyBookings: 3402,
+    });
+    ga4Metrics.collect.mockResolvedValue(fakeGa4);
+    slack.sendMessageToReportingChannel.mockResolvedValue({ status: 200 } as never);
+
+    const quarterly = await service.run('quarterly');
+    expect(dbMetrics.collectTotals).toHaveBeenCalledTimes(1);
+    expect(quarterly.dbTotals?.liveUsers).toBe(5234);
+
+    (dbMetrics.collectTotals as jest.Mock).mockClear();
+    const daily = await service.run('daily');
+    expect(dbMetrics.collectTotals).not.toHaveBeenCalled();
+    expect(daily.dbTotals).toBeUndefined();
   });
 });
