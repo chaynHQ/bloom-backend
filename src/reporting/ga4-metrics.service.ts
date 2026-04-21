@@ -33,8 +33,8 @@ export class Ga4MetricsService {
     const range = this.toDataApiDateRange(window);
     const wantDetail = PERIODS_WITH_FULL_DETAIL.includes(period);
 
-    // Daily digest is headline-only — skip the ~15 extra GA4 calls that power
-    // the global breakdowns and per-line `↳ by X` sub-lines.
+    // Daily digest is headline-only — skip the global breakdowns and
+    // per-line `↳ by X` sub-lines.
     const [overview, events, breakdowns, eventBreakdowns] = await Promise.all([
       this.fetchOverview(range),
       this.fetchEvents(range),

@@ -81,18 +81,20 @@ export const FUNNELS: Funnel[] = [
     ],
   },
   {
+    // VIDEO_VIDEO is intentional — see Single videos line in reporting.events.ts.
     label: 'Resource single video flow',
     steps: [
       { event: 'RESOURCE_SINGLE_VIDEO_VIEWED', label: 'Viewed' },
-      { event: 'RESOURCE_SINGLE_VIDEO_STARTED', label: 'Started' },
+      { event: 'RESOURCE_SINGLE_VIDEO_VIDEO_STARTED', label: 'Started' },
       { event: 'RESOURCE_SINGLE_VIDEO_COMPLETE_SUCCESS', label: 'Completed' },
     ],
   },
   {
+    // AUDIO_STARTED because the conversation page uses <Audio>, not <Video>.
     label: 'Resource conversation flow',
     steps: [
       { event: 'RESOURCE_CONVERSATION_VIEWED', label: 'Viewed' },
-      { event: 'RESOURCE_CONVERSATION_STARTED', label: 'Started' },
+      { event: 'RESOURCE_CONVERSATION_AUDIO_STARTED', label: 'Started' },
       { event: 'RESOURCE_CONVERSATION_COMPLETE_SUCCESS', label: 'Completed' },
     ],
   },
