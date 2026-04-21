@@ -27,6 +27,71 @@ exports[`buildReportBlocks renders a full weekly digest topic-sectioned (snapsho
   },
   {
     "text": {
+      "text": "*:sparkles: Headline* _(top-line across the period)_",
+      "type": "mrkdwn",
+    },
+    "type": "section",
+  },
+  {
+    "fields": [
+      {
+        "text": "*New users*
+12",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Active users*
+1,234",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Courses started*
+8",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Courses completed*
+3",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Sessions started*
+24",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Sessions completed*
+9",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Resources started*
+14",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Resources completed*
+7",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Therapy bookings made*
+5",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Therapy scheduled*
+7",
+        "type": "mrkdwn",
+      },
+    ],
+    "type": "section",
+  },
+  {
+    "type": "divider",
+  },
+  {
+    "text": {
       "text": "*:bust_in_silhouette: Users & accounts*",
       "type": "mrkdwn",
     },
@@ -106,7 +171,7 @@ exports[`buildReportBlocks renders a full weekly digest topic-sectioned (snapsho
 • Partner-access activations by partner (DB): Bumble (2)
 
 *Flows (Analytics events)*
-• *Signup flow* — Registrations 28 → About-you viewed 0 (0%) → Survey completed 0 (0%)
+• *Signup flow* — Registrations 28 → Survey completed 0 (0%)
 
 *Detail (Analytics events)*
 _Auth & onboarding_
