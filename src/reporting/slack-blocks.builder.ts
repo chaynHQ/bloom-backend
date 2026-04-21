@@ -65,6 +65,15 @@ export function buildReportBlocks(payload: ReportPayload): Block[] {
   blocks.push(headerBlock(payload));
   blocks.push(contextBlock(payload));
 
+  const headline = headlineSection(payload, ctx);
+  if (headline.length > 0) {
+    blocks.push(dividerBlock());
+    blocks.push(...headline);
+  }
+
+  const gaBanner = gaUnavailableBanner(payload);
+  if (gaBanner) blocks.push(gaBanner);
+
   const anomalies = payload.anomalies ?? [];
   if (anomalies.length > 0) {
     blocks.push(dividerBlock());
@@ -135,6 +144,25 @@ function renderTopic(
   payload: ReportPayload,
   ctx: RenderContext,
 ): Block[] {
+  // Daily is headline + errors only.
+  if (ctx.period === 'daily' && topic !== 'errors') return [];
+
+  const body = renderTopicBody(topic, payload, ctx);
+  if (body.length === 0) {
+    // Non-daily: "No errors" placeholder. Daily: drop entirely.
+    if (topic === 'errors' && ctx.period !== 'daily') {
+      return [topicHeader('errors'), mrkdwnSection('_No errors in this period._')];
+    }
+    return [];
+  }
+  return [topicHeader(topic), ...body];
+}
+
+function renderTopicBody(
+  topic: EventTopic,
+  payload: ReportPayload,
+  ctx: RenderContext,
+): Block[] {
   switch (topic) {
     case 'users':
       return usersTopic(payload, ctx);
@@ -164,7 +192,7 @@ function renderTopic(
 // ---------- topic: users ----------
 
 function usersTopic(payload: ReportPayload, ctx: RenderContext): Block[] {
-  const out: Block[] = [topicHeader('users')];
+  const out: Block[] = [];
 
   const dbGrid = dbCells(payload, ctx, [
     'newUsers',
@@ -199,7 +227,7 @@ function usersTopic(payload: ReportPayload, ctx: RenderContext): Block[] {
 // ---------- topic: courses ----------
 
 function coursesTopic(payload: ReportPayload, ctx: RenderContext): Block[] {
-  const out: Block[] = [topicHeader('courses')];
+  const out: Block[] = [];
 
   const dbGrid = dbCells(payload, ctx, [
     'coursesStarted',
@@ -227,7 +255,7 @@ function coursesTopic(payload: ReportPayload, ctx: RenderContext): Block[] {
 // ---------- topic: resources (mirrors courses topic structure) ----------
 
 function resourcesTopic(payload: ReportPayload, ctx: RenderContext): Block[] {
-  const out: Block[] = [topicHeader('resources')];
+  const out: Block[] = [];
 
   const dbGrid = dbCells(payload, ctx, [
     'resourcesStarted',
@@ -257,7 +285,7 @@ function resourcesTopic(payload: ReportPayload, ctx: RenderContext): Block[] {
 // ---------- topic: therapy ----------
 
 function therapyTopic(payload: ReportPayload, ctx: RenderContext): Block[] {
-  const out: Block[] = [topicHeader('therapy')];
+  const out: Block[] = [];
 
   const dbGrid = dbCells(payload, ctx, [
     'therapyBookingsBooked',
@@ -286,14 +314,13 @@ function messagingTopic(payload: ReportPayload, ctx: RenderContext): Block[] {
   // No DB grid — chat send/compose isn't persisted by Crisp.
   if (!ctx.withDetail) return [];
   const eventDetail = renderTopicEventGroups('messaging', payload.ga4, ctx);
-  if (!eventDetail) return [];
-  return [topicHeader('messaging'), mrkdwnSection(eventDetail)];
+  return eventDetail ? [mrkdwnSection(eventDetail)] : [];
 }
 
 // ---------- topic: communications ----------
 
 function communicationsTopic(payload: ReportPayload, ctx: RenderContext): Block[] {
-  const out: Block[] = [topicHeader('communications')];
+  const out: Block[] = [];
 
   const dbGrid = dbCells(payload, ctx, [
     'whatsappSubscribed',
@@ -315,7 +342,7 @@ function communicationsTopic(payload: ReportPayload, ctx: RenderContext): Block[
 
 function appTopic(payload: ReportPayload, ctx: RenderContext): Block[] {
   if (!ctx.withDetail) return [];
-  const out: Block[] = [topicHeader('app')];
+  const out: Block[] = [];
 
   // Top pages / sources / device / country render here as traffic-shape signals.
   appendNarrative(out, [
@@ -324,7 +351,7 @@ function appTopic(payload: ReportPayload, ctx: RenderContext): Block[] {
     renderGlobalBreakdownsInline(payload.ga4),
   ]);
 
-  return out.length > 1 ? out : [];
+  return out;
 }
 
 // ---------- topic: navigation ----------
@@ -332,8 +359,7 @@ function appTopic(payload: ReportPayload, ctx: RenderContext): Block[] {
 function navigationTopic(payload: ReportPayload, ctx: RenderContext): Block[] {
   if (!ctx.withDetail) return [];
   const eventDetail = renderTopicEventGroups('navigation', payload.ga4, ctx);
-  if (!eventDetail) return [];
-  return [topicHeader('navigation'), mrkdwnSection(eventDetail)];
+  return eventDetail ? [mrkdwnSection(eventDetail)] : [];
 }
 
 // ---------- topic: promo ----------
@@ -341,8 +367,7 @@ function navigationTopic(payload: ReportPayload, ctx: RenderContext): Block[] {
 function promoTopic(payload: ReportPayload, ctx: RenderContext): Block[] {
   if (!ctx.withDetail) return [];
   const eventDetail = renderTopicEventGroups('promo', payload.ga4, ctx);
-  if (!eventDetail) return [];
-  return [topicHeader('promo'), mrkdwnSection(eventDetail)];
+  return eventDetail ? [mrkdwnSection(eventDetail)] : [];
 }
 
 // ---------- topic: admin ----------
@@ -350,19 +375,17 @@ function promoTopic(payload: ReportPayload, ctx: RenderContext): Block[] {
 function adminTopic(payload: ReportPayload, ctx: RenderContext): Block[] {
   if (!ctx.withDetail) return [];
   const eventDetail = renderTopicEventGroups('admin', payload.ga4, ctx);
-  if (!eventDetail) return [];
-  return [topicHeader('admin'), mrkdwnSection(eventDetail)];
+  return eventDetail ? [mrkdwnSection(eventDetail)] : [];
 }
 
 // ---------- topic: errors ----------
 
 function errorsTopic(payload: ReportPayload, ctx: RenderContext): Block[] {
-  // Always-on across cadences; errorsOnly groups already drop zero rows.
+  // Empty-body case is handled by renderTopic with a placeholder.
   const eventDetail = renderTopicEventGroups('errors', payload.ga4, ctx, {
     omitDetailHeading: true,
   });
-  if (!eventDetail) return [];
-  return [topicHeader('errors'), mrkdwnSection(eventDetail)];
+  return eventDetail ? [mrkdwnSection(eventDetail)] : [];
 }
 
 /** Combine breakdowns + flows + detail into a single mrkdwn block per topic
@@ -413,6 +436,78 @@ function mrkdwnSection(text: string): Block {
 function topicHeader(topic: EventTopic): Block {
   const { emoji, title } = TOPIC_HEADINGS[topic];
   return mrkdwnSection(`*${emoji} ${title}*`);
+}
+
+// ---------- GA unavailable banner ----------
+
+function gaUnavailableBanner(payload: ReportPayload): Block | null {
+  const overviewOut = 'unavailable' in payload.ga4.overview;
+  const eventsOut = 'unavailable' in payload.ga4.events;
+  if (!overviewOut && !eventsOut) return null;
+  const reason =
+    'unavailable' in payload.ga4.events
+      ? payload.ga4.events.reason
+      : 'unavailable' in payload.ga4.overview
+        ? payload.ga4.overview.reason
+        : 'unknown';
+  return {
+    type: 'context',
+    elements: [
+      {
+        type: 'mrkdwn',
+        text: `:warning: _Analytics events unavailable this period — ${reason}. DB counts below are unaffected._`,
+      },
+    ],
+  };
+}
+
+// ---------- headline (top-of-report scoreboard) ----------
+
+function headlineSection(payload: ReportPayload, ctx: RenderContext): Block[] {
+  const cells: GridCell[] = [];
+
+  if (!('unavailable' in payload.db)) {
+    const db = payload.db;
+    const dbCell = (key: keyof DbMetrics): GridCell => ({
+      label: DB_METRIC_LABELS[key],
+      value: db[key],
+      baseline: ctx.baseline?.db[key],
+    });
+    cells.push(dbCell('newUsers'));
+    if (!('unavailable' in payload.ga4.overview)) {
+      cells.push({
+        label: GA4_OVERVIEW_LABELS.activeUsers,
+        value: payload.ga4.overview.activeUsers,
+        baseline: ctx.baseline?.ga4Overview.activeUsers,
+      });
+    }
+    cells.push(dbCell('coursesStarted'));
+    cells.push(dbCell('coursesCompleted'));
+    cells.push(dbCell('sessionsStarted'));
+    cells.push(dbCell('sessionsCompleted'));
+    cells.push(dbCell('resourcesStarted'));
+    cells.push(dbCell('resourcesCompleted'));
+    cells.push(dbCell('therapyBookingsBooked'));
+    cells.push(dbCell('therapyBookingsScheduledForPeriod'));
+  } else if (!('unavailable' in payload.ga4.overview)) {
+    const ov = payload.ga4.overview;
+    cells.push(
+      ...(Object.keys(GA4_OVERVIEW_LABELS) as Array<keyof Ga4OverviewMetrics>).map(
+        (key): GridCell => ({
+          label: GA4_OVERVIEW_LABELS[key],
+          value: ov[key],
+          baseline: ctx.baseline?.ga4Overview[key],
+          decimals: key === 'averageSessionDuration' ? 1 : 0,
+        }),
+      ),
+    );
+  }
+
+  if (cells.length === 0) return [];
+  return [
+    mrkdwnSection('*:sparkles: Headline* _(top-line across the period)_'),
+    ...kpiGrid(cells),
+  ];
 }
 
 // ---------- anomalies ----------
@@ -686,9 +781,8 @@ function renderTopicEventGroups(
   ctx: RenderContext,
   opts: RenderTopicEventOptions = {},
 ): string | null {
-  if ('unavailable' in ga4.events) {
-    return `_App activity for ${topic} unavailable — ${ga4.events.reason}_`;
-  }
+  // GA unavailable is surfaced once at the top via gaUnavailableBanner.
+  if ('unavailable' in ga4.events) return null;
   const counts = indexEventsByName(ga4.events);
   const lineBreakdowns = ctx.withDetail
     ? indexEventBreakdowns(ga4.eventBreakdowns)
