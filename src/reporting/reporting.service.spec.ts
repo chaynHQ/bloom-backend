@@ -216,12 +216,12 @@ describe('ReportingService', () => {
     ga4Metrics.collect.mockResolvedValue(fakeGa4);
     slack.sendMessageToReportingChannel.mockResolvedValue({ status: 200 } as never);
 
-    const quarterly = await service.run('quarterly');
+    const quarterly = await service.run('quarterly', { bypassIdempotency: false });
     expect(dbMetrics.collectTotals).toHaveBeenCalledTimes(1);
     expect(quarterly.dbTotals?.liveUsers).toBe(5234);
 
     (dbMetrics.collectTotals as jest.Mock).mockClear();
-    const daily = await service.run('daily');
+    const daily = await service.run('daily', { bypassIdempotency: false });
     expect(dbMetrics.collectTotals).not.toHaveBeenCalled();
     expect(daily.dbTotals).toBeUndefined();
   });
