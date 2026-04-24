@@ -23,9 +23,9 @@ export class ReportingController {
     summary:
       'Manually trigger a reporting run. Bypasses the idempotency slot so repeated triggers in the same window still post to Slack.',
   })
-  @ApiQuery({ name: 'period', enum: ['daily', 'weekly', 'monthly', 'quarterly'] })
+  @ApiQuery({ name: 'period', enum: ['daily', 'weekly', 'monthly', 'quarterly', 'yearly'] })
   async run(@Query('period') period: ReportPeriod): Promise<ReportPayload> {
-    const valid: ReportPeriod[] = ['daily', 'weekly', 'monthly', 'quarterly'];
+    const valid: ReportPeriod[] = ['daily', 'weekly', 'monthly', 'quarterly', 'yearly'];
     if (!valid.includes(period)) {
       throw new HttpException(
         `period must be one of: ${valid.join(', ')}`,

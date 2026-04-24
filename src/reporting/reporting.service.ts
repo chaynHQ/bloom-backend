@@ -3,20 +3,27 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { SlackMessageClient } from 'src/api/slack/slack-api';
 import { ReportingRunEntity } from 'src/entities/reporting-run.entity';
 import { Logger } from 'src/logger/logger';
-import { reportingTimezone } from 'src/utils/constants';
+import { isProduction, reportingTimezone } from 'src/utils/constants';
 import { LessThan, Not, Repository } from 'typeorm';
 import { computeRange } from './date-range.util';
 import { DbMetricsService } from './db-metrics.service';
 import { Ga4MetricsService } from './ga4-metrics.service';
+import { ANOMALY_WATCHED_EVENTS, renderedEventNames } from './reporting.events';
 import {
   Anomaly,
   BaselineStat,
   DB_METRIC_KEYS,
   DB_METRIC_LABELS,
+  DbBreakdowns,
+  DbTotals,
   GA4_OVERVIEW_KEYS,
   GA4_OVERVIEW_LABELS,
+  Ga4EventTotal,
+  Ga4Metrics,
   Ga4OverviewMetrics,
   PERIODS_WITH_BASELINE,
+  PERIODS_WITH_FULL_DETAIL,
+  PERIODS_WITH_TOTALS,
   ReportBaseline,
   ReportPayload,
   ReportPeriod,
@@ -25,17 +32,9 @@ import {
 } from './reporting.types';
 import { buildReportBlocks } from './slack-blocks.builder';
 
-/** Minimum prior runs required to compute a baseline. Below this, stats are
- *  too noisy to be useful. */
 const MIN_BASELINE_SAMPLES = 3;
-
-/** How many prior runs to pull when computing the rolling baseline. */
 const BASELINE_WINDOW_SIZE = 4;
-
-/** |z| threshold that qualifies as an "anomaly". */
 const ANOMALY_SIGMA_THRESHOLD = 2;
-
-/** How many anomalies to surface at the top of the digest. */
 const ANOMALY_LIMIT = 3;
 
 @Injectable()
@@ -54,11 +53,15 @@ export class ReportingService {
     const window = computeRange(period, new Date(), reportingTimezone);
     const trigger = opts.trigger ?? 'scheduled';
 
+    // Off-prod (staging / dev / test) always bypasses the unique-slot lock so
+    // repeat runs can be made in testing. Explicit `bypassIdempotency` still wins either way.
+    const bypassIdempotency = opts.bypassIdempotency ?? !isProduction;
+
     this.logger.log(
-      `Reporting run start: period=${period} window=${window.label} trigger=${trigger}`,
+      `Reporting run start: period=${period} window=${window.label} trigger=${trigger} bypassIdempotency=${bypassIdempotency}`,
     );
 
-    const runId = await this.claimRunSlot(period, window, opts.bypassIdempotency === true);
+    const runId = await this.claimRunSlot(period, window, bypassIdempotency);
     if (!runId) {
       this.logger.log(
         `Reporting run skipped: period=${period} window=${window.label} already claimed`,
@@ -77,15 +80,15 @@ export class ReportingService {
       };
     }
 
-    const [db, ga4, baseline] = await Promise.all([
+    const [db, dbBreakdowns, dbTotals, ga4, baseline] = await Promise.all([
       this.safeCollectDb(window),
+      this.safeCollectDbBreakdowns(window, period),
+      this.safeCollectDbTotals(period),
       this.safeCollectGa4(window, period),
       this.safeLoadBaseline(period, window),
     ]);
 
-    const anomalies = baseline
-      ? computeAnomalies(db, ga4.overview, baseline)
-      : undefined;
+    const anomalies = baseline ? computeAnomalies(db, ga4, baseline) : undefined;
 
     const payload: ReportPayload = {
       period,
@@ -94,6 +97,8 @@ export class ReportingService {
       ga4,
       trigger,
       runId,
+      ...(dbBreakdowns ? { dbBreakdowns } : {}),
+      ...(dbTotals ? { dbTotals } : {}),
       ...(baseline ? { baseline } : {}),
       ...(anomalies ? { anomalies } : {}),
     };
@@ -103,7 +108,6 @@ export class ReportingService {
 
     try {
       const slackResponse = await this.slackMessageClient.sendMessageToReportingChannel(blocks, {
-        force: opts.force === true,
         fallbackText,
       });
       await this.markSent(runId, payload, slackResponse);
@@ -181,8 +185,12 @@ export class ReportingService {
     }
   }
 
+  /** Snapshot the payload onto the reporting_run row. The persisted view is
+   *  a queryable log — `ga4Events` is a literal copy of GA4's response on
+   *  weekly+ (every dynamic-name + Google auto-event), trimmed to the
+   *  rendered subset on daily to keep that high-volume cadence lean. */
   private toMetricColumns(payload: ReportPayload): Partial<ReportingRunEntity> {
-    const { db, ga4 } = payload;
+    const { db, ga4, dbBreakdowns, dbTotals, anomalies, window, period } = payload;
     const cols: Partial<ReportingRunEntity> = {};
 
     if (!('unavailable' in db)) {
@@ -191,19 +199,25 @@ export class ReportingService {
       }
     }
 
+    cols.periodTimezone = window.timezone;
+
+    cols.dbBreakdowns = dbBreakdowns ?? null;
+    cols.dbTotals = dbTotals ?? null;
+
     cols.ga4Overview = 'unavailable' in ga4.overview ? null : ga4.overview;
-    cols.ga4Events = 'unavailable' in ga4.events ? null : ga4.events;
+    cols.ga4Events = persistedGa4Events(ga4.events, period);
     cols.ga4Breakdowns = ga4.breakdowns.length > 0 ? ga4.breakdowns : null;
     cols.ga4EventBreakdowns = ga4.eventBreakdowns.length > 0 ? ga4.eventBreakdowns : null;
+
+    // baseline isn't persisted — it's always re-derived from prior rows on
+    // the next run, and storing a snapshot of it would only duplicate the
+    // source data + risk confusion if the baseline window ever changes.
+    cols.anomalies = anomalies && anomalies.length > 0 ? anomalies : null;
 
     return cols;
   }
 
-  private async markFailed(
-    runId: string,
-    payload: ReportPayload,
-    error: string,
-  ): Promise<void> {
+  private async markFailed(runId: string, payload: ReportPayload, error: string): Promise<void> {
     try {
       await this.reportingRunRepository.update(
         { id: runId },
@@ -233,6 +247,31 @@ export class ReportingService {
     }
   }
 
+  /** Daily strips topic detail in the Slack message — skip the 11 GROUP BY
+   *  joins on every daily run since their output is never rendered. */
+  private async safeCollectDbBreakdowns(
+    window: ReportPayload['window'],
+    period: ReportPeriod,
+  ): Promise<DbBreakdowns | undefined> {
+    if (!PERIODS_WITH_FULL_DETAIL.includes(period)) return undefined;
+    try {
+      return await this.dbMetricsService.collectBreakdowns(window);
+    } catch (err) {
+      this.logger.warn(`Reporting DB breakdowns failed: ${err?.message || 'unknown error'}`);
+      return undefined;
+    }
+  }
+
+  private async safeCollectDbTotals(period: ReportPeriod): Promise<DbTotals | undefined> {
+    if (!PERIODS_WITH_TOTALS.includes(period)) return undefined;
+    try {
+      return await this.dbMetricsService.collectTotals(new Date());
+    } catch (err) {
+      this.logger.warn(`Reporting DB totals failed: ${err?.message || 'unknown error'}`);
+      return undefined;
+    }
+  }
+
   private async safeCollectGa4(
     window: ReportPayload['window'],
     period: ReportPeriod,
@@ -250,13 +289,8 @@ export class ReportingService {
     }
   }
 
-  /**
-   * Fetch the last ~4 prior `sent` runs of this cadence and compute per-metric
-   * rolling baselines (mean + stdDev). Skipped for weekly and for any run
-   * without enough prior history. Individual metrics whose column was null on
-   * prior rows (e.g. DB collection failed that day) are simply skipped — the
-   * baseline is per-key so a gap in one metric doesn't poison others.
-   */
+  /** Per-key: a metric that was null on prior rows is skipped, so a gap in
+   *  one metric doesn't poison the baselines of others. */
   private async safeLoadBaseline(
     period: ReportPeriod,
     window: ReportWindow,
@@ -265,19 +299,16 @@ export class ReportingService {
 
     let prior: ReportingRunEntity[];
     try {
-      // Include both 'sent' and 'failed' runs — failed runs persist valid
-      // metric snapshots (Slack failure doesn't invalidate the numbers), so
-      // excluding them would bias the baseline toward days where Slack
-      // happened to be up. 'pending' rows are in-flight and must be skipped.
+      // Include 'failed' runs — Slack send failure doesn't invalidate the
+      // metric snapshot, and excluding them would bias the baseline toward
+      // days Slack was up. 'pending' rows are in-flight, skip those.
       prior = await this.reportingRunRepository.find({
         where: { periodType: period, periodStart: LessThan(window.from), status: Not('pending') },
         order: { periodStart: 'DESC' },
         take: BASELINE_WINDOW_SIZE,
       });
     } catch (err) {
-      this.logger.warn(
-        `Reporting: baseline lookup failed: ${err?.message || 'unknown error'}`,
-      );
+      this.logger.warn(`Reporting: baseline lookup failed: ${err?.message || 'unknown error'}`);
       return undefined;
     }
 
@@ -285,9 +316,7 @@ export class ReportingService {
 
     const dbBaseline: ReportBaseline['db'] = {};
     for (const key of DB_METRIC_KEYS) {
-      const values = prior
-        .map((row) => row[key])
-        .filter((v): v is number => typeof v === 'number');
+      const values = prior.map((row) => row[key]).filter((v): v is number => typeof v === 'number');
       const stat = computeBaseline(values);
       if (stat) dbBaseline[key] = stat;
     }
@@ -304,15 +333,33 @@ export class ReportingService {
       if (stat) ga4Baseline[key] = stat;
     }
 
+    // Per-event baselines for the curated watchlist. Prior rows store the
+    // full ga4Events array; index each row by eventName so a missing event
+    // on a row contributes nothing (rather than 0, which would bias the mean).
+    const eventsBaseline: ReportBaseline['ga4Events'] = {};
+    const priorEventIndex = prior.map((row) => {
+      const events = row.ga4Events as Ga4EventTotal[] | null;
+      const m = new Map<string, number>();
+      if (events) for (const e of events) m.set(e.eventName, e.eventCount);
+      return m;
+    });
+    for (const { event } of ANOMALY_WATCHED_EVENTS) {
+      const values = priorEventIndex
+        .map((idx) => idx.get(event))
+        .filter((v): v is number => typeof v === 'number');
+      const stat = computeBaseline(values);
+      if (stat) eventsBaseline[event] = stat;
+    }
+
     return {
       db: dbBaseline,
       ga4Overview: ga4Baseline,
+      ga4Events: eventsBaseline,
       sampleSize: prior.length,
     };
   }
 }
 
-/** Population mean + stdDev. Requires >= MIN_BASELINE_SAMPLES values. */
 function computeBaseline(values: number[]): BaselineStat | undefined {
   if (values.length < MIN_BASELINE_SAMPLES) return undefined;
   const mean = values.reduce((s, v) => s + v, 0) / values.length;
@@ -320,15 +367,11 @@ function computeBaseline(values: number[]): BaselineStat | undefined {
   return { mean, stdDev: Math.sqrt(variance), sampleSize: values.length };
 }
 
-/**
- * Find the top-N metrics whose current value deviates most from baseline
- * (|z| >= threshold). Empty array if nothing qualifies. Filters out metrics
- * with zero stdDev (no variance → z-score undefined) and metrics whose
- * current value is unavailable.
- */
+/** Top-N metrics with |z| >= threshold. Skips metrics with zero variance
+ *  (z-score undefined) or unavailable current values. */
 function computeAnomalies(
   db: ReportPayload['db'],
-  ga4Overview: ReportPayload['ga4']['overview'],
+  ga4: Ga4Metrics,
   baseline: ReportBaseline,
 ): Anomaly[] {
   const candidates: Array<Anomaly & { rawSigma: number }> = [];
@@ -340,14 +383,28 @@ function computeAnomalies(
     }
   }
 
-  if (!('unavailable' in ga4Overview)) {
+  if (!('unavailable' in ga4.overview)) {
+    const ov = ga4.overview;
     for (const key of GA4_OVERVIEW_KEYS) {
       const anomaly = scoreAnomaly(
         'ga4',
         GA4_OVERVIEW_LABELS[key],
-        ga4Overview[key],
+        ov[key],
         baseline.ga4Overview[key],
       );
+      if (anomaly) candidates.push(anomaly);
+    }
+  }
+
+  // Score curated events against their per-event baselines. Missing events in
+  // the current window count as 0 — the watchlist is small and explicit, so
+  // "error event absent from report" is a real data point (not a gap).
+  if (!('unavailable' in ga4.events)) {
+    const byName = new Map<string, number>();
+    for (const e of ga4.events) byName.set(e.eventName, e.eventCount);
+    for (const { event, label } of ANOMALY_WATCHED_EVENTS) {
+      const current = byName.get(event) ?? 0;
+      const anomaly = scoreAnomaly('ga4-event', label, current, baseline.ga4Events[event]);
       if (anomaly) candidates.push(anomaly);
     }
   }
@@ -356,17 +413,19 @@ function computeAnomalies(
     .filter((a) => Math.abs(a.rawSigma) >= ANOMALY_SIGMA_THRESHOLD)
     .sort((a, b) => Math.abs(b.rawSigma) - Math.abs(a.rawSigma))
     .slice(0, ANOMALY_LIMIT)
-    .map((a): Anomaly => ({
-      source: a.source,
-      label: a.label,
-      current: a.current,
-      mean: a.mean,
-      sigma: a.sigma,
-    }));
+    .map(
+      (a): Anomaly => ({
+        source: a.source,
+        label: a.label,
+        current: a.current,
+        mean: a.mean,
+        sigma: a.sigma,
+      }),
+    );
 }
 
 function scoreAnomaly(
-  source: 'db' | 'ga4',
+  source: Anomaly['source'],
   label: string,
   current: number,
   stat: BaselineStat | undefined,
@@ -377,4 +436,17 @@ function scoreAnomaly(
   // (|z| = 2.0) is stable under floating-point rounding.
   const sigma = Math.round(rawSigma * 10) / 10;
   return { source, label, current, mean: stat.mean, sigma, rawSigma };
+}
+
+/** Daily fires 365x/year — trim to the renderer's allowlist so dynamic-name
+ *  (ACCORDION_<title>, STORYBLOK_BUTTON_<text>) and Google auto-events
+ *  don't bloat that cadence. Weekly+ keeps the full literal copy. */
+function persistedGa4Events(
+  events: Ga4Metrics['events'],
+  period: ReportPeriod,
+): Ga4EventTotal[] | null {
+  if ('unavailable' in events) return null;
+  if (period !== 'daily') return events;
+  const allow = renderedEventNames();
+  return events.filter((e) => allow.has(e.eventName));
 }

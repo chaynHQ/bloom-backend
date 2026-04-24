@@ -8,6 +8,7 @@ import { ReportPeriod, ReportWindow } from './reporting.types';
  * - weekly:    previous ISO week (Mon–Sun) in `timezone`
  * - monthly:   previous calendar month in `timezone`
  * - quarterly: previous calendar quarter (Jan–Mar / Apr–Jun / etc.) in `timezone`
+ * - yearly:    previous calendar year in `timezone`
  *
  * Returned `from`/`to` are UTC instants covering the entire local-TZ range.
  */
@@ -61,6 +62,16 @@ export function computeRange(
         from: fromZoned.toUTC().toJSDate(),
         to: toZoned.toUTC().toJSDate(),
         label: `${fromZoned.year}-Q${fromZoned.quarter}`,
+        timezone,
+      };
+    }
+    case 'yearly': {
+      const fromZoned = zoned.minus({ years: 1 }).startOf('year');
+      const toZoned = fromZoned.endOf('year');
+      return {
+        from: fromZoned.toUTC().toJSDate(),
+        to: toZoned.toUTC().toJSDate(),
+        label: `${fromZoned.year}`,
         timezone,
       };
     }

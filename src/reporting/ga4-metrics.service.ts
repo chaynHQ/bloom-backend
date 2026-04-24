@@ -33,8 +33,8 @@ export class Ga4MetricsService {
     const range = this.toDataApiDateRange(window);
     const wantDetail = PERIODS_WITH_FULL_DETAIL.includes(period);
 
-    // Daily digest is headline-only — skip the ~15 extra GA4 calls that power
-    // the global breakdowns and per-line `↳ by X` sub-lines.
+    // Daily digest is headline-only — skip the global breakdowns and
+    // per-line `↳ by X` sub-lines.
     const [overview, events, breakdowns, eventBreakdowns] = await Promise.all([
       this.fetchOverview(range),
       this.fetchEvents(range),
@@ -78,7 +78,7 @@ export class Ga4MetricsService {
         averageSessionDuration: Number(values[4]?.value ?? 0),
       };
     } catch (err) {
-      const reason = err?.message || 'unknown error';
+      const reason = extractGa4Reason(err);
       this.logger.warn(`GA4 overview fetch failed: ${reason}`);
       return { unavailable: true, reason };
     }
@@ -100,7 +100,7 @@ export class Ga4MetricsService {
         totalUsers: Number(row.metricValues?.[1]?.value ?? 0),
       }));
     } catch (err) {
-      const reason = err?.message || 'unknown error';
+      const reason = extractGa4Reason(err);
       this.logger.warn(`GA4 events fetch failed: ${reason}`);
       return { unavailable: true, reason };
     }
@@ -193,7 +193,7 @@ export class Ga4MetricsService {
           return reports.map((r) => r ?? null);
         } catch (err) {
           this.logger.warn(
-            `GA4 batchRunReports failed (offset ${offset}); falling back to individual calls: ${err?.message || 'unknown error'}`,
+            `GA4 batchRunReports failed (offset ${offset}); falling back to individual calls: ${extractGa4Reason(err)}`,
           );
           return Promise.all(
             reqs.map((req, j) => this.runSingleSafe(req, describe(offset + j))),
@@ -212,7 +212,7 @@ export class Ga4MetricsService {
     try {
       return await this.dataClient.runReport(request);
     } catch (err) {
-      this.logger.warn(`GA4 ${label} failed: ${err?.message || 'unknown error'}`);
+      this.logger.warn(`GA4 ${label} failed: ${extractGa4Reason(err)}`);
       return null;
     }
   }
@@ -224,4 +224,25 @@ export class Ga4MetricsService {
       totalUsers: Number(row.metricValues?.[1]?.value ?? 0),
     }));
   }
+}
+
+/**
+ * Pull a useful message out of an axios error from the GA4 Data API.
+ * `err.message` is just "Request failed with status code 403" — not
+ * actionable. GA4 returns the real explanation in `err.response.data.error`
+ * with a `message` and `status` field. Example:
+ *   "User does not have sufficient permissions for this property.
+ *    To learn more, see https://support.google.com/analytics/answer/9305788"
+ */
+function extractGa4Reason(err: unknown): string {
+  const fallback = (err as { message?: string })?.message || 'unknown error';
+  if (!err || typeof err !== 'object') return fallback;
+
+  const resp = (err as { response?: { data?: { error?: { message?: string; status?: string } } } })
+    .response;
+  const serverMessage = resp?.data?.error?.message;
+  if (!serverMessage) return fallback;
+
+  const status = resp?.data?.error?.status;
+  return status ? `${serverMessage} (${status})` : serverMessage;
 }

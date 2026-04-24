@@ -38,8 +38,13 @@ export class ReportingScheduler {
     return this.fire('quarterly');
   }
 
+  @Cron(CRON_EXPRESSIONS.yearly, { timeZone: reportingTimezone })
+  runYearly(): Promise<void> {
+    return this.fire('yearly');
+  }
+
   private async fire(period: ReportPeriod): Promise<void> {
-    this.logger.log(`ReportingScheduler: firing ${period} at ${reportingTimezone} 09:00`);
+    this.logger.log(`ReportingScheduler: firing ${period} (tz=${reportingTimezone})`);
     try {
       await this.reportingService.run(period, { trigger: 'scheduled' });
     } catch (err) {

@@ -64,4 +64,5 @@ describe('Ga4MetricsService', () => {
     expect(metrics.eventBreakdowns).toEqual([]);
     expect(dataClient.batchRunReports).not.toHaveBeenCalled();
   });
+
 });

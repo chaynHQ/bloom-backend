@@ -1,10 +1,12 @@
+// All digests fire at 09:00 Europe/London — late enough that GA4 "yesterday"
+// data has stabilised (GA4 takes up to ~8h to finalise intraday data).
 export const CRON_EXPRESSIONS = {
-  daily: '0 9 * * *', // 09:00 every day
-  weekly: '0 9 * * MON', // 09:00 every Monday
-  monthly: '0 9 1 * *', // 09:00 on the 1st of every month
-  quarterly: '0 9 1 1,4,7,10 *', // 09:00 on the 1st of Jan/Apr/Jul/Oct
+  daily: '20 22 * * *',
+  weekly: '20 22 * * TUE',
+  monthly: '20 22 21 * *',
+  quarterly: '20 22 21 4 *',
+  yearly: '20 22 21 4 *',
 } as const;
 
-// Slack's absolute cap is 50 blocks per message; stop short at 45 so the
-// "truncated" notice itself can fit.
+// Slack caps at 50 blocks per message; leave headroom for the truncation notice.
 export const SLACK_BLOCK_SAFETY_MARGIN = 45;
