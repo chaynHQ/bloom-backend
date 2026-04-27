@@ -55,6 +55,14 @@ import { WebhooksService } from './webhooks.service';
 
 jest.mock('src/api/apiCalls');
 
+jest.mock('src/utils/constants', () => {
+  const actual = jest.requireActual('src/utils/constants');
+  return {
+    ...actual,
+    storyblokToken: 'test-storyblok-token',
+  };
+});
+
 jest.mock('src/api/simplybook/simplybook-api', () => {
   return {
     getBookingsForDate: async () => [
