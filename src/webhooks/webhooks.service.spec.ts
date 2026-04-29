@@ -52,6 +52,7 @@ import {
 } from 'test/utils/mockedServices';
 import { ILike, Repository } from 'typeorm';
 import { EVENT_NAME } from 'src/event-logger/event-logger.interface';
+import { FrontChatGateway } from 'src/front-chat/front-chat.gateway';
 import { WebhooksService } from './webhooks.service';
 
 jest.mock('src/api/apiCalls');
@@ -178,6 +179,10 @@ describe('WebhooksService', () => {
         },
         { provide: FrontChatService, useValue: mockFrontChatService },
         { provide: EventLoggerService, useValue: mockEventLoggerService },
+        {
+          provide: FrontChatGateway,
+          useValue: { emitAgentReply: jest.fn() },
+        },
       ],
     }).compile();
 

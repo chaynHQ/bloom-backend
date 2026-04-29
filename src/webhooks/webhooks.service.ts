@@ -12,6 +12,7 @@ import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
 import { UserEntity } from 'src/entities/user.entity';
 import { EVENT_NAME } from 'src/event-logger/event-logger.interface';
 import { EventLoggerService } from 'src/event-logger/event-logger.service';
+import { FrontChatGateway } from 'src/front-chat/front-chat.gateway';
 import { FRONT_WEBHOOK_EVENT_TYPE } from 'src/front-chat/front-chat.interface';
 import { ZapierSimplybookBodyDto } from 'src/partner-access/dtos/zapier-body.dto';
 import { ServiceUserProfilesService } from 'src/service-user-profiles/service-user-profiles.service';
@@ -27,7 +28,10 @@ import {
   STORYBLOK_STORY_STATUS_ENUM,
   storyblokToken,
 } from '../utils/constants';
-import { FrontChatWebhookDto } from 'src/webhooks/dto/front-chat-webhook.dto';
+import {
+  FrontChatWebhookDto,
+  FrontWebhookMessageAuthor,
+} from 'src/webhooks/dto/front-chat-webhook.dto';
 import { StoryWebhookDto } from './dto/story.dto';
 
 @Injectable()
@@ -47,6 +51,7 @@ export class WebhooksService {
     private serviceUserProfilesService: ServiceUserProfilesService,
     private slackMessageClient: SlackMessageClient,
     private eventLoggerService: EventLoggerService,
+    private frontChatGateway: FrontChatGateway,
   ) {}
 
   async updatePartnerAccessTherapy(
@@ -480,6 +485,27 @@ export class WebhooksService {
         `Front webhook: failed to log ${eventName} for ${email}: ${error?.message || 'unknown error'}`,
       );
     }
+
+    if (
+      data.type === FRONT_WEBHOOK_EVENT_TYPE.OUTBOUND ||
+      data.type === FRONT_WEBHOOK_EVENT_TYPE.OUT_REPLY
+    ) {
+      const messageBody = data.target?.data?.text ?? data.target?.data?.body;
+      if (messageBody) {
+        this.frontChatGateway.emitAgentReply(email, {
+          body: messageBody,
+          authorEmail: data.target?.data?.author?.email,
+          authorName: this.formatAuthorName(data.target?.data?.author),
+          emittedAt: data.emitted_at,
+        });
+      }
+    }
+  }
+
+  private formatAuthorName(author: FrontWebhookMessageAuthor | undefined): string | undefined {
+    if (!author) return undefined;
+    const full = [author.first_name, author.last_name].filter(Boolean).join(' ').trim();
+    return full || author.username || undefined;
   }
 
   private mapFrontEventToEventName(type: string): EVENT_NAME | null {

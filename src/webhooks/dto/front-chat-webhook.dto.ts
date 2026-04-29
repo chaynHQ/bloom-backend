@@ -18,6 +18,48 @@ class FrontWebhookConversation {
   recipient?: FrontWebhookRecipient;
 }
 
+export class FrontWebhookMessageAuthor {
+  @IsOptional()
+  @IsString()
+  email?: string;
+
+  @IsOptional()
+  @IsString()
+  username?: string;
+
+  @IsOptional()
+  @IsString()
+  first_name?: string;
+
+  @IsOptional()
+  @IsString()
+  last_name?: string;
+}
+
+class FrontWebhookMessageData {
+  @IsOptional()
+  @IsString()
+  body?: string;
+
+  @IsOptional()
+  @IsString()
+  text?: string;
+
+  @IsOptional()
+  @IsObject()
+  author?: FrontWebhookMessageAuthor;
+}
+
+class FrontWebhookTarget {
+  @IsOptional()
+  @IsString()
+  type?: string;
+
+  @IsOptional()
+  @IsObject()
+  data?: FrontWebhookMessageData;
+}
+
 export class FrontChatWebhookDto {
   @ApiProperty()
   @IsString()
@@ -35,4 +77,9 @@ export class FrontChatWebhookDto {
   @IsOptional()
   @IsObject()
   conversation?: FrontWebhookConversation;
+
+  @ApiProperty()
+  @IsOptional()
+  @IsObject()
+  target?: FrontWebhookTarget;
 }

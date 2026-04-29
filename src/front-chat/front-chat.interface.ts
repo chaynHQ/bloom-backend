@@ -29,3 +29,10 @@ export interface FrontChatContactProfile {
   email?: string;
   name?: string;
 }
+
+export interface AgentReplyPayload {
+  body: string;
+  authorEmail?: string;
+  authorName?: string;
+  emittedAt: number;
+}

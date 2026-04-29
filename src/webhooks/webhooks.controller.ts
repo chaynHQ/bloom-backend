@@ -12,7 +12,7 @@ import {
 import { ApiBody, ApiTags } from '@nestjs/swagger';
 import { createHmac, timingSafeEqual } from 'crypto';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
-import { frontChatWebhookSecret, storyblokWebhookSecret } from 'src/utils/constants';
+import { frontChatWebhookToken, storyblokWebhookSecret } from 'src/utils/constants';
 import { ControllerDecorator } from 'src/utils/controller.decorator';
 import { ZapierSimplybookBodyDto } from '../partner-access/dtos/zapier-body.dto';
 import { ZapierAuthGuard } from '../partner-access/zapier-auth.guard';
@@ -40,7 +40,7 @@ export class WebhooksController {
   @ApiBody({ type: StoryWebhookDto })
   async handleStoryUpdated(@Request() req, @Body() data: StoryWebhookDto, @Headers() headers) {
     const signature: string | undefined = headers['webhook-signature'];
-    // Verify storyblok signature uses storyblok webhook secret - see https://www.storyblok.com/docs/guide/in-depth/webhooks#securing-a-webhook
+    // https://www.storyblok.com/docs/guide/in-depth/webhooks#securing-a-webhook
     if (!signature) {
       const error = `Storyblok webhook error - no signature provided`;
       this.logger.error(error);
@@ -62,32 +62,28 @@ export class WebhooksController {
   @Post('front-chat')
   @ApiBody({ type: FrontChatWebhookDto })
   async handleFrontChatWebhook(
-    @Request() req,
     @Body() data: FrontChatWebhookDto,
     @Headers() headers,
   ): Promise<void> {
-    const signature: string | undefined = headers['x-front-signature'];
-
-    if (!signature) {
-      const error = 'Front Chat webhook error - no signature provided';
-      this.logger.error(error);
-      throw new HttpException(error, HttpStatus.UNAUTHORIZED);
-    }
-
-    if (!frontChatWebhookSecret) {
+    if (!frontChatWebhookToken) {
       throw new HttpException(
-        'Front Chat webhook secret not configured',
+        'Front Chat webhook token not configured',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
 
-    req.setEncoding('utf8');
-    const computed = createHmac('sha1', frontChatWebhookSecret).update(req.rawBody).digest('base64');
-    const expected = Buffer.from(computed);
-    const provided = Buffer.from(signature);
+    const authHeader: string | undefined = headers['authorization'];
+    if (!authHeader?.startsWith('Bearer ')) {
+      const error = 'Front Chat webhook error - missing or invalid Authorization header';
+      this.logger.error(error);
+      throw new HttpException(error, HttpStatus.UNAUTHORIZED);
+    }
 
-    if (expected.length !== provided.length || !timingSafeEqual(expected, provided)) {
-      const error = 'Front Chat webhook error - signature mismatch';
+    const provided = Buffer.from(authHeader.slice(7));
+    const expected = Buffer.from(frontChatWebhookToken);
+
+    if (provided.length !== expected.length || !timingSafeEqual(provided, expected)) {
+      const error = 'Front Chat webhook error - invalid token';
       this.logger.error(error);
       throw new HttpException(error, HttpStatus.UNAUTHORIZED);
     }

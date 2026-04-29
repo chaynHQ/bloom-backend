@@ -142,13 +142,14 @@ export const firebaseMeasurementId = getEnv(
 export const zapierToken = getEnv(process.env.ZAPIER_TOKEN, 'ZAPIER_TOKEN');
 
 export const frontChatApiToken = getEnv(process.env.FRONT_CHAT_API_TOKEN, 'FRONT_CHAT_API_TOKEN');
-export const frontChatIdentitySecret = getEnv(
-  process.env.FRONT_CHAT_IDENTITY_SECRET,
-  'FRONT_CHAT_IDENTITY_SECRET',
+export const frontChannelId = getEnv(process.env.FRONT_CHANNEL_ID, 'FRONT_CHANNEL_ID');
+export const frontContactListId = getEnv(
+  process.env.FRONT_CONTACT_LIST_ID,
+  'FRONT_CONTACT_LIST_ID',
 );
-export const frontChatWebhookSecret = getEnv(
-  process.env.FRONT_CHAT_WEBHOOK_SECRET,
-  'FRONT_CHAT_WEBHOOK_SECRET',
+export const frontChatWebhookToken = getEnv(
+  process.env.FRONT_CHAT_WEBHOOK_TOKEN,
+  'FRONT_CHAT_WEBHOOK_TOKEN',
 );
 
 export const slackWebhookUrl = getEnv(process.env.SLACK_WEBHOOK_URL, 'SLACK_WEBHOOK_URL');

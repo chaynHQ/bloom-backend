@@ -1,17 +1,90 @@
 import { Injectable } from '@nestjs/common';
-import { createHmac } from 'crypto';
 import { Logger } from 'src/logger/logger';
-import { frontChatApiToken, frontChatIdentitySecret } from 'src/utils/constants';
+import { frontChannelId, frontChatApiToken, frontContactListId } from 'src/utils/constants';
 import { isCypressTestEmail } from 'src/utils/utils';
 import { FrontChatContactCustomFields, FrontChatContactProfile } from './front-chat.interface';
 
 const FRONT_API_BASE_URL = 'https://api2.frontapp.com';
 const logger = new Logger('FrontChatService');
 
+interface ChatUser {
+  id: string;
+  email: string;
+  name?: string | null;
+}
+
+// Front groups messages sharing a thread_ref into one conversation, so a stable
+// per-user value gives every user a single long-running conversation.
+export const buildThreadRef = (userId: string) => `bloom-user-${userId}`;
+
 @Injectable()
 export class FrontChatService {
-  computeUserHash(email: string): string {
-    return createHmac('sha256', frontChatIdentitySecret).update(email).digest('hex');
+  async sendChannelTextMessage(user: ChatUser, text: string): Promise<void> {
+    if (isCypressTestEmail(user.email)) {
+      logger.log('Skipping Front message send for Cypress test user');
+      return;
+    }
+
+    const body = {
+      sender: { handle: user.email, ...(user.name && { name: user.name }) },
+      body: text,
+      body_format: 'markdown',
+      metadata: {
+        external_id: `${user.id}-${Date.now()}`,
+        thread_ref: buildThreadRef(user.id),
+      },
+    };
+
+    const response = await fetch(
+      `${FRONT_API_BASE_URL}/channels/${frontChannelId}/incoming_messages`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${frontChatApiToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      },
+    );
+
+    if (!response.ok) {
+      const errorBody = await response.text();
+      throw new Error(`Front incoming_messages failed (${response.status}): ${errorBody}`);
+    }
+  }
+
+  async sendChannelAttachment(user: ChatUser, file: Express.Multer.File): Promise<void> {
+    if (isCypressTestEmail(user.email)) {
+      logger.log('Skipping Front attachment send for Cypress test user');
+      return;
+    }
+
+    const form = new FormData();
+    form.append('sender[handle]', user.email);
+    if (user.name) form.append('sender[name]', user.name);
+    form.append('body', file.mimetype.startsWith('audio/') ? 'Voice note' : 'Attachment');
+    form.append('body_format', 'markdown');
+    form.append('metadata[external_id]', `${user.id}-${Date.now()}`);
+    form.append('metadata[thread_ref]', buildThreadRef(user.id));
+    form.append(
+      'attachments',
+      new Blob([new Uint8Array(file.buffer)], { type: file.mimetype }),
+      file.originalname,
+    );
+
+    const response = await fetch(
+      `${FRONT_API_BASE_URL}/channels/${frontChannelId}/incoming_messages`,
+      {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${frontChatApiToken}` },
+        body: form,
+      },
+    );
+
+    if (!response.ok) {
+      const errorBody = await response.text();
+      throw new Error(`Front attachment upload failed (${response.status}): ${errorBody}`);
+    }
   }
 
   private async frontApiRequest(method: string, path: string, body?: unknown): Promise<unknown> {
@@ -33,7 +106,9 @@ export class FrontChatService {
     return response.json();
   }
 
-  async createContact(profile: FrontChatContactProfile & { customFields?: FrontChatContactCustomFields }) {
+  async createContact(
+    profile: FrontChatContactProfile & { customFields?: FrontChatContactCustomFields },
+  ) {
     const { email, name, customFields } = profile;
 
     if (isCypressTestEmail(email)) {
@@ -41,8 +116,9 @@ export class FrontChatService {
       return null;
     }
 
+    let contact: unknown;
     try {
-      return await this.frontApiRequest('POST', '/contacts', {
+      contact = await this.frontApiRequest('POST', '/contacts', {
         handles: [{ source: 'email', handle: email }],
         ...(name && { name }),
         ...(customFields && { custom_fields: this.serializeCustomFields(customFields) }),
@@ -53,6 +129,9 @@ export class FrontChatService {
         { cause: error },
       );
     }
+
+    await this.ensureContactInList(email);
+    return contact;
   }
 
   async updateContactProfile(profile: FrontChatContactProfile, email: string) {
@@ -69,20 +148,19 @@ export class FrontChatService {
         updateBody.name = profile.name;
       }
       if (profile.email && profile.email !== email) {
-        // Add new email handle when email changes
         updateBody.handles = [{ source: 'email', handle: profile.email }];
       }
 
-      return await this.frontApiRequest('PATCH', `/contacts/${contactId}`, updateBody);
+      const result = await this.frontApiRequest('PATCH', `/contacts/${contactId}`, updateBody);
+      await this.ensureContactInList(profile.email ?? email);
+      return result;
     } catch (error) {
       if (this.isContactNotFoundError(error)) {
         try {
           await this.createContact({ email, ...profile });
-          return await this.frontApiRequest(
-            'PATCH',
-            `/contacts/${this.getContactAlias(email)}`,
-            { name: profile.name },
-          );
+          return await this.frontApiRequest('PATCH', `/contacts/${this.getContactAlias(email)}`, {
+            name: profile.name,
+          });
         } catch {
           throw new Error(
             `Update Front Chat contact profile API call failed: ${error?.message || 'unknown error'}`,
@@ -106,18 +184,18 @@ export class FrontChatService {
 
     try {
       const contactId = this.getContactAlias(email);
-      return await this.frontApiRequest('PATCH', `/contacts/${contactId}`, {
+      const result = await this.frontApiRequest('PATCH', `/contacts/${contactId}`, {
         custom_fields: serialized,
       });
+      await this.ensureContactInList(email);
+      return result;
     } catch (error) {
       if (this.isContactNotFoundError(error)) {
         try {
           await this.createContact({ email, customFields });
-          return await this.frontApiRequest(
-            'PATCH',
-            `/contacts/${this.getContactAlias(email)}`,
-            { custom_fields: serialized },
-          );
+          return await this.frontApiRequest('PATCH', `/contacts/${this.getContactAlias(email)}`, {
+            custom_fields: serialized,
+          });
         } catch {
           throw new Error(
             `Update Front Chat contact custom fields API call failed: ${error?.message || 'unknown error'}`,
@@ -147,6 +225,18 @@ export class FrontChatService {
     // Front API does not support searching contacts by email prefix.
     // Cypress test contacts are cleaned up individually via deleteContact during test teardown.
     logger.log('Cypress Front Chat contact cleanup is handled by individual test teardown');
+  }
+
+  private async ensureContactInList(email: string): Promise<void> {
+    if (!frontContactListId || isCypressTestEmail(email)) return;
+
+    try {
+      await this.frontApiRequest('POST', `/contact_groups/${frontContactListId}/contacts`, {
+        contact_ids: [this.getContactAlias(email)],
+      });
+    } catch (error) {
+      logger.warn(`Front add-to-list failed for ${email}: ${error?.message || 'unknown error'}`);
+    }
   }
 
   // Front's contact alias format for email handles: https://dev.frontapp.com/reference/contacts

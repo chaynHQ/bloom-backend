@@ -1,4 +1,3 @@
-import { createHmac } from 'crypto';
 import { PartnerAdminEntity } from 'src/entities/partner-admin.entity';
 import { PartnerEntity } from 'src/entities/partner.entity';
 import { ResourceUserEntity } from 'src/entities/resource-user.entity';
@@ -13,7 +12,6 @@ import { UserEntity } from '../entities/user.entity';
 import { ZapierSimplybookBodyDto } from '../partner-access/dtos/zapier-body.dto';
 import { ISubscriptionUser } from '../subscription-user/subscription-user.interface';
 import { GetUserDto } from '../user/dtos/get-user.dto';
-import { frontChatIdentitySecret } from './constants';
 
 export const formatCourseUserObjects = (courseUserObjects: CourseUserEntity[]) => {
   return courseUserObjects.map((courseUser) => formatCourseUserObject(courseUser));
@@ -117,9 +115,6 @@ export const formatUserObject = (userObject: UserEntity): GetUserDto => {
       firebaseUid: userObject.firebaseUid,
       isActive: userObject.isActive,
       lastActiveAt: userObject.lastActiveAt,
-      frontChatUserHash: frontChatIdentitySecret
-        ? createHmac('sha256', frontChatIdentitySecret).update(userObject.email).digest('hex')
-        : undefined,
       isSuperAdmin: userObject.isSuperAdmin,
       signUpLanguage: userObject.signUpLanguage,
       emailRemindersFrequency: userObject.emailRemindersFrequency,
