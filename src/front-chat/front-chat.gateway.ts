@@ -15,8 +15,8 @@ import { UserEntity } from 'src/entities/user.entity';
 import { IFirebaseUser } from 'src/firebase/firebase-user.interface';
 import { Logger } from 'src/logger/logger';
 import { ServiceUserProfilesService } from 'src/service-user-profiles/service-user-profiles.service';
-import { getCorsOrigin } from 'src/utils/cors';
 import { UserService } from 'src/user/user.service';
+import { getCorsOrigin } from 'src/utils/cors';
 import { SendMessageDto } from './dto/send-message.dto';
 import { AgentReplyPayload } from './front-chat.interface';
 import { FrontChatService } from './front-chat.service';
@@ -134,13 +134,16 @@ export class FrontChatGateway implements OnGatewayConnection, OnGatewayDisconnec
       await this.frontChatService.sendChannelTextMessage(user, payload.text);
 
       // Fire-and-forget: sync updated chat activity timestamps to external services.
-      this.frontChatService.getChatUser(user.id).then((chatUser) => {
-        if (chatUser) {
-          return this.serviceUserProfilesService
-            .updateServiceUserProfilesChatActivity(chatUser, user.email)
-            .catch(() => {});
-        }
-      }).catch(() => {});
+      this.frontChatService
+        .getChatUser(user.id)
+        .then((chatUser) => {
+          if (chatUser) {
+            return this.serviceUserProfilesService
+              .updateServiceUserProfilesChatActivity(chatUser, user.email)
+              .catch(() => {});
+          }
+        })
+        .catch(() => {});
 
       return { ok: true };
     } catch (error) {

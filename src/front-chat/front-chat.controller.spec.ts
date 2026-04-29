@@ -1,8 +1,8 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { ChatUserEntity } from 'src/entities/chat-user.entity';
 import { UserEntity } from 'src/entities/user.entity';
-import { ChatHistoryMessage } from './front-chat.service';
 import { FrontChatController } from './front-chat.controller';
+import { ChatHistoryMessage } from './front-chat.service';
 
 describe('FrontChatController', () => {
   let controller: FrontChatController;
@@ -36,7 +36,9 @@ describe('FrontChatController', () => {
       markAsRead: jest.fn().mockResolvedValue(buildChatUser()),
       getChatUser: jest.fn().mockResolvedValue(null),
       getConversationHistory: jest.fn().mockResolvedValue([]),
-      fetchAttachment: jest.fn().mockResolvedValue({ buffer: Buffer.from('img'), contentType: 'image/png' }),
+      fetchAttachment: jest
+        .fn()
+        .mockResolvedValue({ buffer: Buffer.from('img'), contentType: 'image/png' }),
     };
     serviceUserProfilesService = {
       ensureFrontContact: jest.fn().mockResolvedValue(undefined),
@@ -96,7 +98,9 @@ describe('FrontChatController', () => {
       await controller.markAsRead({ userEntity: user } as any);
       await new Promise((r) => setImmediate(r));
 
-      expect(serviceUserProfilesService.updateServiceUserProfilesChatActivity).not.toHaveBeenCalled();
+      expect(
+        serviceUserProfilesService.updateServiceUserProfilesChatActivity,
+      ).not.toHaveBeenCalled();
     });
   });
 
@@ -177,9 +181,9 @@ describe('FrontChatController', () => {
     it('throws BadRequestException when the URL query param is missing', async () => {
       const res = buildRes();
 
-      await expect(
-        controller.proxyAttachment(undefined as any, res as any),
-      ).rejects.toBeInstanceOf(BadRequestException);
+      await expect(controller.proxyAttachment(undefined as any, res as any)).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
       expect(frontChatService.fetchAttachment).not.toHaveBeenCalled();
     });
 

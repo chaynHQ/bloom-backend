@@ -6,8 +6,15 @@ describe('FrontChatGateway', () => {
   let gateway: FrontChatGateway;
   let authService: { parseAuth: jest.Mock };
   let userService: { getUserByFirebaseId: jest.Mock };
-  let frontChatService: { sendChannelTextMessage: jest.Mock; getConversationHistory: jest.Mock; getChatUser: jest.Mock };
-  let serviceUserProfilesService: { ensureFrontContact: jest.Mock; updateServiceUserProfilesChatActivity: jest.Mock };
+  let frontChatService: {
+    sendChannelTextMessage: jest.Mock;
+    getConversationHistory: jest.Mock;
+    getChatUser: jest.Mock;
+  };
+  let serviceUserProfilesService: {
+    ensureFrontContact: jest.Mock;
+    updateServiceUserProfilesChatActivity: jest.Mock;
+  };
   let server: { to: jest.Mock; emit: jest.Mock };
 
   const buildUser = (overrides: Partial<UserEntity> = {}): UserEntity =>
@@ -56,7 +63,7 @@ describe('FrontChatGateway', () => {
 
     it('rejects sockets when token verification fails', async () => {
       authService.parseAuth.mockRejectedValue(new Error('invalid'));
-      const socket = buildSocket("tok-1");
+      const socket = buildSocket('tok-1');
       await gateway.handleConnection(socket as any);
       expect(socket.disconnect).toHaveBeenCalledWith(true);
       expect(socket.join).not.toHaveBeenCalled();
@@ -66,7 +73,7 @@ describe('FrontChatGateway', () => {
       authService.parseAuth.mockResolvedValue({ uid: 'fb-uid' });
       userService.getUserByFirebaseId.mockResolvedValue({ userEntity: buildUser() });
 
-      const socket = buildSocket("tok-1");
+      const socket = buildSocket('tok-1');
       await gateway.handleConnection(socket as any);
 
       expect(authService.parseAuth).toHaveBeenCalledWith('Bearer tok-1');
@@ -115,7 +122,7 @@ describe('FrontChatGateway', () => {
         userEntity: buildUser({ email: 'User@Example.COM' }),
       });
 
-      const socket = buildSocket("tok-1");
+      const socket = buildSocket('tok-1');
       await gateway.handleConnection(socket as any);
 
       expect(socket.join).toHaveBeenCalledWith('user:user@example.com');
@@ -126,16 +133,16 @@ describe('FrontChatGateway', () => {
     const connectAs = async (user: UserEntity) => {
       authService.parseAuth.mockResolvedValue({ uid: 'fb-uid' });
       userService.getUserByFirebaseId.mockResolvedValue({ userEntity: user });
-      const socket = buildSocket("tok-1");
+      const socket = buildSocket('tok-1');
       await gateway.handleConnection(socket as any);
       return socket;
     };
 
     it('rejects when the socket has no cached session', async () => {
       const socket = buildSocket(undefined, 'unknown');
-      await expect(
-        gateway.handleSendMessage(socket as any, { text: 'hi' }),
-      ).rejects.toBeInstanceOf(WsException);
+      await expect(gateway.handleSendMessage(socket as any, { text: 'hi' })).rejects.toBeInstanceOf(
+        WsException,
+      );
       expect(frontChatService.sendChannelTextMessage).not.toHaveBeenCalled();
     });
 
@@ -154,9 +161,9 @@ describe('FrontChatGateway', () => {
       const socket = await connectAs(buildUser());
       frontChatService.sendChannelTextMessage.mockRejectedValue(new Error('Front 500'));
 
-      await expect(
-        gateway.handleSendMessage(socket as any, { text: 'hi' }),
-      ).rejects.toBeInstanceOf(WsException);
+      await expect(gateway.handleSendMessage(socket as any, { text: 'hi' })).rejects.toBeInstanceOf(
+        WsException,
+      );
     });
 
     it('rate-limits after 20 messages within the 10s window', async () => {
@@ -168,9 +175,9 @@ describe('FrontChatGateway', () => {
       }
       expect(frontChatService.sendChannelTextMessage).toHaveBeenCalledTimes(20);
 
-      await expect(
-        gateway.handleSendMessage(socket as any, { text: 'spam' }),
-      ).rejects.toThrow('Rate limit exceeded');
+      await expect(gateway.handleSendMessage(socket as any, { text: 'spam' })).rejects.toThrow(
+        'Rate limit exceeded',
+      );
       expect(frontChatService.sendChannelTextMessage).toHaveBeenCalledTimes(20);
     });
   });
@@ -193,16 +200,16 @@ describe('FrontChatGateway', () => {
     it('clears the cached session and rate-limit history', async () => {
       authService.parseAuth.mockResolvedValue({ uid: 'fb-uid' });
       userService.getUserByFirebaseId.mockResolvedValue({ userEntity: buildUser() });
-      const socket = buildSocket("tok-1");
+      const socket = buildSocket('tok-1');
       await gateway.handleConnection(socket as any);
       frontChatService.sendChannelTextMessage.mockResolvedValue(undefined);
       await gateway.handleSendMessage(socket as any, { text: 'hi' });
 
       gateway.handleDisconnect(socket as any);
 
-      await expect(
-        gateway.handleSendMessage(socket as any, { text: 'hi' }),
-      ).rejects.toBeInstanceOf(WsException);
+      await expect(gateway.handleSendMessage(socket as any, { text: 'hi' })).rejects.toBeInstanceOf(
+        WsException,
+      );
     });
   });
 });

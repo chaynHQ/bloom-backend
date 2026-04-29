@@ -524,6 +524,27 @@ export class WebhooksService {
         `Front webhook: failed to log ${eventName} for ${email}: ${error?.message || 'unknown error'}`,
       );
     }
+
+    if (
+      data.type === FRONT_WEBHOOK_EVENT_TYPE.OUTBOUND ||
+      data.type === FRONT_WEBHOOK_EVENT_TYPE.OUT_REPLY
+    ) {
+      const messageBody = data.target?.data?.text ?? data.target?.data?.body;
+      if (messageBody) {
+        this.frontChatGateway.emitAgentReply(email, {
+          body: messageBody,
+          authorEmail: data.target?.data?.author?.email,
+          authorName: this.formatAuthorName(data.target?.data?.author),
+          emittedAt: data.emitted_at,
+        });
+      }
+    }
+  }
+
+  private formatAuthorName(author: FrontWebhookMessageAuthor | undefined): string | undefined {
+    if (!author) return undefined;
+    const full = [author.first_name, author.last_name].filter(Boolean).join(' ').trim();
+    return full || author.username || undefined;
   }
 
   // Handles outbound messages Front sends to a Custom Channel when an agent
