@@ -55,7 +55,7 @@ describe('FrontChatService', () => {
         'https://api2.frontapp.com/contact_groups/grp_test/contacts',
         expect.objectContaining({
           method: 'POST',
-          body: JSON.stringify({ contact_ids: ['alt:email:user@example.com'] }),
+          body: JSON.stringify({ contact_ids: ['alt:email:user%40example.com'] }),
         }),
       );
       expect(result).toEqual({ id: 'cnt_123', name: 'Test User' });
@@ -102,7 +102,7 @@ describe('FrontChatService', () => {
 
       expect(mockFetch).toHaveBeenNthCalledWith(
         1,
-        'https://api2.frontapp.com/contacts/alt:email:user@example.com',
+        'https://api2.frontapp.com/contacts/alt:email:user%40example.com',
         expect.objectContaining({ method: 'PATCH' }),
       );
       expect(mockFetch).toHaveBeenNthCalledWith(
@@ -138,7 +138,7 @@ describe('FrontChatService', () => {
 
       expect(mockFetch).toHaveBeenNthCalledWith(
         1,
-        'https://api2.frontapp.com/contacts/alt:email:user@example.com',
+        'https://api2.frontapp.com/contacts/alt:email:user%40example.com',
         expect.objectContaining({ method: 'PATCH' }),
       );
       expect(mockFetch).toHaveBeenNthCalledWith(
@@ -173,7 +173,7 @@ describe('FrontChatService', () => {
       await service.deleteContact('user@example.com');
 
       expect(mockFetch).toHaveBeenCalledWith(
-        'https://api2.frontapp.com/contacts/alt:email:user@example.com',
+        'https://api2.frontapp.com/contacts/alt:email:user%40example.com',
         expect.objectContaining({ method: 'DELETE' }),
       );
     });
@@ -188,6 +188,70 @@ describe('FrontChatService', () => {
       await expect(service.deleteContact('user@example.com')).rejects.toThrow(
         'Delete Front Chat contact API call failed',
       );
+    });
+  });
+
+  describe('getConversationHistory', () => {
+    const user = { id: 'user-1', email: 'user@example.com', name: 'Alex' };
+
+    it('requests assigned, unassigned and archived conversations so resolved chats are included', async () => {
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => ({ _results: [] }),
+        });
+
+      await service.getConversationHistory(user);
+
+      const [url] = mockFetch.mock.calls[0];
+      expect(url).toContain('q[statuses][]=assigned');
+      expect(url).toContain('q[statuses][]=unassigned');
+      expect(url).toContain('q[statuses][]=archived');
+    });
+
+    it('returns empty array when contact not found', async () => {
+      mockFetch.mockResolvedValue({ ok: false, status: 404, text: async () => '404 not found' });
+
+      const result = await service.getConversationHistory(user);
+      expect(result).toEqual([]);
+    });
+
+    it('returns empty array for Cypress test emails', async () => {
+      const result = await service.getConversationHistory({
+        ...user,
+        email: 'cypresstestemail+1@chayn.co',
+      });
+      expect(mockFetch).not.toHaveBeenCalled();
+      expect(result).toEqual([]);
+    });
+
+    it('maps inbound messages as user and outbound as agent', async () => {
+      const now = Math.floor(Date.now() / 1000);
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => ({
+            _results: [{ id: 'cnv_1', last_message: { created_at: now } }],
+          }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => ({
+            _results: [
+              { id: 'msg_1', is_inbound: true, text: 'Hello', created_at: now - 10 },
+              { id: 'msg_2', is_inbound: false, text: 'Hi there', created_at: now, author: { first_name: 'Agent', last_name: 'One' } },
+            ],
+          }),
+        });
+
+      const messages = await service.getConversationHistory(user);
+
+      expect(messages).toHaveLength(2);
+      expect(messages[0]).toMatchObject({ id: 'msg_1', direction: 'user', text: 'Hello' });
+      expect(messages[1]).toMatchObject({ id: 'msg_2', direction: 'agent', text: 'Hi there', authorName: 'Agent One' });
     });
   });
 

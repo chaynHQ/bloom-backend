@@ -151,6 +151,8 @@ export const frontChatWebhookToken = getEnv(
   process.env.FRONT_CHAT_WEBHOOK_TOKEN,
   'FRONT_CHAT_WEBHOOK_TOKEN',
 );
+export const frontChannelSigningSecret =
+  getEnv(process.env.FRONT_CHANNEL_SIGNING_SECRET, 'FRONT_CHANNEL_SIGNING_SECRET') || '';
 
 export const slackWebhookUrl = getEnv(process.env.SLACK_WEBHOOK_URL, 'SLACK_WEBHOOK_URL');
 export const slackBloomUsersWebhookUrl = getEnv(

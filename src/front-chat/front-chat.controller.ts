@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Controller,
+  Get,
   HttpCode,
   HttpStatus,
   Post,
@@ -13,7 +14,8 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiTags } from '@nestjs/swagger';
 import { memoryStorage } from 'multer';
 import { FirebaseAuthGuard } from 'src/firebase/firebase-auth.guard';
-import { FrontChatService } from './front-chat.service';
+import { ServiceUserProfilesService } from 'src/service-user-profiles/service-user-profiles.service';
+import { ChatHistoryMessage, FrontChatService } from './front-chat.service';
 
 const ALLOWED_MIME_TYPES = new Set([
   'image/jpeg',
@@ -30,9 +32,12 @@ const ALLOWED_MIME_TYPES = new Set([
 const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25 MB
 
 @ApiTags('Front Chat')
-@Controller('front-chat')
+@Controller('/v1/front-chat')
 export class FrontChatController {
-  constructor(private readonly frontChatService: FrontChatService) {}
+  constructor(
+    private readonly frontChatService: FrontChatService,
+    private readonly serviceUserProfilesService: ServiceUserProfilesService,
+  ) {}
 
   @Post('attachments')
   @HttpCode(HttpStatus.NO_CONTENT)
@@ -63,6 +68,15 @@ export class FrontChatController {
     @UploadedFile() file: Express.Multer.File,
   ): Promise<void> {
     if (!file) throw new BadRequestException('No file provided');
+    await this.serviceUserProfilesService.ensureFrontContact(req.userEntity);
     await this.frontChatService.sendChannelAttachment(req.userEntity, file);
+  }
+
+  @Get('messages')
+  @ApiBearerAuth('access-token')
+  @UseGuards(FirebaseAuthGuard)
+  async getMessages(@Request() req): Promise<{ messages: ChatHistoryMessage[] }> {
+    const messages = await this.frontChatService.getConversationHistory(req.userEntity);
+    return { messages };
   }
 }

@@ -97,6 +97,65 @@ export class ServiceUserProfilesService {
     logger.log('Create user: updated service user profiles');
   }
 
+  async ensureFrontContact(user: UserEntity): Promise<void> {
+    const { email } = user;
+    if (isCypressTestEmail(email)) return;
+
+    let exists: boolean;
+    try {
+      exists = await this.frontChatService.contactExists(email);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'unknown error';
+      logger.error(`ensureFrontContact existence check failed for ${email}: ${message}`);
+      return;
+    }
+
+    // Always hydrate so custom fields are populated regardless of contact state.
+    let hydratedUser: UserEntity | null = user;
+    if (!user.partnerAccess) {
+      hydratedUser = await this.userRepository.findOne({
+        where: { id: user.id },
+        relations: { partnerAccess: { partner: true } },
+      });
+    }
+    if (!hydratedUser) return;
+
+    const userData = this.serializeUserData(hydratedUser);
+    const partnerData = this.serializePartnerAccessData(hydratedUser.partnerAccess ?? []);
+    const customFields = {
+      signed_up_at: hydratedUser.createdAt?.toISOString(),
+      ...userData.frontChatSchema,
+      ...partnerData.frontChatSchema,
+    };
+
+    if (!exists) {
+      // Contact doesn't exist yet — create it with all fields in one pass.
+      try {
+        await this.frontChatService.createContact({
+          email,
+          name: hydratedUser.name,
+          customFields,
+        });
+        logger.log(`Backfilled Front contact for ${email}`);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'unknown error';
+        logger.error(`ensureFrontContact create failed for ${email}: ${message}`);
+      }
+    } else {
+      // Contact already exists — still ensure custom fields are set. This
+      // handles contacts that were auto-created by Front from a channel
+      // sender.handle or where the initial custom field update previously
+      // failed silently.
+      try {
+        await this.frontChatService.updateContactCustomFields(customFields, email);
+        logger.log(`Refreshed Front contact custom fields for ${email}`);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'unknown error';
+        logger.error(`ensureFrontContact custom fields update failed for ${email}: ${message}`);
+      }
+    }
+  }
+
   async updateServiceUserProfilesUser(
     user: UserEntity,
     isProfileUpdateRequired: boolean,

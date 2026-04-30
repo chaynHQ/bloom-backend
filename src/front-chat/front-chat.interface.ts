@@ -31,6 +31,7 @@ export interface FrontChatContactProfile {
 }
 
 export interface AgentReplyPayload {
+  id?: string;
   body: string;
   authorEmail?: string;
   authorName?: string;

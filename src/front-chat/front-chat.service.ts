@@ -5,12 +5,50 @@ import { isCypressTestEmail } from 'src/utils/utils';
 import { FrontChatContactCustomFields, FrontChatContactProfile } from './front-chat.interface';
 
 const FRONT_API_BASE_URL = 'https://api2.frontapp.com';
+const MAX_HISTORY_CONVERSATIONS = 5;
+const MAX_MESSAGES_PER_CONVERSATION = 50;
 const logger = new Logger('FrontChatService');
 
 interface ChatUser {
   id: string;
   email: string;
   name?: string | null;
+}
+
+export interface ChatHistoryMessage {
+  id: string;
+  direction: 'user' | 'agent';
+  text: string;
+  authorName?: string;
+  createdAt: number;
+}
+
+interface FrontApiPaginated<T> {
+  _results: T[];
+  _pagination?: { next?: string | null };
+}
+
+interface FrontApiConversation {
+  id: string;
+  status?: string;
+  last_message?: { created_at?: number };
+  created_at?: number;
+}
+
+interface FrontApiAuthor {
+  email?: string;
+  username?: string;
+  first_name?: string;
+  last_name?: string;
+}
+
+interface FrontApiMessage {
+  id: string;
+  is_inbound?: boolean;
+  created_at?: number;
+  body?: string;
+  text?: string;
+  author?: FrontApiAuthor | null;
 }
 
 // Front groups messages sharing a thread_ref into one conversation, so a stable
@@ -99,11 +137,26 @@ export class FrontChatService {
 
     if (!response.ok) {
       const errorBody = await response.text();
-      throw new Error(`Front API ${method} ${path} failed (${response.status}): ${errorBody}`);
+      const error = new Error(
+        `Front API ${method} ${path} failed (${response.status}): ${errorBody}`,
+      ) as Error & { status?: number };
+      error.status = response.status;
+      throw error;
     }
 
     if (response.status === 204) return null;
     return response.json();
+  }
+
+  async contactExists(email: string): Promise<boolean> {
+    if (isCypressTestEmail(email)) return true;
+    try {
+      await this.frontApiRequest('GET', `/contacts/${this.getContactAlias(email)}`);
+      return true;
+    } catch (error) {
+      if (this.isContactNotFoundError(error)) return false;
+      throw error;
+    }
   }
 
   async createContact(
@@ -209,6 +262,92 @@ export class FrontChatService {
     }
   }
 
+  async getConversationHistory(user: ChatUser, limit = 50): Promise<ChatHistoryMessage[]> {
+    if (isCypressTestEmail(user.email)) return [];
+
+    const contactAlias = this.getContactAlias(user.email);
+
+    let conversations: FrontApiPaginated<FrontApiConversation>;
+    try {
+      // Include all non-trashed statuses so archived/resolved conversations
+      // from previous sessions are returned alongside open ones.
+      conversations = (await this.frontApiRequest(
+        'GET',
+        `/contacts/${contactAlias}/conversations?limit=10&q[statuses][]=assigned&q[statuses][]=unassigned&q[statuses][]=archived`,
+      )) as FrontApiPaginated<FrontApiConversation>;
+      logger.log(
+        `Fetched ${conversations._results.length} Front conversations for user ${user.id}`,
+      );
+    } catch (error) {
+      if (this.isContactNotFoundError(error)) return [];
+      throw new Error(
+        `Fetch Front conversations failed: ${(error as Error)?.message || 'unknown error'}`,
+      );
+    }
+
+    const ordered = (conversations?._results ?? [])
+      .slice()
+      .sort((a, b) => (b.last_message?.created_at ?? 0) - (a.last_message?.created_at ?? 0))
+      .slice(0, MAX_HISTORY_CONVERSATIONS);
+    if (ordered.length === 0) return [];
+
+    const perConversation = Math.min(limit, MAX_MESSAGES_PER_CONVERSATION);
+    const pages = await Promise.all(
+      ordered.map(async (conversation) => {
+        try {
+          return (await this.frontApiRequest(
+            'GET',
+            `/conversations/${conversation.id}/messages?limit=${perConversation}`,
+          )) as FrontApiPaginated<FrontApiMessage>;
+        } catch (error) {
+          throw new Error(
+            `Fetch Front messages failed: ${(error as Error)?.message || 'unknown error'}`,
+          );
+        }
+      }),
+    );
+
+    const seen = new Set<string>();
+    const merged: ChatHistoryMessage[] = [];
+    for (const page of pages) {
+      for (const m of page?._results ?? []) {
+        if (seen.has(m.id)) continue;
+        seen.add(m.id);
+        const text = m.text ?? this.stripHtml(m.body ?? '');
+        if (!text) continue;
+        merged.push({
+          id: m.id,
+          direction: m.is_inbound ? 'user' : 'agent',
+          text,
+          authorName: this.formatAuthorName(m.author ?? undefined),
+          createdAt: (m.created_at ?? Date.now() / 1000) * 1000,
+        });
+      }
+    }
+
+    logger.log(`Merged Front conversation history for user ${user.id}: ${merged.length} messages`);
+
+    return merged.sort((a, b) => a.createdAt - b.createdAt).slice(-limit);
+  }
+
+  private formatAuthorName(author: FrontApiAuthor | undefined): string | undefined {
+    if (!author) return undefined;
+    const full = [author.first_name, author.last_name].filter(Boolean).join(' ').trim();
+    return full || author.username || undefined;
+  }
+
+  private stripHtml(input: string): string {
+    return input
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<\/p>/gi, '\n')
+      .replace(/<[^>]+>/g, '')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .trim();
+  }
+
   async deleteContact(email: string) {
     try {
       const contactId = this.getContactAlias(email);
@@ -231,7 +370,7 @@ export class FrontChatService {
     if (!frontContactListId || isCypressTestEmail(email)) return;
 
     try {
-      await this.frontApiRequest('POST', `/contact_groups/${frontContactListId}/contacts`, {
+      await this.frontApiRequest('POST', `/contact_lists/${frontContactListId}/contacts`, {
         contact_ids: [this.getContactAlias(email)],
       });
     } catch (error) {
@@ -239,14 +378,15 @@ export class FrontChatService {
     }
   }
 
-  // Front's contact alias format for email handles: https://dev.frontapp.com/reference/contacts
   private getContactAlias(email: string): string {
-    return `alt:email:${email}`;
+    return `alt:email:${encodeURIComponent(email)}`;
   }
 
   private isContactNotFoundError(error: unknown): boolean {
+    const status = (error as { status?: number })?.status;
+    if (status === 404) return true;
     const message = (error as Error)?.message || '';
-    return message.includes('404') || message.includes('not_found');
+    return message.includes('not_found');
   }
 
   private serializeCustomFields(

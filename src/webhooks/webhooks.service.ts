@@ -32,6 +32,8 @@ import {
   FrontChatWebhookDto,
   FrontWebhookMessageAuthor,
 } from 'src/webhooks/dto/front-chat-webhook.dto';
+import { FrontChannelOutboundPayload } from 'src/webhooks/dto/front-channel-webhook.dto';
+import { buildThreadRef } from 'src/front-chat/front-chat.service';
 import { StoryWebhookDto } from './dto/story.dto';
 
 @Injectable()
@@ -486,20 +488,47 @@ export class WebhooksService {
       );
     }
 
-    if (
-      data.type === FRONT_WEBHOOK_EVENT_TYPE.OUTBOUND ||
-      data.type === FRONT_WEBHOOK_EVENT_TYPE.OUT_REPLY
-    ) {
-      const messageBody = data.target?.data?.text ?? data.target?.data?.body;
-      if (messageBody) {
-        this.frontChatGateway.emitAgentReply(email, {
-          body: messageBody,
-          authorEmail: data.target?.data?.author?.email,
-          authorName: this.formatAuthorName(data.target?.data?.author),
-          emittedAt: data.emitted_at,
-        });
-      }
+  }
+
+  // Handles outbound messages Front sends to a Custom Channel when an agent
+  // replies in the Front UI. Front REQUIRES a 200 with this exact body shape
+  // (https://dev.frontapp.com/docs/getting-started-1) — any other response
+  // surfaces as "channel servers are unresponsive" to the agent.
+  async handleFrontChannelOutbound(
+    data: FrontChannelOutboundPayload | Record<string, unknown>,
+  ): Promise<{ type: 'success'; external_id: string; external_conversation_id: string }> {
+    const payload = (data as FrontChannelOutboundPayload).payload ?? {};
+    const recipients = payload.to ?? [];
+    const recipientEmail = recipients.find((r) => r?.handle)?.handle;
+    const messageBody = payload.text ?? payload.body ?? '';
+    const externalId = payload.id || `front-${Date.now()}`;
+    const externalConversationId =
+      (data as FrontChannelOutboundPayload).metadata?.external_conversation_ids?.[0] ??
+      (data as FrontChannelOutboundPayload).metadata?.external_conversation_id ??
+      (recipientEmail ? buildThreadRef(recipientEmail) : externalId);
+
+    if (recipientEmail && messageBody) {
+      this.frontChatGateway.emitAgentReply(recipientEmail, {
+        id: payload.id,
+        body: messageBody,
+        authorEmail: payload.author?.email,
+        authorName: this.formatAuthorName(
+          payload.author as FrontWebhookMessageAuthor | undefined,
+        ),
+        emittedAt: Math.floor(Date.now() / 1000),
+      });
+      this.logger.log(`Front Channel: forwarded agent reply to ${recipientEmail}`);
+    } else {
+      this.logger.warn(
+        `Front Channel: missing recipient or body (recipient=${recipientEmail}, hasBody=${!!messageBody})`,
+      );
     }
+
+    return {
+      type: 'success',
+      external_id: externalId,
+      external_conversation_id: externalConversationId,
+    };
   }
 
   private formatAuthorName(author: FrontWebhookMessageAuthor | undefined): string | undefined {

@@ -7,6 +7,7 @@ describe('FrontChatGateway', () => {
   let authService: { parseAuth: jest.Mock };
   let userService: { getUserByFirebaseId: jest.Mock };
   let frontChatService: { sendChannelTextMessage: jest.Mock };
+  let serviceUserProfilesService: { ensureFrontContact: jest.Mock };
   let server: { to: jest.Mock; emit: jest.Mock };
 
   const buildUser = (overrides: Partial<UserEntity> = {}): UserEntity =>
@@ -23,6 +24,9 @@ describe('FrontChatGateway', () => {
     authService = { parseAuth: jest.fn() };
     userService = { getUserByFirebaseId: jest.fn() };
     frontChatService = { sendChannelTextMessage: jest.fn() };
+    serviceUserProfilesService = {
+      ensureFrontContact: jest.fn().mockResolvedValue(undefined),
+    };
 
     const emit = jest.fn();
     server = { to: jest.fn().mockReturnValue({ emit }), emit };
@@ -31,6 +35,7 @@ describe('FrontChatGateway', () => {
       authService as any,
       userService as any,
       frontChatService as any,
+      serviceUserProfilesService as any,
     );
     gateway.server = server as any;
   });

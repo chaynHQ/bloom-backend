@@ -14,6 +14,7 @@ import { AuthService } from 'src/auth/auth.service';
 import { UserEntity } from 'src/entities/user.entity';
 import { IFirebaseUser } from 'src/firebase/firebase-user.interface';
 import { Logger } from 'src/logger/logger';
+import { ServiceUserProfilesService } from 'src/service-user-profiles/service-user-profiles.service';
 import { getCorsOrigin } from 'src/utils/cors';
 import { UserService } from 'src/user/user.service';
 import { SendMessageDto } from './dto/send-message.dto';
@@ -36,12 +37,28 @@ export class FrontChatGateway implements OnGatewayConnection, OnGatewayDisconnec
 
   private readonly sessions = new Map<string, UserEntity>();
   private readonly sendTimestamps = new Map<string, number[]>();
+  private readonly ensureContactPromises = new Map<string, Promise<void>>();
 
   constructor(
     private readonly authService: AuthService,
     private readonly userService: UserService,
     private readonly frontChatService: FrontChatService,
+    private readonly serviceUserProfilesService: ServiceUserProfilesService,
   ) {}
+
+  private ensureContactReady(user: UserEntity): Promise<void> {
+    const key = user.email.toLowerCase();
+    let pending = this.ensureContactPromises.get(key);
+    if (!pending) {
+      pending = this.serviceUserProfilesService.ensureFrontContact(user).catch((error) => {
+        this.logger.warn(
+          `ensureFrontContact failed for user ${user.id}: ${error?.message || 'unknown error'}`,
+        );
+      });
+      this.ensureContactPromises.set(key, pending);
+    }
+    return pending;
+  }
 
   async handleConnection(client: Socket): Promise<void> {
     const token =
@@ -71,6 +88,7 @@ export class FrontChatGateway implements OnGatewayConnection, OnGatewayDisconnec
 
     this.sessions.set(client.id, user);
     await client.join(userRoom(user.email));
+    this.ensureContactReady(user);
     this.logger.log(`FrontChat connected — socket ${client.id} → user ${user.id}`);
   }
 
@@ -94,6 +112,7 @@ export class FrontChatGateway implements OnGatewayConnection, OnGatewayDisconnec
     }
 
     try {
+      await this.ensureContactReady(user);
       await this.frontChatService.sendChannelTextMessage(user, payload.text);
       return { ok: true };
     } catch (error) {

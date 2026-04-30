@@ -5,6 +5,7 @@ import { FrontChatController } from './front-chat.controller';
 describe('FrontChatController', () => {
   let controller: FrontChatController;
   let frontChatService: { sendChannelAttachment: jest.Mock };
+  let serviceUserProfilesService: { ensureFrontContact: jest.Mock };
 
   const buildFile = (overrides: Partial<Express.Multer.File> = {}): Express.Multer.File =>
     ({
@@ -17,7 +18,13 @@ describe('FrontChatController', () => {
 
   beforeEach(() => {
     frontChatService = { sendChannelAttachment: jest.fn().mockResolvedValue(undefined) };
-    controller = new FrontChatController(frontChatService as any);
+    serviceUserProfilesService = {
+      ensureFrontContact: jest.fn().mockResolvedValue(undefined),
+    };
+    controller = new FrontChatController(
+      frontChatService as any,
+      serviceUserProfilesService as any,
+    );
   });
 
   it('forwards the file to FrontChatService along with the authed user', async () => {

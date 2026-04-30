@@ -181,6 +181,77 @@ describe('Service user profiles', () => {
     });
   });
 
+  describe('ensureFrontContact', () => {
+    const expectedCustomFields = {
+      signed_up_at: mockUserEntity.createdAt.toISOString(),
+      marketing_permission: mockUserEntity.contactPermission,
+      service_emails_permission: mockUserEntity.serviceEmailsPermission,
+      email_reminders_frequency: EMAIL_REMINDERS_FREQUENCY.TWO_MONTHS,
+      last_active_at: mockUserEntity.lastActiveAt.toISOString(),
+      feature_live_chat: true,
+      feature_therapy: false,
+      partners: '',
+      therapy_sessions_redeemed: 0,
+      therapy_sessions_remaining: 0,
+    };
+
+    it('creates contact with custom fields when contact does not yet exist', async () => {
+      jest.mocked(mockFrontChatService.contactExists).mockResolvedValue(false);
+
+      await service.ensureFrontContact(mockUserEntity);
+
+      expect(mockFrontChatService.createContact).toHaveBeenCalledWith({
+        email: mockUserEntity.email,
+        name: mockUserEntity.name,
+        customFields: expectedCustomFields,
+      });
+      expect(mockFrontChatService.updateContactCustomFields).not.toHaveBeenCalled();
+    });
+
+    it('updates custom fields when contact already exists (no create)', async () => {
+      jest.mocked(mockFrontChatService.contactExists).mockResolvedValue(true);
+
+      await service.ensureFrontContact(mockUserEntity);
+
+      expect(mockFrontChatService.createContact).not.toHaveBeenCalled();
+      expect(mockFrontChatService.updateContactCustomFields).toHaveBeenCalledWith(
+        expectedCustomFields,
+        mockUserEntity.email,
+      );
+    });
+
+    it('skips for Cypress test emails', async () => {
+      await service.ensureFrontContact({
+        ...mockUserEntity,
+        email: 'cypresstestemail+1@chayn.co',
+      } as any);
+
+      expect(mockFrontChatService.contactExists).not.toHaveBeenCalled();
+    });
+
+    it('does not throw when contactExists check fails', async () => {
+      jest.mocked(mockFrontChatService.contactExists).mockRejectedValue(new Error('API down'));
+
+      await expect(service.ensureFrontContact(mockUserEntity)).resolves.not.toThrow();
+    });
+
+    it('does not throw when createContact fails', async () => {
+      jest.mocked(mockFrontChatService.contactExists).mockResolvedValue(false);
+      jest.mocked(mockFrontChatService.createContact).mockRejectedValue(new Error('API error'));
+
+      await expect(service.ensureFrontContact(mockUserEntity)).resolves.not.toThrow();
+    });
+
+    it('does not throw when updateContactCustomFields fails for existing contact', async () => {
+      jest.mocked(mockFrontChatService.contactExists).mockResolvedValue(true);
+      jest
+        .mocked(mockFrontChatService.updateContactCustomFields)
+        .mockRejectedValue(new Error('API error'));
+
+      await expect(service.ensureFrontContact(mockUserEntity)).resolves.not.toThrow();
+    });
+  });
+
   describe('updateServiceUserProfilesUser', () => {
     it('should update Front Chat and mailchimp profile user data', async () => {
       await service.updateServiceUserProfilesUser(

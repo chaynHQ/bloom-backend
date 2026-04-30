@@ -94,7 +94,7 @@ describe('AppController', () => {
       };
 
       it('should call service handleFrontChatWebhook with valid bearer token', async () => {
-        await webhooksController.handleFrontChatWebhook(frontChatPayload, {
+        await webhooksController.handleFrontChatWebhook({}, frontChatPayload, {
           authorization: 'Bearer test-front-webhook-token',
         });
 
@@ -103,13 +103,13 @@ describe('AppController', () => {
 
       it('should reject requests with missing Authorization header', async () => {
         await expect(
-          webhooksController.handleFrontChatWebhook(frontChatPayload, {}),
+          webhooksController.handleFrontChatWebhook({}, frontChatPayload, {}),
         ).rejects.toThrow('Front Chat webhook error - missing or invalid Authorization header');
       });
 
       it('should reject requests with invalid token', async () => {
         await expect(
-          webhooksController.handleFrontChatWebhook(frontChatPayload, {
+          webhooksController.handleFrontChatWebhook({}, frontChatPayload, {
             authorization: 'Bearer invalid-token',
           }),
         ).rejects.toThrow('Front Chat webhook error - invalid token');
