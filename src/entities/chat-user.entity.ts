@@ -28,4 +28,7 @@ export class ChatUserEntity extends BaseBloomEntity {
 
   @Column({ type: 'timestamptz', nullable: true })
   lastMessageReadAt: Date | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  lastUnreadNotifiedAt: Date | null;
 }

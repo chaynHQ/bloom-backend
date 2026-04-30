@@ -1,6 +1,7 @@
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ChatUserEntity } from 'src/entities/chat-user.entity';
+import { UserEntity } from 'src/entities/user.entity';
 import { FrontChatService } from './front-chat.service';
 
 const mockFetch = jest.fn();
@@ -18,7 +19,12 @@ const mockChatUserRepository = {
   findOne: jest.fn(),
   create: jest.fn(),
   save: jest.fn(),
+  update: jest.fn(),
   createQueryBuilder: jest.fn(),
+};
+
+const mockUserRepository = {
+  findOneBy: jest.fn(),
 };
 
 const buildChatUser = (overrides: Partial<ChatUserEntity> = {}): ChatUserEntity =>
@@ -30,6 +36,7 @@ const buildChatUser = (overrides: Partial<ChatUserEntity> = {}): ChatUserEntity 
     lastMessageSentAt: null,
     lastMessageReceivedAt: null,
     lastMessageReadAt: null,
+    lastUnreadNotifiedAt: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     ...overrides,
@@ -45,11 +52,16 @@ describe('FrontChatService', () => {
     mockChatUserRepository.findOneBy.mockResolvedValue(null);
     mockChatUserRepository.create.mockImplementation((data) => ({ ...data }));
     mockChatUserRepository.save.mockImplementation(async (data) => ({ ...buildChatUser(), ...data }));
+    mockChatUserRepository.update.mockResolvedValue({ affected: 1 });
+    mockUserRepository.findOneBy.mockResolvedValue(null);
 
     const qb = {
       innerJoin: jest.fn().mockReturnThis(),
+      innerJoinAndSelect: jest.fn().mockReturnThis(),
       where: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
       getOne: jest.fn().mockResolvedValue(null),
+      getMany: jest.fn().mockResolvedValue([]),
     };
     mockChatUserRepository.createQueryBuilder.mockReturnValue(qb);
 
@@ -59,6 +71,10 @@ describe('FrontChatService', () => {
         {
           provide: getRepositoryToken(ChatUserEntity),
           useValue: mockChatUserRepository,
+        },
+        {
+          provide: getRepositoryToken(UserEntity),
+          useValue: mockUserRepository,
         },
       ],
     }).compile();
@@ -154,13 +170,17 @@ describe('FrontChatService', () => {
   });
 
   describe('updateChatUserByEmail', () => {
-    it('returns null when no ChatUser exists for the email', async () => {
+    it('returns null when no ChatUser and no matching user exists', async () => {
       const qb = {
         innerJoin: jest.fn().mockReturnThis(),
+        innerJoinAndSelect: jest.fn().mockReturnThis(),
         where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
         getOne: jest.fn().mockResolvedValue(null),
+        getMany: jest.fn().mockResolvedValue([]),
       };
       mockChatUserRepository.createQueryBuilder.mockReturnValue(qb);
+      mockUserRepository.findOneBy.mockResolvedValue(null);
 
       const result = await service.updateChatUserByEmail('user@example.com', {
         lastMessageReceivedAt: new Date(),
@@ -168,12 +188,36 @@ describe('FrontChatService', () => {
       expect(result).toBeNull();
     });
 
+    it('creates a new ChatUser and updates it when user exists but no ChatUser', async () => {
+      const qb = {
+        innerJoin: jest.fn().mockReturnThis(),
+        innerJoinAndSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue(null),
+        getMany: jest.fn().mockResolvedValue([]),
+      };
+      mockChatUserRepository.createQueryBuilder.mockReturnValue(qb);
+      mockUserRepository.findOneBy.mockResolvedValue({ id: 'user-1', email: 'user@example.com' });
+      const now = new Date();
+      const saved = buildChatUser({ lastMessageReceivedAt: now });
+      mockChatUserRepository.save.mockResolvedValue(saved);
+
+      const result = await service.updateChatUserByEmail('user@example.com', {
+        lastMessageReceivedAt: now,
+      });
+      expect(result).not.toBeNull();
+    });
+
     it('saves updated fields when ChatUser is found', async () => {
       const existing = buildChatUser();
       const qb = {
         innerJoin: jest.fn().mockReturnThis(),
+        innerJoinAndSelect: jest.fn().mockReturnThis(),
         where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
         getOne: jest.fn().mockResolvedValue(existing),
+        getMany: jest.fn().mockResolvedValue([]),
       };
       mockChatUserRepository.createQueryBuilder.mockReturnValue(qb);
       const now = new Date();
@@ -194,8 +238,11 @@ describe('FrontChatService', () => {
       const existing = buildChatUser({ frontConversationId: null });
       const qb = {
         innerJoin: jest.fn().mockReturnThis(),
+        innerJoinAndSelect: jest.fn().mockReturnThis(),
         where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
         getOne: jest.fn().mockResolvedValue(existing),
+        getMany: jest.fn().mockResolvedValue([]),
       };
       mockChatUserRepository.createQueryBuilder.mockReturnValue(qb);
       mockChatUserRepository.save.mockImplementation(async (data) => data);
@@ -210,8 +257,11 @@ describe('FrontChatService', () => {
       const existing = buildChatUser({ frontConversationId: 'cnv_existing' });
       const qb = {
         innerJoin: jest.fn().mockReturnThis(),
+        innerJoinAndSelect: jest.fn().mockReturnThis(),
         where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
         getOne: jest.fn().mockResolvedValue(existing),
+        getMany: jest.fn().mockResolvedValue([]),
       };
       mockChatUserRepository.createQueryBuilder.mockReturnValue(qb);
       mockChatUserRepository.save.mockImplementation(async (data) => data);

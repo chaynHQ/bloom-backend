@@ -1,10 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ChatUserEntity } from 'src/entities/chat-user.entity';
+import { UserEntity } from 'src/entities/user.entity';
 import { Logger } from 'src/logger/logger';
 import { frontChannelId, frontChatApiToken, frontContactListId } from 'src/utils/constants';
 import { isCypressTestEmail } from 'src/utils/utils';
-import { Repository } from 'typeorm';
+import { ILike, Repository } from 'typeorm';
 import { FrontChatContactCustomFields, FrontChatContactProfile } from './front-chat.interface';
 
 const FRONT_API_BASE_URL = 'https://api2.frontapp.com';
@@ -58,6 +59,8 @@ export class FrontChatService {
   constructor(
     @InjectRepository(ChatUserEntity)
     private readonly chatUserRepository: Repository<ChatUserEntity>,
+    @InjectRepository(UserEntity)
+    private readonly userRepository: Repository<UserEntity>,
   ) {}
 
   // ── ChatUser DB operations ──────────────────────────────────────────────────
@@ -116,12 +119,18 @@ export class FrontChatService {
     email: string,
     partial: Partial<ChatUserEntity>,
   ): Promise<ChatUserEntity | null> {
-    const chatUser = await this.chatUserRepository
+    let chatUser = await this.chatUserRepository
       .createQueryBuilder('cu')
       .innerJoin('cu.user', 'u')
       .where('LOWER(u.email) = LOWER(:email)', { email })
       .getOne();
-    if (!chatUser) return null;
+
+    if (!chatUser) {
+      // User predates ChatUser table — look up the user and create a record
+      const user = await this.userRepository.findOneBy({ email: ILike(email) });
+      if (!user) return null;
+      chatUser = await this.getOrCreateChatUser(user.id);
+    }
 
     const { frontConversationId, ...rest } = partial;
     const updates = chatUser.frontConversationId
@@ -129,6 +138,28 @@ export class FrontChatService {
       : { frontConversationId, ...rest };
 
     return this.chatUserRepository.save({ ...chatUser, ...updates });
+  }
+
+  async getUsersWithUnreadMessages(): Promise<{ chatUser: ChatUserEntity; email: string }[]> {
+    const cutoff = new Date(Date.now() - 5 * 60 * 1000);
+    const rows = await this.chatUserRepository
+      .createQueryBuilder('cu')
+      .innerJoinAndSelect('cu.user', 'u')
+      .where('cu.lastMessageReceivedAt IS NOT NULL')
+      .andWhere('cu.lastMessageReceivedAt < :cutoff', { cutoff })
+      .andWhere(
+        '(cu.lastMessageReadAt IS NULL OR cu.lastMessageReadAt < cu.lastMessageReceivedAt)',
+      )
+      .andWhere(
+        '(cu.lastUnreadNotifiedAt IS NULL OR cu.lastUnreadNotifiedAt < cu.lastMessageReceivedAt)',
+      )
+      .getMany();
+
+    return rows.map((cu) => ({ chatUser: cu, email: cu.user.email }));
+  }
+
+  async markUnreadNotified(chatUserId: string): Promise<void> {
+    await this.chatUserRepository.update({ id: chatUserId }, { lastUnreadNotifiedAt: new Date() });
   }
 
   async markAsRead(userId: string): Promise<ChatUserEntity | null> {
@@ -474,17 +505,23 @@ export class FrontChatService {
   private async ensureContactInList(email: string, contactId?: string): Promise<void> {
     if (!frontContactListId || isCypressTestEmail(email)) return;
 
+    let resolvedId: string | undefined;
     try {
-      const id =
+      resolvedId =
         contactId ??
         ((await this.frontApiRequest('GET', `/contacts/${this.getContactAlias(email)}`)) as {
           id: string;
         }).id;
       await this.frontApiRequest('POST', `/contact_lists/${frontContactListId}/contacts`, {
-        contact_ids: [id],
+        contact_ids: [resolvedId],
       });
     } catch (error) {
       logger.warn(`Front add-to-list failed for ${email}: ${error?.message || 'unknown error'}`);
+    }
+
+    // Save frontContactId even if the list-add failed — the canonical ID is still valid.
+    if (resolvedId) {
+      this.updateChatUserByEmail(email, { frontContactId: resolvedId }).catch(() => {});
     }
   }
 

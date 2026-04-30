@@ -568,6 +568,18 @@ export class WebhooksService {
         emittedAt: Math.floor(Date.now() / 1000),
       });
       this.logger.log(`Front Channel: forwarded agent reply to ${recipientEmail}`);
+
+      this.frontChatService
+        .updateChatUserByEmail(recipientEmail, { lastMessageReceivedAt: new Date() })
+        .then((chatUser) => {
+          if (chatUser) {
+            return this.serviceUserProfilesService.updateServiceUserProfilesChatActivity(
+              chatUser,
+              recipientEmail,
+            );
+          }
+        })
+        .catch(() => {});
     } else {
       this.logger.warn(
         `Front Channel: missing recipient or body (recipient=${recipientEmail}, hasBody=${!!messageBody})`,
