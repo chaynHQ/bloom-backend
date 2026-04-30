@@ -11,6 +11,7 @@ import {
   ListMemberPartial,
   MAILCHIMP_MERGE_FIELD_TYPES,
 } from 'src/api/mailchimp/mailchimp-api.interfaces';
+import { ChatUserEntity } from 'src/entities/chat-user.entity';
 import { CourseUserEntity } from 'src/entities/course-user.entity';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { PartnerEntity } from 'src/entities/partner.entity';
@@ -63,6 +64,7 @@ export class ServiceUserProfilesService {
       await this.frontChatService.createContact({
         email: email,
         name: user.name,
+        userId: user.id,
       });
 
       await this.frontChatService.updateContactCustomFields(
@@ -134,6 +136,7 @@ export class ServiceUserProfilesService {
           email,
           name: hydratedUser.name,
           customFields,
+          userId: hydratedUser.id,
         });
         logger.log(`Backfilled Front contact for ${email}`);
       } catch (error) {
@@ -273,6 +276,51 @@ export class ServiceUserProfilesService {
       const message = error instanceof Error ? error.message : 'unknown error';
       logger.error(`Update Mailchimp course error - ${message}`);
     }
+  }
+
+  async updateServiceUserProfilesChatActivity(
+    chatUser: ChatUserEntity,
+    email: string,
+  ): Promise<void> {
+    if (isCypressTestEmail(email)) return;
+
+    const data = this.serializeChatActivityData(chatUser);
+
+    try {
+      await this.frontChatService.updateContactCustomFields(data.frontChatSchema, email);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'unknown error';
+      logger.error(`Update Front Chat chat activity error - ${message}`);
+    }
+
+    try {
+      await updateMailchimpProfile(data.mailchimpSchema, email);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'unknown error';
+      logger.error(`Update Mailchimp chat activity error - ${message}`);
+    }
+  }
+
+  serializeChatActivityData(chatUser: ChatUserEntity) {
+    const sentAt = chatUser.lastMessageSentAt?.toISOString() ?? '';
+    const receivedAt = chatUser.lastMessageReceivedAt?.toISOString() ?? '';
+    const readAt = chatUser.lastMessageReadAt?.toISOString() ?? '';
+
+    const frontChatSchema = {
+      last_message_sent_at: sentAt,
+      last_message_received_at: receivedAt,
+      last_message_read_at: readAt,
+    };
+
+    const mailchimpSchema = {
+      merge_fields: {
+        CHATLSTMTX: sentAt,
+        CHATLSTMRX: receivedAt,
+        CHATMSGRD: readAt,
+      },
+    } as ListMemberPartial;
+
+    return { frontChatSchema, mailchimpSchema };
   }
 
   // Merge fields (custom fields) in mailchimp must be created before they are used

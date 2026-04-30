@@ -47,6 +47,9 @@ export interface ListMemberCustomFields {
   C_MA_S?: string;
   C_CB?: string;
   C_CB_S?: string;
+  CHATLSTMTX?: string;
+  CHATLSTMRX?: string;
+  CHATMSGRD?: string;
 }
 
 export interface ListMember {

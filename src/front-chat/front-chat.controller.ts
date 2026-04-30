@@ -4,6 +4,7 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Patch,
   Post,
   Request,
   UploadedFile,
@@ -70,6 +71,15 @@ export class FrontChatController {
     if (!file) throw new BadRequestException('No file provided');
     await this.serviceUserProfilesService.ensureFrontContact(req.userEntity);
     await this.frontChatService.sendChannelAttachment(req.userEntity, file);
+
+    // Fire-and-forget: sync updated chat activity timestamps to external services.
+    this.frontChatService.getChatUser(req.userEntity.id).then((chatUser) => {
+      if (chatUser) {
+        return this.serviceUserProfilesService
+          .updateServiceUserProfilesChatActivity(chatUser, req.userEntity.email)
+          .catch(() => {});
+      }
+    }).catch(() => {});
   }
 
   @Get('messages')
@@ -78,5 +88,18 @@ export class FrontChatController {
   async getMessages(@Request() req): Promise<{ messages: ChatHistoryMessage[] }> {
     const messages = await this.frontChatService.getConversationHistory(req.userEntity);
     return { messages };
+  }
+
+  @Patch('read')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiBearerAuth('access-token')
+  @UseGuards(FirebaseAuthGuard)
+  async markAsRead(@Request() req): Promise<void> {
+    const chatUser = await this.frontChatService.markAsRead(req.userEntity.id);
+    if (chatUser) {
+      this.serviceUserProfilesService
+        .updateServiceUserProfilesChatActivity(chatUser, req.userEntity.email)
+        .catch(() => {});
+    }
   }
 }

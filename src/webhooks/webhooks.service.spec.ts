@@ -860,6 +860,10 @@ describe('WebhooksService', () => {
       },
     };
 
+    beforeEach(() => {
+      jest.spyOn(mockFrontChatService, 'updateChatUserByEmail').mockResolvedValue(null);
+    });
+
     it('should log CHAT_MESSAGE_SENT for inbound events', async () => {
       await service.handleFrontChatWebhook(inboundPayload);
 

@@ -6,6 +6,7 @@ import {
   createMailchimpProfile,
   updateMailchimpProfile,
 } from 'src/api/mailchimp/mailchimp-api';
+import { ChatUserEntity } from 'src/entities/chat-user.entity';
 import { FrontChatService } from 'src/front-chat/front-chat.service';
 import { UserEntity } from 'src/entities/user.entity';
 import { ServiceUserProfilesService } from 'src/service-user-profiles/service-user-profiles.service';
@@ -25,7 +26,9 @@ import {
 } from '../utils/constants';
 
 jest.mock('src/api/mailchimp/mailchimp-api');
-const mockFrontChatServiceMethods = {};
+const mockFrontChatServiceMethods = {
+  getOrCreateChatUser: jest.fn().mockResolvedValue({}),
+};
 
 describe('Service user profiles', () => {
   let service: ServiceUserProfilesService;
@@ -60,6 +63,7 @@ describe('Service user profiles', () => {
       expect(mockFrontChatService.createContact).toHaveBeenCalledWith({
         email: mockUserEntity.email,
         name: mockUserEntity.name,
+        userId: mockUserEntity.id,
       });
 
       const createdAt = mockUserEntity.createdAt.toISOString();
@@ -120,6 +124,7 @@ describe('Service user profiles', () => {
       expect(mockFrontChatService.createContact).toHaveBeenCalledWith({
         email: mockUserEntity.email,
         name: mockUserEntity.name,
+        userId: mockUserEntity.id,
       });
 
       expect(mockFrontChatService.updateContactCustomFields).toHaveBeenCalledWith(
@@ -204,6 +209,7 @@ describe('Service user profiles', () => {
         email: mockUserEntity.email,
         name: mockUserEntity.name,
         customFields: expectedCustomFields,
+        userId: mockUserEntity.id,
       });
       expect(mockFrontChatService.updateContactCustomFields).not.toHaveBeenCalled();
     });

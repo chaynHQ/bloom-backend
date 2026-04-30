@@ -22,6 +22,9 @@ export interface FrontChatContactCustomFields {
   therapy_session_first_at?: string;
   therapy_session_next_at?: string;
   therapy_session_last_at?: string;
+  last_message_sent_at?: string;
+  last_message_received_at?: string;
+  last_message_read_at?: string;
   [key: string]: string | number | boolean | undefined;
 }
 

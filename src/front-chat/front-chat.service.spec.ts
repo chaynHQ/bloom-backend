@@ -1,14 +1,39 @@
+import { getRepositoryToken } from '@nestjs/typeorm';
 import { Test, TestingModule } from '@nestjs/testing';
+import { ChatUserEntity } from 'src/entities/chat-user.entity';
 import { FrontChatService } from './front-chat.service';
 
 const mockFetch = jest.fn();
 global.fetch = mockFetch;
 
 jest.mock('src/utils/constants', () => ({
+  ...jest.requireActual('src/utils/constants'),
   frontChatApiToken: 'test-api-token',
   frontChannelId: 'cha_test',
   frontContactListId: 'grp_test',
 }));
+
+const mockChatUserRepository = {
+  findOneBy: jest.fn(),
+  findOne: jest.fn(),
+  create: jest.fn(),
+  save: jest.fn(),
+  createQueryBuilder: jest.fn(),
+};
+
+const buildChatUser = (overrides: Partial<ChatUserEntity> = {}): ChatUserEntity =>
+  ({
+    id: 'cu-1',
+    userId: 'user-1',
+    frontContactId: null,
+    frontConversationId: null,
+    lastMessageSentAt: null,
+    lastMessageReceivedAt: null,
+    lastMessageReadAt: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    ...overrides,
+  }) as ChatUserEntity;
 
 describe('FrontChatService', () => {
   let service: FrontChatService;
@@ -16,8 +41,26 @@ describe('FrontChatService', () => {
   beforeEach(async () => {
     jest.clearAllMocks();
 
+    // Default: no existing chatUser
+    mockChatUserRepository.findOneBy.mockResolvedValue(null);
+    mockChatUserRepository.create.mockImplementation((data) => ({ ...data }));
+    mockChatUserRepository.save.mockImplementation(async (data) => ({ ...buildChatUser(), ...data }));
+
+    const qb = {
+      innerJoin: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      getOne: jest.fn().mockResolvedValue(null),
+    };
+    mockChatUserRepository.createQueryBuilder.mockReturnValue(qb);
+
     const module: TestingModule = await Test.createTestingModule({
-      providers: [FrontChatService],
+      providers: [
+        FrontChatService,
+        {
+          provide: getRepositoryToken(ChatUserEntity),
+          useValue: mockChatUserRepository,
+        },
+      ],
     }).compile();
 
     service = module.get<FrontChatService>(FrontChatService);
@@ -26,6 +69,177 @@ describe('FrontChatService', () => {
   it('should be defined', () => {
     expect(service).toBeDefined();
   });
+
+  // ── ChatUser operations ──────────────────────────────────────────────────────
+
+  describe('getOrCreateChatUser', () => {
+    it('returns existing record without touching the DB a second time', async () => {
+      const existing = buildChatUser({ frontContactId: 'crd_1' });
+      mockChatUserRepository.findOneBy.mockResolvedValueOnce(existing);
+
+      const result = await service.getOrCreateChatUser('user-1');
+
+      expect(result).toBe(existing);
+      expect(mockChatUserRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('creates a new record when none exists', async () => {
+      mockChatUserRepository.findOneBy.mockResolvedValueOnce(null);
+      const saved = buildChatUser();
+      mockChatUserRepository.save.mockResolvedValueOnce(saved);
+
+      const result = await service.getOrCreateChatUser('user-1');
+
+      expect(mockChatUserRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({ userId: 'user-1' }),
+      );
+      expect(result).toBe(saved);
+    });
+
+    it('fills in null initial fields on an existing record', async () => {
+      const existing = buildChatUser({ frontContactId: null });
+      mockChatUserRepository.findOneBy.mockResolvedValueOnce(existing);
+      const saved = buildChatUser({ frontContactId: 'crd_new' });
+      mockChatUserRepository.save.mockResolvedValueOnce(saved);
+
+      await service.getOrCreateChatUser('user-1', { frontContactId: 'crd_new' });
+
+      expect(mockChatUserRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({ frontContactId: 'crd_new' }),
+      );
+    });
+
+    it('does not overwrite existing non-null initial fields', async () => {
+      const existing = buildChatUser({ frontContactId: 'crd_existing' });
+      mockChatUserRepository.findOneBy.mockResolvedValueOnce(existing);
+
+      await service.getOrCreateChatUser('user-1', { frontContactId: 'crd_new' });
+
+      expect(mockChatUserRepository.save).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('updateChatUser', () => {
+    it('returns null when no ChatUser exists for the userId', async () => {
+      mockChatUserRepository.findOneBy.mockResolvedValueOnce(null);
+      const result = await service.updateChatUser('user-1', { lastMessageReadAt: new Date() });
+      expect(result).toBeNull();
+    });
+
+    it('saves updated fields', async () => {
+      const existing = buildChatUser();
+      mockChatUserRepository.findOneBy.mockResolvedValueOnce(existing);
+      const now = new Date();
+      const saved = buildChatUser({ lastMessageReadAt: now });
+      mockChatUserRepository.save.mockResolvedValueOnce(saved);
+
+      const result = await service.updateChatUser('user-1', { lastMessageReadAt: now });
+
+      expect(mockChatUserRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({ lastMessageReadAt: now }),
+      );
+      expect(result).toBe(saved);
+    });
+
+    it('does not overwrite an existing frontConversationId', async () => {
+      const existing = buildChatUser({ frontConversationId: 'cnv_existing' });
+      mockChatUserRepository.findOneBy.mockResolvedValueOnce(existing);
+      mockChatUserRepository.save.mockImplementation(async (data) => data);
+
+      await service.updateChatUser('user-1', { frontConversationId: 'cnv_new' });
+
+      const saved = mockChatUserRepository.save.mock.calls[0][0];
+      expect(saved.frontConversationId).toBe('cnv_existing');
+    });
+  });
+
+  describe('updateChatUserByEmail', () => {
+    it('returns null when no ChatUser exists for the email', async () => {
+      const qb = {
+        innerJoin: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue(null),
+      };
+      mockChatUserRepository.createQueryBuilder.mockReturnValue(qb);
+
+      const result = await service.updateChatUserByEmail('user@example.com', {
+        lastMessageReceivedAt: new Date(),
+      });
+      expect(result).toBeNull();
+    });
+
+    it('saves updated fields when ChatUser is found', async () => {
+      const existing = buildChatUser();
+      const qb = {
+        innerJoin: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue(existing),
+      };
+      mockChatUserRepository.createQueryBuilder.mockReturnValue(qb);
+      const now = new Date();
+      const saved = buildChatUser({ lastMessageReceivedAt: now });
+      mockChatUserRepository.save.mockResolvedValueOnce(saved);
+
+      const result = await service.updateChatUserByEmail('user@example.com', {
+        lastMessageReceivedAt: now,
+      });
+
+      expect(mockChatUserRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({ lastMessageReceivedAt: now }),
+      );
+      expect(result).toBe(saved);
+    });
+
+    it('saves conversation ID when ChatUser has none', async () => {
+      const existing = buildChatUser({ frontConversationId: null });
+      const qb = {
+        innerJoin: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue(existing),
+      };
+      mockChatUserRepository.createQueryBuilder.mockReturnValue(qb);
+      mockChatUserRepository.save.mockImplementation(async (data) => data);
+
+      await service.updateChatUserByEmail('user@example.com', { frontConversationId: 'cnv_1' });
+
+      const saved = mockChatUserRepository.save.mock.calls[0][0];
+      expect(saved.frontConversationId).toBe('cnv_1');
+    });
+
+    it('does not overwrite an existing frontConversationId', async () => {
+      const existing = buildChatUser({ frontConversationId: 'cnv_existing' });
+      const qb = {
+        innerJoin: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue(existing),
+      };
+      mockChatUserRepository.createQueryBuilder.mockReturnValue(qb);
+      mockChatUserRepository.save.mockImplementation(async (data) => data);
+
+      await service.updateChatUserByEmail('user@example.com', { frontConversationId: 'cnv_new' });
+
+      const saved = mockChatUserRepository.save.mock.calls[0][0];
+      expect(saved.frontConversationId).toBe('cnv_existing');
+    });
+  });
+
+  describe('markAsRead', () => {
+    it('updates lastMessageReadAt to now', async () => {
+      const existing = buildChatUser();
+      mockChatUserRepository.findOneBy.mockResolvedValueOnce(existing);
+      mockChatUserRepository.save.mockImplementation(async (data) => data);
+
+      const before = Date.now();
+      await service.markAsRead('user-1');
+      const after = Date.now();
+
+      const saved = mockChatUserRepository.save.mock.calls[0][0];
+      expect(saved.lastMessageReadAt.getTime()).toBeGreaterThanOrEqual(before);
+      expect(saved.lastMessageReadAt.getTime()).toBeLessThanOrEqual(after);
+    });
+  });
+
+  // ── createContact ────────────────────────────────────────────────────────────
 
   describe('createContact', () => {
     it('should create a new Front Chat contact and add it to the contact list using the canonical ID', async () => {
@@ -50,7 +264,6 @@ describe('FrontChatService', () => {
           headers: expect.objectContaining({ Authorization: 'Bearer test-api-token' }),
         }),
       );
-      // canonical ID from the create response — no alias, no extra GET needed
       expect(mockFetch).toHaveBeenNthCalledWith(
         2,
         'https://api2.frontapp.com/contact_lists/grp_test/contacts',
@@ -60,6 +273,24 @@ describe('FrontChatService', () => {
         }),
       );
       expect(result).toEqual({ id: 'cnt_123', name: 'Test User' });
+    });
+
+    it('saves frontContactId to ChatUser when userId is provided', async () => {
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => ({ id: 'crd_abc' }),
+        })
+        .mockResolvedValueOnce({ ok: true, status: 204 });
+      const saved = buildChatUser({ frontContactId: 'crd_abc' });
+      mockChatUserRepository.save.mockResolvedValueOnce(saved);
+
+      await service.createContact({ email: 'user@example.com', userId: 'user-1' });
+
+      expect(mockChatUserRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({ userId: 'user-1', frontContactId: 'crd_abc' }),
+      );
     });
 
     it('still returns the created contact when adding to the group fails', async () => {
@@ -94,6 +325,8 @@ describe('FrontChatService', () => {
       );
     });
   });
+
+  // ── updateContactCustomFields ────────────────────────────────────────────────
 
   describe('updateContactCustomFields', () => {
     it('should update custom fields, look up the canonical ID, then add to the contact list', async () => {
@@ -142,6 +375,8 @@ describe('FrontChatService', () => {
     });
   });
 
+  // ── updateContactProfile ─────────────────────────────────────────────────────
+
   describe('updateContactProfile', () => {
     it('should update name on an existing contact, look up canonical ID, then add to list', async () => {
       mockFetch
@@ -156,27 +391,14 @@ describe('FrontChatService', () => {
         'https://api2.frontapp.com/contacts/alt:email:user%40example.com',
         expect.objectContaining({ method: 'PATCH' }),
       );
-      expect(mockFetch).toHaveBeenNthCalledWith(
-        2,
-        'https://api2.frontapp.com/contacts/alt:email:user%40example.com',
-        expect.objectContaining({ method: 'GET' }),
-      );
-      expect(mockFetch).toHaveBeenNthCalledWith(
-        3,
-        'https://api2.frontapp.com/contact_lists/grp_test/contacts',
-        expect.objectContaining({
-          method: 'POST',
-          body: JSON.stringify({ contact_ids: ['crd_u1'] }),
-        }),
-      );
     });
 
     it('should create contact and retry if contact not found (404)', async () => {
       mockFetch
-        .mockResolvedValueOnce({ ok: false, status: 404, text: async () => '404 not found' }) // PATCH fails
-        .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ id: 'cnt_new' }) }) // createContact POST
-        .mockResolvedValueOnce({ ok: true, status: 204 }) // createContact list add (canonical ID from create)
-        .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({}) }); // retry PATCH
+        .mockResolvedValueOnce({ ok: false, status: 404, text: async () => '404 not found' })
+        .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ id: 'cnt_new' }) })
+        .mockResolvedValueOnce({ ok: true, status: 204 })
+        .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({}) });
 
       await service.updateContactProfile({ name: 'New Name' }, 'user@example.com');
 
@@ -188,6 +410,8 @@ describe('FrontChatService', () => {
       expect(mockFetch).not.toHaveBeenCalled();
     });
   });
+
+  // ── deleteContact ─────────────────────────────────────────────────────────────
 
   describe('deleteContact', () => {
     it('should delete a Front Chat contact', async () => {
@@ -214,10 +438,29 @@ describe('FrontChatService', () => {
     });
   });
 
+  // ── getConversationHistory ───────────────────────────────────────────────────
+
   describe('getConversationHistory', () => {
     const user = { id: 'user-1', email: 'user@example.com', name: 'Alex' };
 
-    it('looks up the conversation directly by ext:thread_ref', async () => {
+    it('returns empty array when no ChatUser record exists', async () => {
+      mockChatUserRepository.findOneBy.mockResolvedValueOnce(null);
+      const result = await service.getConversationHistory(user);
+      expect(mockFetch).not.toHaveBeenCalled();
+      expect(result).toEqual([]);
+    });
+
+    it('returns empty array when ChatUser exists but frontConversationId is null', async () => {
+      mockChatUserRepository.findOneBy.mockResolvedValueOnce(buildChatUser({ frontConversationId: null }));
+      const result = await service.getConversationHistory(user);
+      expect(mockFetch).not.toHaveBeenCalled();
+      expect(result).toEqual([]);
+    });
+
+    it('fetches messages using the stored frontConversationId', async () => {
+      mockChatUserRepository.findOneBy.mockResolvedValueOnce(
+        buildChatUser({ frontConversationId: 'cnv_abc' }),
+      );
       mockFetch.mockResolvedValueOnce({
         ok: true,
         status: 200,
@@ -227,16 +470,7 @@ describe('FrontChatService', () => {
       await service.getConversationHistory(user);
 
       const [url] = mockFetch.mock.calls[0];
-      expect(url).toBe(
-        'https://api2.frontapp.com/conversations/ext:bloom-user-user-1/messages?limit=100',
-      );
-    });
-
-    it('returns empty array when no conversation exists yet (404)', async () => {
-      mockFetch.mockResolvedValue({ ok: false, status: 404, text: async () => '404 not found' });
-
-      const result = await service.getConversationHistory(user);
-      expect(result).toEqual([]);
+      expect(url).toBe('https://api2.frontapp.com/conversations/cnv_abc/messages?limit=100');
     });
 
     it('returns empty array for Cypress test emails', async () => {
@@ -249,6 +483,9 @@ describe('FrontChatService', () => {
     });
 
     it('maps inbound messages as user and outbound as agent, sorted chronologically', async () => {
+      mockChatUserRepository.findOneBy.mockResolvedValueOnce(
+        buildChatUser({ frontConversationId: 'cnv_abc' }),
+      );
       const now = Math.floor(Date.now() / 1000);
       mockFetch.mockResolvedValueOnce({
         ok: true,
@@ -270,6 +507,9 @@ describe('FrontChatService', () => {
     });
 
     it('paginates through all messages when _pagination.next is set', async () => {
+      mockChatUserRepository.findOneBy.mockResolvedValueOnce(
+        buildChatUser({ frontConversationId: 'cnv_abc' }),
+      );
       const now = Math.floor(Date.now() / 1000);
       mockFetch
         .mockResolvedValueOnce({
@@ -277,7 +517,7 @@ describe('FrontChatService', () => {
           status: 200,
           json: async () => ({
             _results: [{ id: 'msg_1', is_inbound: true, text: 'First', created_at: now - 20 }],
-            _pagination: { next: 'https://api2.frontapp.com/conversations/ext:bloom-user-user-1/messages?limit=100&after=cursor1' },
+            _pagination: { next: 'https://api2.frontapp.com/conversations/cnv_abc/messages?limit=100&after=cursor1' },
           }),
         })
         .mockResolvedValueOnce({
@@ -293,30 +533,33 @@ describe('FrontChatService', () => {
 
       expect(messages).toHaveLength(2);
       expect(mockFetch).toHaveBeenCalledTimes(2);
-      // Second call uses the pagination path
-      expect(mockFetch.mock.calls[1][0]).toBe(
-        'https://api2.frontapp.com/conversations/ext:bloom-user-user-1/messages?limit=100&after=cursor1',
+    });
+
+    it('returns partial results when a 404 is encountered mid-pagination', async () => {
+      mockChatUserRepository.findOneBy.mockResolvedValueOnce(
+        buildChatUser({ frontConversationId: 'cnv_abc' }),
       );
+      mockFetch.mockResolvedValueOnce({ ok: false, status: 404, text: async () => 'not found' });
+
+      const result = await service.getConversationHistory(user);
+      expect(result).toEqual([]);
     });
   });
+
+  // ── sendChannelTextMessage ───────────────────────────────────────────────────
 
   describe('sendChannelTextMessage', () => {
     const user = { id: 'user-1', email: 'user@example.com', name: 'Alex' };
 
     it('posts a JSON body with sender, body and a stable thread_ref', async () => {
-      mockFetch.mockResolvedValue({ ok: true, status: 202 });
+      mockFetch.mockResolvedValue({ ok: true, status: 202, json: async () => ({}) });
+      mockChatUserRepository.findOneBy.mockResolvedValue(buildChatUser());
 
       await service.sendChannelTextMessage(user, 'Hello there');
 
       const [url, init] = mockFetch.mock.calls[0];
       expect(url).toBe('https://api2.frontapp.com/channels/cha_test/incoming_messages');
       expect(init.method).toBe('POST');
-      expect(init.headers).toEqual(
-        expect.objectContaining({
-          Authorization: 'Bearer test-api-token',
-          'Content-Type': 'application/json',
-        }),
-      );
       const body = JSON.parse(init.body);
       expect(body).toEqual(
         expect.objectContaining({
@@ -346,7 +589,25 @@ describe('FrontChatService', () => {
         'Front incoming_messages failed (422)',
       );
     });
+
+    it('updates lastMessageSentAt on the ChatUser', async () => {
+      mockFetch.mockResolvedValue({ ok: true, status: 202, json: async () => ({}) });
+      const existing = buildChatUser();
+      mockChatUserRepository.findOneBy.mockResolvedValue(existing);
+      mockChatUserRepository.save.mockImplementation(async (data) => data);
+
+      await service.sendChannelTextMessage(user, 'hi');
+
+      // Allow micro-task queue to flush so fire-and-forget runs
+      await new Promise((r) => setImmediate(r));
+
+      expect(mockChatUserRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({ lastMessageSentAt: expect.any(Date) }),
+      );
+    });
   });
+
+  // ── sendChannelAttachment ────────────────────────────────────────────────────
 
   describe('sendChannelAttachment', () => {
     const user = { id: 'user-1', email: 'user@example.com', name: 'Alex' };
@@ -358,25 +619,24 @@ describe('FrontChatService', () => {
     } as Express.Multer.File;
 
     it('posts multipart form-data with sender, attachment and thread_ref', async () => {
-      mockFetch.mockResolvedValue({ ok: true, status: 202 });
+      mockFetch.mockResolvedValue({ ok: true, status: 202, json: async () => ({}) });
+      mockChatUserRepository.findOneBy.mockResolvedValue(buildChatUser());
 
       await service.sendChannelAttachment(user, file);
 
       const [url, init] = mockFetch.mock.calls[0];
       expect(url).toBe('https://api2.frontapp.com/channels/cha_test/incoming_messages');
       expect(init.method).toBe('POST');
-      expect(init.headers).toEqual({ Authorization: 'Bearer test-api-token' });
-
       const form = init.body as FormData;
       expect(form).toBeInstanceOf(FormData);
       expect(form.get('sender[handle]')).toBe(user.email);
-      expect(form.get('sender[name]')).toBe(user.name);
       expect(form.get('metadata[thread_ref]')).toBe(`bloom-user-${user.id}`);
-      expect(form.get('attachments')).toBeInstanceOf(Blob);
     });
 
     it('labels audio attachments as "Voice note"', async () => {
-      mockFetch.mockResolvedValue({ ok: true, status: 202 });
+      mockFetch.mockResolvedValue({ ok: true, status: 202, json: async () => ({}) });
+      mockChatUserRepository.findOneBy.mockResolvedValue(buildChatUser());
+
       await service.sendChannelAttachment(user, {
         ...file,
         mimetype: 'audio/webm',

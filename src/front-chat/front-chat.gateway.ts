@@ -126,6 +126,16 @@ export class FrontChatGateway implements OnGatewayConnection, OnGatewayDisconnec
     try {
       await this.ensureContactReady(user);
       await this.frontChatService.sendChannelTextMessage(user, payload.text);
+
+      // Fire-and-forget: sync updated chat activity timestamps to external services.
+      this.frontChatService.getChatUser(user.id).then((chatUser) => {
+        if (chatUser) {
+          return this.serviceUserProfilesService
+            .updateServiceUserProfilesChatActivity(chatUser, user.email)
+            .catch(() => {});
+        }
+      }).catch(() => {});
+
       return { ok: true };
     } catch (error) {
       this.logger.error(

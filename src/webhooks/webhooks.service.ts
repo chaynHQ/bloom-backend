@@ -14,6 +14,7 @@ import { EVENT_NAME } from 'src/event-logger/event-logger.interface';
 import { EventLoggerService } from 'src/event-logger/event-logger.service';
 import { FrontChatGateway } from 'src/front-chat/front-chat.gateway';
 import { FRONT_WEBHOOK_EVENT_TYPE } from 'src/front-chat/front-chat.interface';
+import { FrontChatService } from 'src/front-chat/front-chat.service';
 import { ZapierSimplybookBodyDto } from 'src/partner-access/dtos/zapier-body.dto';
 import { ServiceUserProfilesService } from 'src/service-user-profiles/service-user-profiles.service';
 import { IUser } from 'src/user/user.interface';
@@ -54,6 +55,7 @@ export class WebhooksService {
     private slackMessageClient: SlackMessageClient,
     private eventLoggerService: EventLoggerService,
     private frontChatGateway: FrontChatGateway,
+    private frontChatService: FrontChatService,
   ) {}
 
   async updatePartnerAccessTherapy(
@@ -483,6 +485,22 @@ export class WebhooksService {
         });
         this.logger.log(`Front Events webhook: emitted agent reply to ${email}`);
       }
+
+      // Update chat activity: received timestamp + capture conversation ID if not already stored.
+      this.frontChatService
+        .updateChatUserByEmail(email, {
+          lastMessageReceivedAt: new Date(data.emitted_at * 1000),
+          ...(data.conversation?.id ? { frontConversationId: data.conversation.id } : {}),
+        })
+        .then((chatUser) => {
+          if (chatUser) {
+            return this.serviceUserProfilesService.updateServiceUserProfilesChatActivity(
+              chatUser,
+              email,
+            );
+          }
+        })
+        .catch(() => {});
     }
 
     const eventName = this.mapFrontEventToEventName(data.type);
