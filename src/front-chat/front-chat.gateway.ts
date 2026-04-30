@@ -89,6 +89,18 @@ export class FrontChatGateway implements OnGatewayConnection, OnGatewayDisconnec
     this.sessions.set(client.id, user);
     await client.join(userRoom(user.email));
     this.ensureContactReady(user);
+
+    try {
+      const messages = await this.frontChatService.getConversationHistory(user);
+      if (messages.length > 0) {
+        client.emit('history', { messages });
+      }
+    } catch (error) {
+      this.logger.warn(
+        `History fetch failed for user ${user.id}: ${error?.message || 'unknown error'}`,
+      );
+    }
+
     this.logger.log(`FrontChat connected — socket ${client.id} → user ${user.id}`);
   }
 

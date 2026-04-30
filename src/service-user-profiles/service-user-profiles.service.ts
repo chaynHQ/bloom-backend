@@ -129,7 +129,6 @@ export class ServiceUserProfilesService {
     };
 
     if (!exists) {
-      // Contact doesn't exist yet — create it with all fields in one pass.
       try {
         await this.frontChatService.createContact({
           email,
@@ -142,10 +141,7 @@ export class ServiceUserProfilesService {
         logger.error(`ensureFrontContact create failed for ${email}: ${message}`);
       }
     } else {
-      // Contact already exists — still ensure custom fields are set. This
-      // handles contacts that were auto-created by Front from a channel
-      // sender.handle or where the initial custom field update previously
-      // failed silently.
+      // Contact already exists — ensure custom fields and list membership are current.
       try {
         await this.frontChatService.updateContactCustomFields(customFields, email);
         logger.log(`Refreshed Front contact custom fields for ${email}`);

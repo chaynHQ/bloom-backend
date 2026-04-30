@@ -466,6 +466,25 @@ export class WebhooksService {
       return;
     }
 
+    // Forward agent replies to the connected user in real-time.
+    if (
+      data.type === FRONT_WEBHOOK_EVENT_TYPE.OUTBOUND ||
+      data.type === FRONT_WEBHOOK_EVENT_TYPE.OUT_REPLY
+    ) {
+      const msgData = data.target?.data;
+      const body = msgData?.text ?? (msgData?.body ? this.stripHtml(msgData.body) : '');
+      if (body) {
+        this.frontChatGateway.emitAgentReply(email, {
+          id: data.id,
+          body,
+          authorEmail: msgData?.author?.email,
+          authorName: this.formatAuthorName(msgData?.author),
+          emittedAt: data.emitted_at,
+        });
+        this.logger.log(`Front Events webhook: emitted agent reply to ${email}`);
+      }
+    }
+
     const eventName = this.mapFrontEventToEventName(data.type);
     if (!eventName) {
       this.logger.log(`Front webhook event type "${data.type}" is not tracked, skipping`);
@@ -487,7 +506,18 @@ export class WebhooksService {
         `Front webhook: failed to log ${eventName} for ${email}: ${error?.message || 'unknown error'}`,
       );
     }
+  }
 
+  private stripHtml(input: string): string {
+    return input
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<\/p>/gi, '\n')
+      .replace(/<[^>]+>/g, '')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .trim();
   }
 
   // Handles outbound messages Front sends to a Custom Channel when an agent
@@ -498,8 +528,10 @@ export class WebhooksService {
     data: FrontChannelOutboundPayload | Record<string, unknown>,
   ): Promise<{ type: 'success'; external_id: string; external_conversation_id: string }> {
     const payload = (data as FrontChannelOutboundPayload).payload ?? {};
-    const recipients = payload.to ?? [];
-    const recipientEmail = recipients.find((r) => r?.handle)?.handle;
+    // Front Channel API sends `recipients`; fall back to `to` for legacy variants.
+    const recipients = payload.recipients ?? payload.to ?? [];
+    const recipientEmail = recipients.find((r) => r?.role === 'to' && r?.handle)?.handle
+      ?? recipients.find((r) => r?.handle)?.handle;
     const messageBody = payload.text ?? payload.body ?? '';
     const externalId = payload.id || `front-${Date.now()}`;
     const externalConversationId =

@@ -23,6 +23,8 @@ export interface FrontChannelOutboundPayload {
     body?: string;
     text?: string;
     author?: FrontChannelAuthor;
+    // Front Channel API sends `recipients`; `to` kept for any legacy variants.
+    recipients?: FrontChannelRecipient[];
     to?: FrontChannelRecipient[];
     attachments?: unknown[];
   };

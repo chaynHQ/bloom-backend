@@ -6,7 +6,7 @@ describe('FrontChatGateway', () => {
   let gateway: FrontChatGateway;
   let authService: { parseAuth: jest.Mock };
   let userService: { getUserByFirebaseId: jest.Mock };
-  let frontChatService: { sendChannelTextMessage: jest.Mock };
+  let frontChatService: { sendChannelTextMessage: jest.Mock; getConversationHistory: jest.Mock };
   let serviceUserProfilesService: { ensureFrontContact: jest.Mock };
   let server: { to: jest.Mock; emit: jest.Mock };
 
@@ -18,12 +18,16 @@ describe('FrontChatGateway', () => {
     handshake: { auth: token === undefined ? {} : { token }, headers: {} },
     join: jest.fn().mockResolvedValue(undefined),
     disconnect: jest.fn(),
+    emit: jest.fn(),
   });
 
   beforeEach(() => {
     authService = { parseAuth: jest.fn() };
     userService = { getUserByFirebaseId: jest.fn() };
-    frontChatService = { sendChannelTextMessage: jest.fn() };
+    frontChatService = {
+      sendChannelTextMessage: jest.fn(),
+      getConversationHistory: jest.fn().mockResolvedValue([]),
+    };
     serviceUserProfilesService = {
       ensureFrontContact: jest.fn().mockResolvedValue(undefined),
     };
@@ -66,6 +70,41 @@ describe('FrontChatGateway', () => {
       expect(authService.parseAuth).toHaveBeenCalledWith('Bearer tok-1');
       expect(socket.join).toHaveBeenCalledWith('user:user@example.com');
       expect(socket.disconnect).not.toHaveBeenCalled();
+    });
+
+    it('emits history to the socket when prior messages exist', async () => {
+      authService.parseAuth.mockResolvedValue({ uid: 'fb-uid' });
+      userService.getUserByFirebaseId.mockResolvedValue({ userEntity: buildUser() });
+      const messages = [{ id: 'msg-1', direction: 'user', text: 'hello', createdAt: 1000 }];
+      frontChatService.getConversationHistory.mockResolvedValue(messages);
+
+      const socket = buildSocket('tok-1');
+      await gateway.handleConnection(socket as any);
+
+      expect(socket.emit).toHaveBeenCalledWith('history', { messages });
+    });
+
+    it('does not emit history when there are no prior messages', async () => {
+      authService.parseAuth.mockResolvedValue({ uid: 'fb-uid' });
+      userService.getUserByFirebaseId.mockResolvedValue({ userEntity: buildUser() });
+      frontChatService.getConversationHistory.mockResolvedValue([]);
+
+      const socket = buildSocket('tok-1');
+      await gateway.handleConnection(socket as any);
+
+      expect(socket.emit).not.toHaveBeenCalled();
+    });
+
+    it('does not reject the connection if history fetch fails', async () => {
+      authService.parseAuth.mockResolvedValue({ uid: 'fb-uid' });
+      userService.getUserByFirebaseId.mockResolvedValue({ userEntity: buildUser() });
+      frontChatService.getConversationHistory.mockRejectedValue(new Error('Front 503'));
+
+      const socket = buildSocket('tok-1');
+      await gateway.handleConnection(socket as any);
+
+      expect(socket.disconnect).not.toHaveBeenCalled();
+      expect(socket.join).toHaveBeenCalledWith('user:user@example.com');
     });
 
     it('lower-cases the email when joining the room', async () => {

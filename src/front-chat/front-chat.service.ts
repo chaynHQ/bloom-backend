@@ -5,8 +5,6 @@ import { isCypressTestEmail } from 'src/utils/utils';
 import { FrontChatContactCustomFields, FrontChatContactProfile } from './front-chat.interface';
 
 const FRONT_API_BASE_URL = 'https://api2.frontapp.com';
-const MAX_HISTORY_CONVERSATIONS = 5;
-const MAX_MESSAGES_PER_CONVERSATION = 50;
 const logger = new Logger('FrontChatService');
 
 interface ChatUser {
@@ -26,13 +24,6 @@ export interface ChatHistoryMessage {
 interface FrontApiPaginated<T> {
   _results: T[];
   _pagination?: { next?: string | null };
-}
-
-interface FrontApiConversation {
-  id: string;
-  status?: string;
-  last_message?: { created_at?: number };
-  created_at?: number;
 }
 
 interface FrontApiAuthor {
@@ -169,13 +160,13 @@ export class FrontChatService {
       return null;
     }
 
-    let contact: unknown;
+    let contact: { id: string } & Record<string, unknown>;
     try {
-      contact = await this.frontApiRequest('POST', '/contacts', {
+      contact = (await this.frontApiRequest('POST', '/contacts', {
         handles: [{ source: 'email', handle: email }],
         ...(name && { name }),
         ...(customFields && { custom_fields: this.serializeCustomFields(customFields) }),
-      });
+      })) as { id: string } & Record<string, unknown>;
     } catch (error) {
       throw new Error(
         `Create Front Chat contact API call failed: ${error?.message || 'unknown error'}`,
@@ -183,7 +174,8 @@ export class FrontChatService {
       );
     }
 
-    await this.ensureContactInList(email);
+    // Pass the canonical ID from the create response to avoid an extra lookup.
+    await this.ensureContactInList(email, contact.id);
     return contact;
   }
 
@@ -193,17 +185,14 @@ export class FrontChatService {
       return null;
     }
 
+    const contactId = this.getContactAlias(email);
+    const updateBody: Record<string, unknown> = {};
+    if (profile.name) updateBody.name = profile.name;
+    if (profile.email && profile.email !== email) {
+      updateBody.handles = [{ source: 'email', handle: profile.email }];
+    }
+
     try {
-      const contactId = this.getContactAlias(email);
-      const updateBody: Record<string, unknown> = {};
-
-      if (profile.name) {
-        updateBody.name = profile.name;
-      }
-      if (profile.email && profile.email !== email) {
-        updateBody.handles = [{ source: 'email', handle: profile.email }];
-      }
-
       const result = await this.frontApiRequest('PATCH', `/contacts/${contactId}`, updateBody);
       await this.ensureContactInList(profile.email ?? email);
       return result;
@@ -262,60 +251,33 @@ export class FrontChatService {
     }
   }
 
-  async getConversationHistory(user: ChatUser, limit = 50): Promise<ChatHistoryMessage[]> {
+  // Fetch all messages for a user by looking up their conversation directly via
+  // its external_conversation_id (= thread_ref = "bloom-user-{userId}").
+  // This bypasses contact-source ambiguity: Front can associate a conversation
+  // with a channel-source contact rather than the email-source contact we create,
+  // so querying via /contacts/{alias}/conversations would return nothing.
+  async getConversationHistory(user: ChatUser): Promise<ChatHistoryMessage[]> {
     if (isCypressTestEmail(user.email)) return [];
 
-    const contactAlias = this.getContactAlias(user.email);
+    const conversationRef = `ext:${buildThreadRef(user.id)}`;
+    const allMessages: ChatHistoryMessage[] = [];
+    let nextPath: string | null = `/conversations/${conversationRef}/messages?limit=100`;
 
-    let conversations: FrontApiPaginated<FrontApiConversation>;
-    try {
-      // Include all non-trashed statuses so archived/resolved conversations
-      // from previous sessions are returned alongside open ones.
-      conversations = (await this.frontApiRequest(
-        'GET',
-        `/contacts/${contactAlias}/conversations?limit=10&q[statuses][]=assigned&q[statuses][]=unassigned&q[statuses][]=archived`,
-      )) as FrontApiPaginated<FrontApiConversation>;
-      logger.log(
-        `Fetched ${conversations._results.length} Front conversations for user ${user.id}`,
-      );
-    } catch (error) {
-      if (this.isContactNotFoundError(error)) return [];
-      throw new Error(
-        `Fetch Front conversations failed: ${(error as Error)?.message || 'unknown error'}`,
-      );
-    }
+    while (nextPath) {
+      let page: FrontApiPaginated<FrontApiMessage>;
+      try {
+        page = (await this.frontApiRequest('GET', nextPath)) as FrontApiPaginated<FrontApiMessage>;
+      } catch (error) {
+        if (this.isContactNotFoundError(error)) return [];
+        throw new Error(
+          `Fetch Front messages failed: ${(error as Error)?.message || 'unknown error'}`,
+        );
+      }
 
-    const ordered = (conversations?._results ?? [])
-      .slice()
-      .sort((a, b) => (b.last_message?.created_at ?? 0) - (a.last_message?.created_at ?? 0))
-      .slice(0, MAX_HISTORY_CONVERSATIONS);
-    if (ordered.length === 0) return [];
-
-    const perConversation = Math.min(limit, MAX_MESSAGES_PER_CONVERSATION);
-    const pages = await Promise.all(
-      ordered.map(async (conversation) => {
-        try {
-          return (await this.frontApiRequest(
-            'GET',
-            `/conversations/${conversation.id}/messages?limit=${perConversation}`,
-          )) as FrontApiPaginated<FrontApiMessage>;
-        } catch (error) {
-          throw new Error(
-            `Fetch Front messages failed: ${(error as Error)?.message || 'unknown error'}`,
-          );
-        }
-      }),
-    );
-
-    const seen = new Set<string>();
-    const merged: ChatHistoryMessage[] = [];
-    for (const page of pages) {
-      for (const m of page?._results ?? []) {
-        if (seen.has(m.id)) continue;
-        seen.add(m.id);
+      for (const m of page._results ?? []) {
         const text = m.text ?? this.stripHtml(m.body ?? '');
         if (!text) continue;
-        merged.push({
+        allMessages.push({
           id: m.id,
           direction: m.is_inbound ? 'user' : 'agent',
           text,
@@ -323,11 +285,13 @@ export class FrontChatService {
           createdAt: (m.created_at ?? Date.now() / 1000) * 1000,
         });
       }
+
+      const nextUrl = page._pagination?.next;
+      nextPath = nextUrl ? nextUrl.replace(FRONT_API_BASE_URL, '') : null;
     }
 
-    logger.log(`Merged Front conversation history for user ${user.id}: ${merged.length} messages`);
-
-    return merged.sort((a, b) => a.createdAt - b.createdAt).slice(-limit);
+    logger.log(`Fetched conversation history for user ${user.id}: ${allMessages.length} messages`);
+    return allMessages.sort((a, b) => a.createdAt - b.createdAt);
   }
 
   private formatAuthorName(author: FrontApiAuthor | undefined): string | undefined {
@@ -366,12 +330,19 @@ export class FrontChatService {
     logger.log('Cypress Front Chat contact cleanup is handled by individual test teardown');
   }
 
-  private async ensureContactInList(email: string): Promise<void> {
+  // The contact_lists endpoint requires canonical contact IDs (crd_xxx), not aliases.
+  // contactId can be passed directly from a create/patch response to skip the extra lookup.
+  private async ensureContactInList(email: string, contactId?: string): Promise<void> {
     if (!frontContactListId || isCypressTestEmail(email)) return;
 
     try {
+      const id =
+        contactId ??
+        ((await this.frontApiRequest('GET', `/contacts/${this.getContactAlias(email)}`)) as {
+          id: string;
+        }).id;
       await this.frontApiRequest('POST', `/contact_lists/${frontContactListId}/contacts`, {
-        contact_ids: [this.getContactAlias(email)],
+        contact_ids: [id],
       });
     } catch (error) {
       logger.warn(`Front add-to-list failed for ${email}: ${error?.message || 'unknown error'}`);

@@ -28,7 +28,7 @@ describe('FrontChatService', () => {
   });
 
   describe('createContact', () => {
-    it('should create a new Front Chat contact and add it to the contact group', async () => {
+    it('should create a new Front Chat contact and add it to the contact list using the canonical ID', async () => {
       mockFetch
         .mockResolvedValueOnce({
           ok: true,
@@ -50,12 +50,13 @@ describe('FrontChatService', () => {
           headers: expect.objectContaining({ Authorization: 'Bearer test-api-token' }),
         }),
       );
+      // canonical ID from the create response — no alias, no extra GET needed
       expect(mockFetch).toHaveBeenNthCalledWith(
         2,
-        'https://api2.frontapp.com/contact_groups/grp_test/contacts',
+        'https://api2.frontapp.com/contact_lists/grp_test/contacts',
         expect.objectContaining({
           method: 'POST',
-          body: JSON.stringify({ contact_ids: ['alt:email:user%40example.com'] }),
+          body: JSON.stringify({ contact_ids: ['cnt_123'] }),
         }),
       );
       expect(result).toEqual({ id: 'cnt_123', name: 'Test User' });
@@ -95,8 +96,11 @@ describe('FrontChatService', () => {
   });
 
   describe('updateContactCustomFields', () => {
-    it('should update custom fields and ensure the contact is in the group', async () => {
-      mockFetch.mockResolvedValue({ ok: true, status: 200, json: async () => ({}) });
+    it('should update custom fields, look up the canonical ID, then add to the contact list', async () => {
+      mockFetch
+        .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({}) }) // PATCH
+        .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ id: 'crd_u1' }) }) // GET canonical ID
+        .mockResolvedValueOnce({ ok: true, status: 204 }); // POST list
 
       await service.updateContactCustomFields({ language: 'en' }, 'user@example.com');
 
@@ -107,16 +111,24 @@ describe('FrontChatService', () => {
       );
       expect(mockFetch).toHaveBeenNthCalledWith(
         2,
-        'https://api2.frontapp.com/contact_groups/grp_test/contacts',
-        expect.objectContaining({ method: 'POST' }),
+        'https://api2.frontapp.com/contacts/alt:email:user%40example.com',
+        expect.objectContaining({ method: 'GET' }),
+      );
+      expect(mockFetch).toHaveBeenNthCalledWith(
+        3,
+        'https://api2.frontapp.com/contact_lists/grp_test/contacts',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ contact_ids: ['crd_u1'] }),
+        }),
       );
     });
 
     it('should create contact and retry if contact not found (404)', async () => {
       mockFetch
-        .mockResolvedValueOnce({ ok: false, status: 404, text: async () => '404 not found' })
-        .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ id: 'cnt_new' }) }) // createContact
-        .mockResolvedValueOnce({ ok: true, status: 204 }) // createContact's group add
+        .mockResolvedValueOnce({ ok: false, status: 404, text: async () => '404 not found' }) // PATCH fails
+        .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ id: 'cnt_new' }) }) // createContact POST
+        .mockResolvedValueOnce({ ok: true, status: 204 }) // createContact list add (canonical ID from create)
         .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({}) }); // retry PATCH
 
       await service.updateContactCustomFields({ language: 'en' }, 'user@example.com');
@@ -131,8 +143,11 @@ describe('FrontChatService', () => {
   });
 
   describe('updateContactProfile', () => {
-    it('should update name on an existing contact and ensure the contact is in the group', async () => {
-      mockFetch.mockResolvedValue({ ok: true, status: 200, json: async () => ({}) });
+    it('should update name on an existing contact, look up canonical ID, then add to list', async () => {
+      mockFetch
+        .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({}) }) // PATCH
+        .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ id: 'crd_u1' }) }) // GET canonical ID
+        .mockResolvedValueOnce({ ok: true, status: 204 }); // POST list
 
       await service.updateContactProfile({ name: 'New Name' }, 'user@example.com');
 
@@ -143,16 +158,24 @@ describe('FrontChatService', () => {
       );
       expect(mockFetch).toHaveBeenNthCalledWith(
         2,
-        'https://api2.frontapp.com/contact_groups/grp_test/contacts',
-        expect.objectContaining({ method: 'POST' }),
+        'https://api2.frontapp.com/contacts/alt:email:user%40example.com',
+        expect.objectContaining({ method: 'GET' }),
+      );
+      expect(mockFetch).toHaveBeenNthCalledWith(
+        3,
+        'https://api2.frontapp.com/contact_lists/grp_test/contacts',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ contact_ids: ['crd_u1'] }),
+        }),
       );
     });
 
     it('should create contact and retry if contact not found (404)', async () => {
       mockFetch
-        .mockResolvedValueOnce({ ok: false, status: 404, text: async () => '404 not found' })
-        .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ id: 'cnt_new' }) }) // createContact
-        .mockResolvedValueOnce({ ok: true, status: 204 }) // createContact's group add
+        .mockResolvedValueOnce({ ok: false, status: 404, text: async () => '404 not found' }) // PATCH fails
+        .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ id: 'cnt_new' }) }) // createContact POST
+        .mockResolvedValueOnce({ ok: true, status: 204 }) // createContact list add (canonical ID from create)
         .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({}) }); // retry PATCH
 
       await service.updateContactProfile({ name: 'New Name' }, 'user@example.com');
@@ -194,23 +217,22 @@ describe('FrontChatService', () => {
   describe('getConversationHistory', () => {
     const user = { id: 'user-1', email: 'user@example.com', name: 'Alex' };
 
-    it('requests assigned, unassigned and archived conversations so resolved chats are included', async () => {
-      mockFetch
-        .mockResolvedValueOnce({
-          ok: true,
-          status: 200,
-          json: async () => ({ _results: [] }),
-        });
+    it('looks up the conversation directly by ext:thread_ref', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ _results: [], _pagination: {} }),
+      });
 
       await service.getConversationHistory(user);
 
       const [url] = mockFetch.mock.calls[0];
-      expect(url).toContain('q[statuses][]=assigned');
-      expect(url).toContain('q[statuses][]=unassigned');
-      expect(url).toContain('q[statuses][]=archived');
+      expect(url).toBe(
+        'https://api2.frontapp.com/conversations/ext:bloom-user-user-1/messages?limit=100',
+      );
     });
 
-    it('returns empty array when contact not found', async () => {
+    it('returns empty array when no conversation exists yet (404)', async () => {
       mockFetch.mockResolvedValue({ ok: false, status: 404, text: async () => '404 not found' });
 
       const result = await service.getConversationHistory(user);
@@ -226,32 +248,55 @@ describe('FrontChatService', () => {
       expect(result).toEqual([]);
     });
 
-    it('maps inbound messages as user and outbound as agent', async () => {
+    it('maps inbound messages as user and outbound as agent, sorted chronologically', async () => {
       const now = Math.floor(Date.now() / 1000);
-      mockFetch
-        .mockResolvedValueOnce({
-          ok: true,
-          status: 200,
-          json: async () => ({
-            _results: [{ id: 'cnv_1', last_message: { created_at: now } }],
-          }),
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          status: 200,
-          json: async () => ({
-            _results: [
-              { id: 'msg_1', is_inbound: true, text: 'Hello', created_at: now - 10 },
-              { id: 'msg_2', is_inbound: false, text: 'Hi there', created_at: now, author: { first_name: 'Agent', last_name: 'One' } },
-            ],
-          }),
-        });
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          _results: [
+            { id: 'msg_2', is_inbound: false, text: 'Hi there', created_at: now, author: { first_name: 'Agent', last_name: 'One' } },
+            { id: 'msg_1', is_inbound: true, text: 'Hello', created_at: now - 10 },
+          ],
+          _pagination: {},
+        }),
+      });
 
       const messages = await service.getConversationHistory(user);
 
       expect(messages).toHaveLength(2);
       expect(messages[0]).toMatchObject({ id: 'msg_1', direction: 'user', text: 'Hello' });
       expect(messages[1]).toMatchObject({ id: 'msg_2', direction: 'agent', text: 'Hi there', authorName: 'Agent One' });
+    });
+
+    it('paginates through all messages when _pagination.next is set', async () => {
+      const now = Math.floor(Date.now() / 1000);
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => ({
+            _results: [{ id: 'msg_1', is_inbound: true, text: 'First', created_at: now - 20 }],
+            _pagination: { next: 'https://api2.frontapp.com/conversations/ext:bloom-user-user-1/messages?limit=100&after=cursor1' },
+          }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => ({
+            _results: [{ id: 'msg_2', is_inbound: false, text: 'Second', created_at: now }],
+            _pagination: {},
+          }),
+        });
+
+      const messages = await service.getConversationHistory(user);
+
+      expect(messages).toHaveLength(2);
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      // Second call uses the pagination path
+      expect(mockFetch.mock.calls[1][0]).toBe(
+        'https://api2.frontapp.com/conversations/ext:bloom-user-user-1/messages?limit=100&after=cursor1',
+      );
     });
   });
 
