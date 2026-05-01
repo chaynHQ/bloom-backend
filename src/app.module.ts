@@ -7,6 +7,7 @@ import { ClsModule } from 'nestjs-cls';
 import { dataSourceOptions } from 'src/typeorm.config';
 import { v4 as uuidv4 } from 'uuid';
 import { AuthModule } from './auth/auth.module';
+import { CrispMigrationModule } from './crisp-migration/crisp-migration.module';
 import { CoursePartnerModule } from './course-partner/course-partner.module';
 import { CourseUserModule } from './course-user/course-user.module';
 import { CourseModule } from './course/course.module';
@@ -76,6 +77,7 @@ import { WebhooksModule } from './webhooks/webhooks.module';
     ResourceFeedbackModule,
     TherapySessionModule,
     ReportingModule,
+    CrispMigrationModule,
   ],
   providers: [
     {
