@@ -6,8 +6,8 @@ import {
   createMailchimpProfile,
   updateMailchimpProfile,
 } from 'src/api/mailchimp/mailchimp-api';
-import { CrispService } from 'src/crisp/crisp.service';
 import { UserEntity } from 'src/entities/user.entity';
+import { FrontChatService } from 'src/front-chat/front-chat.service';
 import { ServiceUserProfilesService } from 'src/service-user-profiles/service-user-profiles.service';
 import {
   mockAltPartnerAccessEntity,
@@ -25,12 +25,14 @@ import {
 } from '../utils/constants';
 
 jest.mock('src/api/mailchimp/mailchimp-api');
-const mockCrispServiceMethods = {};
+const mockFrontChatServiceMethods = {
+  getOrCreateChatUser: jest.fn().mockResolvedValue({}),
+};
 
 describe('Service user profiles', () => {
   let service: ServiceUserProfilesService;
   const mockedUserRepository = createMock<Repository<UserEntity>>(mockUserRepositoryMethods);
-  const mockCrispService = createMock<CrispService>(mockCrispServiceMethods);
+  const mockFrontChatService = createMock<FrontChatService>(mockFrontChatServiceMethods);
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -42,7 +44,7 @@ describe('Service user profiles', () => {
           provide: getRepositoryToken(UserEntity),
           useValue: mockedUserRepository,
         },
-        { provide: CrispService, useValue: mockCrispService },
+        { provide: FrontChatService, useValue: mockFrontChatService },
       ],
     }).compile();
 
@@ -54,19 +56,19 @@ describe('Service user profiles', () => {
   });
 
   describe('createServiceUserProfiles', () => {
-    it('should create crisp and mailchimp profiles for a public user', async () => {
+    it('should create Front Chat and mailchimp profiles for a public user', async () => {
       await service.createServiceUserProfiles(mockUserEntity);
 
-      expect(mockCrispService.createCrispProfile).toHaveBeenCalledWith({
+      expect(mockFrontChatService.createContact).toHaveBeenCalledWith({
         email: mockUserEntity.email,
-        person: { nickname: mockUserEntity.name, locales: [mockUserEntity.signUpLanguage] },
-        segments: ['public'],
+        name: mockUserEntity.name,
+        userId: mockUserEntity.id,
       });
 
       const createdAt = mockUserEntity.createdAt.toISOString();
       const lastActiveAt = mockUserEntity.lastActiveAt.toISOString();
 
-      expect(mockCrispService.updateCrispPeopleData).toHaveBeenCalledWith(
+      expect(mockFrontChatService.updateContactCustomFields).toHaveBeenCalledWith(
         {
           marketing_permission: mockUserEntity.contactPermission,
           service_emails_permission: mockUserEntity.serviceEmailsPermission,
@@ -107,7 +109,7 @@ describe('Service user profiles', () => {
       });
     });
 
-    it('should create crisp and mailchimp profiles for a partner user', async () => {
+    it('should create Front Chat and mailchimp profiles for a partner user', async () => {
       await service.createServiceUserProfiles(
         mockUserEntity,
         mockPartnerEntity,
@@ -118,13 +120,13 @@ describe('Service user profiles', () => {
       const createdAt = mockUserEntity.createdAt.toISOString();
       const lastActiveAt = mockUserEntity.lastActiveAt.toISOString();
 
-      expect(mockCrispService.createCrispProfile).toHaveBeenCalledWith({
+      expect(mockFrontChatService.createContact).toHaveBeenCalledWith({
         email: mockUserEntity.email,
-        person: { nickname: mockUserEntity.name, locales: [mockUserEntity.signUpLanguage] },
-        segments: [partnerName],
+        name: mockUserEntity.name,
+        userId: mockUserEntity.id,
       });
 
-      expect(mockCrispService.updateCrispPeopleData).toHaveBeenCalledWith(
+      expect(mockFrontChatService.updateContactCustomFields).toHaveBeenCalledWith(
         {
           signed_up_at: createdAt,
           marketing_permission: mockUserEntity.contactPermission,
@@ -166,15 +168,97 @@ describe('Service user profiles', () => {
     });
 
     it('should not propagate external api call errors', async () => {
-      const mocked = jest.mocked(mockCrispService.createCrispProfile);
-      mocked.mockRejectedValue(new Error('Crisp API call failed'));
+      const mocked = jest.mocked(mockFrontChatService.createContact);
+      mocked.mockRejectedValue(new Error('Front Chat API call failed'));
       await expect(service.createServiceUserProfiles(mockUserEntity)).resolves.not.toThrow();
+      mocked.mockReset();
+    });
+
+    it('should still create mailchimp profile when Front Chat fails', async () => {
+      const mocked = jest.mocked(mockFrontChatService.createContact);
+      mocked.mockRejectedValue(new Error('Front Chat API call failed'));
+
+      await service.createServiceUserProfiles(mockUserEntity);
+
+      expect(createMailchimpProfile).toHaveBeenCalled();
       mocked.mockReset();
     });
   });
 
+  describe('ensureFrontContact', () => {
+    const expectedCustomFields = {
+      signed_up_at: mockUserEntity.createdAt.toISOString(),
+      marketing_permission: mockUserEntity.contactPermission,
+      service_emails_permission: mockUserEntity.serviceEmailsPermission,
+      email_reminders_frequency: EMAIL_REMINDERS_FREQUENCY.TWO_MONTHS,
+      last_active_at: mockUserEntity.lastActiveAt.toISOString(),
+      feature_live_chat: true,
+      feature_therapy: false,
+      partners: '',
+      therapy_sessions_redeemed: 0,
+      therapy_sessions_remaining: 0,
+    };
+
+    it('creates contact with custom fields when contact does not yet exist', async () => {
+      jest.mocked(mockFrontChatService.contactExists).mockResolvedValue(false);
+
+      await service.ensureFrontContact(mockUserEntity);
+
+      expect(mockFrontChatService.createContact).toHaveBeenCalledWith({
+        email: mockUserEntity.email,
+        name: mockUserEntity.name,
+        customFields: expectedCustomFields,
+        userId: mockUserEntity.id,
+      });
+      expect(mockFrontChatService.updateContactCustomFields).not.toHaveBeenCalled();
+    });
+
+    it('updates custom fields when contact already exists (no create)', async () => {
+      jest.mocked(mockFrontChatService.contactExists).mockResolvedValue(true);
+
+      await service.ensureFrontContact(mockUserEntity);
+
+      expect(mockFrontChatService.createContact).not.toHaveBeenCalled();
+      expect(mockFrontChatService.updateContactCustomFields).toHaveBeenCalledWith(
+        expectedCustomFields,
+        mockUserEntity.email,
+      );
+    });
+
+    it('skips for Cypress test emails', async () => {
+      await service.ensureFrontContact({
+        ...mockUserEntity,
+        email: 'cypresstestemail+1@chayn.co',
+      } as any);
+
+      expect(mockFrontChatService.contactExists).not.toHaveBeenCalled();
+    });
+
+    it('does not throw when contactExists check fails', async () => {
+      jest.mocked(mockFrontChatService.contactExists).mockRejectedValue(new Error('API down'));
+
+      await expect(service.ensureFrontContact(mockUserEntity)).resolves.not.toThrow();
+    });
+
+    it('does not throw when createContact fails', async () => {
+      jest.mocked(mockFrontChatService.contactExists).mockResolvedValue(false);
+      jest.mocked(mockFrontChatService.createContact).mockRejectedValue(new Error('API error'));
+
+      await expect(service.ensureFrontContact(mockUserEntity)).resolves.not.toThrow();
+    });
+
+    it('does not throw when updateContactCustomFields fails for existing contact', async () => {
+      jest.mocked(mockFrontChatService.contactExists).mockResolvedValue(true);
+      jest
+        .mocked(mockFrontChatService.updateContactCustomFields)
+        .mockRejectedValue(new Error('API error'));
+
+      await expect(service.ensureFrontContact(mockUserEntity)).resolves.not.toThrow();
+    });
+  });
+
   describe('updateServiceUserProfilesUser', () => {
-    it('should update crisp and mailchimp profile user data', async () => {
+    it('should update Front Chat and mailchimp profile user data', async () => {
       await service.updateServiceUserProfilesUser(
         mockUserEntity,
         false,
@@ -184,8 +268,8 @@ describe('Service user profiles', () => {
 
       const lastActiveAt = mockUserEntity.lastActiveAt.toISOString();
 
-      expect(mockCrispService.updateCrispPeopleData).toHaveBeenCalledTimes(1);
-      expect(mockCrispService.updateCrispPeopleData).toHaveBeenCalledWith(
+      expect(mockFrontChatService.updateContactCustomFields).toHaveBeenCalledTimes(1);
+      expect(mockFrontChatService.updateContactCustomFields).toHaveBeenCalledWith(
         {
           marketing_permission: mockUserEntity.contactPermission,
           service_emails_permission: mockUserEntity.serviceEmailsPermission,
@@ -217,7 +301,7 @@ describe('Service user profiles', () => {
       );
     });
 
-    it('should update crisp and mailchimp profiles contact permissions', async () => {
+    it('should update Front Chat and mailchimp profiles contact permissions', async () => {
       const mockUser: UserEntity = {
         ...mockUserEntity,
         contactPermission: false,
@@ -227,7 +311,7 @@ describe('Service user profiles', () => {
 
       await service.updateServiceUserProfilesUser(mockUser, false, false, mockUser.email);
 
-      expect(mockCrispService.updateCrispPeopleData).toHaveBeenCalledWith(
+      expect(mockFrontChatService.updateContactCustomFields).toHaveBeenCalledWith(
         {
           marketing_permission: false,
           service_emails_permission: false,
@@ -258,7 +342,7 @@ describe('Service user profiles', () => {
       );
     });
 
-    it('should additionally call crisp base profile update if required', async () => {
+    it('should additionally call Front Chat contact profile update if required', async () => {
       await service.updateServiceUserProfilesUser(
         mockUserEntity,
         true,
@@ -266,21 +350,18 @@ describe('Service user profiles', () => {
         mockUserEntity.email,
       );
 
-      expect(mockCrispService.updateCrispPeopleData).toHaveBeenCalled();
+      expect(mockFrontChatService.updateContactCustomFields).toHaveBeenCalled();
       expect(updateMailchimpProfile).toHaveBeenCalled();
 
-      expect(mockCrispService.updateCrispProfileBase).toHaveBeenCalledWith(
+      expect(mockFrontChatService.updateContactProfile).toHaveBeenCalledWith(
         {
-          person: {
-            nickname: mockUserEntity.name,
-            locales: [mockUserEntity.signUpLanguage],
-          },
+          name: mockUserEntity.name,
         },
         mockUserEntity.email,
       );
     });
 
-    it("should update the user's email in crisp and mailchimp", async () => {
+    it("should update the user's email in Front Chat and mailchimp", async () => {
       const oldEmail = mockUserEntity.email;
       const newEmail = 'newemail@test.com';
       await service.updateServiceUserProfilesUser(
@@ -290,12 +371,12 @@ describe('Service user profiles', () => {
         oldEmail,
       );
       const serialisedMockUserData = service.serializeUserData(mockUserEntity);
-      expect(mockCrispService.updateCrispProfileBase).toHaveBeenCalledWith(
-        { email: newEmail, person: { locales: ['en'], nickname: 'name' } },
+      expect(mockFrontChatService.updateContactProfile).toHaveBeenCalledWith(
+        { email: newEmail, name: 'name' },
         oldEmail,
       );
-      expect(mockCrispService.updateCrispPeopleData).toHaveBeenCalledTimes(1);
-      expect(mockCrispService.updateCrispPeopleData).toHaveBeenCalledWith(
+      expect(mockFrontChatService.updateContactCustomFields).toHaveBeenCalledTimes(1);
+      expect(mockFrontChatService.updateContactCustomFields).toHaveBeenCalledWith(
         {
           email_reminders_frequency: EMAIL_REMINDERS_FREQUENCY.TWO_MONTHS,
           last_active_at: mockUserEntity.lastActiveAt.toISOString(),
@@ -318,10 +399,25 @@ describe('Service user profiles', () => {
       ).resolves.not.toThrow();
       mocked.mockReset();
     });
+
+    it('should still update mailchimp when Front Chat fails', async () => {
+      const mocked = jest.mocked(mockFrontChatService.updateContactCustomFields);
+      mocked.mockRejectedValue(new Error('Front Chat API call failed'));
+
+      await service.updateServiceUserProfilesUser(
+        mockUserEntity,
+        false,
+        false,
+        mockUserEntity.email,
+      );
+
+      expect(updateMailchimpProfile).toHaveBeenCalled();
+      mocked.mockReset();
+    });
   });
 
   describe('updateServiceUserProfilesPartnerAccess', () => {
-    it('should update crisp and mailchimp profile partner access data', async () => {
+    it('should update Front Chat and mailchimp profile partner access data', async () => {
       await service.updateServiceUserProfilesPartnerAccess(
         [mockPartnerAccessEntity],
         mockUserEntity.email,
@@ -329,14 +425,7 @@ describe('Service user profiles', () => {
 
       const partnerString = mockPartnerAccessEntity.partner.name.toLowerCase();
 
-      expect(mockCrispService.updateCrispProfileBase).toHaveBeenCalledWith(
-        {
-          segments: [partnerString],
-        },
-        mockUserEntity.email,
-      );
-
-      expect(mockCrispService.updateCrispPeopleData).toHaveBeenCalledWith(
+      expect(mockFrontChatService.updateContactCustomFields).toHaveBeenCalledWith(
         {
           partners: partnerString,
           feature_live_chat: mockPartnerAccessEntity.featureLiveChat,
@@ -361,20 +450,13 @@ describe('Service user profiles', () => {
       );
     });
 
-    it('should update crisp and mailchimp profile multiple partner accesses data', async () => {
+    it('should update Front Chat and mailchimp profile multiple partner accesses data', async () => {
       const partnerAccesses = [mockPartnerAccessEntity, mockAltPartnerAccessEntity];
       await service.updateServiceUserProfilesPartnerAccess(partnerAccesses, mockUserEntity.email);
 
       const partnerString = service.serializePartnersString(partnerAccesses);
 
-      expect(mockCrispService.updateCrispProfileBase).toHaveBeenCalledWith(
-        {
-          segments: partnerString.split('; '),
-        },
-        mockUserEntity.email,
-      );
-
-      expect(mockCrispService.updateCrispPeopleData).toHaveBeenCalledWith(
+      expect(mockFrontChatService.updateContactCustomFields).toHaveBeenCalledWith(
         {
           partners: partnerString,
           feature_live_chat: true,
@@ -400,8 +482,8 @@ describe('Service user profiles', () => {
     });
 
     it('should not propagate external api call errors', async () => {
-      const mocked = jest.mocked(mockCrispService.updateCrispPeopleData);
-      mocked.mockRejectedValue(new Error('Crisp API call failed'));
+      const mocked = jest.mocked(mockFrontChatService.updateContactCustomFields);
+      mocked.mockRejectedValue(new Error('Front Chat API call failed'));
       await expect(
         service.updateServiceUserProfilesPartnerAccess(
           [mockPartnerAccessEntity],
@@ -413,7 +495,7 @@ describe('Service user profiles', () => {
   });
 
   describe('updateServiceUserProfilesTherapy', () => {
-    it('should update crisp and mailchimp profile for first therapy booking', async () => {
+    it('should update Front Chat and mailchimp profile for first therapy booking', async () => {
       const therapySession = mockAltPartnerAccessEntity.therapySession[1];
       const partnerAccesses = [
         {
@@ -430,7 +512,7 @@ describe('Service user profiles', () => {
       const nextTherapySessionAt = therapySession.startDateTime.toISOString();
       const lastTherapySessionAt = '';
 
-      expect(mockCrispService.updateCrispPeopleData).toHaveBeenCalledWith(
+      expect(mockFrontChatService.updateContactCustomFields).toHaveBeenCalledWith(
         {
           therapy_sessions_remaining: 5,
           therapy_sessions_redeemed: 1,
@@ -455,7 +537,7 @@ describe('Service user profiles', () => {
       );
     });
 
-    it('should update crisp and mailchimp profile combined therapy data for new booking', async () => {
+    it('should update Front Chat and mailchimp profile combined therapy data for new booking', async () => {
       const partnerAccesses = [mockPartnerAccessEntity, mockAltPartnerAccessEntity];
 
       await service.updateServiceUserProfilesTherapy(partnerAccesses, mockUserEntity.email);
@@ -467,7 +549,7 @@ describe('Service user profiles', () => {
       const lastTherapySessionAt =
         mockAltPartnerAccessEntity.therapySession[0].startDateTime.toISOString();
 
-      expect(mockCrispService.updateCrispPeopleData).toHaveBeenCalledWith(
+      expect(mockFrontChatService.updateContactCustomFields).toHaveBeenCalledWith(
         {
           therapy_sessions_remaining: 9,
           therapy_sessions_redeemed: 3,
@@ -492,7 +574,7 @@ describe('Service user profiles', () => {
       );
     });
 
-    it('should update crisp and mailchimp profile combined therapy data for updated booking', async () => {
+    it('should update Front Chat and mailchimp profile combined therapy data for updated booking', async () => {
       const partnerAccesses = [mockPartnerAccessEntity, mockAltPartnerAccessEntity];
 
       await service.updateServiceUserProfilesTherapy(partnerAccesses, mockUserEntity.email);
@@ -504,7 +586,7 @@ describe('Service user profiles', () => {
       const lastTherapySessionAt =
         mockAltPartnerAccessEntity.therapySession[0].startDateTime.toISOString();
 
-      expect(mockCrispService.updateCrispPeopleData).toHaveBeenCalledWith(
+      expect(mockFrontChatService.updateContactCustomFields).toHaveBeenCalledWith(
         {
           therapy_sessions_remaining: 9,
           therapy_sessions_redeemed: 3,
@@ -529,7 +611,7 @@ describe('Service user profiles', () => {
       );
     });
 
-    it('should update crisp and mailchimp profile combined therapy data for cancelled booking', async () => {
+    it('should update Front Chat and mailchimp profile combined therapy data for cancelled booking', async () => {
       mockAltPartnerAccessEntity.therapySession[1].action =
         SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING;
       const partnerAccesses = [mockPartnerAccessEntity, mockAltPartnerAccessEntity];
@@ -541,7 +623,7 @@ describe('Service user profiles', () => {
       const lastTherapySessionAt =
         mockAltPartnerAccessEntity.therapySession[0].startDateTime.toISOString();
 
-      expect(mockCrispService.updateCrispPeopleData).toHaveBeenCalledWith(
+      expect(mockFrontChatService.updateContactCustomFields).toHaveBeenCalledWith(
         {
           therapy_sessions_remaining: 9,
           therapy_sessions_redeemed: 3,
@@ -580,10 +662,10 @@ describe('Service user profiles', () => {
   });
 
   describe('updateServiceUserProfilesCourse', () => {
-    it('should update crisp and mailchimp profile course data', async () => {
+    it('should update Front Chat and mailchimp profile course data', async () => {
       await service.updateServiceUserProfilesCourse(mockCourseUserEntity, mockUserEntity.email);
 
-      expect(mockCrispService.updateCrispPeopleData).toHaveBeenCalledWith(
+      expect(mockFrontChatService.updateContactCustomFields).toHaveBeenCalledWith(
         {
           course_cn: 'Started',
           course_cn_sessions: 'WAB:C',
@@ -603,8 +685,8 @@ describe('Service user profiles', () => {
     });
 
     it('should not propagate external api call errors', async () => {
-      const mocked = jest.mocked(mockCrispService.updateCrispPeopleData);
-      mocked.mockRejectedValue(new Error('Crisp API call failed'));
+      const mocked = jest.mocked(mockFrontChatService.updateContactCustomFields);
+      mocked.mockRejectedValue(new Error('Front Chat API call failed'));
       await expect(
         service.updateServiceUserProfilesCourse(mockCourseUserEntity, mockUserEntity.email),
       ).resolves.not.toThrow();

@@ -1,10 +1,9 @@
-/* eslint-disable */
 import { createMock, DeepMocked } from '@golevelup/ts-jest';
 import { HttpException, HttpStatus } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { createMailchimpProfile, updateMailchimpProfile } from 'src/api/mailchimp/mailchimp-api';
-import { CrispService } from 'src/crisp/crisp.service';
+import { FrontChatService } from 'src/front-chat/front-chat.service';
 import { EventLogEntity } from 'src/entities/event-log.entity';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { PartnerEntity } from 'src/entities/partner.entity';
@@ -60,7 +59,7 @@ const updateUserDto: Partial<UpdateUserDto> = {
 
 const mockSubscriptionUserServiceMethods = {};
 const mockTherapySessionServiceMethods = {};
-const mockCrispServiceMethods = {};
+const mockFrontChatServiceMethods = {};
 
 jest.mock('src/api/mailchimp/mailchimp-api');
 
@@ -71,7 +70,7 @@ describe('UserService', () => {
   let mockPartnerAccessService: DeepMocked<PartnerAccessService>;
   let mockSubscriptionUserService: DeepMocked<SubscriptionUserService>;
   let mockTherapySessionService: DeepMocked<TherapySessionService>;
-  let mockCrispService: DeepMocked<CrispService>;
+  let mockFrontChatService: DeepMocked<FrontChatService>;
   let mockEventLoggerService: DeepMocked<EventLoggerService>;
   let mockEventLogRepository: DeepMocked<Repository<EventLogEntity>>;
 
@@ -83,7 +82,7 @@ describe('UserService', () => {
       mockSubscriptionUserServiceMethods,
     );
     mockTherapySessionService = createMock<TherapySessionService>(mockTherapySessionServiceMethods);
-    mockCrispService = createMock<CrispService>(mockCrispServiceMethods);
+    mockFrontChatService = createMock<FrontChatService>(mockFrontChatServiceMethods);
     mockEventLoggerService = createMock<EventLoggerService>();
     mockEventLogRepository = createMock<Repository<EventLogEntity>>(mockEventLogRepository);
 
@@ -117,7 +116,7 @@ describe('UserService', () => {
           provide: getRepositoryToken(EventLogEntity),
           useValue: mockEventLogRepository,
         },
-        { provide: CrispService, useValue: mockCrispService },
+        { provide: FrontChatService, useValue: mockFrontChatService },
         { provide: EventLoggerService, useValue: mockEventLoggerService },
       ],
     }).compile();
@@ -148,12 +147,11 @@ describe('UserService', () => {
       expect(user.partnerAccesses).toBeNull();
 
       // Test services user profiles are created
-      expect(mockCrispService.createCrispProfile).toHaveBeenCalledWith({
+      expect(mockFrontChatService.createContact).toHaveBeenCalledWith({
         email: user.user.email,
-        person: { nickname: user.user.name, locales: [user.user.signUpLanguage] },
-        segments: ['public'],
+        name: user.user.name,
       });
-      expect(mockCrispService.updateCrispPeopleData).toHaveBeenCalled();
+      expect(mockFrontChatService.updateContactCustomFields).toHaveBeenCalled();
       expect(createMailchimpProfile).toHaveBeenCalled();
     });
 
@@ -181,12 +179,11 @@ describe('UserService', () => {
       ]);
 
       // Test services user profiles are created
-      expect(mockCrispService.createCrispProfile).toHaveBeenCalledWith({
+      expect(mockFrontChatService.createContact).toHaveBeenCalledWith({
         email: user.user.email,
-        person: { nickname: 'name', locales: ['en'] },
-        segments: ['bumble'],
+        name: 'name',
       });
-      expect(mockCrispService.updateCrispPeopleData).toHaveBeenCalledWith(
+      expect(mockFrontChatService.updateContactCustomFields).toHaveBeenCalledWith(
         {
           signed_up_at: user.user.createdAt,
           last_active_at: (user.user.lastActiveAt as Date).toISOString(),
@@ -251,9 +248,9 @@ describe('UserService', () => {
       ]);
     });
 
-    it('should not fail create on crisp api call errors', async () => {
-      const mocked = jest.mocked(mockCrispService.createCrispProfile);
-      mocked.mockRejectedValue(new Error('Crisp API call failed'));
+    it('should not fail create on Front Chat api call errors', async () => {
+      const mocked = jest.mocked(mockFrontChatService.createContact);
+      mocked.mockRejectedValue(new Error('Front Chat API call failed'));
 
       const user = await service.createUser(createUserDto);
 
@@ -335,9 +332,9 @@ describe('UserService', () => {
       );
     });
 
-    it('should not fail update on crisp api call errors', async () => {
-      const mocked = jest.mocked(mockCrispService.updateCrispPeopleData);
-      mocked.mockRejectedValue(new Error('Crisp API call failed'));
+    it('should not fail update on Front Chat api call errors', async () => {
+      const mocked = jest.mocked(mockFrontChatService.updateContactCustomFields);
+      mocked.mockRejectedValue(new Error('Front Chat API call failed'));
 
       const user = await service.updateUser(updateUserDto, mockUserEntity.id);
       await new Promise(process.nextTick); // wait for async funcs to resolve
@@ -569,7 +566,6 @@ describe('UserService', () => {
       mockUserEntity.signUpLanguage = 'en';
       mockUserEntity.emailRemindersFrequency = EMAIL_REMINDERS_FREQUENCY.TWO_MONTHS;
       mockUserEntity.firebaseUid = '123';
-      mockUserEntity.crispTokenId = '123';
       mockUserEntity.serviceEmailsPermission = true;
       mockUserEntity.contactPermission = true;
       mockUserEntity.deletedAt = null;
@@ -594,7 +590,6 @@ describe('UserService', () => {
           signUpLanguage: 'en',
           emailRemindersFrequency: 'TWO_MONTHS',
           firebaseUid: '123',
-          crispTokenId: '123',
           deletedAt: null,
           contactPermission: true,
           serviceEmailsPermission: true,

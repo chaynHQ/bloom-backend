@@ -15,7 +15,8 @@ export enum MAILCHIMP_MERGE_FIELD_TYPES {
 }
 
 export enum MAILCHIMP_CUSTOM_EVENTS {
-  CRISP_MESSAGE_RECEIVED = 'CRISP_MESSAGE_RECEIVED',
+  CHAT_MESSAGE_RECEIVED = 'CRISP_MESSAGE_RECEIVED', // Mailchimp event name kept for backwards compatibility
+  FRONT_MESSAGE_UNREAD = 'FRONT_MESSAGE_UNREAD',
 }
 
 export interface ListMemberCustomFields {
@@ -47,6 +48,9 @@ export interface ListMemberCustomFields {
   C_MA_S?: string;
   C_CB?: string;
   C_CB_S?: string;
+  CHATLSTMTX?: string;
+  CHATLSTMRX?: string;
+  CHATMSGRD?: string;
 }
 
 export interface ListMember {

@@ -188,7 +188,6 @@ export const mockUserEntity: UserEntity = {
   partnerAccess: [],
   partnerAdmin: null,
   courseUser: [],
-  crispTokenId: '123',
   firebaseUid: '123',
   contactPermission: true,
   serviceEmailsPermission: true,

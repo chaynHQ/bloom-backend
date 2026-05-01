@@ -21,6 +21,7 @@ import { SessionEntity } from './entities/session.entity';
 import { SubscriptionUserEntity } from './entities/subscription-user.entity';
 import { SubscriptionEntity } from './entities/subscription.entity';
 import { TherapySessionEntity } from './entities/therapy-session.entity';
+import { ChatUserEntity } from './entities/chat-user.entity';
 import { UserEntity } from './entities/user.entity';
 import { bloomBackend1637704119795 } from './migrations/1637704119795-bloom_backend';
 import { bloomBackend1638992987868 } from './migrations/1638992987868-bloom_backend';
@@ -59,6 +60,7 @@ import { BloomBackend1743510885507 } from './migrations/1743510885507-bloom-back
 import { BloomBackend1744450013565 } from './migrations/1744450013565-bloom-backend';
 import { BloomBackend1748540025892 } from './migrations/1748540025892-bloom-backend';
 import { BloomBackend1756987770157 } from './migrations/1756987770157-bloom-backend';
+import { BloomBackend1757000000000 } from './migrations/1757000000000-bloom-backend';
 import { BloomBackend1773245874548 } from './migrations/1773245874548-bloom-backend';
 import { BloomBackend1776686083659 } from './migrations/1776686083659-bloom-backend';
 import { BloomBackend1777046400000 } from './migrations/1777046400000-bloom-backend';
@@ -85,6 +87,7 @@ export const dataSourceOptions = {
   logging: !isProduction,
   entities: [
     UserEntity,
+    ChatUserEntity,
     PartnerEntity,
     PartnerAdminEntity,
     PartnerAccessEntity,
@@ -143,6 +146,7 @@ export const dataSourceOptions = {
     BloomBackend1744450013565,
     BloomBackend1748540025892,
     BloomBackend1756987770157,
+    BloomBackend1757000000000,
     BloomBackend1773245874548,
     BloomBackend1776686083659,
     BloomBackend1777046400000,

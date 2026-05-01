@@ -14,6 +14,7 @@ jobs:
   build:
     runs-on: ubuntu-24.04
     env:
+      FRONTEND_APP_URL: ${{ secrets.FRONTEND_APP_URL }}
       SIMPLYBOOK_CREDENTIALS: '{"login": "login"}'
       STORYBLOK_PUBLIC_TOKEN: ${{ secrets.STORYBLOK_PUBLIC_TOKEN }}
       STORYBLOK_WEBHOOK_SECRET: ${{ secrets.STORYBLOK_WEBHOOK_SECRET }}

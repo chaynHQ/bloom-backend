@@ -5,31 +5,14 @@ import 'reflect-metadata';
 import { AppModule } from './app.module';
 import { Logger } from './logger/logger';
 import { LoggingInterceptor } from './logger/logging.interceptor';
+import { getCorsOrigin } from './utils/cors';
 import { ExceptionsFilter } from './utils/exceptions.filter';
-
-function getCorsOrigin(): (string | RegExp)[] {
-  const frontendAppUrl = process.env.FRONTEND_APP_URL;
-
-  if (!frontendAppUrl) {
-    throw new Error('FRONTEND_APP_URL environment variable must be set');
-  }
-
-  const allowedOrigins: (string | RegExp)[] = [frontendAppUrl.replace(/\/+$/, '')];
-
-  if (process.env.NODE_ENV !== 'production') {
-    // Allow Vercel preview branch URLs in non-production environments
-    allowedOrigins.push(/^https:\/\/bloom-frontend-[\w-]+-chaynhq\.vercel\.app$/);
-  }
-
-  return allowedOrigins;
-}
 
 async function bootstrap() {
   const PORT = process.env.PORT || 35001;
-  const isDevelopment = process.env.NODE_ENV === 'development';
   const app = await NestFactory.create(AppModule, {
     cors: {
-      origin: isDevelopment ? true : getCorsOrigin(),
+      origin: getCorsOrigin(),
       methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
       credentials: true,
     },

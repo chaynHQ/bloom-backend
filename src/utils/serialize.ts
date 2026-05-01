@@ -115,7 +115,6 @@ export const formatUserObject = (userObject: UserEntity): GetUserDto => {
       firebaseUid: userObject.firebaseUid,
       isActive: userObject.isActive,
       lastActiveAt: userObject.lastActiveAt,
-      crispTokenId: userObject.crispTokenId,
       isSuperAdmin: userObject.isSuperAdmin,
       signUpLanguage: userObject.signUpLanguage,
       emailRemindersFrequency: userObject.emailRemindersFrequency,

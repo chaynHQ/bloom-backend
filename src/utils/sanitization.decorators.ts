@@ -13,7 +13,6 @@ import {
 import * as validator from 'validator';
 
 // DOMPurify setup for Node.js environment
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let DOMPurify: any;
 try {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
