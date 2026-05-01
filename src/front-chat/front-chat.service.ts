@@ -1,3 +1,4 @@
+import * as https from 'https';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ChatUserEntity } from 'src/entities/chat-user.entity';
@@ -20,7 +21,9 @@ interface FrontChatUser {
 export interface ChatHistoryMessage {
   id: string;
   direction: 'user' | 'agent';
+  kind?: 'image' | 'voice';
   text: string;
+  attachmentUrl?: string;
   authorName?: string;
   createdAt: number;
 }
@@ -37,6 +40,12 @@ interface FrontApiAuthor {
   last_name?: string;
 }
 
+interface FrontApiAttachment {
+  url: string;
+  filename?: string;
+  content_type?: string;
+}
+
 interface FrontApiMessage {
   id: string;
   is_inbound?: boolean;
@@ -44,6 +53,7 @@ interface FrontApiMessage {
   body?: string;
   text?: string;
   author?: FrontApiAuthor | null;
+  attachments?: FrontApiAttachment[];
 }
 
 interface FrontApiMessageLinks {
@@ -315,15 +325,39 @@ export class FrontChatService {
       }
 
       for (const m of page._results ?? []) {
+        const attachments = m.attachments ?? [];
+        const imageAttachment = attachments.find(
+          (a) => a.content_type?.startsWith('image/') && a.url,
+        );
+        const audioAttachment = !imageAttachment
+          ? attachments.find((a) => a.content_type?.startsWith('audio/') && a.url)
+          : undefined;
         const text = m.text ?? this.stripHtml(m.body ?? '');
-        if (!text) continue;
-        allMessages.push({
+        if (!text && !imageAttachment && !audioAttachment) continue;
+
+        const histMsg: ChatHistoryMessage = {
           id: m.id,
           direction: m.is_inbound ? 'user' : 'agent',
-          text,
+          // Images: show filename. Voice: use message body text ("Voice note") for consistency
+          // with fresh messages. Fallback to plain text for everything else.
+          text: imageAttachment
+            ? (imageAttachment.filename ?? 'image')
+            : audioAttachment
+              ? (text || 'Voice note')
+              : text,
           authorName: this.formatAuthorName(m.author ?? undefined),
           createdAt: (m.created_at ?? Date.now() / 1000) * 1000,
-        });
+        };
+
+        if (imageAttachment) {
+          histMsg.kind = 'image';
+          histMsg.attachmentUrl = `/front-chat/attachment-proxy?url=${encodeURIComponent(imageAttachment.url)}`;
+        } else if (audioAttachment) {
+          histMsg.kind = 'voice';
+          histMsg.attachmentUrl = `/front-chat/attachment-proxy?url=${encodeURIComponent(audioAttachment.url)}`;
+        }
+
+        allMessages.push(histMsg);
       }
 
       const nextUrl = page._pagination?.next;
@@ -473,6 +507,73 @@ export class FrontChatService {
     // Front API does not support searching contacts by email prefix.
     // Cypress test contacts are cleaned up individually via deleteContact during test teardown.
     logger.log('Cypress Front Chat contact cleanup is handled by individual test teardown');
+  }
+
+  private isValidFrontUrl(url: string): boolean {
+    try {
+      const parsed = new URL(url);
+      return (
+        parsed.protocol === 'https:' &&
+        (parsed.hostname === 'api2.frontapp.com' || parsed.hostname.endsWith('.frontapp.com'))
+      );
+    } catch {
+      return false;
+    }
+  }
+
+  // Fetches an attachment URL with auth but without following redirects, so we can
+  // capture the Location header and fetch the CDN URL separately without auth.
+  // Front's download URLs redirect to S3 presigned URLs which reject an Authorization
+  // header alongside their own query-string signature.
+  private frontAttachmentRequest(url: string): Promise<{
+    statusCode: number;
+    location?: string;
+    buffer?: Buffer;
+    contentType?: string;
+  }> {
+    return new Promise((resolve, reject) => {
+      const req = https.get(url, { headers: { Authorization: `Bearer ${frontChatApiToken}` } }, (res) => {
+        const statusCode = res.statusCode ?? 0;
+        if (statusCode >= 300 && statusCode < 400) {
+          res.resume();
+          return resolve({ statusCode, location: res.headers.location as string | undefined });
+        }
+        const chunks: Buffer[] = [];
+        res.on('data', (chunk: Buffer) => chunks.push(chunk));
+        res.on('end', () =>
+          resolve({
+            statusCode,
+            buffer: Buffer.concat(chunks),
+            contentType: res.headers['content-type'] as string | undefined,
+          }),
+        );
+        res.on('error', reject);
+      });
+      req.on('error', reject);
+    });
+  }
+
+  async fetchAttachment(url: string): Promise<{ buffer: Buffer; contentType: string }> {
+    if (!this.isValidFrontUrl(url)) {
+      throw new Error('Invalid attachment URL');
+    }
+
+    const initial = await this.frontAttachmentRequest(url);
+
+    if (initial.statusCode >= 200 && initial.statusCode < 300 && initial.buffer) {
+      return { buffer: initial.buffer, contentType: initial.contentType ?? 'application/octet-stream' };
+    }
+
+    if (initial.statusCode >= 300 && initial.statusCode < 400 && initial.location) {
+      const cdnResponse = await fetch(initial.location);
+      if (cdnResponse.ok) {
+        const contentType = cdnResponse.headers.get('content-type') ?? 'application/octet-stream';
+        return { buffer: Buffer.from(await cdnResponse.arrayBuffer()), contentType };
+      }
+      throw new Error(`CDN fetch failed (${cdnResponse.status})`);
+    }
+
+    throw new Error(`Front attachment fetch failed (${initial.statusCode})`);
   }
 
   // ── Private helpers ─────────────────────────────────────────────────────────

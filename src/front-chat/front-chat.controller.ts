@@ -4,13 +4,17 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  NotFoundException,
   Patch,
   Post,
+  Query,
   Request,
+  Res,
   UploadedFile,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
+import { Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiTags } from '@nestjs/swagger';
 import { memoryStorage } from 'multer';
@@ -80,6 +84,35 @@ export class FrontChatController {
           .catch(() => {});
       }
     }).catch(() => {});
+  }
+
+  @Get('attachment-proxy')
+  @ApiBearerAuth('access-token')
+  @UseGuards(FirebaseAuthGuard)
+  async proxyAttachment(@Query('url') url: string, @Res() res: Response): Promise<void> {
+    let parsed: URL;
+    try {
+      parsed = new URL(url ?? '');
+    } catch {
+      throw new BadRequestException('Invalid attachment URL');
+    }
+    if (
+      parsed.protocol !== 'https:' ||
+      (parsed.hostname !== 'api2.frontapp.com' && !parsed.hostname.endsWith('.frontapp.com'))
+    ) {
+      throw new BadRequestException('Invalid attachment URL');
+    }
+    let buffer: Buffer;
+    let contentType: string;
+    try {
+      ({ buffer, contentType } = await this.frontChatService.fetchAttachment(url));
+    } catch {
+      throw new NotFoundException('Attachment not found');
+    }
+    res.set('Content-Type', contentType);
+    res.set('Cache-Control', 'private, max-age=3600');
+    res.set('Content-Disposition', 'inline');
+    res.send(buffer);
   }
 
   @Get('messages')

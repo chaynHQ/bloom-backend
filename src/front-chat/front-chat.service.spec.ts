@@ -594,6 +594,165 @@ describe('FrontChatService', () => {
       const result = await service.getConversationHistory(user);
       expect(result).toEqual([]);
     });
+
+    it('maps image attachment messages with kind=image and an attachmentUrl proxy path', async () => {
+      mockChatUserRepository.findOneBy.mockResolvedValueOnce(
+        buildChatUser({ frontConversationId: 'cnv_abc' }),
+      );
+      const now = Math.floor(Date.now() / 1000);
+      const attachmentUrl = 'https://api2.frontapp.com/download/att_1/photo.jpg';
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          _results: [
+            {
+              id: 'msg_1',
+              is_inbound: true,
+              body: 'Attachment',
+              text: 'Attachment',
+              created_at: now,
+              attachments: [{ url: attachmentUrl, filename: 'photo.jpg', content_type: 'image/jpeg' }],
+            },
+          ],
+          _pagination: {},
+        }),
+      });
+
+      const messages = await service.getConversationHistory(user);
+
+      expect(messages).toHaveLength(1);
+      expect(messages[0]).toMatchObject({
+        id: 'msg_1',
+        kind: 'image',
+        text: 'photo.jpg',
+        attachmentUrl: `/front-chat/attachment-proxy?url=${encodeURIComponent(attachmentUrl)}`,
+      });
+    });
+
+    it('skips messages with no text and no image attachment', async () => {
+      mockChatUserRepository.findOneBy.mockResolvedValueOnce(
+        buildChatUser({ frontConversationId: 'cnv_abc' }),
+      );
+      const now = Math.floor(Date.now() / 1000);
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          _results: [
+            { id: 'msg_1', is_inbound: true, body: '', text: '', created_at: now },
+          ],
+          _pagination: {},
+        }),
+      });
+
+      const messages = await service.getConversationHistory(user);
+      expect(messages).toHaveLength(0);
+    });
+  });
+
+  // ── fetchAttachment ──────────────────────────────────────────────────────────
+
+  describe('fetchAttachment', () => {
+    it('returns buffer directly when Front responds with 200 (no redirect)', async () => {
+      const url = 'https://chayneb55.api.frontapp.com/messages/msg_abc/download/fil_xyz';
+      jest.spyOn(service as any, 'frontAttachmentRequest').mockResolvedValueOnce({
+        statusCode: 200,
+        buffer: Buffer.from([1, 2, 3]),
+        contentType: 'image/jpeg',
+      });
+
+      const result = await service.fetchAttachment(url);
+
+      expect(result.contentType).toBe('image/jpeg');
+      expect(result.buffer).toBeInstanceOf(Buffer);
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
+
+    it('fetches CDN Location URL without auth when Front returns a redirect', async () => {
+      const url = 'https://chayneb55.api.frontapp.com/messages/msg_abc/download/fil_xyz';
+      const cdnUrl = 'https://s3.amazonaws.com/bucket/file?X-Amz-Signature=abc';
+
+      jest.spyOn(service as any, 'frontAttachmentRequest').mockResolvedValueOnce({
+        statusCode: 302,
+        location: cdnUrl,
+      });
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        headers: { get: () => 'audio/webm' },
+        arrayBuffer: async () => new ArrayBuffer(0),
+      });
+
+      const result = await service.fetchAttachment(url);
+
+      expect(mockFetch.mock.calls[0][0]).toBe(cdnUrl);
+      expect(result.contentType).toBe('audio/webm');
+    });
+
+    it('throws when Front returns non-ok and non-redirect', async () => {
+      const url = 'https://chayneb55.api.frontapp.com/messages/msg_abc/download/fil_xyz';
+      jest.spyOn(service as any, 'frontAttachmentRequest').mockResolvedValueOnce({
+        statusCode: 403,
+      });
+
+      await expect(service.fetchAttachment(url)).rejects.toThrow('Front attachment fetch failed (403)');
+    });
+
+    it('throws when CDN returns non-ok status', async () => {
+      const url = 'https://chayneb55.api.frontapp.com/messages/msg_abc/download/fil_xyz';
+      jest.spyOn(service as any, 'frontAttachmentRequest').mockResolvedValueOnce({
+        statusCode: 302,
+        location: 'https://s3.amazonaws.com/bucket/file?X-Amz-Signature=abc',
+      });
+      mockFetch.mockResolvedValueOnce({ ok: false, status: 403 });
+
+      await expect(service.fetchAttachment(url)).rejects.toThrow('CDN fetch failed (403)');
+    });
+
+    it('throws for non-frontapp URLs', async () => {
+      await expect(service.fetchAttachment('https://evil.com/image.jpg')).rejects.toThrow(
+        'Invalid attachment URL',
+      );
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('getConversationHistory — audio attachments', () => {
+    const user = { id: 'user-1', email: 'user@example.com', name: 'Alex' };
+
+    it('maps audio attachment messages with kind=voice and an attachmentUrl proxy path', async () => {
+      mockChatUserRepository.findOneBy.mockResolvedValueOnce(
+        buildChatUser({ frontConversationId: 'cnv_abc' }),
+      );
+      const now = Math.floor(Date.now() / 1000);
+      const audioUrl = 'https://chayneb55.api.frontapp.com/messages/msg_1/download/fil_audio';
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          _results: [
+            {
+              id: 'msg_1',
+              is_inbound: true,
+              body: 'Voice note',
+              text: 'Voice note',
+              created_at: now,
+              attachments: [{ url: audioUrl, filename: 'voice-note.webm', content_type: 'audio/webm' }],
+            },
+          ],
+          _pagination: {},
+        }),
+      });
+
+      const messages = await service.getConversationHistory(user);
+
+      expect(messages).toHaveLength(1);
+      expect(messages[0]).toMatchObject({
+        kind: 'voice',
+        text: 'Voice note',
+        attachmentUrl: `/front-chat/attachment-proxy?url=${encodeURIComponent(audioUrl)}`,
+      });
+    });
   });
 
   // ── sendChannelTextMessage ───────────────────────────────────────────────────
