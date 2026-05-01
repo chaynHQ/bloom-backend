@@ -5,6 +5,7 @@ import {
   isProduction,
   slackBloomUsersWebhookUrl,
   slackDeletedUsersWebhookUrl,
+  slackReportingWebhookUrl,
   slackWebhookUrl,
 } from 'src/utils/constants';
 import apiCall from '../apiCalls';
@@ -68,6 +69,38 @@ export class SlackMessageClient {
       return response;
     } catch (err) {
       this.logger.error(`Unable to sendMessageToDeletedUsersSlackChannel: ${err?.message || 'unknown error'}`);
+      return err;
+    }
+  }
+
+  /**
+   * Unlike the other Slack channels above (which gate on `isProduction` to
+   * avoid accidentally messaging real user-facing channels from
+   * dev/staging), the reporting channel is explicitly operational — it's
+   * where the reporting digest lands and staging runs need to land there
+   * too so scheduled-run tests are end-to-end visible. No environment gate.
+   * The apiCall will simply 4xx/5xx if `slackReportingWebhookUrl` is
+   * missing locally, caught below.
+   */
+  public async sendMessageToReportingChannel(
+    blocks: unknown[],
+    opts: { fallbackText?: string } = {},
+  ): Promise<AxiosResponse | string> {
+    try {
+      const response = await apiCall({
+        url: slackReportingWebhookUrl,
+        type: 'post',
+        data: {
+          text: opts.fallbackText ?? 'Bloom reporting digest',
+          blocks,
+        },
+      });
+      this.logger.log('Message sent to slack Reporting Channel');
+      return response;
+    } catch (err) {
+      this.logger.error(
+        `Unable to sendMessageToReportingChannel: ${err?.message || 'unknown error'}`,
+      );
       return err;
     }
   }

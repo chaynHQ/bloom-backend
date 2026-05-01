@@ -1,0 +1,496 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`buildReportBlocks renders a full weekly digest topic-sectioned (snapshot) 1`] = `
+[
+  {
+    "text": {
+      "text": "Bloom weekly digest — 2026-W16 (2026-04-12 → 2026-04-19)",
+      "type": "plain_text",
+    },
+    "type": "header",
+  },
+  {
+    "elements": [
+      {
+        "text": "trigger: *manual* · tz: Europe/London · run: run-123",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "_DB = source of truth · Analytics events supplement where the DB has no equivalent_",
+        "type": "mrkdwn",
+      },
+    ],
+    "type": "context",
+  },
+  {
+    "type": "divider",
+  },
+  {
+    "text": {
+      "text": "*:sparkles: Headline* _(top-line across the period)_",
+      "type": "mrkdwn",
+    },
+    "type": "section",
+  },
+  {
+    "fields": [
+      {
+        "text": "*New users*
+12",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Courses started*
+8",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Courses completed*
+3",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Sessions started*
+24",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Sessions completed*
+9",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Resources started*
+14",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Resources completed*
+7",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Therapy bookings made*
+5",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Therapy scheduled*
+7",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Active users*
+1,234",
+        "type": "mrkdwn",
+      },
+    ],
+    "type": "section",
+  },
+  {
+    "type": "divider",
+  },
+  {
+    "text": {
+      "text": "*:bust_in_silhouette: Users & accounts*",
+      "type": "mrkdwn",
+    },
+    "type": "section",
+  },
+  {
+    "fields": [
+      {
+        "text": "*New users*
+12",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Deleted users*
+1",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Partner access grants*
+4",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Partner access activations*
+2",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Activation rate (%)*
+23",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Partner activation rate (%)*
+41",
+        "type": "mrkdwn",
+      },
+    ],
+    "type": "section",
+  },
+  {
+    "fields": [
+      {
+        "text": "*Active users*
+1,234",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*New users (GA)*
+210",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Sessions*
+1,890",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Pageviews*
+4,212",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Avg session (s)*
+123.4",
+        "type": "mrkdwn",
+      },
+    ],
+    "text": {
+      "text": "_Analytics: traffic overview_",
+      "type": "mrkdwn",
+    },
+    "type": "section",
+  },
+  {
+    "text": {
+      "text": "*Breakdowns*
+• New users by partner (DB): Bumble (8) · Public (no partner) (4)
+• New users by signup language (DB): en (10)
+• Partner-access grants by partner (DB): Bumble (4)
+• Partner-access activations by partner (DB): Bumble (2)
+
+*Flows (Analytics events)*
+• *Signup flow* — Registrations 28 → Survey completed 0 (0%)",
+      "type": "mrkdwn",
+    },
+    "type": "section",
+  },
+  {
+    "fields": [
+      {
+        "text": "*Header login clicks*
+0",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Logins*
+142",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Logouts*
+0",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Registrations*
+28",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Reset-password link clicks*
+0",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Password resets*
+0",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Create-account link*
+0",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Signup survey*
+completed (0) · skipped (0)",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*About you form*
+viewed (0) · demographics submitted (0) · SETA submitted (0)",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Apply-a-code page viewed*
+0",
+        "type": "mrkdwn",
+      },
+    ],
+    "text": {
+      "text": "_Auth & onboarding_",
+      "type": "mrkdwn",
+    },
+    "type": "section",
+  },
+  {
+    "fields": [
+      {
+        "text": "*Partner access codes*
+redeemed (0) · invalid (client) (0) · new partner assigned (0) · invalid (server) (0)",
+        "type": "mrkdwn",
+      },
+    ],
+    "type": "section",
+  },
+  {
+    "type": "divider",
+  },
+  {
+    "text": {
+      "text": "*:books: Courses & sessions*",
+      "type": "mrkdwn",
+    },
+    "type": "section",
+  },
+  {
+    "fields": [
+      {
+        "text": "*Courses started*
+8",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Courses completed*
+3",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Sessions started*
+24",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Sessions completed*
+9",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Session feedback*
+5",
+        "type": "mrkdwn",
+      },
+    ],
+    "type": "section",
+  },
+  {
+    "text": {
+      "text": "*Courses & sessions (DB)*
+• *Foundations* — courses: 6 started · 2 completed · sessions: 14 started · 8 completed
+    ↳ Intro (9 started · 5 completed) · Reflection (5 started · 3 completed)
+
+*Breakdowns*
+• Session feedback by tag (DB): useful (3)
+
+*Flows (Analytics events)*
+• *Session flow* — Viewed 56 → Started 0 (0%) → Completed 0 (0%) → Feedback 0 (0%)",
+      "type": "mrkdwn",
+    },
+    "type": "section",
+  },
+  {
+    "fields": [
+      {
+        "text": "*Session viewed*
+56",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Session video*
+started (32) · finished (0)",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Session progression*
+started (0) · completed (0)",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Session transcript*
+opened (0) · closed (0)",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Session feedback (GA)*
+0",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Session chat CTA*
+0",
+        "type": "mrkdwn",
+      },
+    ],
+    "text": {
+      "text": "_Sessions_",
+      "type": "mrkdwn",
+    },
+    "type": "section",
+  },
+  {
+    "type": "divider",
+  },
+  {
+    "text": {
+      "text": "*:headphones: Resources*",
+      "type": "mrkdwn",
+    },
+    "type": "section",
+  },
+  {
+    "fields": [
+      {
+        "text": "*Resources started*
+14",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Resources completed*
+7",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Resource feedback*
+3",
+        "type": "mrkdwn",
+      },
+    ],
+    "type": "section",
+  },
+  {
+    "text": {
+      "text": "*Resources (DB)*
+• *Short videos* — 9 started · 5 completed
+    ↳ Breathing (6 started · 3 completed) · Grounding (3 started · 2 completed)
+
+*Breakdowns*
+• Resource feedback by tag (DB): relatable (3)",
+      "type": "mrkdwn",
+    },
+    "type": "section",
+  },
+  {
+    "type": "divider",
+  },
+  {
+    "text": {
+      "text": "*:speech_balloon: Therapy*",
+      "type": "mrkdwn",
+    },
+    "type": "section",
+  },
+  {
+    "fields": [
+      {
+        "text": "*Therapy bookings made*
+5",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Therapy cancellations*
+1",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Therapy scheduled*
+7",
+        "type": "mrkdwn",
+      },
+    ],
+    "type": "section",
+  },
+  {
+    "text": {
+      "text": "*Breakdowns*
+• Therapy by therapist (DB): Dr Jane Smith (4)
+• Therapy by partner (DB): Bumble (5)",
+      "type": "mrkdwn",
+    },
+    "type": "section",
+  },
+  {
+    "type": "divider",
+  },
+  {
+    "text": {
+      "text": "*:inbox_tray: Communications*",
+      "type": "mrkdwn",
+    },
+    "type": "section",
+  },
+  {
+    "fields": [
+      {
+        "text": "*WhatsApp subscribed*
+6",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*WhatsApp unsubscribed*
+1",
+        "type": "mrkdwn",
+      },
+    ],
+    "type": "section",
+  },
+  {
+    "type": "divider",
+  },
+  {
+    "text": {
+      "text": "*:iphone: App & traffic*",
+      "type": "mrkdwn",
+    },
+    "type": "section",
+  },
+  {
+    "text": {
+      "text": "*Top traffic breakdowns (Analytics events)*
+_Top pages_
+• /courses — 500 (200 users)",
+      "type": "mrkdwn",
+    },
+    "type": "section",
+  },
+  {
+    "type": "divider",
+  },
+  {
+    "text": {
+      "text": "*:rotating_light: Errors*",
+      "type": "mrkdwn",
+    },
+    "type": "section",
+  },
+  {
+    "fields": [
+      {
+        "text": "*Login errors*
+3",
+        "type": "mrkdwn",
+      },
+    ],
+    "text": {
+      "text": "_Errors_",
+      "type": "mrkdwn",
+    },
+    "type": "section",
+  },
+]
+`;
