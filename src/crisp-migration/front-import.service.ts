@@ -307,9 +307,9 @@ export class FrontImportService {
     conversationId: string | undefined,
     inboxId: string,
   ): Promise<string | undefined> {
-    let fileData: { url?: string; name?: string } = {};
+    let fileData: { url?: string; name?: string };
     try {
-      fileData = JSON.parse(msg.content || '{}');
+      fileData = JSON.parse(msg.content || '{}') as { url?: string; name?: string };
     } catch {
       logger.warn(`Could not parse file content for ${externalId}`);
       return undefined;

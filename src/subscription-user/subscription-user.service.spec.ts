@@ -1,4 +1,3 @@
-/* eslint-disable */
 import { DeepMocked, createMock } from '@golevelup/ts-jest/lib/mocks';
 import { Logger } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';

@@ -1,4 +1,3 @@
-/* eslint-disable */
 import { createMock, DeepMocked } from '@golevelup/ts-jest';
 import { HttpException, HttpStatus } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';

@@ -321,6 +321,7 @@ export class FrontChatService {
         if (this.isContactNotFoundError(error)) return allMessages;
         throw new Error(
           `Fetch Front messages failed: ${(error as Error)?.message || 'unknown error'}`,
+          { cause: error },
         );
       }
 

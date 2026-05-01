@@ -50,7 +50,7 @@ export class CrispExportService {
         )) as unknown as CrispConversation[];
       } catch (error) {
         logger.error(`Failed to fetch conversation page ${page}: ${(error as Error).message}`);
-        throw new Error(`Failed to fetch conversations from Crisp: ${(error as Error).message}`);
+        throw new Error(`Failed to fetch conversations from Crisp: ${(error as Error).message}`, { cause: error });
       }
 
       if (!response || response.length === 0) break;
@@ -112,7 +112,7 @@ export class CrispExportService {
       logger.error(
         `Failed to fetch messages for ${sessionId}: ${(error as Error).message}`,
       );
-      throw new Error(`Failed to fetch messages for ${sessionId}: ${(error as Error).message}`);
+      throw new Error(`Failed to fetch messages for ${sessionId}: ${(error as Error).message}`, { cause: error });
     }
 
     logger.log(`Fetched ${messages.length} messages for conversation ${sessionId}`);
@@ -130,7 +130,7 @@ export class CrispExportService {
       )) as unknown as CrispConversation;
     } catch (error) {
       logger.error(`Failed to fetch metadata for ${sessionId}: ${(error as Error).message}`);
-      throw new Error(`Failed to fetch metadata for ${sessionId}: ${(error as Error).message}`);
+      throw new Error(`Failed to fetch metadata for ${sessionId}: ${(error as Error).message}`, { cause: error });
     }
   }
 

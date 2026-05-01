@@ -97,6 +97,9 @@
     "node": "22.x",
     "yarn": "1.x"
   },
+  "resolutions": {
+    "uuid": "^14.0.0"
+  },
   "jest": {
     "moduleFileExtensions": [
       "js",
