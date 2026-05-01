@@ -7,6 +7,7 @@ import { Logger } from 'src/logger/logger';
 import { frontChannelId, frontChatApiToken, frontContactListId } from 'src/utils/constants';
 import { formatAuthorName, stripHtml } from 'src/utils/html';
 import { isCypressTestEmail } from 'src/utils/utils';
+import { formatAuthorName, stripHtml } from 'src/utils/html';
 import { ILike, Repository } from 'typeorm';
 import { FrontChatContactCustomFields, FrontChatContactProfile } from './front-chat.interface';
 
