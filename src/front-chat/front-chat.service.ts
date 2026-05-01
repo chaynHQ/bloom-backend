@@ -6,6 +6,7 @@ import { UserEntity } from 'src/entities/user.entity';
 import { Logger } from 'src/logger/logger';
 import { frontChannelId, frontChatApiToken, frontContactListId } from 'src/utils/constants';
 import { isCypressTestEmail } from 'src/utils/utils';
+import { formatAuthorName, stripHtml } from 'src/utils/html';
 import { ILike, Repository } from 'typeorm';
 import { FrontChatContactCustomFields, FrontChatContactProfile } from './front-chat.interface';
 
@@ -148,6 +149,14 @@ export class FrontChatService {
       : { frontConversationId, ...rest };
 
     return this.chatUserRepository.save({ ...chatUser, ...updates });
+  }
+
+  async getChatUserByEmail(email: string): Promise<ChatUserEntity | null> {
+    return this.chatUserRepository
+      .createQueryBuilder('cu')
+      .innerJoin('cu.user', 'u')
+      .where('LOWER(u.email) = LOWER(:email)', { email })
+      .getOne();
   }
 
   async getUsersWithUnreadMessages(): Promise<{ chatUser: ChatUserEntity; email: string }[]> {
@@ -332,7 +341,7 @@ export class FrontChatService {
         const audioAttachment = !imageAttachment
           ? attachments.find((a) => a.content_type?.startsWith('audio/') && a.url)
           : undefined;
-        const text = m.text ?? this.stripHtml(m.body ?? '');
+        const text = m.text ?? stripHtml(m.body ?? '');
         if (!text && !imageAttachment && !audioAttachment) continue;
 
         const histMsg: ChatHistoryMessage = {
@@ -345,7 +354,7 @@ export class FrontChatService {
             : audioAttachment
               ? (text || 'Voice note')
               : text,
-          authorName: this.formatAuthorName(m.author ?? undefined),
+          authorName: formatAuthorName(m.author ?? undefined),
           createdAt: (m.created_at ?? Date.now() / 1000) * 1000,
         };
 
@@ -624,24 +633,6 @@ export class FrontChatService {
     if (resolvedId) {
       this.updateChatUserByEmail(email, { frontContactId: resolvedId }).catch(() => {});
     }
-  }
-
-  private formatAuthorName(author: FrontApiAuthor | undefined): string | undefined {
-    if (!author) return undefined;
-    const full = [author.first_name, author.last_name].filter(Boolean).join(' ').trim();
-    return full || author.username || undefined;
-  }
-
-  private stripHtml(input: string): string {
-    return input
-      .replace(/<br\s*\/?>/gi, '\n')
-      .replace(/<\/p>/gi, '\n')
-      .replace(/<[^>]+>/g, '')
-      .replace(/&nbsp;/g, ' ')
-      .replace(/&amp;/g, '&')
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
-      .trim();
   }
 
   private getContactAlias(email: string): string {

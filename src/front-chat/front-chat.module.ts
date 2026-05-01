@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { SlackMessageClient } from 'src/api/slack/slack-api';
 import { ZapierWebhookClient } from 'src/api/zapier/zapier-webhook-client';
@@ -17,7 +16,6 @@ import { ServiceUserProfilesService } from 'src/service-user-profiles/service-us
 import { SubscriptionUserService } from 'src/subscription-user/subscription-user.service';
 import { SubscriptionService } from 'src/subscription/subscription.service';
 import { TherapySessionService } from 'src/therapy-session/therapy-session.service';
-import { UserModule } from 'src/user/user.module';
 import { UserService } from 'src/user/user.service';
 import { FrontChatController } from './front-chat.controller';
 import { FrontChatGateway } from './front-chat.gateway';
@@ -26,7 +24,6 @@ import { FrontChatService } from './front-chat.service';
 
 @Module({
   imports: [
-    ScheduleModule.forRoot(),
     TypeOrmModule.forFeature([
       UserEntity,
       ChatUserEntity,
@@ -38,7 +35,6 @@ import { FrontChatService } from './front-chat.service';
     ]),
     AuthModule,
     FirebaseModule,
-    UserModule,
   ],
   providers: [
     FrontChatService,

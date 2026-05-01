@@ -217,7 +217,6 @@ export const mailchimpServerPrefix = getEnv(
   'MAILCHIMP_SERVER_PREFIX',
 );
 
-export const crispToken = getEnv(process.env.CRISP_TOKEN, 'CRISP_TOKEN');
 export const crispWebsiteId = getEnv(process.env.CRISP_WEBSITE_ID, 'CRISP_WEBSITE_ID');
 export const crispIdentifier = getEnv(process.env.CRISP_IDENTIFIER, 'CRISP_IDENTIFIER');
 export const crispKey = getEnv(process.env.CRISP_KEY, 'CRISP_KEY');

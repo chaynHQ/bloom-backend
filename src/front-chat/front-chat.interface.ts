@@ -38,5 +38,6 @@ export interface AgentReplyPayload {
   body: string;
   authorEmail?: string;
   authorName?: string;
+  /** Unix timestamp in milliseconds */
   emittedAt: number;
 }

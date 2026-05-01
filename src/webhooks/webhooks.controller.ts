@@ -79,20 +79,6 @@ export class WebhooksController {
     @Body() data: Record<string, unknown>,
     @Headers() headers,
   ): Promise<unknown> {
-    // Diagnostic — every Front POST should produce one of these lines so we
-    // can see what shape Front is sending and whether the route fires at all.
-    const headerKeys = Object.keys(headers || {})
-      .filter((k) => /^x-front|authorization|content-type/i.test(k))
-      .reduce<Record<string, string>>((acc, k) => {
-        acc[k] = k.toLowerCase() === 'authorization' ? '<redacted>' : String(headers[k]);
-        return acc;
-      }, {});
-    this.logger.log(
-      `Front webhook received - bodyKeys=[${Object.keys(data || {}).join(',')}] ` +
-        `bodyType=${(data as { type?: unknown })?.type ?? 'absent'} ` +
-        `headers=${JSON.stringify(headerKeys)}`,
-    );
-
     if (isChannelApiRequest(data)) {
       this.logger.log(`Front webhook routed -> CHANNEL branch (type=${data.type})`);
       return this.handleFrontChannelRequest(req, data, headers);
@@ -122,7 +108,17 @@ export class WebhooksController {
       throw new HttpException(error, HttpStatus.UNAUTHORIZED);
     }
 
-    return this.webhooksService.handleFrontChatWebhook(data as unknown as FrontChatWebhookDto);
+    const webhookData = data as unknown as FrontChatWebhookDto;
+    if (!webhookData?.conversation?.recipient?.handle) {
+      // Front sends events (e.g. "tag") that have no conversation recipient — acknowledge
+      // with 200 so Front does not retry, and let the service skip processing.
+      this.logger.log(
+        `Front webhook events: no conversation.recipient.handle (type="${(data as { type?: unknown })?.type ?? 'unknown'}"), acknowledging without processing`,
+      );
+      return;
+    }
+
+    return this.webhooksService.handleFrontChatWebhook(webhookData);
   }
 
   private async handleFrontChannelRequest(

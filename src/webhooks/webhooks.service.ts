@@ -35,6 +35,7 @@ import {
 } from 'src/webhooks/dto/front-chat-webhook.dto';
 import { FrontChannelOutboundPayload } from 'src/webhooks/dto/front-channel-webhook.dto';
 import { buildThreadRef } from 'src/front-chat/front-chat.service';
+import { formatAuthorName, stripHtml } from 'src/utils/html';
 import { StoryWebhookDto } from './dto/story.dto';
 
 @Injectable()
@@ -474,14 +475,14 @@ export class WebhooksService {
       data.type === FRONT_WEBHOOK_EVENT_TYPE.OUT_REPLY
     ) {
       const msgData = data.target?.data;
-      const body = msgData?.text ?? (msgData?.body ? this.stripHtml(msgData.body) : '');
+      const body = msgData?.text ?? (msgData?.body ? stripHtml(msgData.body) : '');
       if (body) {
         this.frontChatGateway.emitAgentReply(email, {
           id: data.id,
           body,
           authorEmail: msgData?.author?.email,
-          authorName: this.formatAuthorName(msgData?.author),
-          emittedAt: data.emitted_at,
+          authorName: formatAuthorName(msgData?.author),
+          emittedAt: data.emitted_at * 1000,
         });
         this.logger.log(`Front Events webhook: emitted agent reply to ${email}`);
       }
@@ -526,18 +527,6 @@ export class WebhooksService {
     }
   }
 
-  private stripHtml(input: string): string {
-    return input
-      .replace(/<br\s*\/?>/gi, '\n')
-      .replace(/<\/p>/gi, '\n')
-      .replace(/<[^>]+>/g, '')
-      .replace(/&nbsp;/g, ' ')
-      .replace(/&amp;/g, '&')
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
-      .trim();
-  }
-
   // Handles outbound messages Front sends to a Custom Channel when an agent
   // replies in the Front UI. Front REQUIRES a 200 with this exact body shape
   // (https://dev.frontapp.com/docs/getting-started-1) — any other response
@@ -552,20 +541,23 @@ export class WebhooksService {
       ?? recipients.find((r) => r?.handle)?.handle;
     const messageBody = payload.text ?? payload.body ?? '';
     const externalId = payload.id || `front-${Date.now()}`;
+    const chatUser = recipientEmail
+      ? await this.frontChatService.getChatUserByEmail(recipientEmail)
+      : null;
     const externalConversationId =
       (data as FrontChannelOutboundPayload).metadata?.external_conversation_ids?.[0] ??
       (data as FrontChannelOutboundPayload).metadata?.external_conversation_id ??
-      (recipientEmail ? buildThreadRef(recipientEmail) : externalId);
+      (chatUser ? buildThreadRef(chatUser.userId) : externalId);
 
     if (recipientEmail && messageBody) {
       this.frontChatGateway.emitAgentReply(recipientEmail, {
         id: payload.id,
         body: messageBody,
         authorEmail: payload.author?.email,
-        authorName: this.formatAuthorName(
+        authorName: formatAuthorName(
           payload.author as FrontWebhookMessageAuthor | undefined,
         ),
-        emittedAt: Math.floor(Date.now() / 1000),
+        emittedAt: Date.now(),
       });
       this.logger.log(`Front Channel: forwarded agent reply to ${recipientEmail}`);
 
@@ -591,12 +583,6 @@ export class WebhooksService {
       external_id: externalId,
       external_conversation_id: externalConversationId,
     };
-  }
-
-  private formatAuthorName(author: FrontWebhookMessageAuthor | undefined): string | undefined {
-    if (!author) return undefined;
-    const full = [author.first_name, author.last_name].filter(Boolean).join(' ').trim();
-    return full || author.username || undefined;
   }
 
   private mapFrontEventToEventName(type: string): EVENT_NAME | null {

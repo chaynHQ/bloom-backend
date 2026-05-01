@@ -50,11 +50,17 @@ export class FrontChatGateway implements OnGatewayConnection, OnGatewayDisconnec
     const key = user.email.toLowerCase();
     let pending = this.ensureContactPromises.get(key);
     if (!pending) {
-      pending = this.serviceUserProfilesService.ensureFrontContact(user).catch((error) => {
-        this.logger.warn(
-          `ensureFrontContact failed for user ${user.id}: ${error?.message || 'unknown error'}`,
-        );
-      });
+      pending = this.serviceUserProfilesService
+        .ensureFrontContact(user)
+        .then(() => {
+          this.ensureContactPromises.delete(key);
+        })
+        .catch((error) => {
+          this.ensureContactPromises.delete(key);
+          this.logger.warn(
+            `ensureFrontContact failed for user ${user.id}: ${error?.message || 'unknown error'}`,
+          );
+        });
       this.ensureContactPromises.set(key, pending);
     }
     return pending;

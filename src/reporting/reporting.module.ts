@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Ga4AuthService } from 'src/api/ga4/ga4-auth';
 import { Ga4DataClient } from 'src/api/ga4/ga4-data.client';
@@ -24,7 +23,6 @@ import { ReportingService } from './reporting.service';
 @Module({
   imports: [
     AuthModule,
-    ScheduleModule.forRoot(),
     TypeOrmModule.forFeature([
       UserEntity,
       CourseUserEntity,

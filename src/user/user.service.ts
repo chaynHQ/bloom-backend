@@ -358,6 +358,8 @@ export class UserService {
 
         await deleteCypressMailchimpProfiles();
 
+        // No-op: Front's API does not support searching contacts by email prefix,
+        // so Cypress test contact cleanup is handled per-test rather than in bulk.
         await this.frontChatService.deleteCypressFrontChatContacts();
       }
     } catch (error) {

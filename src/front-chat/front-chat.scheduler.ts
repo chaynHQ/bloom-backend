@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Cron } from '@nestjs/schedule';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { sendMailchimpUserEvent } from 'src/api/mailchimp/mailchimp-api';
 import { MAILCHIMP_CUSTOM_EVENTS } from 'src/api/mailchimp/mailchimp-api.interfaces';
 import { Logger } from 'src/logger/logger';
@@ -12,7 +12,7 @@ export class FrontChatScheduler {
   constructor(private readonly frontChatService: FrontChatService) {}
 
   // Every minute: find users with unread messages older than 5 minutes and send a Mailchimp event.
-  @Cron('* * * * *')
+  @Cron(CronExpression.EVERY_MINUTE)
   async checkUnreadMessages(): Promise<void> {
     const unread = await this.frontChatService.getUsersWithUnreadMessages();
     if (!unread.length) return;
