@@ -36,20 +36,6 @@ const ALLOWED_MIME_TYPES = new Set([
 
 const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25 MB
 
-const ALLOWED_MIME_TYPES = new Set([
-  'image/jpeg',
-  'image/png',
-  'image/gif',
-  'image/webp',
-  'audio/webm',
-  'audio/mp4',
-  'audio/mpeg',
-  'audio/ogg',
-  'application/pdf',
-]);
-
-const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25 MB
-
 @ApiTags('Front Chat')
 @Controller('/v1/front-chat')
 export class FrontChatController {
