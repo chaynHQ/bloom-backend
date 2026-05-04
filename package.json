@@ -50,7 +50,7 @@
     "firebase": "^12.12.1",
     "firebase-admin": "^13.8.0",
     "google-auth-library": "^10.6.2",
-    "jsdom": "^28.1.0",
+    "jsdom": "^29.1.0",
     "lodash": "^4.18.1",
     "luxon": "^3.7.2",
     "nestjs-cls": "^6.2.0",
@@ -90,7 +90,7 @@
     "typescript-eslint": "^8.59.1"
   },
   "engines": {
-    "node": "22.x",
+    "node": ">=22.13.0",
     "yarn": "1.x"
   },
   "jest": {
