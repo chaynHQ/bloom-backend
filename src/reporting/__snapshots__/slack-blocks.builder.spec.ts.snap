@@ -40,11 +40,6 @@ exports[`buildReportBlocks renders a full weekly digest topic-sectioned (snapsho
         "type": "mrkdwn",
       },
       {
-        "text": "*Active users*
-1,234",
-        "type": "mrkdwn",
-      },
-      {
         "text": "*Courses started*
 8",
         "type": "mrkdwn",
@@ -82,6 +77,11 @@ exports[`buildReportBlocks renders a full weekly digest topic-sectioned (snapsho
       {
         "text": "*Therapy scheduled*
 7",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Active users*
+1,234",
         "type": "mrkdwn",
       },
     ],
@@ -160,6 +160,10 @@ exports[`buildReportBlocks renders a full weekly digest topic-sectioned (snapsho
         "type": "mrkdwn",
       },
     ],
+    "text": {
+      "text": "_Analytics: traffic overview_",
+      "type": "mrkdwn",
+    },
     "type": "section",
   },
   {
@@ -171,23 +175,78 @@ exports[`buildReportBlocks renders a full weekly digest topic-sectioned (snapsho
 • Partner-access activations by partner (DB): Bumble (2)
 
 *Flows (Analytics events)*
-• *Signup flow* — Registrations 28 → Survey completed 0 (0%)
-
-*Detail (Analytics events)*
-_Auth & onboarding_
-• Header login clicks — 0
-• Logins — 142
-• Logouts — 0
-• Registrations — 28
-• Reset-password link clicks — 0
-• Password resets — 0
-• Create-account link — 0
-• Signup survey — completed (0) · skipped (0)
-• About you form — viewed (0) · demographics submitted (0) · SETA submitted (0)
-• Apply-a-code page viewed — 0
-• Partner access codes — redeemed (0) · invalid (client) (0) · new partner assigned (0) · invalid (server) (0)",
+• *Signup flow* — Registrations 28 → Survey completed 0 (0%)",
       "type": "mrkdwn",
     },
+    "type": "section",
+  },
+  {
+    "fields": [
+      {
+        "text": "*Header login clicks*
+0",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Logins*
+142",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Logouts*
+0",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Registrations*
+28",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Reset-password link clicks*
+0",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Password resets*
+0",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Create-account link*
+0",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Signup survey*
+completed (0) · skipped (0)",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*About you form*
+viewed (0) · demographics submitted (0) · SETA submitted (0)",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Apply-a-code page viewed*
+0",
+        "type": "mrkdwn",
+      },
+    ],
+    "text": {
+      "text": "_Auth & onboarding_",
+      "type": "mrkdwn",
+    },
+    "type": "section",
+  },
+  {
+    "fields": [
+      {
+        "text": "*Partner access codes*
+redeemed (0) · invalid (client) (0) · new partner assigned (0) · invalid (server) (0)",
+        "type": "mrkdwn",
+      },
+    ],
     "type": "section",
   },
   {
@@ -240,21 +299,46 @@ _Auth & onboarding_
 • Session feedback by tag (DB): useful (3)
 
 *Flows (Analytics events)*
-• *Session flow* — Viewed 56 → Started 0 (0%) → Completed 0 (0%) → Feedback 0 (0%)
-
-*Detail (Analytics events)*
-_Courses_
-• Course list viewed — 0
-• Course overview viewed — 0
-• Course intro video — started (0) · finished (0)
-• Course intro transcript — opened (0) · closed (0)
-_Sessions_
-• Session viewed — 56
-• Session video — started (32) · finished (0)
-• Session progression — started (0) · completed (0)
-• Session transcript — opened (0) · closed (0)
-• Session feedback (GA) — 0
-• Session chat CTA — 0",
+• *Session flow* — Viewed 56 → Started 0 (0%) → Completed 0 (0%) → Feedback 0 (0%)",
+      "type": "mrkdwn",
+    },
+    "type": "section",
+  },
+  {
+    "fields": [
+      {
+        "text": "*Session viewed*
+56",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Session video*
+started (32) · finished (0)",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Session progression*
+started (0) · completed (0)",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Session transcript*
+opened (0) · closed (0)",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Session feedback (GA)*
+0",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Session chat CTA*
+0",
+        "type": "mrkdwn",
+      },
+    ],
+    "text": {
+      "text": "_Sessions_",
       "type": "mrkdwn",
     },
     "type": "section",
@@ -296,15 +380,7 @@ _Sessions_
     ↳ Breathing (6 started · 3 completed) · Grounding (3 started · 2 completed)
 
 *Breakdowns*
-• Resource feedback by tag (DB): relatable (3)
-
-*Detail (Analytics events)*
-_Resource events_
-• Conversations — viewed (0) · started (0) · finished (0) · completed (0)
-• Short videos — viewed (0) · started (0) · finished (0) · completed (0)
-• Single videos — viewed (0) · started (0) · finished (0) · completed (0)
-• Resource feedback (GA) — 0
-• Resource → session navigation — from short (0) · from single (0)",
+• Resource feedback by tag (DB): relatable (3)",
       "type": "mrkdwn",
     },
     "type": "section",
@@ -343,34 +419,7 @@ _Resource events_
     "text": {
       "text": "*Breakdowns*
 • Therapy by therapist (DB): Dr Jane Smith (4)
-• Therapy by partner (DB): Bumble (5)
-
-*Detail (Analytics events)*
-_Therapy events_
-• My bookings list viewed — 0
-• Book-a-session flow — page views (0) · booking opened (0) · confirmed (0)
-• Therapy cancellations — dialog opened (0) · confirmed (0) · cancelled (0)
-• Therapy joining — 0
-• Therapy FAQ — 0",
-      "type": "mrkdwn",
-    },
-    "type": "section",
-  },
-  {
-    "type": "divider",
-  },
-  {
-    "text": {
-      "text": "*:left_speech_bubble: Messaging*",
-      "type": "mrkdwn",
-    },
-    "type": "section",
-  },
-  {
-    "text": {
-      "text": "*Detail (Analytics events)*
-_Chat_
-• Chat — opened (0) · composed (0) · sent (0)",
+• Therapy by partner (DB): Bumble (5)",
       "type": "mrkdwn",
     },
     "type": "section",
@@ -401,17 +450,6 @@ _Chat_
     "type": "section",
   },
   {
-    "text": {
-      "text": "*Detail (Analytics events)*
-_Email & comms_
-• Email reminders (GA — no DB date column) — set (0) · unset (0)
-• Service emails — 0
-• Cookies consent — accepted (0) · rejected (0)",
-      "type": "mrkdwn",
-    },
-    "type": "section",
-  },
-  {
     "type": "divider",
   },
   {
@@ -423,86 +461,9 @@ _Email & comms_
   },
   {
     "text": {
-      "text": "*Detail (Analytics events)*
-_App & install_
-• App loads — PWA (0) · Web (0)
-• PWA install — install clicked (0) · installed (0) · dismiss clicked (0) · dismissed (0)
-• PWA desktop banner viewed — 0
-
-*Top traffic breakdowns (Analytics events)*
+      "text": "*Top traffic breakdowns (Analytics events)*
 _Top pages_
 • /courses — 500 (200 users)",
-      "type": "mrkdwn",
-    },
-    "type": "section",
-  },
-  {
-    "type": "divider",
-  },
-  {
-    "text": {
-      "text": "*:compass: Navigation & engagement*",
-      "type": "mrkdwn",
-    },
-    "type": "section",
-  },
-  {
-    "text": {
-      "text": "*Detail (Analytics events)*
-_Header_
-• Header nav — menu opened (0) · menu closed (0) · home logo (0) · account icon (0) · apply-code (0) · our team (0) · immediate help (0) · admin (0)
-• Drawer — courses (0) · therapy (0) · chat (0) · notes (0) · activities (0) · grounding (0) · our team (0) · immediate help (0) · admin (0) · login (0)
-• Secondary header — courses (0) · therapy (0) · chat (0) · notes (0) · activities (0) · grounding (0)
-• Language menu — 0
-• Language switches — EN (0) · DE (0) · FR (0) · ES (0) · PT (0) · HI (0)
-• On-page engagement — FAQ opens (0) · accordion opens (0) · related content (0) · meet team (0) · leave-site button (0)
-• Social links — social (0) · partner social (0)",
-      "type": "mrkdwn",
-    },
-    "type": "section",
-  },
-  {
-    "type": "divider",
-  },
-  {
-    "text": {
-      "text": "*:loudspeaker: Promo & banners*",
-      "type": "mrkdwn",
-    },
-    "type": "section",
-  },
-  {
-    "text": {
-      "text": "*Detail (Analytics events)*
-_Promo & banners_
-• Promo CTA — 0
-• Sign-up-today banner — 0
-• Notes-from-Bloom promo — 0
-• User-research banner — interested (0) · dismissed (0)
-• Fruitz retirement banner — 0",
-      "type": "mrkdwn",
-    },
-    "type": "section",
-  },
-  {
-    "type": "divider",
-  },
-  {
-    "text": {
-      "text": "*:gear: Admin activity*",
-      "type": "mrkdwn",
-    },
-    "type": "section",
-  },
-  {
-    "text": {
-      "text": "*Detail (Analytics events)*
-_Admin activity_
-• Admin dashboard viewed — 0
-• Partner access codes created — 0
-• Partner admin changes — created (0) · updated (0)
-• Partner active toggles — 0
-• Therapy sessions adjusted — 0",
       "type": "mrkdwn",
     },
     "type": "section",
@@ -518,9 +479,15 @@ _Admin activity_
     "type": "section",
   },
   {
+    "fields": [
+      {
+        "text": "*Login errors*
+3",
+        "type": "mrkdwn",
+      },
+    ],
     "text": {
-      "text": "_Errors_
-• Login errors — 3",
+      "text": "_Errors_",
       "type": "mrkdwn",
     },
     "type": "section",
