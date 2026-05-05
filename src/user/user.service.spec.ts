@@ -146,12 +146,19 @@ describe('UserService', () => {
       expect(user.partnerAdmin).toBeNull();
       expect(user.partnerAccesses).toBeNull();
 
-      // Test services user profiles are created
-      expect(mockFrontChatService.createContact).toHaveBeenCalledWith({
-        email: user.user.email,
-        name: user.user.name,
-      });
-      expect(mockFrontChatService.updateContactCustomFields).toHaveBeenCalled();
+      // Test services user profiles are created (single createContact call with all fields)
+      expect(mockFrontChatService.createContact).toHaveBeenCalledWith(
+        expect.objectContaining({
+          email: user.user.email,
+          name: user.user.name,
+          customFields: expect.objectContaining({
+            feature_live_chat: true,
+            feature_therapy: false,
+            partners: '',
+          }),
+        }),
+      );
+      expect(mockFrontChatService.updateContactCustomFields).not.toHaveBeenCalled();
       expect(createMailchimpProfile).toHaveBeenCalled();
     });
 
@@ -178,26 +185,21 @@ describe('UserService', () => {
         { ...partnerAccessData, therapySessions: [mockTherapySessionDto] },
       ]);
 
-      // Test services user profiles are created
-      expect(mockFrontChatService.createContact).toHaveBeenCalledWith({
-        email: user.user.email,
-        name: 'name',
-      });
-      expect(mockFrontChatService.updateContactCustomFields).toHaveBeenCalledWith(
-        {
-          signed_up_at: user.user.createdAt,
-          last_active_at: (user.user.lastActiveAt as Date).toISOString(),
-          marketing_permission: true,
-          service_emails_permission: true,
-          email_reminders_frequency: EMAIL_REMINDERS_FREQUENCY.TWO_MONTHS,
-          partners: 'bumble',
-          feature_live_chat: true,
-          feature_therapy: true,
-          therapy_sessions_remaining: 5,
-          therapy_sessions_redeemed: 1,
-        },
-        'user@email.com',
+      // Test services user profiles are created (single createContact call with all fields)
+      expect(mockFrontChatService.createContact).toHaveBeenCalledWith(
+        expect.objectContaining({
+          email: user.user.email,
+          name: 'name',
+          customFields: expect.objectContaining({
+            marketing_permission: true,
+            partners: 'bumble',
+            feature_therapy: true,
+            therapy_sessions_remaining: 5,
+            therapy_sessions_redeemed: 1,
+          }),
+        }),
       );
+      expect(mockFrontChatService.updateContactCustomFields).not.toHaveBeenCalled();
       expect(createMailchimpProfile).toHaveBeenCalled();
     });
 

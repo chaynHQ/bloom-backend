@@ -55,26 +55,26 @@ export class ServiceUserProfilesService {
     }
 
     const userData = this.serializeUserData(user);
-    const partnerData = this.serializePartnerAccessData(
-      partnerAccess ? [{ ...partnerAccess, partner }] : [],
-    );
+    // partnerAccess.therapySession may not be loaded at signup time — default to empty.
+    const partnerAccesses = partnerAccess ? [{ ...partnerAccess, partner, therapySession: partnerAccess.therapySession ?? [] }] : [];
+    const partnerData = this.serializePartnerAccessData(partnerAccesses);
+    const therapyData = this.serializeTherapyData(partnerAccesses);
     const userSignedUpAt = user.createdAt?.toISOString();
 
     try {
+      // Single API call: create contact with all custom fields so the initial record
+      // matches what ensureFrontContact sets on subsequent widget opens.
       await this.frontChatService.createContact({
         email: email,
         name: user.name,
         userId: user.id,
-      });
-
-      await this.frontChatService.updateContactCustomFields(
-        {
+        customFields: {
           signed_up_at: userSignedUpAt,
           ...userData.frontChatSchema,
           ...partnerData.frontChatSchema,
+          ...therapyData.frontChatSchema,
         },
-        email,
-      );
+      });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'unknown error';
       logger.error(`Create Front Chat profile error: ${message}`);
@@ -112,22 +112,31 @@ export class ServiceUserProfilesService {
       return;
     }
 
-    // Always hydrate so custom fields are populated regardless of contact state.
-    let hydratedUser: UserEntity | null = user;
-    if (!user.partnerAccess) {
-      hydratedUser = await this.userRepository.findOne({
-        where: { id: user.id },
-        relations: { partnerAccess: { partner: true } },
-      });
-    }
+    // Always load from DB with all relations so therapy, course, and partner data
+    // are included in custom fields regardless of what the caller hydrated.
+    const hydratedUser = await this.userRepository.findOne({
+      where: { id: user.id },
+      relations: {
+        partnerAccess: { partner: true, therapySession: true },
+        courseUser: { course: true, sessionUser: { session: true } },
+      },
+    });
     if (!hydratedUser) return;
 
     const userData = this.serializeUserData(hydratedUser);
     const partnerData = this.serializePartnerAccessData(hydratedUser.partnerAccess ?? []);
+    const therapyData = this.serializeTherapyData(hydratedUser.partnerAccess ?? []);
+    const courseFields: Record<string, string> = {};
+    for (const cu of hydratedUser.courseUser ?? []) {
+      Object.assign(courseFields, this.serializeCourseData(cu).frontChatSchema);
+    }
+
     const customFields = {
       signed_up_at: hydratedUser.createdAt?.toISOString(),
       ...userData.frontChatSchema,
       ...partnerData.frontChatSchema,
+      ...therapyData.frontChatSchema,
+      ...courseFields,
     };
 
     if (!exists) {
@@ -144,7 +153,8 @@ export class ServiceUserProfilesService {
         logger.error(`ensureFrontContact create failed for ${email}: ${message}`);
       }
     } else {
-      // Contact already exists — ensure custom fields and list membership are current.
+      // Contact already exists — refresh custom fields and ensure the channel handle
+      // is present so Channel API messages link to this contact (not an auto-contact).
       try {
         await this.frontChatService.updateContactCustomFields(customFields, email);
         logger.log(`Refreshed Front contact custom fields for ${email}`);
@@ -152,9 +162,8 @@ export class ServiceUserProfilesService {
         const message = error instanceof Error ? error.message : 'unknown error';
         logger.error(`ensureFrontContact custom fields update failed for ${email}: ${message}`);
       }
+      this.frontChatService.addChannelHandle(email).catch(() => {});
     }
-
-    logger.log('Create user: updated service user profiles');
   }
 
   async updateServiceUserProfilesUser(
@@ -538,17 +547,23 @@ export class ServiceUserProfilesService {
 
   serializeTherapyData(partnerAccesses: PartnerAccessEntity[]) {
     const therapySessions = partnerAccesses
-      .flatMap((partnerAccess) => partnerAccess.therapySession)
+      .flatMap((partnerAccess) => partnerAccess.therapySession ?? [])
       .filter(
-        (therapySession) => therapySession.action !== SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING,
+        (therapySession) => !!therapySession && therapySession.action !== SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING,
       )
-      .sort((a, b) => a.startDateTime.getTime() - b.startDateTime.getTime());
+      .sort((a, b) => {
+        // TypeORM may return dates as strings in some contexts — guard both cases.
+        const aMs = a.startDateTime instanceof Date ? a.startDateTime.getTime() : new Date(a.startDateTime as unknown as string).getTime();
+        const bMs = b.startDateTime instanceof Date ? b.startDateTime.getTime() : new Date(b.startDateTime as unknown as string).getTime();
+        return aMs - bMs;
+      });
 
+    const now = new Date().getTime();
     const pastTherapySessions = therapySessions.filter(
-      (therapySession) => therapySession.startDateTime.getTime() < new Date().getTime(),
+      (therapySession) => (therapySession.startDateTime instanceof Date ? therapySession.startDateTime.getTime() : new Date(therapySession.startDateTime as unknown as string).getTime()) < now,
     );
     const futureTherapySessions = therapySessions.filter(
-      (therapySession) => therapySession.startDateTime.getTime() > new Date().getTime(),
+      (therapySession) => (therapySession.startDateTime instanceof Date ? therapySession.startDateTime.getTime() : new Date(therapySession.startDateTime as unknown as string).getTime()) > now,
     );
 
     const firstTherapySessionAt = therapySessions?.at(0)?.startDateTime.toISOString() || '';
@@ -595,7 +610,8 @@ export class ServiceUserProfilesService {
 
     const data = {
       course: courseUser.completed ? PROGRESS_STATUS.COMPLETED : PROGRESS_STATUS.STARTED,
-      sessions: courseUser.sessionUser
+      sessions: (courseUser.sessionUser ?? [])
+        .filter((su) => !!su?.session)
         .map(
           (sessionUser) =>
             `${getAcronym(sessionUser.session.name)}:${sessionUser.completed ? 'C' : 'S'}`,

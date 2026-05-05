@@ -909,5 +909,25 @@ describe('WebhooksService', () => {
 
       await expect(service.handleFrontChatWebhook(inboundPayload)).resolves.not.toThrow();
     });
+
+    it('saves conversation ID from inbound events for history loading on reconnect', async () => {
+      await service.handleFrontChatWebhook(inboundPayload);
+      await new Promise((r) => setImmediate(r));
+
+      expect(mockFrontChatService.updateChatUserByEmail).toHaveBeenCalledWith(
+        'user@example.com',
+        { frontConversationId: 'cnv_abc' },
+      );
+    });
+
+    it('does not try to save conversation ID from inbound events when conversation is absent', async () => {
+      await service.handleFrontChatWebhook({ ...inboundPayload, conversation: undefined });
+      await new Promise((r) => setImmediate(r));
+
+      expect(mockFrontChatService.updateChatUserByEmail).not.toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ frontConversationId: expect.anything() }),
+      );
+    });
   });
 });

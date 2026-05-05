@@ -84,7 +84,7 @@ export const dataSourceOptions = {
   database,
   synchronize: false, // updates the database automatically without running migrations - turn on with caution
   migrationsRun: true, // ensures migrations are run on the db at startup - turn off with caution
-  logging: !isProduction,
+  logging: false,
   entities: [
     UserEntity,
     ChatUserEntity,

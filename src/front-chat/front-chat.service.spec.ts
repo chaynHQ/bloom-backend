@@ -458,8 +458,59 @@ describe('FrontChatService', () => {
       expect(mockFetch).toHaveBeenCalledTimes(4);
     });
 
+    it('adds the custom channel handle fire-and-forget when email changes', async () => {
+      mockFetch
+        .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({}) }) // PATCH profile
+        .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ id: 'crd_u1' }) }) // GET canonical ID
+        .mockResolvedValueOnce({ ok: true, status: 204 }) // POST list
+        .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({}) }); // PATCH custom handle
+
+      await service.updateContactProfile(
+        { email: 'new@example.com', name: 'New Name' },
+        'old@example.com',
+      );
+      // Allow fire-and-forget addChannelHandle to settle
+      await new Promise((r) => setImmediate(r));
+
+      const urls = mockFetch.mock.calls.map((c) => c[0] as string);
+      // Last call should be the addChannelHandle PATCH for the new email
+      expect(urls[urls.length - 1]).toContain('alt:email:new%40example.com');
+      expect(JSON.parse(mockFetch.mock.calls[mockFetch.mock.calls.length - 1][1].body)).toEqual({
+        handles: [{ source: 'custom', handle: 'new@example.com' }],
+      });
+    });
+
     it('should skip for Cypress test emails', async () => {
       await service.updateContactProfile({ name: 'Test' }, 'cypresstestemail+1@chayn.co');
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
+  });
+
+  // ── addChannelHandle ──────────────────────────────────────────────────────────
+
+  describe('addChannelHandle', () => {
+    it('PATCHes the custom handle on the contact alias', async () => {
+      mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({}) });
+
+      await service.addChannelHandle('user@example.com');
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        'https://api2.frontapp.com/contacts/alt:email:user%40example.com',
+        expect.objectContaining({
+          method: 'PATCH',
+          body: JSON.stringify({ handles: [{ source: 'custom', handle: 'user@example.com' }] }),
+        }),
+      );
+    });
+
+    it('does not throw when the PATCH fails (non-fatal)', async () => {
+      mockFetch.mockResolvedValueOnce({ ok: false, status: 422, text: async () => 'Duplicate' });
+
+      await expect(service.addChannelHandle('user@example.com')).resolves.not.toThrow();
+    });
+
+    it('skips for Cypress test emails', async () => {
+      await service.addChannelHandle('cypresstestemail+1@chayn.co');
       expect(mockFetch).not.toHaveBeenCalled();
     });
   });
@@ -496,20 +547,53 @@ describe('FrontChatService', () => {
   describe('getConversationHistory', () => {
     const user = { id: 'user-1', email: 'user@example.com', name: 'Alex' };
 
-    it('returns empty array when no ChatUser record exists', async () => {
+    // Helper: mock the contact-conversations lookup to return no results.
+    const mockEmptyContactLookup = () =>
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ _results: [] }),
+      });
+
+    it('returns empty array when no ChatUser record exists and contact has no conversations', async () => {
       mockChatUserRepository.findOneBy.mockResolvedValueOnce(null);
+      mockEmptyContactLookup();
       const result = await service.getConversationHistory(user);
-      expect(mockFetch).not.toHaveBeenCalled();
       expect(result).toEqual([]);
     });
 
-    it('returns empty array when ChatUser exists but frontConversationId is null', async () => {
+    it('returns empty array when ChatUser exists but frontConversationId is null and contact has no conversations', async () => {
       mockChatUserRepository.findOneBy.mockResolvedValueOnce(
         buildChatUser({ frontConversationId: null }),
       );
+      mockEmptyContactLookup();
       const result = await service.getConversationHistory(user);
-      expect(mockFetch).not.toHaveBeenCalled();
       expect(result).toEqual([]);
+    });
+
+    it('uses contact conversation lookup to find and cache frontConversationId when absent', async () => {
+      mockChatUserRepository.findOneBy.mockResolvedValueOnce(
+        buildChatUser({ frontConversationId: null }),
+      );
+      // First fetch: contact conversations lookup
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ _results: [{ id: 'cnv_found' }] }),
+      });
+      // Second fetch: messages for found conversation
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ _results: [], _pagination: {} }),
+      });
+
+      await service.getConversationHistory(user);
+
+      const contactsUrl = mockFetch.mock.calls[0][0] as string;
+      expect(contactsUrl).toContain('/contacts/alt:email:user%40example.com/conversations');
+      const messagesUrl = mockFetch.mock.calls[1][0] as string;
+      expect(messagesUrl).toContain('/conversations/cnv_found/messages');
     });
 
     it('fetches messages using the stored frontConversationId', async () => {
@@ -603,14 +687,19 @@ describe('FrontChatService', () => {
       expect(mockFetch).toHaveBeenCalledTimes(2);
     });
 
-    it('returns partial results when a 404 is encountered mid-pagination', async () => {
+    it('clears stale frontConversationId on 404 and returns empty', async () => {
       mockChatUserRepository.findOneBy.mockResolvedValueOnce(
-        buildChatUser({ frontConversationId: 'cnv_abc' }),
+        buildChatUser({ frontConversationId: 'cnv_stale' }),
       );
       mockFetch.mockResolvedValueOnce({ ok: false, status: 404, text: async () => 'not found' });
 
       const result = await service.getConversationHistory(user);
+
       expect(result).toEqual([]);
+      expect(mockChatUserRepository.update).toHaveBeenCalledWith(
+        { userId: 'user-1' },
+        { frontConversationId: null },
+      );
     });
 
     it('maps image attachment messages with kind=image and an attachmentUrl proxy path', async () => {

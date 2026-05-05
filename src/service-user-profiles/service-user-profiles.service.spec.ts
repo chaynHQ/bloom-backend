@@ -27,6 +27,7 @@ import {
 jest.mock('src/api/mailchimp/mailchimp-api');
 const mockFrontChatServiceMethods = {
   getOrCreateChatUser: jest.fn().mockResolvedValue({}),
+  addChannelHandle: jest.fn().mockResolvedValue(undefined),
 };
 
 describe('Service user profiles', () => {
@@ -56,33 +57,38 @@ describe('Service user profiles', () => {
   });
 
   describe('createServiceUserProfiles', () => {
+    const therapyTimestamps = {
+      therapy_session_first_at: '',
+      therapy_session_next_at: '',
+      therapy_session_last_at: '',
+    };
+
     it('should create Front Chat and mailchimp profiles for a public user', async () => {
       await service.createServiceUserProfiles(mockUserEntity);
-
-      expect(mockFrontChatService.createContact).toHaveBeenCalledWith({
-        email: mockUserEntity.email,
-        name: mockUserEntity.name,
-        userId: mockUserEntity.id,
-      });
 
       const createdAt = mockUserEntity.createdAt.toISOString();
       const lastActiveAt = mockUserEntity.lastActiveAt.toISOString();
 
-      expect(mockFrontChatService.updateContactCustomFields).toHaveBeenCalledWith(
-        {
+      // Single createContact call with all custom fields — no separate updateContactCustomFields
+      expect(mockFrontChatService.createContact).toHaveBeenCalledWith({
+        email: mockUserEntity.email,
+        name: mockUserEntity.name,
+        userId: mockUserEntity.id,
+        customFields: {
+          signed_up_at: createdAt,
           marketing_permission: mockUserEntity.contactPermission,
           service_emails_permission: mockUserEntity.serviceEmailsPermission,
           email_reminders_frequency: EMAIL_REMINDERS_FREQUENCY.TWO_MONTHS,
-          signed_up_at: createdAt,
           last_active_at: lastActiveAt,
           feature_live_chat: true,
           feature_therapy: false,
           partners: '',
           therapy_sessions_redeemed: 0,
           therapy_sessions_remaining: 0,
+          ...therapyTimestamps,
         },
-        mockUserEntity.email,
-      );
+      });
+      expect(mockFrontChatService.updateContactCustomFields).not.toHaveBeenCalled();
 
       expect(createMailchimpProfile).toHaveBeenCalledWith({
         email_address: mockUserEntity.email,
@@ -120,27 +126,30 @@ describe('Service user profiles', () => {
       const createdAt = mockUserEntity.createdAt.toISOString();
       const lastActiveAt = mockUserEntity.lastActiveAt.toISOString();
 
+      // mockPartnerAccessEntity has one past therapy session (2022-09-12T06:30:00.000Z)
+      const therapySessionAt = new Date('2022-09-12T07:30:00+0100').toISOString();
+
       expect(mockFrontChatService.createContact).toHaveBeenCalledWith({
         email: mockUserEntity.email,
         name: mockUserEntity.name,
         userId: mockUserEntity.id,
-      });
-
-      expect(mockFrontChatService.updateContactCustomFields).toHaveBeenCalledWith(
-        {
+        customFields: {
           signed_up_at: createdAt,
           marketing_permission: mockUserEntity.contactPermission,
           service_emails_permission: mockUserEntity.serviceEmailsPermission,
           email_reminders_frequency: EMAIL_REMINDERS_FREQUENCY.TWO_MONTHS,
-          partners: partnerName,
           last_active_at: lastActiveAt,
+          partners: partnerName,
           feature_live_chat: mockPartnerAccessEntity.featureLiveChat,
           feature_therapy: mockPartnerAccessEntity.featureTherapy,
           therapy_sessions_remaining: mockPartnerAccessEntity.therapySessionsRemaining,
           therapy_sessions_redeemed: mockPartnerAccessEntity.therapySessionsRedeemed,
+          therapy_session_first_at: therapySessionAt,
+          therapy_session_last_at: therapySessionAt,
+          therapy_session_next_at: '',
         },
-        mockUserEntity.email,
-      );
+      });
+      expect(mockFrontChatService.updateContactCustomFields).not.toHaveBeenCalled();
 
       expect(createMailchimpProfile).toHaveBeenCalledWith({
         email_address: mockUserEntity.email,
@@ -186,6 +195,7 @@ describe('Service user profiles', () => {
   });
 
   describe('ensureFrontContact', () => {
+    // mockUserEntity has empty partnerAccess/courseUser, so therapy timestamps are ''
     const expectedCustomFields = {
       signed_up_at: mockUserEntity.createdAt.toISOString(),
       marketing_permission: mockUserEntity.contactPermission,
@@ -197,7 +207,19 @@ describe('Service user profiles', () => {
       partners: '',
       therapy_sessions_redeemed: 0,
       therapy_sessions_remaining: 0,
+      therapy_session_first_at: '',
+      therapy_session_next_at: '',
+      therapy_session_last_at: '',
     };
+
+    beforeEach(() => {
+      // ensureFrontContact always loads full relations from DB
+      jest.spyOn(mockedUserRepository, 'findOne').mockResolvedValue({
+        ...mockUserEntity,
+        partnerAccess: [],
+        courseUser: [],
+      } as any);
+    });
 
     it('creates contact with custom fields when contact does not yet exist', async () => {
       jest.mocked(mockFrontChatService.contactExists).mockResolvedValue(false);
@@ -223,6 +245,15 @@ describe('Service user profiles', () => {
         expectedCustomFields,
         mockUserEntity.email,
       );
+    });
+
+    it('calls addChannelHandle when contact already exists', async () => {
+      jest.mocked(mockFrontChatService.contactExists).mockResolvedValue(true);
+
+      await service.ensureFrontContact(mockUserEntity);
+      await new Promise((r) => setImmediate(r));
+
+      expect(mockFrontChatService.addChannelHandle).toHaveBeenCalledWith(mockUserEntity.email);
     });
 
     it('skips for Cypress test emails', async () => {
@@ -254,6 +285,15 @@ describe('Service user profiles', () => {
         .mockRejectedValue(new Error('API error'));
 
       await expect(service.ensureFrontContact(mockUserEntity)).resolves.not.toThrow();
+    });
+
+    it('returns early when user not found in DB', async () => {
+      jest.spyOn(mockedUserRepository, 'findOne').mockResolvedValue(null);
+
+      await service.ensureFrontContact(mockUserEntity);
+
+      expect(mockFrontChatService.createContact).not.toHaveBeenCalled();
+      expect(mockFrontChatService.updateContactCustomFields).not.toHaveBeenCalled();
     });
   });
 

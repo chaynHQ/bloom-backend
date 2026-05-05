@@ -468,25 +468,13 @@ export class WebhooksService {
       return;
     }
 
-    // Forward agent replies to the connected user in real-time.
+    // OUTBOUND/OUT_REPLY: update chat activity timestamps. Agent reply delivery is handled
+    // exclusively by handleFrontChannelOutbound (Channel API outbound webhook) so we don't
+    // emit here — doing so would duplicate the message when both webhooks hit the same endpoint.
     if (
       data.type === FRONT_WEBHOOK_EVENT_TYPE.OUTBOUND ||
       data.type === FRONT_WEBHOOK_EVENT_TYPE.OUT_REPLY
     ) {
-      const msgData = data.target?.data;
-      const body = msgData?.text ?? (msgData?.body ? stripHtml(msgData.body) : '');
-      if (body) {
-        this.frontChatGateway.emitAgentReply(email, {
-          id: data.id,
-          body,
-          authorEmail: msgData?.author?.email,
-          authorName: formatAuthorName(msgData?.author),
-          emittedAt: data.emitted_at * 1000,
-        });
-        this.logger.log(`Front Events webhook: emitted agent reply to ${email}`);
-      }
-
-      // Update chat activity: received timestamp + capture conversation ID if not already stored.
       this.frontChatService
         .updateChatUserByEmail(email, {
           lastMessageReceivedAt: new Date(data.emitted_at * 1000),
@@ -500,6 +488,14 @@ export class WebhooksService {
             );
           }
         })
+        .catch(() => {});
+    }
+
+    // Capture conversation ID from inbound events so history loads immediately on reconnect,
+    // rather than waiting for the 5-second post-send timer or an agent reply.
+    if (data.type === FRONT_WEBHOOK_EVENT_TYPE.INBOUND && data.conversation?.id) {
+      this.frontChatService
+        .updateChatUserByEmail(email, { frontConversationId: data.conversation.id })
         .catch(() => {});
     }
 
@@ -524,27 +520,6 @@ export class WebhooksService {
         `Front webhook: failed to log ${eventName} for ${email}: ${error?.message || 'unknown error'}`,
       );
     }
-
-    if (
-      data.type === FRONT_WEBHOOK_EVENT_TYPE.OUTBOUND ||
-      data.type === FRONT_WEBHOOK_EVENT_TYPE.OUT_REPLY
-    ) {
-      const messageBody = data.target?.data?.text ?? data.target?.data?.body;
-      if (messageBody) {
-        this.frontChatGateway.emitAgentReply(email, {
-          body: messageBody,
-          authorEmail: data.target?.data?.author?.email,
-          authorName: this.formatAuthorName(data.target?.data?.author),
-          emittedAt: data.emitted_at,
-        });
-      }
-    }
-  }
-
-  private formatAuthorName(author: FrontWebhookMessageAuthor | undefined): string | undefined {
-    if (!author) return undefined;
-    const full = [author.first_name, author.last_name].filter(Boolean).join(' ').trim();
-    return full || author.username || undefined;
   }
 
   // Handles outbound messages Front sends to a Custom Channel when an agent

@@ -307,18 +307,29 @@ export class FrontChatService {
     if (isCypressTestEmail(user.email)) return [];
 
     const chatUser = await this.chatUserRepository.findOneBy({ userId: user.id });
-    if (!chatUser?.frontConversationId) return [];
+
+    let conversationId = chatUser?.frontConversationId ?? null;
+    if (!conversationId) {
+      // No conversation ID cached — try to find one via the Front contact's conversations.
+      // This handles existing users who connected before frontConversationId was tracked.
+      conversationId = await this.findConversationIdByContact(user.id, user.email);
+      if (!conversationId) return [];
+    }
 
     const allMessages: ChatHistoryMessage[] = [];
-    let nextPath: string | null =
-      `/conversations/${chatUser.frontConversationId}/messages?limit=100`;
+    let nextPath: string | null = `/conversations/${conversationId}/messages?limit=100`;
 
     while (nextPath) {
       let page: FrontApiPaginated<FrontApiMessage>;
       try {
         page = (await this.frontApiRequest('GET', nextPath)) as FrontApiPaginated<FrontApiMessage>;
       } catch (error) {
-        if (this.isContactNotFoundError(error)) return allMessages;
+        if ((error as { status?: number })?.status === 404) {
+          // Stale conversation ID — clear it so the next connection tries a fresh lookup.
+          await this.chatUserRepository.update({ userId: user.id }, { frontConversationId: null });
+          logger.warn(`Cleared stale conversation ${conversationId} for user ${user.id}`);
+          return allMessages;
+        }
         throw new Error(
           `Fetch Front messages failed: ${(error as Error)?.message || 'unknown error'}`,
           { cause: error },
@@ -398,7 +409,13 @@ export class FrontChatService {
     let contact: { id: string } & Record<string, unknown>;
     try {
       contact = (await this.frontApiRequest('POST', '/contacts', {
-        handles: [{ source: 'email', handle: email }],
+        // 'email' handle for REST API lookups; 'custom' handle so Channel API messages
+        // (source type used by Application Channels) are linked to this contact instead
+        // of creating a separate auto-contact.
+        handles: [
+          { source: 'email', handle: email },
+          { source: 'custom', handle: email },
+        ],
         ...(name && { name }),
         ...(customFields && { custom_fields: this.serializeCustomFields(customFields) }),
       })) as { id: string } & Record<string, unknown>;
@@ -436,6 +453,10 @@ export class FrontChatService {
     try {
       const result = await this.frontApiRequest('PATCH', `/contacts/${contactId}`, updateBody);
       await this.ensureContactInList(profile.email ?? email);
+      // When email changes, the new email handle won't have the custom channel handle yet.
+      if (profile.email && profile.email !== email) {
+        this.addChannelHandle(profile.email).catch(() => {});
+      }
       return result;
     } catch (error) {
       if (this.isContactNotFoundError(error)) {
@@ -501,6 +522,40 @@ export class FrontChatService {
         `Delete Front Chat contact API call failed: ${error?.message || 'unknown error'}`,
         { cause: error },
       );
+    }
+  }
+
+  // Adds the 'custom' channel handle to an existing contact so that Channel API
+  // messages (source type used by Front Application Channels) link to it instead
+  // of creating a separate auto-contact. Safe to call when the handle already exists.
+  async addChannelHandle(email: string): Promise<void> {
+    if (isCypressTestEmail(email)) return;
+    try {
+      await this.frontApiRequest('PATCH', `/contacts/${this.getContactAlias(email)}`, {
+        handles: [{ source: 'custom', handle: email }],
+      });
+    } catch {
+      // Non-fatal: duplicate handle or contact not found
+    }
+  }
+
+  // When no frontConversationId is cached locally, look it up from Front and persist it.
+  // Returns the most recently active conversation ID for the contact, or null if none found.
+  private async findConversationIdByContact(userId: string, email: string): Promise<string | null> {
+    try {
+      const data = (await this.frontApiRequest(
+        'GET',
+        `/contacts/${this.getContactAlias(email)}/conversations?limit=5`,
+      )) as FrontApiPaginated<{ id: string }>;
+
+      const conversationId = data._results?.[0]?.id ?? null;
+      if (conversationId) {
+        await this.getOrCreateChatUser(userId, { frontConversationId: conversationId });
+        logger.log(`Resolved conversation ${conversationId} for user ${userId} via contact lookup`);
+      }
+      return conversationId;
+    } catch {
+      return null;
     }
   }
 
