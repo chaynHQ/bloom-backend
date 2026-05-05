@@ -110,8 +110,6 @@ export class FrontChatGateway implements OnGatewayConnection, OnGatewayDisconnec
         `History fetch failed for user ${user.id}: ${error?.message || 'unknown error'}`,
       );
     }
-
-    this.logger.log(`FrontChat connected — socket ${client.id} → user ${user.id}`);
   }
 
   handleDisconnect(client: Socket): void {

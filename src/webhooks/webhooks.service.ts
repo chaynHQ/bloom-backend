@@ -1,6 +1,7 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ISbStoryData } from '@storyblok/js';
+import { createHmac, timingSafeEqual } from 'crypto';
 import apiCall from 'src/api/apiCalls';
 import { SlackMessageClient } from 'src/api/slack/slack-api';
 import { CourseEntity } from 'src/entities/course.entity';
@@ -9,25 +10,11 @@ import { ResourceEntity } from 'src/entities/resource.entity';
 import { SessionEntity } from 'src/entities/session.entity';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
 import { UserEntity } from 'src/entities/user.entity';
-import { EVENT_NAME } from 'src/event-logger/event-logger.interface';
-import { EventLoggerService } from 'src/event-logger/event-logger.service';
-import { FrontChatGateway } from 'src/front-chat/front-chat.gateway';
-import { FRONT_WEBHOOK_EVENT_TYPE } from 'src/front-chat/front-chat.interface';
-import { buildThreadRef, FrontChatService } from 'src/front-chat/front-chat.service';
 import { Logger } from 'src/logger/logger';
 import { ZapierSimplybookBodyDto } from 'src/partner-access/dtos/zapier-body.dto';
 import { ServiceUserProfilesService } from 'src/service-user-profiles/service-user-profiles.service';
 import { IUser } from 'src/user/user.interface';
-import { formatAuthorName } from 'src/utils/html';
 import { serializeZapierSimplyBookDtoToTherapySessionEntity } from 'src/utils/serialize';
-import {
-  FrontChannelAttachment,
-  FrontChannelOutboundPayload,
-} from 'src/webhooks/dto/front-channel-webhook.dto';
-import {
-  FrontChatWebhookDto,
-  FrontWebhookMessageAuthor,
-} from 'src/webhooks/dto/front-chat-webhook.dto';
 import { ILike, MoreThan, Repository } from 'typeorm';
 import { CoursePartnerService } from '../course-partner/course-partner.service';
 import {
@@ -37,12 +24,13 @@ import {
   STORYBLOK_PAGE_COMPONENTS,
   STORYBLOK_STORY_STATUS_ENUM,
   storyblokToken,
+  storyblokWebhookSecret,
 } from '../utils/constants';
 import { StoryWebhookDto } from './dto/story.dto';
 
 @Injectable()
 export class WebhooksService {
-  private readonly logger = new Logger('WebhookService');
+  private readonly logger = new Logger('WebhooksService');
 
   constructor(
     @InjectRepository(PartnerAccessEntity)
@@ -56,9 +44,6 @@ export class WebhooksService {
     private therapySessionRepository: Repository<TherapySessionEntity>,
     private serviceUserProfilesService: ServiceUserProfilesService,
     private slackMessageClient: SlackMessageClient,
-    private eventLoggerService: EventLoggerService,
-    private frontChatGateway: FrontChatGateway,
-    private frontChatService: FrontChatService,
   ) {}
 
   async updatePartnerAccessTherapy(
@@ -408,8 +393,32 @@ export class WebhooksService {
     }
   }
 
-  // Handle Storyblok story status change (published, unpublished, moved, deleted)
-  // Triggered by a webhook, this function handles updating our database records to sync with storyblok story data
+  async handleStoryblokWebhook(
+    rawBody: Buffer | undefined,
+    signature: string | undefined,
+    data: StoryWebhookDto,
+  ) {
+    if (!signature) {
+      const error = 'Storyblok webhook error - no signature provided';
+      this.logger.error(error);
+      throw new HttpException(error, HttpStatus.UNAUTHORIZED);
+    }
+    if (!rawBody) {
+      const error = 'Storyblok webhook error - raw body unavailable';
+      this.logger.error(error);
+      throw new HttpException(error, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+    const bodyHmac = createHmac('sha1', storyblokWebhookSecret).update(rawBody).digest('hex');
+    const expectedBuf = Buffer.from(bodyHmac);
+    const providedBuf = Buffer.from(signature);
+    if (expectedBuf.length !== providedBuf.length || !timingSafeEqual(expectedBuf, providedBuf)) {
+      const error = 'Storyblok webhook error - signature mismatch';
+      this.logger.error(error);
+      throw new HttpException(error, HttpStatus.UNAUTHORIZED);
+    }
+    return this.handleStoryUpdated(data);
+  }
+
   async handleStoryUpdated(data: StoryWebhookDto) {
     const status = data.action;
     const story_slug = data.full_slug;
@@ -464,142 +473,4 @@ export class WebhooksService {
     return this.updateOrCreateStoryData(story, status);
   }
 
-  async handleFrontChatWebhook(data: FrontChatWebhookDto): Promise<void> {
-    const email = data.conversation?.recipient?.handle;
-    if (!email) {
-      this.logger.warn(`Front webhook ${data.type} event ${data.id}: no recipient email, skipping`);
-      return;
-    }
-
-    // OUTBOUND/OUT_REPLY: update chat activity timestamps. Agent reply delivery is handled
-    // exclusively by handleFrontChannelOutbound (Channel API outbound webhook) so we don't
-    // emit here — doing so would duplicate the message when both webhooks hit the same endpoint.
-    if (
-      data.type === FRONT_WEBHOOK_EVENT_TYPE.OUTBOUND ||
-      data.type === FRONT_WEBHOOK_EVENT_TYPE.OUT_REPLY
-    ) {
-      this.frontChatService
-        .updateChatUserByEmail(email, {
-          lastMessageReceivedAt: new Date(data.emitted_at * 1000),
-          ...(data.conversation?.id ? { frontConversationId: data.conversation.id } : {}),
-        })
-        .then((chatUser) => {
-          if (chatUser) {
-            return this.serviceUserProfilesService.updateServiceUserProfilesChatActivity(
-              chatUser,
-              email,
-            );
-          }
-        })
-        .catch(() => {});
-    }
-
-    // Capture conversation ID from inbound events so history loads immediately on reconnect,
-    // rather than waiting for the 5-second post-send timer or an agent reply.
-    if (data.type === FRONT_WEBHOOK_EVENT_TYPE.INBOUND && data.conversation?.id) {
-      this.frontChatService
-        .updateChatUserByEmail(email, { frontConversationId: data.conversation.id })
-        .catch(() => {});
-    }
-
-    const eventName = this.mapFrontEventToEventName(data.type);
-    if (!eventName) {
-      this.logger.log(`Front webhook event type "${data.type}" is not tracked, skipping`);
-      return;
-    }
-
-    try {
-      await this.eventLoggerService.createEventLog(
-        {
-          event: eventName,
-          date: new Date(data.emitted_at * 1000),
-        },
-        email,
-      );
-      this.logger.log(`Front webhook: logged ${eventName} for ${email}`);
-    } catch (error) {
-      // Don't fail the webhook response if event logging fails (e.g. user not found)
-      this.logger.warn(
-        `Front webhook: failed to log ${eventName} for ${email}: ${error?.message || 'unknown error'}`,
-      );
-    }
-  }
-
-  // Handles outbound messages Front sends to a Custom Channel when an agent
-  // replies in the Front UI. Front REQUIRES a 200 with this exact body shape
-  // (https://dev.frontapp.com/docs/getting-started-1) — any other response
-  // surfaces as "channel servers are unresponsive" to the agent.
-  async handleFrontChannelOutbound(
-    data: FrontChannelOutboundPayload | Record<string, unknown>,
-  ): Promise<{ type: 'success'; external_id: string; external_conversation_id: string }> {
-    const payload = (data as FrontChannelOutboundPayload).payload ?? {};
-    // Front Channel API sends `recipients`; fall back to `to` for legacy variants.
-    const recipients = payload.recipients ?? payload.to ?? [];
-    const recipientEmail =
-      recipients.find((r) => r?.role === 'to' && r?.handle)?.handle ??
-      recipients.find((r) => r?.handle)?.handle;
-    const messageBody = payload.text ?? payload.body ?? '';
-    const externalId = payload.id || `front-${Date.now()}`;
-    const chatUser = recipientEmail
-      ? await this.frontChatService.getChatUserByEmail(recipientEmail)
-      : null;
-    const externalConversationId =
-      (data as FrontChannelOutboundPayload).metadata?.external_conversation_ids?.[0] ??
-      (data as FrontChannelOutboundPayload).metadata?.external_conversation_id ??
-      (chatUser ? buildThreadRef(chatUser.userId) : externalId);
-
-    const attachments = (payload.attachments ?? []) as FrontChannelAttachment[];
-    const imageAttachment = attachments.find((a) => a.content_type?.startsWith('image/') && a.url);
-    const audioAttachment = !imageAttachment
-      ? attachments.find((a) => a.content_type?.startsWith('audio/') && a.url)
-      : undefined;
-    const attachment = imageAttachment ?? audioAttachment;
-
-    if (recipientEmail && (messageBody || attachment)) {
-      this.frontChatGateway.emitAgentReply(recipientEmail, {
-        // Use externalId (always non-empty) so the frontend can reliably dedup by ID.
-        // Send seconds, not ms — the frontend multiplies by 1000 matching Front's emitted_at convention.
-        id: externalId,
-        body: messageBody || (attachment?.filename ?? 'Attachment'),
-        authorEmail: payload.author?.email,
-        authorName: formatAuthorName(payload.author as FrontWebhookMessageAuthor | undefined),
-        emittedAt: Math.floor(Date.now() / 1000),
-        ...(attachment?.url && {
-          attachmentUrl: `/front-chat/attachment-proxy?url=${encodeURIComponent(attachment.url)}`,
-          kind: imageAttachment ? 'image' : 'voice',
-        }),
-      });
-      this.logger.log(`Front Channel: forwarded agent reply to ${recipientEmail}`);
-
-      // Update the DB timestamp only. External profile sync (Mailchimp + Front custom fields)
-      // is handled exclusively by the Events API OUTBOUND/OUT_REPLY handler, which fires on
-      // the same endpoint with the more accurate emitted_at timestamp — doing it here too
-      // would double-hit those APIs on every agent reply.
-      this.frontChatService
-        .updateChatUserByEmail(recipientEmail, { lastMessageReceivedAt: new Date() })
-        .catch(() => {});
-    } else {
-      this.logger.warn(
-        `Front Channel: missing recipient or body (recipient=${recipientEmail}, hasBody=${!!messageBody})`,
-      );
-    }
-
-    return {
-      type: 'success',
-      external_id: externalId,
-      external_conversation_id: externalConversationId,
-    };
-  }
-
-  private mapFrontEventToEventName(type: string): EVENT_NAME | null {
-    switch (type) {
-      case FRONT_WEBHOOK_EVENT_TYPE.INBOUND:
-        return EVENT_NAME.CHAT_MESSAGE_SENT;
-      case FRONT_WEBHOOK_EVENT_TYPE.OUTBOUND:
-      case FRONT_WEBHOOK_EVENT_TYPE.OUT_REPLY:
-        return EVENT_NAME.CHAT_MESSAGE_RECEIVED;
-      default:
-        return null;
-    }
-  }
 }
