@@ -19,13 +19,18 @@ import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
 import { UserEntity } from 'src/entities/user.entity';
 import { EVENT_NAME } from 'src/event-logger/event-logger.interface';
 import { IFirebaseUser } from 'src/firebase/firebase-user.interface';
-import { ZapierSimplybookBodyDto } from 'src/partner-access/dtos/zapier-body.dto';
+import { SimplybookBookingDetails } from 'src/api/simplybook/simplybook-api';
+import { SimplybookBodyDto } from 'src/partner-access/dtos/simplybook-body.dto';
 import {
   EMAIL_REMINDERS_FREQUENCY,
   RESOURCE_CATEGORIES,
   SIMPLYBOOK_ACTION_ENUM,
   STORYBLOK_STORY_STATUS_ENUM,
 } from 'src/utils/constants';
+import {
+  SimplybookNotificationType,
+  SimplybookWebhookDto,
+} from 'src/webhooks/dtos/simplybook-webhook.dto';
 
 export const mockSessionStoryblokResult = {
   data: {
@@ -259,7 +264,7 @@ export const mockAltTherapySessionEntity = {
   user: { signUpLanguage: 'en' } as UserEntity,
 } as TherapySessionEntity;
 
-export const mockSimplybookBodyBase: ZapierSimplybookBodyDto = {
+export const mockSimplybookBodyBase: SimplybookBodyDto = {
   action: SIMPLYBOOK_ACTION_ENUM.UPDATED_BOOKING,
   start_date_time: '2022-09-12T07:30:00+0000',
   end_date_time: '2022-09-12T08:30:00+0000',
@@ -270,6 +275,24 @@ export const mockSimplybookBodyBase: ZapierSimplybookBodyDto = {
   service_name: 'bloom therapy',
   service_provider_email: 'therapist@test.com',
   service_provider_name: 'Therapist name',
+};
+
+export const mockSimplybookWebhookDto: SimplybookWebhookDto = {
+  booking_id: 123,
+  booking_hash: 'abc123def456abc123def456abc123de',
+  company: 'chayn',
+  notification_type: SimplybookNotificationType.CREATE,
+};
+
+export const mockSimplybookBookingDetails: SimplybookBookingDetails = {
+  id: 123,
+  code: 'abc',
+  start_datetime: '2022-09-12T07:30:00+0000',
+  end_datetime: '2022-09-12T08:30:00+0000',
+  service: { name: 'bloom therapy' },
+  provider: { name: 'Therapist name', email: 'therapist@test.com' },
+  client: { email: 'testuser@test.com' },
+  additional_fields: [{ id: 1, field_name: 'user_id', value: 'userId2' }],
 };
 
 export const mockPartnerEntity = {

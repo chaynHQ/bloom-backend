@@ -1,12 +1,14 @@
-import { Body, Controller, Headers, Post, Request, UseGuards } from '@nestjs/common';
-import { ApiBody, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Headers, Post, Query, Request, UseGuards } from '@nestjs/common';
+import { ApiBody, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
 import { FrontChatWebhookService } from 'src/front-chat/front-chat-webhook.service';
 import { ControllerDecorator } from 'src/utils/controller.decorator';
-import { ZapierSimplybookBodyDto } from '../partner-access/dtos/zapier-body.dto';
+import { SimplybookBodyDto } from '../partner-access/dtos/simplybook-body.dto';
 import { ZapierAuthGuard } from '../partner-access/zapier-auth.guard';
 import { FrontChatWebhookDto } from './dto/front-chat-webhook.dto';
 import { StoryWebhookDto } from './dto/story.dto';
+import { SimplybookWebhookDto } from './dtos/simplybook-webhook.dto';
+import { SimplybookWebhookGuard } from './guards/simplybook-webhook.guard';
 import { WebhooksService } from './webhooks.service';
 
 @ApiTags('Webhooks')
@@ -20,11 +22,22 @@ export class WebhooksController {
 
   @UseGuards(ZapierAuthGuard)
   @Post('simplybook')
-  @ApiBody({ type: ZapierSimplybookBodyDto })
+  @ApiBody({ type: SimplybookBodyDto })
   async updatePartnerAccessTherapy(
-    @Body() simplybookBodyDto: ZapierSimplybookBodyDto,
+    @Body() simplybookBodyDto: SimplybookBodyDto,
   ): Promise<TherapySessionEntity> {
     return this.webhooksService.updatePartnerAccessTherapy(simplybookBodyDto);
+  }
+
+  @UseGuards(SimplybookWebhookGuard)
+  @Post('simplybook-admin')
+  @ApiBody({ type: SimplybookWebhookDto })
+  @ApiQuery({ name: 'token', required: true, description: 'Webhook secret token' })
+  async handleSimplybookWebhook(
+    @Body() webhookDto: SimplybookWebhookDto,
+    @Query('token') _token: string,
+  ): Promise<TherapySessionEntity | void> {
+    return this.webhooksService.handleSimplybookWebhook(webhookDto);
   }
 
   @Post('storyblok')

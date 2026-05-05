@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { ISbStoryData } from '@storyblok/js';
 import { createHmac, timingSafeEqual } from 'crypto';
 import apiCall from 'src/api/apiCalls';
+import { getBookingDetails } from 'src/api/simplybook/simplybook-api';
 import { SlackMessageClient } from 'src/api/slack/slack-api';
 import { CourseEntity } from 'src/entities/course.entity';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
@@ -11,10 +12,10 @@ import { SessionEntity } from 'src/entities/session.entity';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
 import { UserEntity } from 'src/entities/user.entity';
 import { Logger } from 'src/logger/logger';
-import { ZapierSimplybookBodyDto } from 'src/partner-access/dtos/zapier-body.dto';
+import { SimplybookBodyDto } from 'src/partner-access/dtos/simplybook-body.dto';
 import { ServiceUserProfilesService } from 'src/service-user-profiles/service-user-profiles.service';
 import { IUser } from 'src/user/user.interface';
-import { serializeZapierSimplyBookDtoToTherapySessionEntity } from 'src/utils/serialize';
+import { serializeSimplybookDtoToTherapySessionEntity } from 'src/utils/serialize';
 import { ILike, MoreThan, Repository } from 'typeorm';
 import { CoursePartnerService } from '../course-partner/course-partner.service';
 import {
@@ -27,6 +28,7 @@ import {
   storyblokWebhookSecret,
 } from '../utils/constants';
 import { StoryWebhookDto } from './dto/story.dto';
+import { SimplybookNotificationType, SimplybookWebhookDto } from './dtos/simplybook-webhook.dto';
 
 @Injectable()
 export class WebhooksService {
@@ -47,7 +49,7 @@ export class WebhooksService {
   ) {}
 
   async updatePartnerAccessTherapy(
-    simplyBookDto: ZapierSimplybookBodyDto,
+    simplyBookDto: SimplybookBodyDto,
   ): Promise<TherapySessionEntity> {
     const { action, booking_code, user_id, client_email } = simplyBookDto;
 
@@ -142,6 +144,57 @@ export class WebhooksService {
     }
   }
 
+  async handleSimplybookWebhook(
+    webhookDto: SimplybookWebhookDto,
+  ): Promise<TherapySessionEntity | void> {
+    if (webhookDto.notification_type === SimplybookNotificationType.NOTIFY) {
+      this.logger.log(
+        `Simplybook reminder webhook received for booking ${webhookDto.booking_id} - ignoring`,
+      );
+      return;
+    }
+
+    const notificationTypeToAction: Record<string, SIMPLYBOOK_ACTION_ENUM> = {
+      [SimplybookNotificationType.CREATE]: SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING,
+      [SimplybookNotificationType.CANCEL]: SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING,
+      [SimplybookNotificationType.CHANGE]: SIMPLYBOOK_ACTION_ENUM.UPDATED_BOOKING,
+    };
+
+    const action = notificationTypeToAction[webhookDto.notification_type];
+    const bookingDetails = await getBookingDetails(webhookDto.booking_id);
+
+    // NOTE: user_id pre-fill is currently broken on the frontend.
+    // The user_id intake field is set to "not visible" in Simplybook admin, which causes
+    // Simplybook to drop it from the form submission — the predefined value is never passed
+    // through to the booking payload, so userId will always be undefined here.
+    //
+    // The fallback in updatePartnerAccessTherapy handles this: it looks up the user by
+    // client_email, which Simplybook always submits and the frontend pre-fills reliably.
+    //
+    // Possible fixes (tracked on the frontend):
+    // 1. Make the user_id field visible in Simplybook admin — fixes it but exposes a raw UUID.
+    // 2. Pre-fill with the user's active therapy access code instead — less confusing to users,
+    //    but needs a reliable way to select one code when a user has multiple active ones.
+    const userId =
+      bookingDetails.additional_fields.find((f) => f.field_name === 'user_id')?.value || undefined;
+
+    const internalDto: SimplybookBodyDto = {
+      action,
+      booking_id: webhookDto.booking_id,
+      booking_code: bookingDetails.code,
+      client_email: bookingDetails.client.email,
+      client_timezone: undefined,
+      service_name: bookingDetails.service.name,
+      service_provider_name: bookingDetails.provider.name,
+      service_provider_email: bookingDetails.provider.email,
+      start_date_time: bookingDetails.start_datetime,
+      end_date_time: bookingDetails.end_datetime,
+      user_id: userId,
+    } as SimplybookBodyDto;
+
+    return this.updatePartnerAccessTherapy(internalDto);
+  }
+
   private async getSimplyBookTherapyUser(userId: string, client_email: string): Promise<IUser> {
     if (!userId) {
       // No userId sent in the webhook - likely due to user clicking simplybook link from email instead of in-app widget
@@ -195,7 +248,7 @@ export class WebhooksService {
     }
   }
 
-  private async newPartnerAccessTherapy(user: IUser, simplyBookDto: ZapierSimplybookBodyDto) {
+  private async newPartnerAccessTherapy(user: IUser, simplyBookDto: SimplybookBodyDto) {
     const partnerAccesses = await this.partnerAccessRepository.find({
       where: {
         userId: user.id,
@@ -237,7 +290,7 @@ export class WebhooksService {
     partnerAccess.therapySessionsRedeemed += 1;
 
     try {
-      const serializedTherapySession = serializeZapierSimplyBookDtoToTherapySessionEntity(
+      const serializedTherapySession = serializeSimplybookDtoToTherapySessionEntity(
         simplyBookDto,
         partnerAccess,
       );
@@ -472,5 +525,4 @@ export class WebhooksService {
     // Create or update the resource/course/session record in our database
     return this.updateOrCreateStoryData(story, status);
   }
-
 }
