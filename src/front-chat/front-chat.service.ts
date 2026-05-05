@@ -385,7 +385,6 @@ export class FrontChatService {
       nextPath = nextUrl ? nextUrl.replace(FRONT_API_BASE_URL, '') : null;
     }
 
-    logger.log(`Fetched conversation history for user ${user.id}: ${allMessages.length} messages`);
     return { messages: allMessages.sort((a, b) => a.createdAt - b.createdAt), conversationFound: true };
   }
 
