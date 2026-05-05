@@ -277,8 +277,8 @@ describe('FrontChatService', () => {
   });
 
   describe('markAsRead', () => {
-    it('updates lastMessageReadAt to now', async () => {
-      const existing = buildChatUser();
+    it('updates lastMessageReadAt to now when there is an unread received message', async () => {
+      const existing = buildChatUser({ lastMessageReceivedAt: new Date(Date.now() - 60_000) });
       mockChatUserRepository.findOneBy.mockResolvedValueOnce(existing);
       mockChatUserRepository.save.mockImplementation(async (data) => data);
 
@@ -289,6 +289,28 @@ describe('FrontChatService', () => {
       const saved = mockChatUserRepository.save.mock.calls[0][0];
       expect(saved.lastMessageReadAt.getTime()).toBeGreaterThanOrEqual(before);
       expect(saved.lastMessageReadAt.getTime()).toBeLessThanOrEqual(after);
+    });
+
+    it('returns null and does not save when no received message exists', async () => {
+      mockChatUserRepository.findOneBy.mockResolvedValueOnce(buildChatUser({ lastMessageReceivedAt: null }));
+
+      const result = await service.markAsRead('user-1');
+
+      expect(result).toBeNull();
+      expect(mockChatUserRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('returns null and does not save when already up to date', async () => {
+      const readAt = new Date();
+      const receivedAt = new Date(readAt.getTime() - 5000);
+      mockChatUserRepository.findOneBy.mockResolvedValueOnce(
+        buildChatUser({ lastMessageReceivedAt: receivedAt, lastMessageReadAt: readAt }),
+      );
+
+      const result = await service.markAsRead('user-1');
+
+      expect(result).toBeNull();
+      expect(mockChatUserRepository.save).not.toHaveBeenCalled();
     });
   });
 
@@ -555,7 +577,7 @@ describe('FrontChatService', () => {
       mockChatUserRepository.findOneBy.mockResolvedValueOnce(null);
       mockEmptyContactLookup();
       const result = await service.getConversationHistory(user);
-      expect(result).toEqual([]);
+      expect(result).toEqual({ messages: [], conversationFound: false });
     });
 
     it('returns empty array when ChatUser exists but frontConversationId is null and contact has no conversations', async () => {
@@ -564,7 +586,7 @@ describe('FrontChatService', () => {
       );
       mockEmptyContactLookup();
       const result = await service.getConversationHistory(user);
-      expect(result).toEqual([]);
+      expect(result).toEqual({ messages: [], conversationFound: false });
     });
 
     it('uses contact conversation lookup to find and cache frontConversationId when absent', async () => {
@@ -614,7 +636,7 @@ describe('FrontChatService', () => {
         email: 'cypresstestemail+1@chayn.co',
       });
       expect(mockFetch).not.toHaveBeenCalled();
-      expect(result).toEqual([]);
+      expect(result).toEqual({ messages: [], conversationFound: false });
     });
 
     it('maps inbound messages as user and outbound as agent, sorted chronologically', async () => {
@@ -640,7 +662,7 @@ describe('FrontChatService', () => {
         }),
       });
 
-      const messages = await service.getConversationHistory(user);
+      const { messages } = await service.getConversationHistory(user);
 
       expect(messages).toHaveLength(2);
       expect(messages[0]).toMatchObject({ id: 'msg_1', direction: 'user', text: 'Hello' });
@@ -677,7 +699,7 @@ describe('FrontChatService', () => {
           }),
         });
 
-      const messages = await service.getConversationHistory(user);
+      const { messages } = await service.getConversationHistory(user);
 
       expect(messages).toHaveLength(2);
       expect(mockFetch).toHaveBeenCalledTimes(2);
@@ -691,7 +713,7 @@ describe('FrontChatService', () => {
 
       const result = await service.getConversationHistory(user);
 
-      expect(result).toEqual([]);
+      expect(result).toEqual({ messages: [], conversationFound: false });
       expect(mockChatUserRepository.update).toHaveBeenCalledWith(
         { userId: 'user-1' },
         { frontConversationId: null },
@@ -724,7 +746,7 @@ describe('FrontChatService', () => {
         }),
       });
 
-      const messages = await service.getConversationHistory(user);
+      const { messages } = await service.getConversationHistory(user);
 
       expect(messages).toHaveLength(1);
       expect(messages[0]).toMatchObject({
@@ -749,7 +771,7 @@ describe('FrontChatService', () => {
         }),
       });
 
-      const messages = await service.getConversationHistory(user);
+      const { messages } = await service.getConversationHistory(user);
       expect(messages).toHaveLength(0);
     });
   });
@@ -851,7 +873,7 @@ describe('FrontChatService', () => {
         }),
       });
 
-      const messages = await service.getConversationHistory(user);
+      const { messages } = await service.getConversationHistory(user);
 
       expect(messages).toHaveLength(1);
       expect(messages[0]).toMatchObject({

@@ -94,10 +94,14 @@ export class FrontChatGateway implements OnGatewayConnection, OnGatewayDisconnec
 
     this.sessions.set(client.id, user);
     await client.join(userRoom(user.email));
-    this.ensureContactReady(user);
 
     try {
-      const messages = await this.frontChatService.getConversationHistory(user);
+      const { messages, conversationFound } = await this.frontChatService.getConversationHistory(user);
+
+      if (!conversationFound) {
+        this.ensureContactReady(user);
+      }
+
       if (messages.length > 0) {
         client.emit('history', { messages });
       }
@@ -130,19 +134,17 @@ export class FrontChatGateway implements OnGatewayConnection, OnGatewayDisconnec
     }
 
     try {
-      await this.ensureContactReady(user);
-      await this.frontChatService.sendChannelTextMessage(user, payload.text);
+      const existingChatUser = await this.frontChatService.getChatUser(user.id);
+      if (!existingChatUser?.frontContactId) {
+        await this.ensureContactReady(user);
+      }
+      const chatUser = await this.frontChatService.sendChannelTextMessage(user, payload.text);
 
-      this.frontChatService
-        .getChatUser(user.id)
-        .then((chatUser) => {
-          if (chatUser) {
-            return this.serviceUserProfilesService
-              .updateServiceUserProfilesChatActivity(chatUser, user.email)
-              .catch(() => {});
-          }
-        })
-        .catch(() => {});
+      if (chatUser) {
+        this.serviceUserProfilesService
+          .updateServiceUserProfilesChatActivity(chatUser, user.email)
+          .catch(() => {});
+      }
 
       return { ok: true };
     } catch (error) {

@@ -14,6 +14,12 @@ export interface FrontChannelAuthor {
   last_name?: string;
 }
 
+export interface FrontChannelAttachment {
+  url?: string;
+  filename?: string;
+  content_type?: string;
+}
+
 export interface FrontChannelOutboundPayload {
   type: 'message' | string;
   payload: {
@@ -26,7 +32,7 @@ export interface FrontChannelOutboundPayload {
     // Front Channel API sends `recipients`; `to` kept for any legacy variants.
     recipients?: FrontChannelRecipient[];
     to?: FrontChannelRecipient[];
-    attachments?: unknown[];
+    attachments?: FrontChannelAttachment[];
   };
   metadata?: {
     external_conversation_ids?: string[];

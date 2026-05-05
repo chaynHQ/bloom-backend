@@ -12,7 +12,7 @@ import { FrontImportService } from './front-import.service';
 
 const logger = new Logger('CrispMigrationService');
 
-const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000;
+const SIX_MONTHS_MS = 182 * 24 * 60 * 60 * 1000;
 
 const INTER_REQUEST_DELAY_MS = 300;
 const INTER_CONVERSATION_DELAY_MS = 500;
@@ -51,7 +51,7 @@ export class CrispMigrationService {
 
     const since = options.startDate
       ? new Date(options.startDate)
-      : new Date(Date.now() - ONE_YEAR_MS);
+      : new Date(Date.now() - SIX_MONTHS_MS);
 
     this.migrationErrors = [];
     this.currentProgress = {
@@ -148,9 +148,6 @@ export class CrispMigrationService {
 
       if (email && !(options.dryRun ?? false)) {
         try {
-          await this.frontImport.ensureContact(email, name ?? undefined);
-          this.currentProgress!.processedContacts++;
-
           const user = await this.userRepository.findOne({
             where: { email },
             relations: {
@@ -160,19 +157,23 @@ export class CrispMigrationService {
           });
 
           if (user) {
+            // ensureFrontContact creates the contact with full custom fields and adds it
+            // to the contact list internally — no need to call ensureContact separately.
             await this.serviceUserProfiles.ensureFrontContact(user);
             logger.log(`Populated Front custom fields from DB for ${email}`);
           } else {
-            logger.log(`No DB user found for ${email} — skipping custom field population`);
+            // No DB record — create a minimal contact and add to list.
+            logger.log(`No DB user found for ${email} — creating minimal contact`);
+            await this.frontImport.ensureContact(email, name ?? undefined);
           }
+
+          this.currentProgress!.processedContacts++;
         } catch (err) {
           logger.warn(`Failed to set up contact for ${email}: ${(err as Error).message}`);
         }
         await this.delay(INTER_REQUEST_DELAY_MS);
       }
 
-      const lastConv = userConversations[userConversations.length - 1];
-      const finalIsResolved = lastConv?.state === 'resolved';
       let existingConversationId: string | undefined;
 
       for (const conv of userConversations) {
@@ -184,7 +185,6 @@ export class CrispMigrationService {
             since,
             options,
             existingConversationId,
-            finalIsResolved,
           );
         } catch (err) {
           const message = (err as Error).message || 'Unknown error';
@@ -200,7 +200,7 @@ export class CrispMigrationService {
 
   private async migrateSingleConversation(sessionId: string, options: MigrationOptionsDto): Promise<void> {
     this.currentProgress!.totalConversations = 1;
-    await this.migrateConversationById(sessionId, new Date(0), options, undefined, undefined);
+    await this.migrateConversationById(sessionId, new Date(0), options, undefined);
   }
 
   private async migrateConversationById(
@@ -208,11 +208,10 @@ export class CrispMigrationService {
     since: Date,
     options: MigrationOptionsDto,
     existingConversationId: string | undefined,
-    isResolved: boolean | undefined,
   ): Promise<string | undefined> {
     logger.log(`Processing conversation ${sessionId}`);
 
-    const data = await this.crispExport.getConversationData(sessionId);
+    const data = await this.crispExport.getConversationData(sessionId, since);
     await this.delay(INTER_REQUEST_DELAY_MS);
 
     const cutoffMs = since.getTime();
@@ -227,7 +226,6 @@ export class CrispMigrationService {
       skipAttachments: options.skipAttachments ?? false,
       skipNotes: options.skipNotes ?? false,
       existingConversationId,
-      isResolved,
     });
 
     this.currentProgress!.processedConversations++;

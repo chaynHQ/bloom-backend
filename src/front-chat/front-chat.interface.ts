@@ -40,4 +40,7 @@ export interface AgentReplyPayload {
   authorName?: string;
   /** Unix timestamp in seconds (multiply by 1000 on the frontend to get ms) */
   emittedAt: number;
+  /** Relative proxy path, e.g. /front-chat/attachment-proxy?url=... — prefix with API_URL on the client */
+  attachmentUrl?: string;
+  kind?: 'image' | 'voice';
 }

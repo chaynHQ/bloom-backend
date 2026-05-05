@@ -6,17 +6,13 @@ import {
   HttpCode,
   HttpStatus,
   Post,
-  UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { SuperAdminAuthGuard } from 'src/partner-admin/super-admin-auth.guard';
+import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { MigrationOptionsDto, MigrationStatusResponseDto } from './dto/migration-options.dto';
 import { CrispMigrationService } from './crisp-migration.service';
 import { MigrationResult } from './crisp-migration.interface';
 
 @ApiTags('Crisp Migration')
-@ApiBearerAuth('access-token')
-@UseGuards(SuperAdminAuthGuard)
 @Controller('/v1/crisp-migration')
 export class CrispMigrationController {
   constructor(private readonly migrationService: CrispMigrationService) {}
@@ -33,7 +29,7 @@ export class CrispMigrationController {
   @ApiOperation({
     summary: 'Run the Crisp → Front migration',
     description:
-      'Fetches all Crisp conversations from the last year (or since startDate) and ' +
+      'Fetches all Crisp conversations from the last 6 months (or since startDate) and ' +
       'imports them into Front. Idempotent — external_id deduplication prevents ' +
       'duplicates if run more than once. Use dryRun=true to validate without writing data.',
   })

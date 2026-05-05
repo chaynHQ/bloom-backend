@@ -35,7 +35,7 @@ describe('FrontChatController', () => {
       sendChannelAttachment: jest.fn().mockResolvedValue(undefined),
       markAsRead: jest.fn().mockResolvedValue(buildChatUser()),
       getChatUser: jest.fn().mockResolvedValue(null),
-      getConversationHistory: jest.fn().mockResolvedValue([]),
+      getConversationHistory: jest.fn().mockResolvedValue({ messages: [], conversationFound: false }),
       fetchAttachment: jest
         .fn()
         .mockResolvedValue({ buffer: Buffer.from('img'), contentType: 'image/png' }),
@@ -57,6 +57,25 @@ describe('FrontChatController', () => {
     await controller.uploadAttachment({ userEntity: user } as any, file);
 
     expect(frontChatService.sendChannelAttachment).toHaveBeenCalledWith(user, file);
+  });
+
+  it('calls ensureFrontContact when chatUser has no frontContactId', async () => {
+    const user = { id: 'u1', email: 'u@example.com' } as UserEntity;
+    frontChatService.getChatUser.mockResolvedValueOnce(buildChatUser({ frontContactId: null }));
+
+    await controller.uploadAttachment({ userEntity: user } as any, buildFile());
+
+    expect(serviceUserProfilesService.ensureFrontContact).toHaveBeenCalledWith(user);
+  });
+
+  it('skips ensureFrontContact when chatUser already has a frontContactId', async () => {
+    const user = { id: 'u1', email: 'u@example.com' } as UserEntity;
+    frontChatService.getChatUser.mockResolvedValueOnce(buildChatUser({ frontContactId: 'crd_existing' }));
+
+    await controller.uploadAttachment({ userEntity: user } as any, buildFile());
+
+    expect(serviceUserProfilesService.ensureFrontContact).not.toHaveBeenCalled();
+    expect(frontChatService.sendChannelAttachment).toHaveBeenCalled();
   });
 
   it('throws when no file is provided', async () => {
@@ -111,7 +130,7 @@ describe('FrontChatController', () => {
         { id: 'msg-1', direction: 'agent', text: 'Hello!', createdAt: 1000 },
         { id: 'msg-2', direction: 'user', text: 'Hi there', createdAt: 2000 },
       ];
-      frontChatService.getConversationHistory.mockResolvedValueOnce(history);
+      frontChatService.getConversationHistory.mockResolvedValueOnce({ messages: history, conversationFound: true });
 
       const result = await controller.getMessages({ userEntity: user } as any);
 
@@ -204,7 +223,7 @@ describe('FrontChatController', () => {
         { id: 'msg-1', direction: 'agent', text: 'Hello!', createdAt: 1000 },
         { id: 'msg-2', direction: 'user', text: 'Hi there', createdAt: 2000 },
       ];
-      frontChatService.getConversationHistory.mockResolvedValueOnce(history);
+      frontChatService.getConversationHistory.mockResolvedValueOnce({ messages: history, conversationFound: true });
 
       const result = await controller.getMessages({ userEntity: user } as any);
 

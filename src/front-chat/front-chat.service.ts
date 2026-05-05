@@ -173,13 +173,24 @@ export class FrontChatService {
   }
 
   async markAsRead(userId: string): Promise<ChatUserEntity | null> {
-    return this.updateChatUser(userId, { lastMessageReadAt: new Date() });
+    const chatUser = await this.chatUserRepository.findOneBy({ userId });
+    if (!chatUser) return null;
+
+    // Nothing to mark as read if the agent has never sent a message.
+    if (!chatUser.lastMessageReceivedAt) return null;
+
+    // Already up to date — don't write or sync unnecessarily.
+    if (chatUser.lastMessageReadAt && chatUser.lastMessageReadAt >= chatUser.lastMessageReceivedAt) {
+      return null;
+    }
+
+    return this.chatUserRepository.save({ ...chatUser, lastMessageReadAt: new Date() });
   }
 
-  async sendChannelTextMessage(user: FrontChatUser, text: string): Promise<void> {
+  async sendChannelTextMessage(user: FrontChatUser, text: string): Promise<ChatUserEntity | null> {
     if (isCypressTestEmail(user.email)) {
       logger.log('Skipping Front message send for Cypress test user');
-      return;
+      return null;
     }
 
     const body = {
@@ -211,28 +222,29 @@ export class FrontChatService {
 
     const data = (await response.json()) as { message_uid?: string };
 
+    // Await the save so the returned chatUser has lastMessageSentAt set — callers use it
+    // directly for Mailchimp sync to avoid a race condition on the subsequent DB fetch.
     const now = new Date();
-    this.getOrCreateChatUser(user.id)
-      .then((chatUser) => this.chatUserRepository.save({ ...chatUser, lastMessageSentAt: now }))
-      .catch((err) => {
-        logger.warn(`Failed to persist lastMessageSentAt for user ${user.id}: ${err?.message || 'unknown error'}`);
-      });
+    const chatUser = await this.getOrCreateChatUser(user.id);
+    const saved = await this.chatUserRepository.save({ ...chatUser, lastMessageSentAt: now });
 
     if (data.message_uid) {
       this.scheduleConversationIdResolution(user.id, data.message_uid);
     }
+
+    return saved;
   }
 
-  async sendChannelAttachment(user: FrontChatUser, file: Express.Multer.File): Promise<void> {
+  async sendChannelAttachment(user: FrontChatUser, file: Express.Multer.File): Promise<ChatUserEntity | null> {
     if (isCypressTestEmail(user.email)) {
       logger.log('Skipping Front attachment send for Cypress test user');
-      return;
+      return null;
     }
 
     const form = new FormData();
     form.append('sender[handle]', user.email);
     if (user.name) form.append('sender[name]', user.name);
-    form.append('body', file.mimetype.startsWith('audio/') ? 'Voice note' : 'Attachment');
+    form.append('body', file.mimetype.startsWith('audio/') ? 'Voice note' : file.originalname);
     form.append('body_format', 'markdown');
     form.append('metadata[external_id]', `${user.id}-${Date.now()}`);
     form.append('metadata[thread_ref]', buildThreadRef(user.id));
@@ -259,15 +271,14 @@ export class FrontChatService {
     const data = (await response.json()) as { message_uid?: string };
 
     const now = new Date();
-    this.getOrCreateChatUser(user.id)
-      .then((chatUser) => this.chatUserRepository.save({ ...chatUser, lastMessageSentAt: now }))
-      .catch((err) => {
-        logger.warn(`Failed to persist lastMessageSentAt for user ${user.id}: ${err?.message || 'unknown error'}`);
-      });
+    const chatUser = await this.getOrCreateChatUser(user.id);
+    const saved = await this.chatUserRepository.save({ ...chatUser, lastMessageSentAt: now });
 
     if (data.message_uid) {
       this.scheduleConversationIdResolution(user.id, data.message_uid);
     }
+
+    return saved;
   }
 
   private scheduleConversationIdResolution(userId: string, messageUid: string): void {
@@ -300,8 +311,10 @@ export class FrontChatService {
     }
   }
 
-  async getConversationHistory(user: FrontChatUser): Promise<ChatHistoryMessage[]> {
-    if (isCypressTestEmail(user.email)) return [];
+  async getConversationHistory(
+    user: FrontChatUser,
+  ): Promise<{ messages: ChatHistoryMessage[]; conversationFound: boolean }> {
+    if (isCypressTestEmail(user.email)) return { messages: [], conversationFound: false };
 
     const chatUser = await this.chatUserRepository.findOneBy({ userId: user.id });
 
@@ -309,7 +322,7 @@ export class FrontChatService {
     if (!conversationId) {
       // handles users who predate local conversation ID tracking
       conversationId = await this.findConversationIdByContact(user.id, user.email);
-      if (!conversationId) return [];
+      if (!conversationId) return { messages: [], conversationFound: false };
     }
 
     const allMessages: ChatHistoryMessage[] = [];
@@ -324,7 +337,7 @@ export class FrontChatService {
           // Stale conversation ID — clear it so the next connection tries a fresh lookup.
           await this.chatUserRepository.update({ userId: user.id }, { frontConversationId: null });
           logger.warn(`Cleared stale conversation ${conversationId} for user ${user.id}`);
-          return allMessages;
+          return { messages: allMessages, conversationFound: false };
         }
         throw new Error(
           `Fetch Front messages failed: ${(error as Error)?.message || 'unknown error'}`,
@@ -373,7 +386,7 @@ export class FrontChatService {
     }
 
     logger.log(`Fetched conversation history for user ${user.id}: ${allMessages.length} messages`);
-    return allMessages.sort((a, b) => a.createdAt - b.createdAt);
+    return { messages: allMessages.sort((a, b) => a.createdAt - b.createdAt), conversationFound: true };
   }
 
   async contactExists(email: string): Promise<boolean> {

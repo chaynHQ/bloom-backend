@@ -78,11 +78,13 @@ export class CrispExportService {
   }
 
   /**
-   * Fetch all messages for a conversation, paginating via timestamp_before.
-   * Crisp returns messages newest-first; we collect all pages then reverse.
+   * Fetch messages for a conversation, paginating via timestamp_before.
+   * Crisp returns messages newest-first. Stops early once a page goes entirely
+   * before `since`, avoiding unnecessary fetches for long-running conversations.
    */
-  async getConversationMessages(sessionId: string): Promise<CrispMessage[]> {
+  async getConversationMessages(sessionId: string, since?: Date): Promise<CrispMessage[]> {
     logger.log(`Fetching messages for conversation ${sessionId}`);
+    const cutoffTimestamp = since ? Math.floor(since.getTime() / 1000) : undefined;
     const messages: CrispMessage[] = [];
     let timestampBefore: number | undefined;
 
@@ -103,9 +105,12 @@ export class CrispExportService {
           break;
         }
 
-        // Move the cursor to just before the oldest message on this page.
         const oldest = Math.min(...response.map((m) => m.timestamp ?? Infinity));
         if (!isFinite(oldest) || oldest === timestampBefore) break;
+
+        // Stop fetching once we've gone past the cutoff — older pages won't be imported.
+        if (cutoffTimestamp !== undefined && oldest < cutoffTimestamp) break;
+
         timestampBefore = oldest;
       }
     } catch (error) {
@@ -138,12 +143,12 @@ export class CrispExportService {
    * Return all data for a single conversation ready for import.
    * Notes (type === 'note') are separated from regular messages.
    */
-  async getConversationData(sessionId: string): Promise<ConversationMigrationData> {
+  async getConversationData(sessionId: string, since?: Date): Promise<ConversationMigrationData> {
     logger.log(`Getting full data for conversation ${sessionId}`);
 
     const [metadata, allMessages] = await Promise.all([
       this.getConversationMetadata(sessionId),
-      this.getConversationMessages(sessionId),
+      this.getConversationMessages(sessionId, since),
     ]);
 
     const notes: CrispNote[] = allMessages

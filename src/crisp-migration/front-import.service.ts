@@ -6,6 +6,9 @@ import { ConversationMigrationData, CrispMessage, CrispNote } from './crisp-migr
 const FRONT_API_BASE_URL = 'https://api2.frontapp.com';
 const logger = new Logger('FrontImportService');
 
+const INTER_MESSAGE_DELAY_MS = 200;
+const MAX_RETRIES = 3;
+
 const SUPPORT_SENDER_HANDLE = process.env.FRONT_SUPPORT_EMAIL || 'support@bloom.chayn.co';
 const SUPPORT_SENDER_NAME = 'Bloom Support';
 
@@ -70,7 +73,12 @@ export class FrontImportService {
 
     if (!contactId) {
       logger.log(`Creating Front contact for ${email}`);
-      const body: Record<string, unknown> = { handles: [{ handle: email, source: 'email' }] };
+      const body: Record<string, unknown> = {
+        handles: [
+          { handle: email, source: 'email' },
+          { handle: email, source: 'custom' },
+        ],
+      };
       if (name) body.name = name;
       const created = (await this.frontApiRequest('POST', '/contacts', body)) as { id: string };
       contactId = created.id;
@@ -98,7 +106,6 @@ export class FrontImportService {
       skipAttachments: boolean;
       skipNotes: boolean;
       existingConversationId?: string;
-      isResolved?: boolean;
     },
   ): Promise<ImportedConversationResult> {
     const { sessionId, email, name, messages, notes } = data;
@@ -115,7 +122,7 @@ export class FrontImportService {
     const userName = name || 'Unknown User';
     const sorted = [...messages].sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
 
-    const isResolved = options.isResolved ?? data.metadata.state === 'resolved';
+    const isResolved = data.metadata.state === 'resolved';
     const messageIds: string[] = [];
     let conversationId: string | undefined = options.existingConversationId;
 
@@ -143,6 +150,8 @@ export class FrontImportService {
           }
         }
       }
+
+      await this.delay(INTER_MESSAGE_DELAY_MS);
     }
 
     if (!conversationId) {
@@ -159,6 +168,15 @@ export class FrontImportService {
         } catch (err) {
           logger.warn(`Failed to add note as comment on ${conversationId}: ${(err as Error).message}`);
         }
+      }
+    }
+
+    if (isResolved) {
+      try {
+        await this.frontApiRequest('PATCH', `/conversations/${conversationId}`, { status: 'archived' });
+        logger.log(`Archived conversation ${conversationId}`);
+      } catch (err) {
+        logger.warn(`Failed to archive conversation ${conversationId}: ${(err as Error).message}`);
       }
     }
 
@@ -266,7 +284,7 @@ export class FrontImportService {
   }
 
   private async resolveConversationId(messageUid: string): Promise<string | undefined> {
-    const delays = [1000, 2000];
+    const delays = [1000, 2000, 3000, 5000];
     for (let attempt = 0; attempt < delays.length; attempt++) {
       await this.delay(delays[attempt]);
       try {
@@ -344,14 +362,19 @@ export class FrontImportService {
     if (msg.automated) return false;
     if (msg.type === 'note') return false;
     if (!msg.content && msg.type !== 'file') return false;
-    if (typeof msg.content === 'string') {
-      if (msg.content.startsWith('Hi there, chat here with survivors')) return false;
-      if (msg.content.startsWith('{"namespace":')) return false;
-    }
+    const contentStr =
+      typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content);
+    if (contentStr.startsWith('Hi there, chat here with survivors')) return false;
+    if (contentStr.startsWith('{"namespace":')) return false;
     return true;
   }
 
-  private async frontApiRequest(method: string, path: string, body?: unknown): Promise<unknown> {
+  private async frontApiRequest(
+    method: string,
+    path: string,
+    body?: unknown,
+    attempt = 0,
+  ): Promise<unknown> {
     const response = await fetch(`${FRONT_API_BASE_URL}${path}`, {
       method,
       headers: {
@@ -363,6 +386,16 @@ export class FrontImportService {
 
     if (!response.ok) {
       const errBody = await response.text();
+
+      if (response.status === 429 && attempt < MAX_RETRIES) {
+        const retryMs = this.parseRetryDelayMs(errBody) ?? 500;
+        logger.warn(
+          `Rate limited on ${method} ${path} — retrying in ${retryMs}ms (attempt ${attempt + 1}/${MAX_RETRIES})`,
+        );
+        await this.delay(retryMs + 50);
+        return this.frontApiRequest(method, path, body, attempt + 1);
+      }
+
       const err = new Error(
         `Front API ${method} ${path} failed (${response.status}): ${errBody}`,
       ) as Error & { status?: number };
@@ -372,6 +405,17 @@ export class FrontImportService {
 
     if (response.status === 204) return null;
     return response.json();
+  }
+
+  private parseRetryDelayMs(errBody: string): number | undefined {
+    try {
+      const parsed = JSON.parse(errBody) as { _error?: { message?: string } };
+      const match = parsed._error?.message?.match(/retry in (\d+) milliseconds/i);
+      if (match) return parseInt(match[1], 10);
+    } catch {
+      // ignore
+    }
+    return undefined;
   }
 
   private delay(ms: number): Promise<void> {

@@ -33,7 +33,7 @@ describe('FrontChatGateway', () => {
     userService = { getUserByFirebaseId: jest.fn() };
     frontChatService = {
       sendChannelTextMessage: jest.fn(),
-      getConversationHistory: jest.fn().mockResolvedValue([]),
+      getConversationHistory: jest.fn().mockResolvedValue({ messages: [], conversationFound: false }),
       getChatUser: jest.fn().mockResolvedValue(null),
     };
     serviceUserProfilesService = {
@@ -85,7 +85,7 @@ describe('FrontChatGateway', () => {
       authService.parseAuth.mockResolvedValue({ uid: 'fb-uid' });
       userService.getUserByFirebaseId.mockResolvedValue({ userEntity: buildUser() });
       const messages = [{ id: 'msg-1', direction: 'user', text: 'hello', createdAt: 1000 }];
-      frontChatService.getConversationHistory.mockResolvedValue(messages);
+      frontChatService.getConversationHistory.mockResolvedValue({ messages, conversationFound: true });
 
       const socket = buildSocket('tok-1');
       await gateway.handleConnection(socket as any);
@@ -96,7 +96,7 @@ describe('FrontChatGateway', () => {
     it('does not emit history when there are no prior messages', async () => {
       authService.parseAuth.mockResolvedValue({ uid: 'fb-uid' });
       userService.getUserByFirebaseId.mockResolvedValue({ userEntity: buildUser() });
-      frontChatService.getConversationHistory.mockResolvedValue([]);
+      frontChatService.getConversationHistory.mockResolvedValue({ messages: [], conversationFound: false });
 
       const socket = buildSocket('tok-1');
       await gateway.handleConnection(socket as any);
@@ -155,6 +155,22 @@ describe('FrontChatGateway', () => {
 
       expect(frontChatService.sendChannelTextMessage).toHaveBeenCalledWith(user, 'hi');
       expect(result).toEqual({ ok: true });
+    });
+
+    it('skips ensureFrontContact when the chatUser already has a frontContactId', async () => {
+      const user = buildUser();
+      // Connect with conversationFound: true so ensureContactReady is not triggered at connect time.
+      frontChatService.getConversationHistory.mockResolvedValueOnce({ messages: [], conversationFound: true });
+      const socket = await connectAs(user);
+      serviceUserProfilesService.ensureFrontContact.mockClear();
+
+      frontChatService.getChatUser.mockResolvedValueOnce({ frontContactId: 'crd_existing' });
+      frontChatService.sendChannelTextMessage.mockResolvedValue(undefined);
+
+      await gateway.handleSendMessage(socket as any, { text: 'hi' });
+
+      expect(serviceUserProfilesService.ensureFrontContact).not.toHaveBeenCalled();
+      expect(frontChatService.sendChannelTextMessage).toHaveBeenCalledWith(user, 'hi');
     });
 
     it('wraps service failures in a WsException', async () => {

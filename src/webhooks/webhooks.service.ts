@@ -18,9 +18,12 @@ import { Logger } from 'src/logger/logger';
 import { ZapierSimplybookBodyDto } from 'src/partner-access/dtos/zapier-body.dto';
 import { ServiceUserProfilesService } from 'src/service-user-profiles/service-user-profiles.service';
 import { IUser } from 'src/user/user.interface';
-import { formatAuthorName, stripHtml } from 'src/utils/html';
+import { formatAuthorName } from 'src/utils/html';
 import { serializeZapierSimplyBookDtoToTherapySessionEntity } from 'src/utils/serialize';
-import { FrontChannelOutboundPayload } from 'src/webhooks/dto/front-channel-webhook.dto';
+import {
+  FrontChannelAttachment,
+  FrontChannelOutboundPayload,
+} from 'src/webhooks/dto/front-channel-webhook.dto';
 import {
   FrontChatWebhookDto,
   FrontWebhookMessageAuthor,
@@ -545,15 +548,26 @@ export class WebhooksService {
       (data as FrontChannelOutboundPayload).metadata?.external_conversation_id ??
       (chatUser ? buildThreadRef(chatUser.userId) : externalId);
 
-    if (recipientEmail && messageBody) {
+    const attachments = (payload.attachments ?? []) as FrontChannelAttachment[];
+    const imageAttachment = attachments.find((a) => a.content_type?.startsWith('image/') && a.url);
+    const audioAttachment = !imageAttachment
+      ? attachments.find((a) => a.content_type?.startsWith('audio/') && a.url)
+      : undefined;
+    const attachment = imageAttachment ?? audioAttachment;
+
+    if (recipientEmail && (messageBody || attachment)) {
       this.frontChatGateway.emitAgentReply(recipientEmail, {
         // Use externalId (always non-empty) so the frontend can reliably dedup by ID.
         // Send seconds, not ms — the frontend multiplies by 1000 matching Front's emitted_at convention.
         id: externalId,
-        body: messageBody,
+        body: messageBody || (attachment?.filename ?? 'Attachment'),
         authorEmail: payload.author?.email,
         authorName: formatAuthorName(payload.author as FrontWebhookMessageAuthor | undefined),
         emittedAt: Math.floor(Date.now() / 1000),
+        ...(attachment?.url && {
+          attachmentUrl: `/front-chat/attachment-proxy?url=${encodeURIComponent(attachment.url)}`,
+          kind: imageAttachment ? 'image' : 'voice',
+        }),
       });
       this.logger.log(`Front Channel: forwarded agent reply to ${recipientEmail}`);
 
