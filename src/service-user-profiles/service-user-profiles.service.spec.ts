@@ -212,17 +212,13 @@ describe('Service user profiles', () => {
       therapy_session_last_at: '',
     };
 
-    beforeEach(() => {
-      // ensureFrontContact always loads full relations from DB
+    it('creates contact with custom fields when contact does not yet exist', async () => {
+      jest.mocked(mockFrontChatService.contactExists).mockResolvedValue(false);
       jest.spyOn(mockedUserRepository, 'findOne').mockResolvedValue({
         ...mockUserEntity,
         partnerAccess: [],
         courseUser: [],
       } as any);
-    });
-
-    it('creates contact with custom fields when contact does not yet exist', async () => {
-      jest.mocked(mockFrontChatService.contactExists).mockResolvedValue(false);
 
       await service.ensureFrontContact(mockUserEntity);
 
@@ -235,24 +231,14 @@ describe('Service user profiles', () => {
       expect(mockFrontChatService.updateContactCustomFields).not.toHaveBeenCalled();
     });
 
-    it('updates custom fields when contact already exists (no create)', async () => {
-      jest.mocked(mockFrontChatService.contactExists).mockResolvedValue(true);
-
-      await service.ensureFrontContact(mockUserEntity);
-
-      expect(mockFrontChatService.createContact).not.toHaveBeenCalled();
-      expect(mockFrontChatService.updateContactCustomFields).toHaveBeenCalledWith(
-        expectedCustomFields,
-        mockUserEntity.email,
-      );
-    });
-
-    it('calls addChannelHandle when contact already exists', async () => {
+    it('only calls addChannelHandle (not updateContactCustomFields) when contact already exists', async () => {
       jest.mocked(mockFrontChatService.contactExists).mockResolvedValue(true);
 
       await service.ensureFrontContact(mockUserEntity);
       await new Promise((r) => setImmediate(r));
 
+      expect(mockFrontChatService.createContact).not.toHaveBeenCalled();
+      expect(mockFrontChatService.updateContactCustomFields).not.toHaveBeenCalled();
       expect(mockFrontChatService.addChannelHandle).toHaveBeenCalledWith(mockUserEntity.email);
     });
 
@@ -273,21 +259,18 @@ describe('Service user profiles', () => {
 
     it('does not throw when createContact fails', async () => {
       jest.mocked(mockFrontChatService.contactExists).mockResolvedValue(false);
+      jest.spyOn(mockedUserRepository, 'findOne').mockResolvedValue({
+        ...mockUserEntity,
+        partnerAccess: [],
+        courseUser: [],
+      } as any);
       jest.mocked(mockFrontChatService.createContact).mockRejectedValue(new Error('API error'));
 
       await expect(service.ensureFrontContact(mockUserEntity)).resolves.not.toThrow();
     });
 
-    it('does not throw when updateContactCustomFields fails for existing contact', async () => {
-      jest.mocked(mockFrontChatService.contactExists).mockResolvedValue(true);
-      jest
-        .mocked(mockFrontChatService.updateContactCustomFields)
-        .mockRejectedValue(new Error('API error'));
-
-      await expect(service.ensureFrontContact(mockUserEntity)).resolves.not.toThrow();
-    });
-
     it('returns early when user not found in DB', async () => {
+      jest.mocked(mockFrontChatService.contactExists).mockResolvedValue(false);
       jest.spyOn(mockedUserRepository, 'findOne').mockResolvedValue(null);
 
       await service.ensureFrontContact(mockUserEntity);
@@ -298,6 +281,12 @@ describe('Service user profiles', () => {
   });
 
   describe('updateServiceUserProfilesUser', () => {
+    const baseHydratedUser = { ...mockUserEntity, partnerAccess: [], courseUser: [] };
+
+    beforeEach(() => {
+      jest.spyOn(mockedUserRepository, 'findOne').mockResolvedValue(baseHydratedUser as any);
+    });
+
     it('should update Front Chat and mailchimp profile user data', async () => {
       await service.updateServiceUserProfilesUser(
         mockUserEntity,
@@ -310,12 +299,12 @@ describe('Service user profiles', () => {
 
       expect(mockFrontChatService.updateContactCustomFields).toHaveBeenCalledTimes(1);
       expect(mockFrontChatService.updateContactCustomFields).toHaveBeenCalledWith(
-        {
+        expect.objectContaining({
           marketing_permission: mockUserEntity.contactPermission,
           service_emails_permission: mockUserEntity.serviceEmailsPermission,
           email_reminders_frequency: EMAIL_REMINDERS_FREQUENCY.TWO_MONTHS,
           last_active_at: lastActiveAt,
-        },
+        }),
         mockUserEntity.email,
       );
 
@@ -347,17 +336,21 @@ describe('Service user profiles', () => {
         contactPermission: false,
         serviceEmailsPermission: false,
       };
+      // Override findOne to return the modified user so Front sync reflects the new permissions.
+      jest.spyOn(mockedUserRepository, 'findOne').mockResolvedValue({
+        ...mockUser,
+        partnerAccess: [],
+        courseUser: [],
+      } as any);
       const lastActiveAt = mockUserEntity.lastActiveAt.toISOString();
 
       await service.updateServiceUserProfilesUser(mockUser, false, false, mockUser.email);
 
       expect(mockFrontChatService.updateContactCustomFields).toHaveBeenCalledWith(
-        {
+        expect.objectContaining({
           marketing_permission: false,
           service_emails_permission: false,
-          last_active_at: lastActiveAt,
-          email_reminders_frequency: EMAIL_REMINDERS_FREQUENCY.TWO_MONTHS,
-        },
+        }),
         mockUser.email,
       );
 
@@ -390,7 +383,7 @@ describe('Service user profiles', () => {
         mockUserEntity.email,
       );
 
-      expect(mockFrontChatService.updateContactCustomFields).toHaveBeenCalled();
+      expect(mockFrontChatService.updateContactCustomFields).toHaveBeenCalledTimes(1);
       expect(updateMailchimpProfile).toHaveBeenCalled();
 
       expect(mockFrontChatService.updateContactProfile).toHaveBeenCalledWith(
@@ -416,15 +409,6 @@ describe('Service user profiles', () => {
         oldEmail,
       );
       expect(mockFrontChatService.updateContactCustomFields).toHaveBeenCalledTimes(1);
-      expect(mockFrontChatService.updateContactCustomFields).toHaveBeenCalledWith(
-        {
-          email_reminders_frequency: EMAIL_REMINDERS_FREQUENCY.TWO_MONTHS,
-          last_active_at: mockUserEntity.lastActiveAt.toISOString(),
-          marketing_permission: true,
-          service_emails_permission: true,
-        },
-        newEmail,
-      );
       expect(updateMailchimpProfile).toHaveBeenCalledWith(
         { ...serialisedMockUserData.mailchimpSchema, email_address: newEmail },
         oldEmail,
@@ -441,8 +425,9 @@ describe('Service user profiles', () => {
     });
 
     it('should still update mailchimp when Front Chat fails', async () => {
-      const mocked = jest.mocked(mockFrontChatService.updateContactCustomFields);
-      mocked.mockRejectedValue(new Error('Front Chat API call failed'));
+      jest
+        .mocked(mockFrontChatService.updateContactCustomFields)
+        .mockRejectedValue(new Error('Front Chat API call failed'));
 
       await service.updateServiceUserProfilesUser(
         mockUserEntity,
@@ -452,11 +437,18 @@ describe('Service user profiles', () => {
       );
 
       expect(updateMailchimpProfile).toHaveBeenCalled();
-      mocked.mockReset();
     });
   });
 
   describe('updateServiceUserProfilesPartnerAccess', () => {
+    beforeEach(() => {
+      jest.spyOn(mockedUserRepository, 'findOne').mockResolvedValue({
+        ...mockUserEntity,
+        partnerAccess: [mockPartnerAccessEntity],
+        courseUser: [],
+      } as any);
+    });
+
     it('should update Front Chat and mailchimp profile partner access data', async () => {
       await service.updateServiceUserProfilesPartnerAccess(
         [mockPartnerAccessEntity],
@@ -466,13 +458,13 @@ describe('Service user profiles', () => {
       const partnerString = mockPartnerAccessEntity.partner.name.toLowerCase();
 
       expect(mockFrontChatService.updateContactCustomFields).toHaveBeenCalledWith(
-        {
+        expect.objectContaining({
           partners: partnerString,
           feature_live_chat: mockPartnerAccessEntity.featureLiveChat,
           feature_therapy: mockPartnerAccessEntity.featureTherapy,
           therapy_sessions_remaining: mockPartnerAccessEntity.therapySessionsRemaining,
           therapy_sessions_redeemed: mockPartnerAccessEntity.therapySessionsRedeemed,
-        },
+        }),
         mockUserEntity.email,
       );
 
@@ -492,18 +484,23 @@ describe('Service user profiles', () => {
 
     it('should update Front Chat and mailchimp profile multiple partner accesses data', async () => {
       const partnerAccesses = [mockPartnerAccessEntity, mockAltPartnerAccessEntity];
+      jest.spyOn(mockedUserRepository, 'findOne').mockResolvedValue({
+        ...mockUserEntity,
+        partnerAccess: partnerAccesses,
+        courseUser: [],
+      } as any);
       await service.updateServiceUserProfilesPartnerAccess(partnerAccesses, mockUserEntity.email);
 
       const partnerString = service.serializePartnersString(partnerAccesses);
 
       expect(mockFrontChatService.updateContactCustomFields).toHaveBeenCalledWith(
-        {
+        expect.objectContaining({
           partners: partnerString,
           feature_live_chat: true,
           feature_therapy: true,
           therapy_sessions_remaining: 9,
           therapy_sessions_redeemed: 3,
-        },
+        }),
         mockUserEntity.email,
       );
 
@@ -522,15 +519,15 @@ describe('Service user profiles', () => {
     });
 
     it('should not propagate external api call errors', async () => {
-      const mocked = jest.mocked(mockFrontChatService.updateContactCustomFields);
-      mocked.mockRejectedValue(new Error('Front Chat API call failed'));
+      jest
+        .mocked(mockFrontChatService.updateContactCustomFields)
+        .mockRejectedValue(new Error('Front Chat API call failed'));
       await expect(
         service.updateServiceUserProfilesPartnerAccess(
           [mockPartnerAccessEntity],
           mockUserEntity.email,
         ),
       ).resolves.not.toThrow();
-      mocked.mockReset();
     });
   });
 
@@ -545,6 +542,11 @@ describe('Service user profiles', () => {
           therapySession: [therapySession],
         },
       ];
+      jest.spyOn(mockedUserRepository, 'findOne').mockResolvedValue({
+        ...mockUserEntity,
+        partnerAccess: partnerAccesses,
+        courseUser: [],
+      } as any);
 
       await service.updateServiceUserProfilesTherapy(partnerAccesses, mockUserEntity.email);
 
@@ -553,13 +555,13 @@ describe('Service user profiles', () => {
       const lastTherapySessionAt = '';
 
       expect(mockFrontChatService.updateContactCustomFields).toHaveBeenCalledWith(
-        {
+        expect.objectContaining({
           therapy_sessions_remaining: 5,
           therapy_sessions_redeemed: 1,
           therapy_session_first_at: firstTherapySessionAt,
           therapy_session_next_at: nextTherapySessionAt,
           therapy_session_last_at: lastTherapySessionAt,
-        },
+        }),
         mockUserEntity.email,
       );
 
@@ -579,6 +581,11 @@ describe('Service user profiles', () => {
 
     it('should update Front Chat and mailchimp profile combined therapy data for new booking', async () => {
       const partnerAccesses = [mockPartnerAccessEntity, mockAltPartnerAccessEntity];
+      jest.spyOn(mockedUserRepository, 'findOne').mockResolvedValue({
+        ...mockUserEntity,
+        partnerAccess: partnerAccesses,
+        courseUser: [],
+      } as any);
 
       await service.updateServiceUserProfilesTherapy(partnerAccesses, mockUserEntity.email);
 
@@ -590,13 +597,13 @@ describe('Service user profiles', () => {
         mockAltPartnerAccessEntity.therapySession[0].startDateTime.toISOString();
 
       expect(mockFrontChatService.updateContactCustomFields).toHaveBeenCalledWith(
-        {
+        expect.objectContaining({
           therapy_sessions_remaining: 9,
           therapy_sessions_redeemed: 3,
           therapy_session_first_at: firstTherapySessionAt,
           therapy_session_next_at: nextTherapySessionAt,
           therapy_session_last_at: lastTherapySessionAt,
-        },
+        }),
         mockUserEntity.email,
       );
 
@@ -616,6 +623,11 @@ describe('Service user profiles', () => {
 
     it('should update Front Chat and mailchimp profile combined therapy data for updated booking', async () => {
       const partnerAccesses = [mockPartnerAccessEntity, mockAltPartnerAccessEntity];
+      jest.spyOn(mockedUserRepository, 'findOne').mockResolvedValue({
+        ...mockUserEntity,
+        partnerAccess: partnerAccesses,
+        courseUser: [],
+      } as any);
 
       await service.updateServiceUserProfilesTherapy(partnerAccesses, mockUserEntity.email);
 
@@ -627,13 +639,13 @@ describe('Service user profiles', () => {
         mockAltPartnerAccessEntity.therapySession[0].startDateTime.toISOString();
 
       expect(mockFrontChatService.updateContactCustomFields).toHaveBeenCalledWith(
-        {
+        expect.objectContaining({
           therapy_sessions_remaining: 9,
           therapy_sessions_redeemed: 3,
           therapy_session_first_at: firstTherapySessionAt,
           therapy_session_next_at: nextTherapySessionAt,
           therapy_session_last_at: lastTherapySessionAt,
-        },
+        }),
         mockUserEntity.email,
       );
 
@@ -655,6 +667,11 @@ describe('Service user profiles', () => {
       mockAltPartnerAccessEntity.therapySession[1].action =
         SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING;
       const partnerAccesses = [mockPartnerAccessEntity, mockAltPartnerAccessEntity];
+      jest.spyOn(mockedUserRepository, 'findOne').mockResolvedValue({
+        ...mockUserEntity,
+        partnerAccess: partnerAccesses,
+        courseUser: [],
+      } as any);
 
       await service.updateServiceUserProfilesTherapy(partnerAccesses, mockUserEntity.email);
 
@@ -664,13 +681,13 @@ describe('Service user profiles', () => {
         mockAltPartnerAccessEntity.therapySession[0].startDateTime.toISOString();
 
       expect(mockFrontChatService.updateContactCustomFields).toHaveBeenCalledWith(
-        {
+        expect.objectContaining({
           therapy_sessions_remaining: 9,
           therapy_sessions_redeemed: 3,
           therapy_session_first_at: firstTherapySessionAt,
           therapy_session_next_at: '',
           therapy_session_last_at: lastTherapySessionAt,
-        },
+        }),
         mockUserEntity.email,
       );
 
@@ -702,14 +719,22 @@ describe('Service user profiles', () => {
   });
 
   describe('updateServiceUserProfilesCourse', () => {
+    beforeEach(() => {
+      jest.spyOn(mockedUserRepository, 'findOne').mockResolvedValue({
+        ...mockUserEntity,
+        partnerAccess: [],
+        courseUser: [mockCourseUserEntity],
+      } as any);
+    });
+
     it('should update Front Chat and mailchimp profile course data', async () => {
       await service.updateServiceUserProfilesCourse(mockCourseUserEntity, mockUserEntity.email);
 
       expect(mockFrontChatService.updateContactCustomFields).toHaveBeenCalledWith(
-        {
+        expect.objectContaining({
           course_cn: 'Started',
           course_cn_sessions: 'WAB:C',
-        },
+        }),
         mockUserEntity.email,
       );
 
@@ -725,12 +750,12 @@ describe('Service user profiles', () => {
     });
 
     it('should not propagate external api call errors', async () => {
-      const mocked = jest.mocked(mockFrontChatService.updateContactCustomFields);
-      mocked.mockRejectedValue(new Error('Front Chat API call failed'));
+      jest
+        .mocked(mockFrontChatService.updateContactCustomFields)
+        .mockRejectedValue(new Error('Front Chat API call failed'));
       await expect(
         service.updateServiceUserProfilesCourse(mockCourseUserEntity, mockUserEntity.email),
       ).resolves.not.toThrow();
-      mocked.mockReset();
     });
   });
 

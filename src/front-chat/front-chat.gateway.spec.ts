@@ -185,6 +185,7 @@ describe('FrontChatGateway', () => {
   describe('emitAgentReply', () => {
     it('emits to the recipient email room with a normalised key', () => {
       gateway.emitAgentReply('User@Example.COM', {
+        id: 'test-id',
         body: 'hello',
         emittedAt: 1700000000,
       });

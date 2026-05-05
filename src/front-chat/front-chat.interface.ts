@@ -34,10 +34,10 @@ export interface FrontChatContactProfile {
 }
 
 export interface AgentReplyPayload {
-  id?: string;
+  id: string;
   body: string;
   authorEmail?: string;
   authorName?: string;
-  /** Unix timestamp in milliseconds */
+  /** Unix timestamp in seconds (multiply by 1000 on the frontend to get ms) */
   emittedAt: number;
 }

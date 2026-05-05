@@ -547,24 +547,22 @@ export class WebhooksService {
 
     if (recipientEmail && messageBody) {
       this.frontChatGateway.emitAgentReply(recipientEmail, {
-        id: payload.id,
+        // Use externalId (always non-empty) so the frontend can reliably dedup by ID.
+        // Send seconds, not ms — the frontend multiplies by 1000 matching Front's emitted_at convention.
+        id: externalId,
         body: messageBody,
         authorEmail: payload.author?.email,
         authorName: formatAuthorName(payload.author as FrontWebhookMessageAuthor | undefined),
-        emittedAt: Date.now(),
+        emittedAt: Math.floor(Date.now() / 1000),
       });
       this.logger.log(`Front Channel: forwarded agent reply to ${recipientEmail}`);
 
+      // Update the DB timestamp only. External profile sync (Mailchimp + Front custom fields)
+      // is handled exclusively by the Events API OUTBOUND/OUT_REPLY handler, which fires on
+      // the same endpoint with the more accurate emitted_at timestamp — doing it here too
+      // would double-hit those APIs on every agent reply.
       this.frontChatService
         .updateChatUserByEmail(recipientEmail, { lastMessageReceivedAt: new Date() })
-        .then((chatUser) => {
-          if (chatUser) {
-            return this.serviceUserProfilesService.updateServiceUserProfilesChatActivity(
-              chatUser,
-              recipientEmail,
-            );
-          }
-        })
         .catch(() => {});
     } else {
       this.logger.warn(

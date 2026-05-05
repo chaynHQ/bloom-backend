@@ -74,15 +74,12 @@ export class FrontChatService {
     private readonly userRepository: Repository<UserEntity>,
   ) {}
 
-  // ── ChatUser DB operations ──────────────────────────────────────────────────
-
   async getOrCreateChatUser(
     userId: string,
     initial: Partial<ChatUserEntity> = {},
   ): Promise<ChatUserEntity> {
     const existing = await this.chatUserRepository.findOneBy({ userId });
     if (existing) {
-      // Update any non-null initial values that aren't already set
       const updates: Partial<ChatUserEntity> = {};
       for (const [key, value] of Object.entries(initial) as [keyof ChatUserEntity, unknown][]) {
         if (value != null && existing[key] == null) {
@@ -179,8 +176,6 @@ export class FrontChatService {
     return this.updateChatUser(userId, { lastMessageReadAt: new Date() });
   }
 
-  // ── Front channel messaging ─────────────────────────────────────────────────
-
   async sendChannelTextMessage(user: FrontChatUser, text: string): Promise<void> {
     if (isCypressTestEmail(user.email)) {
       logger.log('Skipping Front message send for Cypress test user');
@@ -219,7 +214,9 @@ export class FrontChatService {
     const now = new Date();
     this.getOrCreateChatUser(user.id)
       .then((chatUser) => this.chatUserRepository.save({ ...chatUser, lastMessageSentAt: now }))
-      .catch(() => {});
+      .catch((err) => {
+        logger.warn(`Failed to persist lastMessageSentAt for user ${user.id}: ${err?.message || 'unknown error'}`);
+      });
 
     if (data.message_uid) {
       this.scheduleConversationIdResolution(user.id, data.message_uid);
@@ -264,7 +261,9 @@ export class FrontChatService {
     const now = new Date();
     this.getOrCreateChatUser(user.id)
       .then((chatUser) => this.chatUserRepository.save({ ...chatUser, lastMessageSentAt: now }))
-      .catch(() => {});
+      .catch((err) => {
+        logger.warn(`Failed to persist lastMessageSentAt for user ${user.id}: ${err?.message || 'unknown error'}`);
+      });
 
     if (data.message_uid) {
       this.scheduleConversationIdResolution(user.id, data.message_uid);
@@ -301,8 +300,6 @@ export class FrontChatService {
     }
   }
 
-  // ── Conversation history ────────────────────────────────────────────────────
-
   async getConversationHistory(user: FrontChatUser): Promise<ChatHistoryMessage[]> {
     if (isCypressTestEmail(user.email)) return [];
 
@@ -310,8 +307,7 @@ export class FrontChatService {
 
     let conversationId = chatUser?.frontConversationId ?? null;
     if (!conversationId) {
-      // No conversation ID cached — try to find one via the Front contact's conversations.
-      // This handles existing users who connected before frontConversationId was tracked.
+      // handles users who predate local conversation ID tracking
       conversationId = await this.findConversationIdByContact(user.id, user.email);
       if (!conversationId) return [];
     }
@@ -380,8 +376,6 @@ export class FrontChatService {
     return allMessages.sort((a, b) => a.createdAt - b.createdAt);
   }
 
-  // ── Contact management ──────────────────────────────────────────────────────
-
   async contactExists(email: string): Promise<boolean> {
     if (isCypressTestEmail(email)) return true;
     try {
@@ -426,10 +420,8 @@ export class FrontChatService {
       );
     }
 
-    // Pass the canonical ID from the create response to avoid an extra lookup.
     await this.ensureContactInList(email, contact.id);
 
-    // Persist the canonical contact ID on the ChatUser record when userId is known.
     if (userId) {
       await this.getOrCreateChatUser(userId, { frontContactId: contact.id });
     }
@@ -459,20 +451,11 @@ export class FrontChatService {
       }
       return result;
     } catch (error) {
-      if (this.isContactNotFoundError(error)) {
-        try {
-          await this.createContact({ email, ...profile });
-          return await this.frontApiRequest('PATCH', `/contacts/${this.getContactAlias(email)}`, {
-            name: profile.name,
-          });
-        } catch {
-          throw new Error(
-            `Update Front Chat contact profile API call failed: ${error?.message || 'unknown error'}`,
-          );
-        }
-      }
+      // Do NOT fall back to createContact here: it would create a contact with only name/email,
+      // losing all custom field data. ensureFrontContact (widget open) handles backfill with
+      // full data if the contact is missing.
       throw new Error(
-        `Update Front Chat contact profile API call failed: ${error?.message || 'unknown error'}`,
+        `Update Front Chat contact profile API call failed: ${(error as Error)?.message || 'unknown error'}`,
         { cause: error },
       );
     }
@@ -494,20 +477,12 @@ export class FrontChatService {
       await this.ensureContactInList(email);
       return result;
     } catch (error) {
-      if (this.isContactNotFoundError(error)) {
-        try {
-          await this.createContact({ email, customFields });
-          return await this.frontApiRequest('PATCH', `/contacts/${this.getContactAlias(email)}`, {
-            custom_fields: serialized,
-          });
-        } catch {
-          throw new Error(
-            `Update Front Chat contact custom fields API call failed: ${error?.message || 'unknown error'}`,
-          );
-        }
-      }
+      // Do NOT fall back to createContact here: it would create a contact with only the
+      // partial fields being updated (e.g. just chat-activity timestamps), losing all other
+      // data. Contact creation with full data is handled by createServiceUserProfiles (signup)
+      // and ensureFrontContact (widget open). If the contact doesn't exist here, log and move on.
       throw new Error(
-        `Update Front Chat contact custom fields API call failed: ${error?.message || 'unknown error'}`,
+        `Update Front Chat contact custom fields API call failed: ${(error as Error)?.message || 'unknown error'}`,
         { cause: error },
       );
     }
@@ -525,9 +500,8 @@ export class FrontChatService {
     }
   }
 
-  // Adds the 'custom' channel handle to an existing contact so that Channel API
-  // messages (source type used by Front Application Channels) link to it instead
-  // of creating a separate auto-contact. Safe to call when the handle already exists.
+  // Without the 'custom' handle, Channel API messages create a separate auto-contact
+  // instead of linking to this one.
   async addChannelHandle(email: string): Promise<void> {
     if (isCypressTestEmail(email)) return;
     try {
@@ -539,16 +513,18 @@ export class FrontChatService {
     }
   }
 
-  // When no frontConversationId is cached locally, look it up from Front and persist it.
-  // Returns the most recently active conversation ID for the contact, or null if none found.
   private async findConversationIdByContact(userId: string, email: string): Promise<string | null> {
     try {
       const data = (await this.frontApiRequest(
         'GET',
-        `/contacts/${this.getContactAlias(email)}/conversations?limit=5`,
-      )) as FrontApiPaginated<{ id: string }>;
+        `/contacts/${this.getContactAlias(email)}/conversations?limit=10`,
+      )) as FrontApiPaginated<{ id: string; created_at?: number }>;
 
-      const conversationId = data._results?.[0]?.id ?? null;
+      const sorted = (data._results ?? [])
+        .filter((c) => c.id)
+        .sort((a, b) => (b.created_at ?? 0) - (a.created_at ?? 0));
+
+      const conversationId = sorted[0]?.id ?? null;
       if (conversationId) {
         await this.getOrCreateChatUser(userId, { frontConversationId: conversationId });
         logger.log(`Resolved conversation ${conversationId} for user ${userId} via contact lookup`);
@@ -560,8 +536,7 @@ export class FrontChatService {
   }
 
   async deleteCypressFrontChatContacts() {
-    // Front API does not support searching contacts by email prefix.
-    // Cypress test contacts are cleaned up individually via deleteContact during test teardown.
+    // Front API does not support searching contacts by email prefix — tests call deleteContact directly.
     logger.log('Cypress Front Chat contact cleanup is handled by individual test teardown');
   }
 
@@ -638,8 +613,6 @@ export class FrontChatService {
 
     throw new Error(`Front attachment fetch failed (${initial.statusCode})`);
   }
-
-  // ── Private helpers ─────────────────────────────────────────────────────────
 
   private async frontApiRequest(method: string, path: string, body?: unknown): Promise<unknown> {
     const response = await fetch(`${FRONT_API_BASE_URL}${path}`, {

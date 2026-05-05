@@ -133,7 +133,6 @@ export class FrontChatGateway implements OnGatewayConnection, OnGatewayDisconnec
       await this.ensureContactReady(user);
       await this.frontChatService.sendChannelTextMessage(user, payload.text);
 
-      // Fire-and-forget: sync updated chat activity timestamps to external services.
       this.frontChatService
         .getChatUser(user.id)
         .then((chatUser) => {
@@ -154,8 +153,6 @@ export class FrontChatGateway implements OnGatewayConnection, OnGatewayDisconnec
     }
   }
 
-  // Sliding-window check: drop timestamps older than the window, enforce the cap,
-  // then record the new attempt.
   private isRateLimited(socketId: string): boolean {
     const now = Date.now();
     const cutoff = now - SEND_MESSAGE_WINDOW_MS;
@@ -169,7 +166,6 @@ export class FrontChatGateway implements OnGatewayConnection, OnGatewayDisconnec
     return false;
   }
 
-  // Routes by recipient email so all of the user's open tabs receive the reply.
   emitAgentReply(recipientEmail: string, payload: AgentReplyPayload): void {
     this.server.to(userRoom(recipientEmail)).emit('agent_reply', payload);
   }

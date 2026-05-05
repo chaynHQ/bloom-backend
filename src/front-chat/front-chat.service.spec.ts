@@ -410,16 +410,14 @@ describe('FrontChatService', () => {
       );
     });
 
-    it('should create contact and retry if contact not found (404)', async () => {
-      mockFetch
-        .mockResolvedValueOnce({ ok: false, status: 404, text: async () => '404 not found' }) // PATCH fails
-        .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ id: 'cnt_new' }) }) // createContact POST
-        .mockResolvedValueOnce({ ok: true, status: 204 }) // createContact list add (canonical ID from create)
-        .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({}) }); // retry PATCH
+    it('throws when contact not found (404) rather than creating a partial contact', async () => {
+      mockFetch.mockResolvedValueOnce({ ok: false, status: 404, text: async () => '404 not found' });
 
-      await service.updateContactCustomFields({ language: 'en' }, 'user@example.com');
+      await expect(
+        service.updateContactCustomFields({ language: 'en' }, 'user@example.com'),
+      ).rejects.toThrow('Update Front Chat contact custom fields API call failed');
 
-      expect(mockFetch).toHaveBeenCalledTimes(4);
+      expect(mockFetch).toHaveBeenCalledTimes(1);
     });
 
     it('should skip for Cypress test emails', async () => {
@@ -446,16 +444,14 @@ describe('FrontChatService', () => {
       );
     });
 
-    it('should create contact and retry if contact not found (404)', async () => {
-      mockFetch
-        .mockResolvedValueOnce({ ok: false, status: 404, text: async () => '404 not found' })
-        .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ id: 'cnt_new' }) })
-        .mockResolvedValueOnce({ ok: true, status: 204 })
-        .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({}) });
+    it('throws when contact not found (404) rather than creating a partial contact', async () => {
+      mockFetch.mockResolvedValueOnce({ ok: false, status: 404, text: async () => '404 not found' });
 
-      await service.updateContactProfile({ name: 'New Name' }, 'user@example.com');
+      await expect(
+        service.updateContactProfile({ name: 'New Name' }, 'user@example.com'),
+      ).rejects.toThrow('Update Front Chat contact profile API call failed');
 
-      expect(mockFetch).toHaveBeenCalledTimes(4);
+      expect(mockFetch).toHaveBeenCalledTimes(1);
     });
 
     it('adds the custom channel handle fire-and-forget when email changes', async () => {

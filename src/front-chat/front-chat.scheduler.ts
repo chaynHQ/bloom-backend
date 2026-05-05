@@ -11,7 +11,6 @@ export class FrontChatScheduler {
 
   constructor(private readonly frontChatService: FrontChatService) {}
 
-  // Every minute: find users with unread messages older than 5 minutes and send a Mailchimp event.
   @Cron(CronExpression.EVERY_MINUTE)
   async checkUnreadMessages(): Promise<void> {
     const unread = await this.frontChatService.getUsersWithUnreadMessages();

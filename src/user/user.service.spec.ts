@@ -343,7 +343,6 @@ describe('UserService', () => {
       expect(mocked).toHaveBeenCalled();
       expect(user.name).toBe(updateUserDto.name);
       expect(user.email).toBe(updateUserDto.email);
-      mocked.mockReset();
     });
 
     it('should not fail update on mailchimp api call errors', async () => {
