@@ -128,6 +128,7 @@ export class FrontImportService {
     const isResolved = data.metadata.state === 'resolved';
     const messageIds: string[] = [];
     let conversationId: string | undefined = options.existingConversationId;
+    let lastMessageUid: string | undefined;
 
     for (const msg of sorted) {
       if (!this.isImportableMessage(msg)) continue;
@@ -145,6 +146,7 @@ export class FrontImportService {
 
       if (messageUid) {
         messageIds.push(messageUid);
+        lastMessageUid = messageUid;
 
         if (!conversationId) {
           conversationId = await this.resolveConversationId(messageUid);
@@ -180,6 +182,9 @@ export class FrontImportService {
 
     if (isResolved) {
       try {
+        if (lastMessageUid && lastMessageUid !== messageIds[0]) {
+          await this.waitForMessageProcessed(lastMessageUid);
+        }
         await this.frontApiRequest('PATCH', `/conversations/${conversationId}`, {
           status: 'archived',
         });
@@ -300,6 +305,24 @@ export class FrontImportService {
       payload,
     )) as FrontImportAccepted;
     return r.message_uid;
+  }
+
+  private async waitForMessageProcessed(messageUid: string): Promise<void> {
+    const delays = [500, 1000, 2000, 3000];
+    for (let attempt = 0; attempt < delays.length; attempt++) {
+      await this.delay(delays[attempt]);
+      try {
+        await this.frontApiRequest('GET', `/messages/alt:uid:${messageUid}`);
+        return;
+      } catch (err) {
+        const isNotFound = (err as { status?: number }).status === 404;
+        if (!isNotFound || attempt === delays.length - 1) {
+          logger.warn(`Message ${messageUid} not confirmed processed before archive — proceeding anyway`);
+          return;
+        }
+        logger.log(`Waiting for message ${messageUid} to be processed (attempt ${attempt + 1})…`);
+      }
+    }
   }
 
   private async resolveConversationId(messageUid: string): Promise<string | undefined> {
