@@ -96,7 +96,7 @@ export class TherapySessionService {
       .getMany();
 
     await this.slackMessageClient.sendMessageToDeletedUsersSlackChannel(
-      `User (userId: ${userId}) has been deleted from bloom - please remove associated accounts from Simplybook, Crisp and Mailchimp`,
+      `User (userId: ${userId}) has been deleted from bloom - please remove associated accounts from Simplybook, Front Chat and Mailchimp`,
     );
 
     // redact email from therapy sessions

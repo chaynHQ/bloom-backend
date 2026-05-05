@@ -71,11 +71,17 @@ export const batchCreateMailchimpProfiles = async (
       `Mailchimp batch create started - batchId: ${batchRequest.id}, operations: ${operations.length}`,
     );
 
-    setTimeout(async () => {
-      const batchResponse = await mailchimp.batches.status(batchRequest.id);
-      logger.log(
-        `Mailchimp batch create completed - batchId: ${batchRequest.id}, status: ${batchResponse.status}, total: ${batchResponse.total_operations}, errored: ${batchResponse.errored_operations}`,
-      );
+    setTimeout(() => {
+      mailchimp.batches
+        .status(batchRequest.id)
+        .then((batchResponse) => {
+          logger.log(
+            `Mailchimp batch create completed - batchId: ${batchRequest.id}, status: ${batchResponse.status}, total: ${batchResponse.total_operations}, errored: ${batchResponse.errored_operations}`,
+          );
+        })
+        .catch((err) => {
+          logger.warn(`Mailchimp batch create status check failed - batchId: ${batchRequest.id}: ${err?.message || 'unknown error'}`);
+        });
     }, 120000);
   } catch (error) {
     throw new Error(
@@ -117,11 +123,17 @@ export const batchUpdateMailchimpProfiles = async (
       `Mailchimp batch update started - batchId: ${batchRequest.id}, operations: ${operations.length}`,
     );
 
-    setTimeout(async () => {
-      const batchResponse = await mailchimp.batches.status(batchRequest.id);
-      logger.log(
-        `Mailchimp batch update completed - batchId: ${batchRequest.id}, status: ${batchResponse.status}, total: ${batchResponse.total_operations}, errored: ${batchResponse.errored_operations}`,
-      );
+    setTimeout(() => {
+      mailchimp.batches
+        .status(batchRequest.id)
+        .then((batchResponse) => {
+          logger.log(
+            `Mailchimp batch update completed - batchId: ${batchRequest.id}, status: ${batchResponse.status}, total: ${batchResponse.total_operations}, errored: ${batchResponse.errored_operations}`,
+          );
+        })
+        .catch((err) => {
+          logger.warn(`Mailchimp batch update status check failed - batchId: ${batchRequest.id}: ${err?.message || 'unknown error'}`);
+        });
     }, 120000);
   } catch (error) {
     throw new Error(`Batch update mailchimp profiles API call failed: ${error?.message || 'unknown error'}`, {
@@ -213,7 +225,7 @@ export const deleteCypressMailchimpProfiles = async () => {
 
   logger.log(`Deleting ${cypressProfiles.members.length} mailchimp profiles`);
 
-  cypressProfiles.members.forEach(async (profile: ListMember) => {
+  for (const profile of cypressProfiles.members) {
     try {
       await deleteMailchimpProfile(profile.email_address);
     } catch (error) {
@@ -222,7 +234,7 @@ export const deleteCypressMailchimpProfiles = async () => {
         { cause: error },
       );
     }
-  });
+  }
 };
 
 export const sendMailchimpUserEvent = async (email: string, event: MAILCHIMP_CUSTOM_EVENTS) => {

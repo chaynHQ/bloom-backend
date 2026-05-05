@@ -141,9 +141,18 @@ export const firebaseMeasurementId = getEnv(
 
 export const zapierToken = getEnv(process.env.ZAPIER_TOKEN, 'ZAPIER_TOKEN');
 
-export const crispPluginId = getEnv(process.env.CRISP_PLUGIN_ID, 'CRISP_PLUGIN_ID');
-export const crispPluginKey = getEnv(process.env.CRISP_PLUGIN_KEY, 'CRISP_PLUGIN_KEY');
-export const crispWebsiteId = getEnv(process.env.CRISP_WEBSITE_ID, 'CRISP_WEBSITE_ID');
+export const frontChatApiToken = getEnv(process.env.FRONT_CHAT_API_TOKEN, 'FRONT_CHAT_API_TOKEN');
+export const frontChannelId = getEnv(process.env.FRONT_CHANNEL_ID, 'FRONT_CHANNEL_ID');
+export const frontContactListId = getEnv(
+  process.env.FRONT_CONTACT_LIST_ID,
+  'FRONT_CONTACT_LIST_ID',
+);
+export const frontChatWebhookToken = getEnv(
+  process.env.FRONT_CHAT_WEBHOOK_TOKEN,
+  'FRONT_CHAT_WEBHOOK_TOKEN',
+);
+export const frontChannelSigningSecret =
+  getEnv(process.env.FRONT_CHANNEL_SIGNING_SECRET, 'FRONT_CHANNEL_SIGNING_SECRET') || '';
 
 export const slackWebhookUrl = getEnv(process.env.SLACK_WEBHOOK_URL, 'SLACK_WEBHOOK_URL');
 export const slackBloomUsersWebhookUrl = getEnv(
@@ -207,3 +216,7 @@ export const mailchimpServerPrefix = getEnv(
   process.env.MAILCHIMP_SERVER_PREFIX,
   'MAILCHIMP_SERVER_PREFIX',
 );
+
+export const crispWebsiteId = getEnv(process.env.CRISP_WEBSITE_ID, 'CRISP_WEBSITE_ID');
+export const crispIdentifier = getEnv(process.env.CRISP_IDENTIFIER, 'CRISP_IDENTIFIER');
+export const crispKey = getEnv(process.env.CRISP_KEY, 'CRISP_KEY');
