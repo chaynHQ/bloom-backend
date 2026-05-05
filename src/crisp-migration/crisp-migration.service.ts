@@ -29,10 +29,10 @@ export class CrispMigrationService {
     @InjectRepository(UserEntity) private readonly userRepository: Repository<UserEntity>,
   ) {}
 
-  getStatus(): MigrationResult | null {
-    if (!this.currentProgress) return null;
+  getStatus(): { status: MigrationProgress['status'] | 'idle'; progress?: MigrationProgress; errors?: MigrationResult['errors'] } {
+    if (!this.currentProgress) return { status: 'idle' };
     return {
-      success: this.currentProgress.status !== 'failed',
+      status: this.currentProgress.status,
       progress: this.currentProgress,
       errors: this.migrationErrors,
     };
@@ -146,32 +146,36 @@ export class CrispMigrationService {
       const firstConv = userConversations[0];
       const name = firstConv?.meta?.nickname ?? firstConv?.nickname;
 
-      if (email && !(options.dryRun ?? false)) {
-        try {
-          const user = await this.userRepository.findOne({
-            where: { email },
-            relations: {
-              partnerAccess: { partner: true, therapySession: true },
-              courseUser: { course: true, sessionUser: { session: true } },
-            },
-          });
+      if (email) {
+        if (!(options.dryRun ?? false)) {
+          try {
+            const user = await this.userRepository.findOne({
+              where: { email },
+              relations: {
+                partnerAccess: { partner: true, therapySession: true },
+                courseUser: { course: true, sessionUser: { session: true } },
+              },
+            });
 
-          if (user) {
-            // getOrCreateFrontContact creates the contact with full custom fields and adds it
-            // to the contact list internally — no need to call getOrCreateFrontContact separately.
-            await this.serviceUserProfiles.getOrCreateFrontContact(user);
-            logger.log(`Populated Front custom fields from DB for ${email}`);
-          } else {
-            // No DB record — create a minimal contact and add to list.
-            logger.log(`No DB user found for ${email} — creating minimal contact`);
-            await this.frontImport.getOrCreateFrontContact(email, name ?? undefined);
+            if (user) {
+              // getOrCreateFrontContact creates the contact with full custom fields and adds it
+              // to the contact list internally — no need to call getOrCreateFrontContact separately.
+              await this.serviceUserProfiles.getOrCreateFrontContact(user);
+              logger.log(`Populated Front custom fields from DB for ${email}`);
+            } else {
+              // No DB record — create a minimal contact and add to list.
+              logger.log(`No DB user found for ${email} — creating minimal contact`);
+              await this.frontImport.getOrCreateFrontContact(email, name ?? undefined);
+            }
+
+            this.currentProgress!.processedContacts++;
+          } catch (err) {
+            logger.warn(`Failed to set up contact for ${email}: ${(err as Error).message}`);
           }
-
+          await this.delay(INTER_REQUEST_DELAY_MS);
+        } else {
           this.currentProgress!.processedContacts++;
-        } catch (err) {
-          logger.warn(`Failed to set up contact for ${email}: ${(err as Error).message}`);
         }
-        await this.delay(INTER_REQUEST_DELAY_MS);
       }
 
       let existingConversationId: string | undefined;
@@ -229,8 +233,8 @@ export class CrispMigrationService {
     });
 
     this.currentProgress!.processedConversations++;
-    this.currentProgress!.processedMessages += result.messageIds.length;
-    this.currentProgress!.processedNotes += result.commentIds.length;
+    this.currentProgress!.processedMessages += options.dryRun ? data.messages.length : result.messageIds.length;
+    this.currentProgress!.processedNotes += options.dryRun ? data.notes.length : result.commentIds.length;
     if (!options.skipAttachments) {
       this.currentProgress!.processedAttachments += data.messages.filter((m) => m.type === 'file').length;
     }
