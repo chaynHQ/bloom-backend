@@ -194,7 +194,7 @@ describe('Service user profiles', () => {
     });
   });
 
-  describe('ensureFrontContact', () => {
+  describe('getOrCreateFrontContact', () => {
     // mockUserEntity has empty partnerAccess/courseUser, so therapy timestamps are ''
     const expectedCustomFields = {
       signed_up_at: mockUserEntity.createdAt.toISOString(),
@@ -220,7 +220,7 @@ describe('Service user profiles', () => {
         courseUser: [],
       } as any);
 
-      await service.ensureFrontContact(mockUserEntity);
+      await service.getOrCreateFrontContact(mockUserEntity);
 
       expect(mockFrontChatService.createContact).toHaveBeenCalledWith({
         email: mockUserEntity.email,
@@ -234,7 +234,7 @@ describe('Service user profiles', () => {
     it('only calls addChannelHandle (not updateContactCustomFields) when contact already exists', async () => {
       jest.mocked(mockFrontChatService.contactExists).mockResolvedValue(true);
 
-      await service.ensureFrontContact(mockUserEntity);
+      await service.getOrCreateFrontContact(mockUserEntity);
       await new Promise((r) => setImmediate(r));
 
       expect(mockFrontChatService.createContact).not.toHaveBeenCalled();
@@ -243,7 +243,7 @@ describe('Service user profiles', () => {
     });
 
     it('skips for Cypress test emails', async () => {
-      await service.ensureFrontContact({
+      await service.getOrCreateFrontContact({
         ...mockUserEntity,
         email: 'cypresstestemail+1@chayn.co',
       } as any);
@@ -254,7 +254,7 @@ describe('Service user profiles', () => {
     it('does not throw when contactExists check fails', async () => {
       jest.mocked(mockFrontChatService.contactExists).mockRejectedValue(new Error('API down'));
 
-      await expect(service.ensureFrontContact(mockUserEntity)).resolves.not.toThrow();
+      await expect(service.getOrCreateFrontContact(mockUserEntity)).resolves.not.toThrow();
     });
 
     it('does not throw when createContact fails', async () => {
@@ -266,14 +266,14 @@ describe('Service user profiles', () => {
       } as any);
       jest.mocked(mockFrontChatService.createContact).mockRejectedValue(new Error('API error'));
 
-      await expect(service.ensureFrontContact(mockUserEntity)).resolves.not.toThrow();
+      await expect(service.getOrCreateFrontContact(mockUserEntity)).resolves.not.toThrow();
     });
 
     it('returns early when user not found in DB', async () => {
       jest.mocked(mockFrontChatService.contactExists).mockResolvedValue(false);
       jest.spyOn(mockedUserRepository, 'findOne').mockResolvedValue(null);
 
-      await service.ensureFrontContact(mockUserEntity);
+      await service.getOrCreateFrontContact(mockUserEntity);
 
       expect(mockFrontChatService.createContact).not.toHaveBeenCalled();
       expect(mockFrontChatService.updateContactCustomFields).not.toHaveBeenCalled();

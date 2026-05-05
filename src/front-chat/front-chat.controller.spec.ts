@@ -14,7 +14,7 @@ describe('FrontChatController', () => {
     fetchAttachment: jest.Mock;
   };
   let serviceUserProfilesService: {
-    ensureFrontContact: jest.Mock;
+    getOrCreateFrontContact: jest.Mock;
     updateServiceUserProfilesChatActivity: jest.Mock;
   };
 
@@ -41,7 +41,7 @@ describe('FrontChatController', () => {
         .mockResolvedValue({ buffer: Buffer.from('img'), contentType: 'image/png' }),
     };
     serviceUserProfilesService = {
-      ensureFrontContact: jest.fn().mockResolvedValue(undefined),
+      getOrCreateFrontContact: jest.fn().mockResolvedValue(undefined),
       updateServiceUserProfilesChatActivity: jest.fn().mockResolvedValue(undefined),
     };
     controller = new FrontChatController(
@@ -59,22 +59,22 @@ describe('FrontChatController', () => {
     expect(frontChatService.sendChannelAttachment).toHaveBeenCalledWith(user, file);
   });
 
-  it('calls ensureFrontContact when chatUser has no frontContactId', async () => {
+  it('calls getOrCreateFrontContact when chatUser has no frontContactId', async () => {
     const user = { id: 'u1', email: 'u@example.com' } as UserEntity;
     frontChatService.getChatUser.mockResolvedValueOnce(buildChatUser({ frontContactId: null }));
 
     await controller.uploadAttachment({ userEntity: user } as any, buildFile());
 
-    expect(serviceUserProfilesService.ensureFrontContact).toHaveBeenCalledWith(user);
+    expect(serviceUserProfilesService.getOrCreateFrontContact).toHaveBeenCalledWith(user);
   });
 
-  it('skips ensureFrontContact when chatUser already has a frontContactId', async () => {
+  it('skips getOrCreateFrontContact when chatUser already has a frontContactId', async () => {
     const user = { id: 'u1', email: 'u@example.com' } as UserEntity;
     frontChatService.getChatUser.mockResolvedValueOnce(buildChatUser({ frontContactId: 'crd_existing' }));
 
     await controller.uploadAttachment({ userEntity: user } as any, buildFile());
 
-    expect(serviceUserProfilesService.ensureFrontContact).not.toHaveBeenCalled();
+    expect(serviceUserProfilesService.getOrCreateFrontContact).not.toHaveBeenCalled();
     expect(frontChatService.sendChannelAttachment).toHaveBeenCalled();
   });
 

@@ -433,7 +433,7 @@ export class FrontChatService {
       );
     }
 
-    await this.ensureContactInList(email, contact.id);
+    await this.addToFrontContactList(email, contact.id);
 
     if (userId) {
       await this.getOrCreateChatUser(userId, { frontContactId: contact.id });
@@ -457,7 +457,7 @@ export class FrontChatService {
 
     try {
       const result = await this.frontApiRequest('PATCH', `/contacts/${contactId}`, updateBody);
-      await this.ensureContactInList(profile.email ?? email);
+      await this.addToFrontContactList(profile.email ?? email);
       // When email changes, the new email handle won't have the custom channel handle yet.
       if (profile.email && profile.email !== email) {
         this.addChannelHandle(profile.email).catch(() => {});
@@ -465,7 +465,7 @@ export class FrontChatService {
       return result;
     } catch (error) {
       // Do NOT fall back to createContact here: it would create a contact with only name/email,
-      // losing all custom field data. ensureFrontContact (widget open) handles backfill with
+      // losing all custom field data. getOrCreateFrontContact (widget open) handles backfill with
       // full data if the contact is missing.
       throw new Error(
         `Update Front Chat contact profile API call failed: ${(error as Error)?.message || 'unknown error'}`,
@@ -487,13 +487,13 @@ export class FrontChatService {
       const result = await this.frontApiRequest('PATCH', `/contacts/${contactId}`, {
         custom_fields: serialized,
       });
-      await this.ensureContactInList(email);
+      await this.addToFrontContactList(email);
       return result;
     } catch (error) {
       // Do NOT fall back to createContact here: it would create a contact with only the
       // partial fields being updated (e.g. just chat-activity timestamps), losing all other
       // data. Contact creation with full data is handled by createServiceUserProfiles (signup)
-      // and ensureFrontContact (widget open). If the contact doesn't exist here, log and move on.
+      // and getOrCreateFrontContact (widget open). If the contact doesn't exist here, log and move on.
       throw new Error(
         `Update Front Chat contact custom fields API call failed: ${(error as Error)?.message || 'unknown error'}`,
         { cause: error },
@@ -652,7 +652,7 @@ export class FrontChatService {
 
   // The contact_lists endpoint requires canonical contact IDs (crd_xxx), not aliases.
   // contactId can be passed directly from a create/patch response to skip the extra lookup.
-  private async ensureContactInList(email: string, contactId?: string): Promise<void> {
+  private async addToFrontContactList(email: string, contactId?: string): Promise<void> {
     if (!frontContactListId || isCypressTestEmail(email)) return;
 
     let resolvedId: string | undefined;

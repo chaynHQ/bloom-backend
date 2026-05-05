@@ -61,7 +61,7 @@ export class ServiceUserProfilesService {
     const userSignedUpAt = user.createdAt?.toISOString();
 
     try {
-      // Create with all custom fields so the initial record matches ensureFrontContact.
+      // Create with all custom fields so the initial record matches getOrCreateFrontContact.
       await this.frontChatService.createContact({
         email: email,
         name: user.name,
@@ -97,7 +97,7 @@ export class ServiceUserProfilesService {
     logger.log('Create user: updated service user profiles');
   }
 
-  async ensureFrontContact(user: UserEntity): Promise<void> {
+  async getOrCreateFrontContact(user: UserEntity): Promise<void> {
     const { email } = user;
     if (isCypressTestEmail(email)) return;
 
@@ -106,7 +106,7 @@ export class ServiceUserProfilesService {
       exists = await this.frontChatService.contactExists(email);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'unknown error';
-      logger.error(`ensureFrontContact existence check failed for ${email}: ${message}`);
+      logger.error(`getOrCreateFrontContact existence check failed for ${email}: ${message}`);
       return;
     }
 
@@ -131,7 +131,7 @@ export class ServiceUserProfilesService {
         logger.log(`Backfilled Front contact for ${email}`);
       } catch (error) {
         const message = error instanceof Error ? error.message : 'unknown error';
-        logger.error(`ensureFrontContact create failed for ${email}: ${message}`);
+        logger.error(`getOrCreateFrontContact create failed for ${email}: ${message}`);
       }
     } else {
       // Contact already exists — ensure the channel handle is present so Channel API
@@ -296,7 +296,7 @@ export class ServiceUserProfilesService {
     const data = this.serializeChatActivityData(chatUser);
 
     // Front custom fields not updated here — partial PATCH replaces all custom fields,
-    // and last_message_* timestamps are Mailchimp-only. ensureFrontContact (widget open)
+    // and last_message_* timestamps are Mailchimp-only. getOrCreateFrontContact (widget open)
     // refreshes Front with the full field set.
 
     try {

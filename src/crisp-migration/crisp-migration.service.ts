@@ -157,14 +157,14 @@ export class CrispMigrationService {
           });
 
           if (user) {
-            // ensureFrontContact creates the contact with full custom fields and adds it
-            // to the contact list internally — no need to call ensureContact separately.
-            await this.serviceUserProfiles.ensureFrontContact(user);
+            // getOrCreateFrontContact creates the contact with full custom fields and adds it
+            // to the contact list internally — no need to call getOrCreateFrontContact separately.
+            await this.serviceUserProfiles.getOrCreateFrontContact(user);
             logger.log(`Populated Front custom fields from DB for ${email}`);
           } else {
             // No DB record — create a minimal contact and add to list.
             logger.log(`No DB user found for ${email} — creating minimal contact`);
-            await this.frontImport.ensureContact(email, name ?? undefined);
+            await this.frontImport.getOrCreateFrontContact(email, name ?? undefined);
           }
 
           this.currentProgress!.processedContacts++;

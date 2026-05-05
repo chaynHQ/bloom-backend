@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Logger } from 'src/logger/logger';
-import { frontChatApiToken, frontChannelId, frontContactListId } from 'src/utils/constants';
+import { frontChannelId, frontChatApiToken, frontContactListId } from 'src/utils/constants';
 import { ConversationMigrationData, CrispMessage, CrispNote } from './crisp-migration.interface';
 
 const FRONT_API_BASE_URL = 'https://api2.frontapp.com';
@@ -47,7 +47,10 @@ export class FrontImportService {
 
     logger.log(`Resolving inbox ID from channel ${frontChannelId}…`);
 
-    const channel = (await this.frontApiRequest('GET', `/channels/${frontChannelId}`)) as FrontChannelResponse;
+    const channel = (await this.frontApiRequest(
+      'GET',
+      `/channels/${frontChannelId}`,
+    )) as FrontChannelResponse;
     const inboxUrl = channel._links?.related?.inbox;
 
     if (!inboxUrl) {
@@ -59,7 +62,7 @@ export class FrontImportService {
     return this.resolvedInboxId;
   }
 
-  async ensureContact(email: string, name?: string): Promise<string> {
+  async getOrCreateFrontContact(email: string, name?: string): Promise<string> {
     const alias = `alt:email:${encodeURIComponent(email)}`;
     let contactId: string | undefined;
 
@@ -161,26 +164,34 @@ export class FrontImportService {
 
     const commentIds: string[] = [];
     if (!options.skipNotes && notes.length > 0) {
-      for (const note of notes) {
+      const sortedNotes = [...notes].sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+      for (const note of sortedNotes) {
         try {
           const commentId = await this.addComment(conversationId, note);
           if (commentId) commentIds.push(commentId);
         } catch (err) {
-          logger.warn(`Failed to add note as comment on ${conversationId}: ${(err as Error).message}`);
+          logger.warn(
+            `Failed to add note as comment on ${conversationId}: ${(err as Error).message}`,
+          );
         }
+        await this.delay(INTER_MESSAGE_DELAY_MS);
       }
     }
 
     if (isResolved) {
       try {
-        await this.frontApiRequest('PATCH', `/conversations/${conversationId}`, { status: 'archived' });
+        await this.frontApiRequest('PATCH', `/conversations/${conversationId}`, {
+          status: 'archived',
+        });
         logger.log(`Archived conversation ${conversationId}`);
       } catch (err) {
         logger.warn(`Failed to archive conversation ${conversationId}: ${(err as Error).message}`);
       }
     }
 
-    logger.log(`Imported session ${sessionId} → ${conversationId} (${messageIds.length} messages, ${commentIds.length} comments, resolved: ${isResolved})`);
+    logger.log(
+      `Imported session ${sessionId} → ${conversationId} (${messageIds.length} messages, ${commentIds.length} comments, resolved: ${isResolved})`,
+    );
     return { conversationId, messageIds, commentIds };
   }
 
@@ -205,7 +216,17 @@ export class FrontImportService {
     const to = isInbound ? [SUPPORT_SENDER_HANDLE] : [userEmail];
 
     if (msg.type === 'file' && !skipAttachments) {
-      return this.importFileMessage(msg, sender, to, externalId, createdAt, isInbound, conversationId, inboxId, isResolved);
+      return this.importFileMessage(
+        msg,
+        sender,
+        to,
+        externalId,
+        createdAt,
+        isInbound,
+        conversationId,
+        inboxId,
+        isResolved,
+      );
     }
 
     const body = this.extractMessageText(msg);
@@ -246,9 +267,10 @@ export class FrontImportService {
     try {
       const raw = msg.content;
       if (!raw) return undefined;
-      fileData = typeof raw === 'string'
-        ? (JSON.parse(raw) as { url?: string; name?: string; type?: string })
-        : (raw as unknown as { url?: string; name?: string; type?: string });
+      fileData =
+        typeof raw === 'string'
+          ? (JSON.parse(raw) as { url?: string; name?: string; type?: string })
+          : (raw as unknown as { url?: string; name?: string; type?: string });
     } catch {
       logger.warn(`Could not parse file content for ${externalId}`);
       return undefined;
@@ -257,12 +279,9 @@ export class FrontImportService {
 
     const fileName = fileData.name || 'Attachment';
     const isImage =
-      fileData.type?.startsWith('image/') ||
-      /\.(jpe?g|png|gif|webp|svg|bmp)$/i.test(fileName);
+      fileData.type?.startsWith('image/') || /\.(jpe?g|png|gif|webp|svg|bmp)$/i.test(fileName);
 
-    const body = isImage
-      ? `![${fileName}](${fileData.url})`
-      : `📎 [${fileName}](${fileData.url})`;
+    const body = isImage ? `![${fileName}](${fileData.url})` : `📎 [${fileName}](${fileData.url})`;
 
     const payload: Record<string, unknown> = {
       sender,
@@ -298,7 +317,9 @@ export class FrontImportService {
       } catch (err) {
         const isNotFound = (err as { status?: number }).status === 404;
         if (!isNotFound || attempt === delays.length - 1) {
-          logger.warn(`Could not resolve conversation ID for ${messageUid}: ${(err as Error).message}`);
+          logger.warn(
+            `Could not resolve conversation ID for ${messageUid}: ${(err as Error).message}`,
+          );
           return undefined;
         }
         logger.log(`Message ${messageUid} not yet available, retrying (attempt ${attempt + 1})…`);
@@ -312,14 +333,18 @@ export class FrontImportService {
     if (!body) return undefined;
 
     const authorLabel = note.user?.nickname ? ` (${note.user.nickname})` : '';
-    const timestamp = note.timestamp
-      ? new Date(note.timestamp * 1000).toISOString()
-      : new Date().toISOString();
+    const dateLabel = note.timestamp
+      ? ` on ${new Date(note.timestamp).toISOString().slice(0, 10)}`
+      : '';
 
-    const commentBody = `**[Crisp Admin Note${authorLabel} — ${timestamp}]**\n\n${body}`;
-    const result = (await this.frontApiRequest('POST', `/conversations/${conversationId}/comments`, {
-      body: commentBody,
-    })) as { id?: string };
+    const commentBody = `**[Crisp Admin Note made by${authorLabel}${dateLabel}]**\n\n${body}`;
+    const result = (await this.frontApiRequest(
+      'POST',
+      `/conversations/${conversationId}/comments`,
+      {
+        body: commentBody,
+      },
+    )) as { id?: string };
 
     logger.log(`Added comment to ${conversationId}`);
     return result.id;
@@ -330,7 +355,12 @@ export class FrontImportService {
   }
 
   private extractMessageText(msg: CrispMessage): string {
-    const rawContent = typeof msg.content === 'string' ? msg.content : (msg.content ? JSON.stringify(msg.content) : '');
+    const rawContent =
+      typeof msg.content === 'string'
+        ? msg.content
+        : msg.content
+          ? JSON.stringify(msg.content)
+          : '';
     if (msg.type === 'text') return this.sanitiseBody(rawContent);
     if (msg.type === 'picker') {
       try {
@@ -362,8 +392,7 @@ export class FrontImportService {
     if (msg.automated) return false;
     if (msg.type === 'note') return false;
     if (!msg.content && msg.type !== 'file') return false;
-    const contentStr =
-      typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content);
+    const contentStr = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content);
     if (contentStr.startsWith('Hi there, chat here with survivors')) return false;
     if (contentStr.startsWith('{"namespace":')) return false;
     return true;

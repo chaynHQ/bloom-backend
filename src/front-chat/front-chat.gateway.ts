@@ -37,7 +37,7 @@ export class FrontChatGateway implements OnGatewayConnection, OnGatewayDisconnec
 
   private readonly sessions = new Map<string, UserEntity>();
   private readonly sendTimestamps = new Map<string, number[]>();
-  private readonly ensureContactPromises = new Map<string, Promise<void>>();
+  private readonly pendingFrontContactCreations = new Map<string, Promise<void>>();
 
   constructor(
     private readonly authService: AuthService,
@@ -46,22 +46,22 @@ export class FrontChatGateway implements OnGatewayConnection, OnGatewayDisconnec
     private readonly serviceUserProfilesService: ServiceUserProfilesService,
   ) {}
 
-  private ensureContactReady(user: UserEntity): Promise<void> {
+  private awaitFrontContactReady(user: UserEntity): Promise<void> {
     const key = user.email.toLowerCase();
-    let pending = this.ensureContactPromises.get(key);
+    let pending = this.pendingFrontContactCreations.get(key);
     if (!pending) {
       pending = this.serviceUserProfilesService
-        .ensureFrontContact(user)
+        .getOrCreateFrontContact(user)
         .then(() => {
-          this.ensureContactPromises.delete(key);
+          this.pendingFrontContactCreations.delete(key);
         })
         .catch((error) => {
-          this.ensureContactPromises.delete(key);
+          this.pendingFrontContactCreations.delete(key);
           this.logger.warn(
-            `ensureFrontContact failed for user ${user.id}: ${error?.message || 'unknown error'}`,
+            `getOrCreateFrontContact failed for user ${user.id}: ${error?.message || 'unknown error'}`,
           );
         });
-      this.ensureContactPromises.set(key, pending);
+      this.pendingFrontContactCreations.set(key, pending);
     }
     return pending;
   }
@@ -99,7 +99,7 @@ export class FrontChatGateway implements OnGatewayConnection, OnGatewayDisconnec
       const { messages, conversationFound } = await this.frontChatService.getConversationHistory(user);
 
       if (!conversationFound) {
-        this.ensureContactReady(user);
+        this.awaitFrontContactReady(user);
       }
 
       if (messages.length > 0) {
@@ -136,7 +136,7 @@ export class FrontChatGateway implements OnGatewayConnection, OnGatewayDisconnec
     try {
       const existingChatUser = await this.frontChatService.getChatUser(user.id);
       if (!existingChatUser?.frontContactId) {
-        await this.ensureContactReady(user);
+        await this.awaitFrontContactReady(user);
       }
       const chatUser = await this.frontChatService.sendChannelTextMessage(user, payload.text);
 

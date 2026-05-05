@@ -10,7 +10,6 @@ import {
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { MigrationOptionsDto, MigrationStatusResponseDto } from './dto/migration-options.dto';
 import { CrispMigrationService } from './crisp-migration.service';
-import { MigrationResult } from './crisp-migration.interface';
 
 @ApiTags('Crisp Migration')
 @Controller('/v1/crisp-migration')
@@ -20,7 +19,7 @@ export class CrispMigrationController {
   @Get('status')
   @ApiOperation({ summary: 'Get current migration status' })
   @ApiResponse({ status: 200, description: 'Migration status', type: MigrationStatusResponseDto })
-  getStatus(): MigrationResult | { status: 'idle' } {
+  getStatus() {
     return this.migrationService.getStatus() ?? { status: 'idle' };
   }
 
@@ -33,13 +32,14 @@ export class CrispMigrationController {
       'imports them into Front. Idempotent — external_id deduplication prevents ' +
       'duplicates if run more than once. Use dryRun=true to validate without writing data.',
   })
-  @ApiResponse({ status: 200, description: 'Migration completed' })
+  @ApiResponse({ status: 200, description: 'Migration started — poll GET /status for progress' })
   @ApiResponse({ status: 400, description: 'Migration already running' })
-  async runMigration(@Body() options: MigrationOptionsDto = {}): Promise<MigrationResult> {
+  async runMigration(@Body() options: MigrationOptionsDto = {}): Promise<{ status: 'started' }> {
     if (this.migrationService.isRunning()) {
       throw new BadRequestException('A migration is already in progress. Poll GET /status.');
     }
 
-    return this.migrationService.runMigration(options);
+    void this.migrationService.runMigration(options);
+    return { status: 'started' };
   }
 }

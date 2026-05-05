@@ -12,7 +12,7 @@ describe('FrontChatGateway', () => {
     getChatUser: jest.Mock;
   };
   let serviceUserProfilesService: {
-    ensureFrontContact: jest.Mock;
+    getOrCreateFrontContact: jest.Mock;
     updateServiceUserProfilesChatActivity: jest.Mock;
   };
   let server: { to: jest.Mock; emit: jest.Mock };
@@ -37,7 +37,7 @@ describe('FrontChatGateway', () => {
       getChatUser: jest.fn().mockResolvedValue(null),
     };
     serviceUserProfilesService = {
-      ensureFrontContact: jest.fn().mockResolvedValue(undefined),
+      getOrCreateFrontContact: jest.fn().mockResolvedValue(undefined),
       updateServiceUserProfilesChatActivity: jest.fn().mockResolvedValue(undefined),
     };
 
@@ -157,19 +157,19 @@ describe('FrontChatGateway', () => {
       expect(result).toEqual({ ok: true });
     });
 
-    it('skips ensureFrontContact when the chatUser already has a frontContactId', async () => {
+    it('skips getOrCreateFrontContact when the chatUser already has a frontContactId', async () => {
       const user = buildUser();
-      // Connect with conversationFound: true so ensureContactReady is not triggered at connect time.
+      // Connect with conversationFound: true so awaitFrontContactReady is not triggered at connect time.
       frontChatService.getConversationHistory.mockResolvedValueOnce({ messages: [], conversationFound: true });
       const socket = await connectAs(user);
-      serviceUserProfilesService.ensureFrontContact.mockClear();
+      serviceUserProfilesService.getOrCreateFrontContact.mockClear();
 
       frontChatService.getChatUser.mockResolvedValueOnce({ frontContactId: 'crd_existing' });
       frontChatService.sendChannelTextMessage.mockResolvedValue(undefined);
 
       await gateway.handleSendMessage(socket as any, { text: 'hi' });
 
-      expect(serviceUserProfilesService.ensureFrontContact).not.toHaveBeenCalled();
+      expect(serviceUserProfilesService.getOrCreateFrontContact).not.toHaveBeenCalled();
       expect(frontChatService.sendChannelTextMessage).toHaveBeenCalledWith(user, 'hi');
     });
 

@@ -72,7 +72,7 @@ export class FrontChatController {
     if (!file) throw new BadRequestException('No file provided');
     const existingChatUser = await this.frontChatService.getChatUser(req.userEntity.id);
     if (!existingChatUser?.frontContactId) {
-      await this.serviceUserProfilesService.ensureFrontContact(req.userEntity);
+      await this.serviceUserProfilesService.getOrCreateFrontContact(req.userEntity);
     }
     const chatUser = await this.frontChatService.sendChannelAttachment(req.userEntity, file);
 
