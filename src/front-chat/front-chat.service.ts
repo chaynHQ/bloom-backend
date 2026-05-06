@@ -67,6 +67,8 @@ export const buildThreadRef = (userId: string) => `bloom-user-${userId}`;
 
 @Injectable()
 export class FrontChatService {
+  private resolvedInboxId: string | undefined;
+
   constructor(
     @InjectRepository(ChatUserEntity)
     private readonly chatUserRepository: Repository<ChatUserEntity>,
@@ -525,18 +527,51 @@ export class FrontChatService {
     }
   }
 
+  private async getInboxId(): Promise<string | null> {
+    if (this.resolvedInboxId) return this.resolvedInboxId;
+    if (!frontChannelId) return null;
+    try {
+      const channel = (await this.frontApiRequest('GET', `/channels/${frontChannelId}`)) as {
+        _links?: { related?: { inbox?: string } };
+      };
+      const inboxUrl = channel._links?.related?.inbox;
+      if (!inboxUrl) return null;
+      this.resolvedInboxId = inboxUrl.split('/').pop()!;
+      return this.resolvedInboxId;
+    } catch {
+      return null;
+    }
+  }
+
   private async findConversationIdByContact(userId: string, email: string): Promise<string | null> {
     try {
-      const data = (await this.frontApiRequest(
-        'GET',
-        `/contacts/${this.getContactAlias(email)}/conversations?limit=10`,
-      )) as FrontApiPaginated<{ id: string; created_at?: number }>;
+      const inboxId = await this.getInboxId();
+      if (!inboxId) return null;
 
-      const sorted = (data._results ?? [])
-        .filter((c) => c.id)
-        .sort((a, b) => (b.created_at ?? 0) - (a.created_at ?? 0));
+      let nextPath: string | null =
+        `/contacts/${this.getContactAlias(email)}/conversations?limit=50`;
+      const matching: { id: string; created_at?: number }[] = [];
 
-      const conversationId = sorted[0]?.id ?? null;
+      while (nextPath) {
+        const data = (await this.frontApiRequest('GET', nextPath)) as FrontApiPaginated<{
+          id: string;
+          created_at?: number;
+          _links?: { related?: { inbox?: string } };
+        }>;
+
+        for (const c of data._results ?? []) {
+          if (!c.id) continue;
+          if (!c._links?.related?.inbox?.endsWith(`/${inboxId}`)) continue;
+          matching.push({ id: c.id, created_at: c.created_at });
+        }
+
+        const nextUrl = data._pagination?.next;
+        nextPath = nextUrl ? nextUrl.replace(FRONT_API_BASE_URL, '') : null;
+      }
+
+      const conversationId =
+        matching.sort((a, b) => (b.created_at ?? 0) - (a.created_at ?? 0))[0]?.id ?? null;
+
       if (conversationId) {
         await this.getOrCreateChatUser(userId, { frontConversationId: conversationId });
         logger.log(`Resolved conversation ${conversationId} for user ${userId} via contact lookup`);
