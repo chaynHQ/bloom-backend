@@ -14,6 +14,9 @@ const logger = new Logger('CrispExportService');
 // Crisp returns 20 conversations per page.
 const CRISP_PAGE_SIZE = 20;
 
+const CRISP_RATE_LIMIT_DELAY_MS = 10_000;
+const CRISP_MAX_RETRIES = 4;
+
 @Injectable()
 export class CrispExportService {
   private crispClient: Crisp;
@@ -24,6 +27,21 @@ export class CrispExportService {
     // (no marketplace plugin account required) and have a 10k req/day quota.
     this.crispClient.authenticateTier('website', crispIdentifier, crispKey);
     logger.log('Crisp API client initialized');
+  }
+
+  private async crispApiCall<T>(fn: () => Promise<T>): Promise<T> {
+    for (let attempt = 0; attempt <= CRISP_MAX_RETRIES; attempt++) {
+      try {
+        return await fn();
+      } catch (error) {
+        const msg = (error as Error).message ?? '';
+        const isRateLimit = msg.includes('rate_limited') || msg.includes('rate limit');
+        if (!isRateLimit || attempt === CRISP_MAX_RETRIES) throw error;
+        logger.warn(`Crisp rate limited — waiting ${CRISP_RATE_LIMIT_DELAY_MS / 1000}s before retry (attempt ${attempt + 1}/${CRISP_MAX_RETRIES})`);
+        await new Promise((resolve) => setTimeout(resolve, CRISP_RATE_LIMIT_DELAY_MS));
+      }
+    }
+    throw new Error('Unreachable');
   }
 
   /**
@@ -44,9 +62,8 @@ export class CrispExportService {
 
       let response: CrispConversation[];
       try {
-        response = (await this.crispClient.website.listConversations(
-          crispWebsiteId,
-          page,
+        response = (await this.crispApiCall(() =>
+          this.crispClient.website.listConversations(crispWebsiteId, page),
         )) as unknown as CrispConversation[];
       } catch (error) {
         logger.error(`Failed to fetch conversation page ${page}: ${(error as Error).message}`);
@@ -84,16 +101,18 @@ export class CrispExportService {
    */
   async getConversationMessages(sessionId: string, since?: Date): Promise<CrispMessage[]> {
     logger.log(`Fetching messages for conversation ${sessionId}`);
-    const cutoffTimestamp = since ? Math.floor(since.getTime() / 1000) : undefined;
+    const cutoffTimestamp = since ? since.getTime() : undefined;
     const messages: CrispMessage[] = [];
     let timestampBefore: number | undefined;
 
     try {
       while (true) {
-        const response = (await this.crispClient.website.getMessagesInConversation(
-          crispWebsiteId,
-          sessionId,
-          timestampBefore,
+        const response = (await this.crispApiCall(() =>
+          this.crispClient.website.getMessagesInConversation(
+            crispWebsiteId,
+            sessionId,
+            timestampBefore,
+          ),
         )) as unknown as CrispMessage[];
 
         if (!response || response.length === 0) break;
@@ -129,9 +148,8 @@ export class CrispExportService {
    */
   async getConversationMetadata(sessionId: string): Promise<CrispConversation> {
     try {
-      return (await this.crispClient.website.getConversation(
-        crispWebsiteId,
-        sessionId,
+      return (await this.crispApiCall(() =>
+        this.crispClient.website.getConversation(crispWebsiteId, sessionId),
       )) as unknown as CrispConversation;
     } catch (error) {
       logger.error(`Failed to fetch metadata for ${sessionId}: ${(error as Error).message}`);
