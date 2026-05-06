@@ -182,7 +182,7 @@ export class FrontImportService {
 
     if (isResolved) {
       try {
-        if (lastMessageUid && lastMessageUid !== messageIds[0]) {
+        if (lastMessageUid) {
           await this.waitForMessageProcessed(lastMessageUid);
         }
         await this.frontApiRequest('PATCH', `/conversations/${conversationId}`, {
