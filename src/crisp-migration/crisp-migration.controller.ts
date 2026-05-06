@@ -23,7 +23,7 @@ export class CrispMigrationController {
   @ApiResponse({ status: 200, description: 'Migration status', type: MigrationStatusResponseDto })
   @UseGuards(SuperAdminAuthGuard)
   getStatus() {
-    return this.migrationService.getStatus() ?? { status: 'idle' };
+    return this.migrationService.getStatus();
   }
 
   @Post('run')
