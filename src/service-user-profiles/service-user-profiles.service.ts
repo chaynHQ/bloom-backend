@@ -171,11 +171,27 @@ export class ServiceUserProfilesService {
         },
       });
       if (!user) return;
-      await this.frontChatService.updateContactCustomFields(this.buildFrontCustomFields(user), email);
+      try {
+        await this.frontChatService.updateContactCustomFields(this.buildFrontCustomFields(user), email);
+      } catch (err) {
+        if (this.isFrontContactNotFound(err)) {
+          logger.log(`Front contact missing for ${email} — creating with full custom fields`);
+          await this.getOrCreateFrontContact(user);
+          // Contact now exists with all fields populated by getOrCreateFrontContact
+        } else {
+          throw err;
+        }
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'unknown error';
       logger.error(`Sync Front Chat contact custom fields error for ${email}: ${message}`);
     }
+  }
+
+  private isFrontContactNotFound(error: unknown): boolean {
+    const cause = (error as { cause?: { status?: number } })?.cause;
+    if (cause?.status === 404) return true;
+    return (error as Error)?.message?.includes('(404)') ?? false;
   }
 
   async updateServiceUserProfilesUser(
@@ -194,17 +210,26 @@ export class ServiceUserProfilesService {
     const userData = this.serializeUserData(user);
 
     if (isProfileUpdateRequired) {
+      const profilePayload = {
+        ...(isEmailUpdateRequired && { email: email }),
+        name: user.name,
+      };
       try {
-        await this.frontChatService.updateContactProfile(
-          {
-            ...(isEmailUpdateRequired && { email: email }),
-            name: user.name,
-          },
-          existingEmail,
-        );
+        await this.frontChatService.updateContactProfile(profilePayload, existingEmail);
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'unknown error';
-        logger.error(`Update Front Chat user profile error - ${message}`);
+        if (this.isFrontContactNotFound(error)) {
+          logger.log(`Front contact missing for ${existingEmail} — creating before profile update`);
+          await this.getOrCreateFrontContact(user);
+          try {
+            await this.frontChatService.updateContactProfile(profilePayload, existingEmail);
+          } catch (retryError) {
+            const message = retryError instanceof Error ? retryError.message : 'unknown error';
+            logger.error(`Update Front Chat user profile error - ${message}`);
+          }
+        } else {
+          const message = error instanceof Error ? error.message : 'unknown error';
+          logger.error(`Update Front Chat user profile error - ${message}`);
+        }
       }
     }
 
