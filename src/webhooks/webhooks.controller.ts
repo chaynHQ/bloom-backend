@@ -1,4 +1,4 @@
-import { Body, Controller, Headers, HttpCode, HttpStatus, Post, Request, UseGuards } from '@nestjs/common';
+import { Body, Controller, Headers, Post, Request, UseGuards } from '@nestjs/common';
 import { ApiBody, ApiTags } from '@nestjs/swagger';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
 import { FrontChatWebhookService } from 'src/front-chat/front-chat-webhook.service';
@@ -43,7 +43,6 @@ export class WebhooksController {
   // Body is typed loosely so the global ValidationPipe doesn't 400 the Channel API
   // payload (different shape from FrontChatWebhookDto).
   @Post('front-chat')
-  @HttpCode(HttpStatus.OK)
   @ApiBody({ type: FrontChatWebhookDto })
   async handleFrontChatWebhook(
     @Request() req,
