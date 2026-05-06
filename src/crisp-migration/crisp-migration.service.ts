@@ -156,23 +156,29 @@ export class CrispMigrationService {
     const firstConv = userConversations[0];
     const name = firstConv?.meta?.nickname ?? firstConv?.nickname;
 
-    if (email) {
+    const isAnonymous = email.startsWith('unknown-');
+
+    if (!isAnonymous) {
       if (!(options.dryRun ?? false)) {
+        // Deleted users have their ID hashed (no '@'); synthesize a stable fake address for Front
+        const contactEmail = email.includes('@') ? email : `${email}@deleted.chayn.co`;
         try {
-          const user = await this.userRepository.findOne({
-            where: { email },
-            relations: {
-              partnerAccess: { partner: true, therapySession: true },
-              courseUser: { course: true, sessionUser: { session: true } },
-            },
-          });
+          const user = email.includes('@')
+            ? await this.userRepository.findOne({
+                where: { email },
+                relations: {
+                  partnerAccess: { partner: true, therapySession: true },
+                  courseUser: { course: true, sessionUser: { session: true } },
+                },
+              })
+            : null;
 
           if (user) {
             await this.serviceUserProfiles.getOrCreateFrontContact(user);
             logger.log(`Populated Front custom fields from DB for ${email}`);
           } else {
-            logger.log(`No DB user found for ${email} — creating minimal contact`);
-            await this.frontImport.getOrCreateFrontContact(email, name ?? undefined);
+            logger.log(`No DB user found for ${email} — creating minimal Front contact`);
+            await this.frontImport.getOrCreateFrontContact(contactEmail, name ?? undefined);
           }
 
           this.currentProgress!.processedContacts++;
@@ -183,6 +189,8 @@ export class CrispMigrationService {
       } else {
         this.currentProgress!.processedContacts++;
       }
+    } else {
+      logger.log(`Skipping contact creation for anonymous session`);
     }
 
     let existingConversationId: string | undefined;
