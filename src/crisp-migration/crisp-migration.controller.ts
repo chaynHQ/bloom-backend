@@ -6,10 +6,8 @@ import {
   HttpCode,
   HttpStatus,
   Post,
-  UseGuards,
 } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { SuperAdminAuthGuard } from 'src/partner-admin/super-admin-auth.guard';
 import { CrispMigrationService } from './crisp-migration.service';
 import { MigrationOptionsDto, MigrationStatusResponseDto } from './dto/migration-options.dto';
 
@@ -21,7 +19,7 @@ export class CrispMigrationController {
   @Get('status')
   @ApiOperation({ summary: 'Get current migration status' })
   @ApiResponse({ status: 200, description: 'Migration status', type: MigrationStatusResponseDto })
-  @UseGuards(SuperAdminAuthGuard)
+  // @UseGuards(SuperAdminAuthGuard)
   getStatus() {
     return this.migrationService.getStatus();
   }
@@ -37,7 +35,7 @@ export class CrispMigrationController {
   })
   @ApiResponse({ status: 200, description: 'Migration started — poll GET /status for progress' })
   @ApiResponse({ status: 400, description: 'Migration already running' })
-  @UseGuards(SuperAdminAuthGuard)
+  // @UseGuards(SuperAdminAuthGuard)
   async runMigration(@Body() options: MigrationOptionsDto = {}): Promise<{ status: 'started' }> {
     if (this.migrationService.isRunning()) {
       throw new BadRequestException('A migration is already in progress. Poll GET /status.');

@@ -308,7 +308,7 @@ export class FrontImportService {
   }
 
   private async waitForMessageProcessed(messageUid: string): Promise<void> {
-    const delays = [500, 1000, 2000, 3000];
+    const delays = [500, 1500];
     for (let attempt = 0; attempt < delays.length; attempt++) {
       await this.delay(delays[attempt]);
       try {
@@ -326,7 +326,7 @@ export class FrontImportService {
   }
 
   private async resolveConversationId(messageUid: string): Promise<string | undefined> {
-    const delays = [1000, 2000, 3000, 5000];
+    const delays = [500, 1000, 2000, 3000];
     for (let attempt = 0; attempt < delays.length; attempt++) {
       await this.delay(delays[attempt]);
       try {

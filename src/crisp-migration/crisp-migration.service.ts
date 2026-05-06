@@ -15,7 +15,6 @@ const logger = new Logger('CrispMigrationService');
 const SIX_MONTHS_MS = 182 * 24 * 60 * 60 * 1000;
 
 const INTER_REQUEST_DELAY_MS = 300;
-const INTER_CONVERSATION_DELAY_MS = 500;
 
 @Injectable()
 export class CrispMigrationService {
@@ -140,66 +139,83 @@ export class CrispMigrationService {
     this.currentProgress!.totalContacts = byEmail.size;
     logger.log(`Found ${conversations.length} conversations across ${byEmail.size} contacts`);
 
-    for (const [email, userConversations] of byEmail) {
-      userConversations.sort((a, b) => (a.created_at ?? 0) - (b.created_at ?? 0));
+    await this.runWithConcurrency(
+      [...byEmail.entries()].map(([email, convs]) => () => this.migrateUser(email, convs, since, options)),
+      3,
+    );
+  }
 
-      const firstConv = userConversations[0];
-      const name = firstConv?.meta?.nickname ?? firstConv?.nickname;
+  private async migrateUser(
+    email: string,
+    userConversations: CrispConversation[],
+    since: Date,
+    options: MigrationOptionsDto,
+  ): Promise<void> {
+    userConversations.sort((a, b) => (a.created_at ?? 0) - (b.created_at ?? 0));
 
-      if (email) {
-        if (!(options.dryRun ?? false)) {
-          try {
-            const user = await this.userRepository.findOne({
-              where: { email },
-              relations: {
-                partnerAccess: { partner: true, therapySession: true },
-                courseUser: { course: true, sessionUser: { session: true } },
-              },
-            });
+    const firstConv = userConversations[0];
+    const name = firstConv?.meta?.nickname ?? firstConv?.nickname;
 
-            if (user) {
-              // getOrCreateFrontContact creates the contact with full custom fields and adds it
-              // to the contact list internally — no need to call getOrCreateFrontContact separately.
-              await this.serviceUserProfiles.getOrCreateFrontContact(user);
-              logger.log(`Populated Front custom fields from DB for ${email}`);
-            } else {
-              // No DB record — create a minimal contact and add to list.
-              logger.log(`No DB user found for ${email} — creating minimal contact`);
-              await this.frontImport.getOrCreateFrontContact(email, name ?? undefined);
-            }
-
-            this.currentProgress!.processedContacts++;
-          } catch (err) {
-            logger.warn(`Failed to set up contact for ${email}: ${(err as Error).message}`);
-          }
-          await this.delay(INTER_REQUEST_DELAY_MS);
-        } else {
-          this.currentProgress!.processedContacts++;
-        }
-      }
-
-      let existingConversationId: string | undefined;
-
-      for (const conv of userConversations) {
-        if (!conv.session_id) continue;
-
+    if (email) {
+      if (!(options.dryRun ?? false)) {
         try {
-          existingConversationId = await this.migrateConversationById(
-            conv.session_id,
-            since,
-            options,
-            existingConversationId,
-          );
-        } catch (err) {
-          const message = (err as Error).message || 'Unknown error';
-          this.recordError({ sessionId: conv.session_id, email: conv.meta?.email ?? conv.email, error: message });
-          if (!(options.continueOnError ?? true)) throw err;
-          logger.warn(`Skipping session ${conv.session_id} after error: ${message}`);
-        }
+          const user = await this.userRepository.findOne({
+            where: { email },
+            relations: {
+              partnerAccess: { partner: true, therapySession: true },
+              courseUser: { course: true, sessionUser: { session: true } },
+            },
+          });
 
-        await this.delay(INTER_CONVERSATION_DELAY_MS);
+          if (user) {
+            await this.serviceUserProfiles.getOrCreateFrontContact(user);
+            logger.log(`Populated Front custom fields from DB for ${email}`);
+          } else {
+            logger.log(`No DB user found for ${email} — creating minimal contact`);
+            await this.frontImport.getOrCreateFrontContact(email, name ?? undefined);
+          }
+
+          this.currentProgress!.processedContacts++;
+        } catch (err) {
+          logger.warn(`Failed to set up contact for ${email}: ${(err as Error).message}`);
+        }
+        await this.delay(INTER_REQUEST_DELAY_MS);
+      } else {
+        this.currentProgress!.processedContacts++;
       }
     }
+
+    let existingConversationId: string | undefined;
+
+    for (const conv of userConversations) {
+      if (!conv.session_id) continue;
+
+      try {
+        existingConversationId = await this.migrateConversationById(
+          conv.session_id,
+          since,
+          options,
+          existingConversationId,
+        );
+      } catch (err) {
+        const message = (err as Error).message || 'Unknown error';
+        this.recordError({ sessionId: conv.session_id, email: conv.meta?.email ?? conv.email, error: message });
+        if (!(options.continueOnError ?? true)) throw err;
+        logger.warn(`Skipping session ${conv.session_id} after error: ${message}`);
+      }
+    }
+  }
+
+  private async runWithConcurrency(tasks: (() => Promise<unknown>)[], concurrency: number): Promise<void> {
+    const executing = new Set<Promise<unknown>>();
+    for (const task of tasks) {
+      const p = task().finally(() => executing.delete(p));
+      executing.add(p);
+      if (executing.size >= concurrency) {
+        await Promise.race(executing);
+      }
+    }
+    await Promise.all(executing);
   }
 
   private async migrateSingleConversation(sessionId: string, options: MigrationOptionsDto): Promise<void> {
