@@ -29,7 +29,7 @@ const SEND_MESSAGE_LIMIT_PER_WINDOW = 20;
 
 @WebSocketGateway({
   namespace: '/front-chat',
-  cors: { origin: getCorsOrigin(), credentials: true },
+  cors: { origin: () => getCorsOrigin(), credentials: true },
 })
 export class FrontChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer() server: Server;
@@ -96,7 +96,8 @@ export class FrontChatGateway implements OnGatewayConnection, OnGatewayDisconnec
     await client.join(userRoom(user.email));
 
     try {
-      const { messages, conversationFound } = await this.frontChatService.getConversationHistory(user);
+      const { messages, conversationFound } =
+        await this.frontChatService.getConversationHistory(user);
 
       if (!conversationFound) {
         this.awaitFrontContactReady(user);
