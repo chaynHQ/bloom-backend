@@ -121,7 +121,12 @@ export class FrontImportService {
     const inboxId = await this.getInboxId();
     logger.log(`Importing ${sessionId} — ${messages.length} messages, ${notes.length} notes`);
 
-    const userEmail = email || `unknown-${sessionId}@crisp-import.local`;
+    // Deleted users have a hashed ID as their Crisp email (no '@'); give them a stable fake address
+    const userEmail = !email
+      ? `unknown-${sessionId}@crisp-import.local`
+      : email.includes('@')
+        ? email
+        : `${email}@deleted.chayn.co`;
     const userName = name || 'Unknown User';
     const sorted = [...messages].sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
 
@@ -160,8 +165,14 @@ export class FrontImportService {
     }
 
     if (!conversationId) {
-      logger.warn(`No importable messages in session ${sessionId} — skipping`);
-      return { conversationId: '', messageIds: [], commentIds: [] };
+      if (messageIds.length === 0) {
+        logger.warn(`No importable messages in session ${sessionId} — skipping`);
+        return { conversationId: '', messageIds: [], commentIds: [] };
+      }
+      logger.warn(
+        `Imported ${messageIds.length} message(s) for session ${sessionId} but could not resolve conversation ID — messages may be fragmented across multiple Front conversations`,
+      );
+      return { conversationId: '', messageIds, commentIds: [] };
     }
 
     const commentIds: string[] = [];
@@ -317,7 +328,9 @@ export class FrontImportService {
       } catch (err) {
         const isNotFound = (err as { status?: number }).status === 404;
         if (!isNotFound || attempt === delays.length - 1) {
-          logger.warn(`Message ${messageUid} not confirmed processed before archive — proceeding anyway`);
+          logger.warn(
+            `Message ${messageUid} not confirmed processed before archive — proceeding anyway`,
+          );
           return;
         }
         logger.log(`Waiting for message ${messageUid} to be processed (attempt ${attempt + 1})…`);
@@ -326,7 +339,8 @@ export class FrontImportService {
   }
 
   private async resolveConversationId(messageUid: string): Promise<string | undefined> {
-    const delays = [500, 1000, 2000, 3000];
+    // Front processes imported messages asynchronously; poll until the message is visible.
+    const delays = [1000, 2000, 3000, 5000];
     for (let attempt = 0; attempt < delays.length; attempt++) {
       await this.delay(delays[attempt]);
       try {
@@ -334,7 +348,6 @@ export class FrontImportService {
           'GET',
           `/messages/alt:uid:${messageUid}`,
         )) as FrontMessageWithLinks;
-
         const conversationUrl = message._links?.related?.conversation;
         if (conversationUrl) return conversationUrl.split('/').pop();
       } catch (err) {
@@ -412,12 +425,22 @@ export class FrontImportService {
   }
 
   private isImportableMessage(msg: CrispMessage): boolean {
-    if (msg.automated) return false;
-    if (msg.type === 'note') return false;
-    if (!msg.content && msg.type !== 'file') return false;
+    if (msg.automated) {
+      return false;
+    }
+    if (msg.type === 'note') {
+      return false;
+    }
+    if (!msg.content && msg.type !== 'file') {
+      return false;
+    }
     const contentStr = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content);
-    if (contentStr.startsWith('Hi there, chat here with survivors')) return false;
-    if (contentStr.startsWith('{"namespace":')) return false;
+    if (contentStr.startsWith('Hi there, chat here with survivors')) {
+      return false;
+    }
+    if (contentStr.startsWith('{"namespace":')) {
+      return false;
+    }
     return true;
   }
 

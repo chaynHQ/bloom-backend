@@ -40,9 +40,25 @@ export class FrontChatWebhookService {
     host: string | undefined,
     originalUrl: string,
   ): Promise<unknown> {
+    const bodyKeys = data && typeof data === 'object' ? Object.keys(data) : [];
+    const hasPayload = 'payload' in data;
+    const hasEmittedAt = 'emitted_at' in data;
+    const hasTarget = 'target' in data;
+    const bodyType = (data as { type?: string }).type ?? 'undefined';
+    const hasSignature = !!headers['x-front-signature'];
+    const hasTimestamp = !!headers['x-front-request-timestamp'];
+    this.logger.log(
+      `Front webhook received: type=${bodyType} keys=[${bodyKeys.join(',')}] ` +
+        `hasPayload=${hasPayload} hasEmittedAt=${hasEmittedAt} hasTarget=${hasTarget} ` +
+        `hasSignature=${hasSignature} hasTimestamp=${hasTimestamp} ` +
+        `rawBodyBytes=${rawBody?.length ?? 'none'}`,
+    );
+
     if (isChannelApiRequest(data)) {
+      this.logger.log(`Front webhook → Channel API (type=${bodyType})`);
       return this.handleFrontChannelRequest(rawBody, data, headers, protocol, host, originalUrl);
     }
+    this.logger.log(`Front webhook → Events API (type=${bodyType})`);
 
     if (!frontChatWebhookToken) {
       throw new HttpException(
@@ -132,6 +148,9 @@ export class FrontChatWebhookService {
   async handleFrontChannelOutbound(
     data: FrontChannelOutboundPayload | Record<string, unknown>,
   ): Promise<{ type: 'success'; external_id: string; external_conversation_id: string }> {
+    this.logger.log(
+      `Front Channel outbound: top-level keys=[${Object.keys(data ?? {}).join(',')}]`,
+    );
     const payload = (data as FrontChannelOutboundPayload).payload ?? {};
     // Front Channel API sends `recipients`; fall back to `to` for legacy variants.
     const recipients = payload.recipients ?? payload.to ?? [];
@@ -148,6 +167,11 @@ export class FrontChatWebhookService {
       (data as FrontChannelOutboundPayload).metadata?.external_conversation_id ??
       (chatUser ? buildThreadRef(chatUser.userId) : externalId);
 
+    this.logger.log(
+      `Front Channel outbound: recipientEmail=${recipientEmail ?? 'none'} ` +
+        `hasBody=${!!messageBody} externalId=${externalId} ` +
+        `externalConversationId=${externalConversationId}`,
+    );
     const attachments = (payload.attachments ?? []) as FrontChannelAttachment[];
     const imageAttachment = attachments.find((a) => a.content_type?.startsWith('image/') && a.url);
     const audioAttachment = !imageAttachment
@@ -241,6 +265,10 @@ export class FrontChatWebhookService {
       .digest('base64');
     const expectedBuf = Buffer.from(expectedDigest);
     const providedBuf = Buffer.from(signature);
+    this.logger.log(
+      `Front Channel HMAC check: sigLenMatch=${expectedBuf.length === providedBuf.length} ` +
+        `received="${signature}" expected="${expectedDigest}" rawBodyBytes=${rawBody.length} ts=${timestamp}`,
+    );
     if (expectedBuf.length !== providedBuf.length || !timingSafeEqual(expectedBuf, providedBuf)) {
       this.logger.error(
         `Front Channel webhook - signature mismatch. received="${signature}" ` +
@@ -259,7 +287,15 @@ export class FrontChatWebhookService {
     }
 
     if (type === 'message') {
-      return this.handleFrontChannelOutbound(data);
+      this.logger.log(`Front Channel: routing to handleFrontChannelOutbound`);
+      try {
+        return await this.handleFrontChannelOutbound(data);
+      } catch (error) {
+        this.logger.error(
+          `Front Channel: handleFrontChannelOutbound threw: ${error?.message || error}`,
+        );
+        throw error;
+      }
     }
 
     // Other channel events (delete, message_imported, etc.) — acknowledge generically.

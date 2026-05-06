@@ -20,9 +20,18 @@ export class FrontChatScheduler {
 
     await Promise.allSettled(
       unread.map(async ({ chatUser, email }) => {
+        // Mark notified in the DB before sending so a restart between these two
+        // operations doesn't cause a duplicate notification on the next cron fire.
+        try {
+          await this.frontChatService.markUnreadNotified(chatUser.id);
+        } catch (err) {
+          this.logger.warn(
+            `FrontChatScheduler: failed to mark notified for ${email}, skipping send: ${(err as Error)?.message || 'unknown error'}`,
+          );
+          return;
+        }
         try {
           await sendMailchimpUserEvent(email, MAILCHIMP_CUSTOM_EVENTS.FRONT_MESSAGE_UNREAD);
-          await this.frontChatService.markUnreadNotified(chatUser.id);
         } catch (err) {
           this.logger.warn(
             `FrontChatScheduler: failed to notify ${email}: ${(err as Error)?.message || 'unknown error'}`,
