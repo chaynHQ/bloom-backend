@@ -24,6 +24,11 @@ interface FrontImportAccepted {
   message_uid: string;
 }
 
+// GET /messages/alt:uid:{uid} — used to resolve the conversation ID
+interface FrontMessageWithLinks {
+  _links?: { related?: { conversation?: string } };
+}
+
 // GET /channels/{id} — used to discover the inbox linked to the channel
 interface FrontChannelResponse {
   _links?: { related?: { inbox?: string } };
@@ -129,49 +134,27 @@ export class FrontImportService {
     const messageIds: string[] = [];
     let conversationId: string | undefined = options.existingConversationId;
     let lastMessageUid: string | undefined;
+
     for (const msg of sorted) {
       if (!this.isImportableMessage(msg)) continue;
 
-      let messageUid: string | undefined;
-      try {
-        messageUid = await this.importOneMessage(
-          msg,
-          userEmail,
-          userName,
-          sessionId,
-          conversationId,
-          inboxId,
-          options.skipAttachments,
-          isResolved,
-        );
-      } catch (err) {
-        const isMismatch = (err as Error).message?.includes('different message type');
-        if (isMismatch && conversationId) {
-          logger.warn(
-            `Message type mismatch on conversation ${conversationId} — resetting and retrying without conversation ID`,
-          );
-          conversationId = undefined;
-          messageUid = await this.importOneMessage(
-            msg,
-            userEmail,
-            userName,
-            sessionId,
-            undefined,
-            inboxId,
-            options.skipAttachments,
-            isResolved,
-          );
-        } else {
-          throw err;
-        }
-      }
+      const messageUid = await this.importOneMessage(
+        msg,
+        userEmail,
+        userName,
+        sessionId,
+        conversationId,
+        inboxId,
+        options.skipAttachments,
+        isResolved,
+      );
 
       if (messageUid) {
         messageIds.push(messageUid);
         lastMessageUid = messageUid;
 
         if (!conversationId) {
-          conversationId = await this.resolveConversationId(messageUid, userEmail);
+          conversationId = await this.resolveConversationId(messageUid);
           if (conversationId) {
             logger.log(`Resolved conversation ${conversationId} for session ${sessionId}`);
           }
@@ -355,45 +338,27 @@ export class FrontImportService {
     }
   }
 
-  private async resolveConversationId(
-    _messageUid: string,
-    userEmail?: string,
-  ): Promise<string | undefined> {
-    if (!userEmail) return undefined;
-    return this.resolveConversationIdByContact(userEmail);
-  }
-
-  private async resolveConversationIdByContact(email: string): Promise<string | undefined> {
-    const alias = `alt:email:${encodeURIComponent(email)}`;
-    // Front processes imported messages asynchronously. Wait enough time before first check,
-    // then retry — the newly created conversation will have the highest created_at.
-    const delays = [5000, 3000, 3000, 3000];
-
+  private async resolveConversationId(messageUid: string): Promise<string | undefined> {
+    // Front processes imported messages asynchronously; poll until the message is visible.
+    const delays = [1000, 2000, 3000, 5000];
     for (let attempt = 0; attempt < delays.length; attempt++) {
       await this.delay(delays[attempt]);
       try {
-        const resp = (await this.frontApiRequest('GET', `/contacts/${alias}/conversations`)) as {
-          _results: Array<{ id: string; created_at: number }>;
-        };
-
-        // Sort by created_at descending — the conversation we just created will be newest
-        const sorted = (resp._results || []).sort((a, b) => b.created_at - a.created_at);
-
-        if (sorted[0]) {
-          logger.log(`Resolved conversation ${sorted[0].id} for ${email}`);
-          return sorted[0].id;
-        }
-
-        if (attempt < delays.length - 1) {
-          logger.log(`No conversations for ${email} yet, retrying (attempt ${attempt + 1})…`);
-        } else {
-          logger.warn(
-            `No conversations found in Front for ${email} after ${delays.length} attempts`,
-          );
-        }
+        const message = (await this.frontApiRequest(
+          'GET',
+          `/messages/alt:uid:${messageUid}`,
+        )) as FrontMessageWithLinks;
+        const conversationUrl = message._links?.related?.conversation;
+        if (conversationUrl) return conversationUrl.split('/').pop();
       } catch (err) {
-        logger.warn(`Could not resolve conversation for ${email}: ${(err as Error).message}`);
-        return undefined;
+        const isNotFound = (err as { status?: number }).status === 404;
+        if (!isNotFound || attempt === delays.length - 1) {
+          logger.warn(
+            `Could not resolve conversation ID for ${messageUid}: ${(err as Error).message}`,
+          );
+          return undefined;
+        }
+        logger.log(`Message ${messageUid} not yet available, retrying (attempt ${attempt + 1})…`);
       }
     }
     return undefined;
