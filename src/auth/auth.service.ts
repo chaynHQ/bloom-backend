@@ -53,7 +53,22 @@ export class AuthService {
     return decodedToken;
   }
 
+  // Passwords that pass a length check but are trivially guessable.
+  private static readonly COMMON_PASSWORDS = new Set([
+    '12345678', '123456789', '1234567890',
+    '11111111', '00000000',
+    'password', 'password1', 'password123',
+    'qwerty123', 'qwertyui',
+    'letmein1', 'welcome1',
+    'iloveyou', 'abc12345',
+  ]);
+
   public async createFirebaseUser(email: string, password: string) {
+    if (password.length < 8 || AuthService.COMMON_PASSWORDS.has(password.toLowerCase())) {
+      this.logger.warn('Create user: user tried to create account with weak password');
+      throw new HttpException(FIREBASE_ERRORS.CREATE_USER_WEAK_PASSWORD, HttpStatus.BAD_REQUEST);
+    }
+
     try {
       const firebaseUser = await this.firebase.admin.auth().createUser({
         email,
