@@ -68,54 +68,31 @@ export class FrontChatWebhookService {
     }
 
     const webhookData = data as unknown as FrontChatWebhookDto;
-    if (!webhookData?.conversation?.recipient?.handle) {
+    const email = webhookData?.conversation?.recipient?.handle;
+    if (!email) {
       // Front sends events (e.g. "tag") with no conversation recipient — acknowledge
       // with 200 so Front does not retry.
       return;
     }
 
-    return this.handleFrontChatWebhook(webhookData);
-  }
-
-  async handleFrontChatWebhook(data: FrontChatWebhookDto): Promise<void> {
-    const email = data.conversation?.recipient?.handle;
-    if (!email) return;
-
-    // OUTBOUND/OUT_REPLY: update chat activity. Agent reply delivery is handled exclusively
-    // by handleFrontChannelOutbound (Channel API) to avoid duplicating the socket emit.
-    if (
-      data.type === FRONT_WEBHOOK_EVENT_TYPE.OUTBOUND ||
-      data.type === FRONT_WEBHOOK_EVENT_TYPE.OUT_REPLY
-    ) {
-      this.frontChatService
-        .updateChatUserByEmail(email, {
-          lastMessageReceivedAt: new Date(data.emitted_at * 1000),
-          ...(data.conversation?.id ? { frontConversationId: data.conversation.id } : {}),
-        })
-        .then((chatUser) => {
-          if (chatUser) {
-            return this.serviceUserProfilesService.updateServiceUserProfilesChatActivity(
-              chatUser,
-              email,
-            );
-          }
-        })
-        .catch(() => {});
-    }
-
     // Capture conversation ID from inbound events so history loads immediately on reconnect.
-    if (data.type === FRONT_WEBHOOK_EVENT_TYPE.INBOUND && data.conversation?.id) {
+    if (webhookData.type === FRONT_WEBHOOK_EVENT_TYPE.INBOUND && webhookData.conversation?.id) {
       this.frontChatService
-        .updateChatUserByEmail(email, { frontConversationId: data.conversation.id })
+        .updateChatUserByEmail(email, { frontConversationId: webhookData.conversation.id })
         .catch(() => {});
     }
 
-    const eventName = this.mapFrontEventToEventName(data.type);
+    const eventMap: Partial<Record<string, EVENT_NAME>> = {
+      [FRONT_WEBHOOK_EVENT_TYPE.INBOUND]: EVENT_NAME.CHAT_MESSAGE_SENT,
+      [FRONT_WEBHOOK_EVENT_TYPE.OUTBOUND]: EVENT_NAME.CHAT_MESSAGE_RECEIVED,
+      [FRONT_WEBHOOK_EVENT_TYPE.OUT_REPLY]: EVENT_NAME.CHAT_MESSAGE_RECEIVED,
+    };
+    const eventName = eventMap[webhookData.type];
     if (!eventName) return;
 
     try {
       await this.eventLoggerService.createEventLog(
-        { event: eventName, date: new Date(data.emitted_at * 1000) },
+        { event: eventName, date: new Date(webhookData.emitted_at * 1000) },
         email,
       );
     } catch (error) {
@@ -169,10 +146,16 @@ export class FrontChatWebhookService {
       });
       this.logger.log(`Front Channel: forwarded agent reply to ${recipientEmail}`);
 
-      // Update the DB timestamp only — external profile sync is handled by the Events API
-      // OUTBOUND/OUT_REPLY handler with the more accurate emitted_at timestamp.
       this.frontChatService
         .updateChatUserByEmail(recipientEmail, { lastMessageReceivedAt: new Date() })
+        .then((chatUser) => {
+          if (chatUser) {
+            return this.serviceUserProfilesService.updateServiceUserProfilesChatActivity(
+              chatUser,
+              recipientEmail,
+            );
+          }
+        })
         .catch(() => {});
     } else {
       this.logger.warn(
@@ -267,15 +250,4 @@ export class FrontChatWebhookService {
     return { type: 'success' };
   }
 
-  private mapFrontEventToEventName(type: string): EVENT_NAME | null {
-    switch (type) {
-      case FRONT_WEBHOOK_EVENT_TYPE.INBOUND:
-        return EVENT_NAME.CHAT_MESSAGE_SENT;
-      case FRONT_WEBHOOK_EVENT_TYPE.OUTBOUND:
-      case FRONT_WEBHOOK_EVENT_TYPE.OUT_REPLY:
-        return EVENT_NAME.CHAT_MESSAGE_RECEIVED;
-      default:
-        return null;
-    }
-  }
 }
