@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import * as https from 'https';
 import { ChatUserEntity } from 'src/entities/chat-user.entity';
 import { UserEntity } from 'src/entities/user.entity';
 import { Logger } from 'src/logger/logger';
@@ -16,8 +15,9 @@ import { ILike, Repository } from 'typeorm';
 import {
   buildThreadRef,
   getContactAlias,
-  isValidAttachmentUrl,
+  isAllowedS3RedirectTarget,
   mapFrontMessageToHistory,
+  normalizeFrontAttachmentUrl,
   serializeCustomFields,
 } from './front-chat.helpers';
 import {
@@ -76,60 +76,40 @@ async function frontApiRequest(method: string, path: string, body?: unknown): Pr
   return response.json();
 }
 
-// Fetches an attachment URL with auth but without following redirects, so we can
-// capture the Location header and fetch the CDN URL separately without auth.
-// Front's download URLs redirect to S3 presigned URLs which reject an Authorization
-// header alongside their own query-string signature.
-function frontAttachmentRequest(url: string): Promise<{
-  statusCode: number;
-  location?: string;
-  buffer?: Buffer;
-  contentType?: string;
-}> {
-  return new Promise((resolve, reject) => {
-    const req = https.get(
-      url,
-      { headers: { Authorization: `Bearer ${frontChatApiToken}` } },
-      (res) => {
-        const statusCode = res.statusCode ?? 0;
-        if (statusCode >= 300 && statusCode < 400) {
-          res.resume();
-          return resolve({ statusCode, location: res.headers.location as string | undefined });
-        }
-        const chunks: Buffer[] = [];
-        res.on('data', (chunk: Buffer) => chunks.push(chunk));
-        res.on('end', () =>
-          resolve({
-            statusCode,
-            buffer: Buffer.concat(chunks),
-            contentType: res.headers['content-type'] as string | undefined,
-          }),
-        );
-        res.on('error', reject);
-      },
-    );
-    req.on('error', reject);
-  });
-}
-
+// Fetches a Front attachment via the proxy. The URL is rebuilt from a hardcoded
+// template before any network call (see normalizeFrontAttachmentUrl) — that's the
+// SSRF defence: the URL handed to fetch contains only string literals + regex-
+// extracted IDs from the input.
+//
+// Uses redirect: 'manual' so we can capture the Location header without following
+// it: Front's download URLs redirect to S3 presigned URLs which reject an
+// Authorization header alongside their own query-string signature. The redirect
+// target is independently validated against the AWS S3 host allowlist before we
+// follow it.
 export async function fetchFrontAttachment(
   url: string,
 ): Promise<{ buffer: Buffer; contentType: string }> {
-  if (!isValidAttachmentUrl(url)) {
+  const safeUrl = normalizeFrontAttachmentUrl(url);
+  if (!safeUrl) {
     throw new Error('Invalid attachment URL');
   }
 
-  const initial = await frontAttachmentRequest(url);
+  const initial = await fetch(safeUrl, {
+    redirect: 'manual',
+    headers: { Authorization: `Bearer ${frontChatApiToken}` },
+  });
 
-  if (initial.statusCode >= 200 && initial.statusCode < 300 && initial.buffer) {
-    return {
-      buffer: initial.buffer,
-      contentType: initial.contentType ?? 'application/octet-stream',
-    };
+  if (initial.ok) {
+    const contentType = initial.headers.get('content-type') ?? 'application/octet-stream';
+    return { buffer: Buffer.from(await initial.arrayBuffer()), contentType };
   }
 
-  if (initial.statusCode >= 300 && initial.statusCode < 400 && initial.location) {
-    const cdnResponse = await fetch(initial.location);
+  if (initial.status >= 300 && initial.status < 400) {
+    const location = initial.headers.get('location');
+    if (!location || !isAllowedS3RedirectTarget(location)) {
+      throw new Error('Disallowed redirect target');
+    }
+    const cdnResponse = await fetch(location);
     if (cdnResponse.ok) {
       const contentType = cdnResponse.headers.get('content-type') ?? 'application/octet-stream';
       return { buffer: Buffer.from(await cdnResponse.arrayBuffer()), contentType };
@@ -137,7 +117,7 @@ export async function fetchFrontAttachment(
     throw new Error(`CDN fetch failed (${cdnResponse.status})`);
   }
 
-  throw new Error(`Front attachment fetch failed (${initial.statusCode})`);
+  throw new Error(`Front attachment fetch failed (${initial.status})`);
 }
 
 function isFrontContactNotFound(error: unknown): boolean {

@@ -24,7 +24,18 @@ const SUPPORT_SENDER_NAME = 'Bloom Support';
 interface ImportedConversationResult {
   conversationId: string;
   messageIds: string[];
+  // message_uids of messages whose binary attachment was successfully uploaded as
+  // a Front attachment. Excludes file messages that fell back to a markdown link
+  // (Crisp CDN unreachable, oversize, or Front upload failed). Subset of messageIds.
+  attachmentIds: string[];
   commentIds: string[];
+}
+
+// Result of importing a single Crisp message. `isAttachment` is true only when the
+// binary was uploaded to Front successfully — markdown-fallback messages have it false.
+interface ImportedMessage {
+  messageUid: string;
+  isAttachment: boolean;
 }
 
 // 202 Accepted response from POST /channels/{id}/inbound_messages or /outbound_messages
@@ -96,7 +107,12 @@ export class FrontImportService {
 
     if (options.dryRun) {
       logger.log(`[DRY RUN] Would import conversation ${sessionId} (${messages.length} messages)`);
-      return { conversationId: `dry-run-${sessionId}`, messageIds: [], commentIds: [] };
+      return {
+        conversationId: `dry-run-${sessionId}`,
+        messageIds: [],
+        attachmentIds: [],
+        commentIds: [],
+      };
     }
 
     if (!frontChannelId) {
@@ -119,13 +135,14 @@ export class FrontImportService {
 
     const isResolved = data.metadata.state === 'resolved';
     const messageIds: string[] = [];
+    const attachmentIds: string[] = [];
     let conversationId: string | undefined;
     let lastMessageUid: string | undefined;
 
     for (const msg of sorted) {
       if (!this.isImportableMessage(msg)) continue;
 
-      const messageUid = await this.importOneMessage(
+      const imported = await this.importOneMessage(
         msg,
         userEmail,
         userName,
@@ -134,12 +151,13 @@ export class FrontImportService {
         userId,
       );
 
-      if (messageUid) {
-        messageIds.push(messageUid);
-        lastMessageUid = messageUid;
+      if (imported) {
+        messageIds.push(imported.messageUid);
+        if (imported.isAttachment) attachmentIds.push(imported.messageUid);
+        lastMessageUid = imported.messageUid;
 
         if (!conversationId) {
-          conversationId = await this.resolveConversationId(messageUid);
+          conversationId = await this.resolveConversationId(imported.messageUid);
           if (conversationId) {
             logger.log(`Resolved conversation ${conversationId} for session ${sessionId}`);
           }
@@ -152,12 +170,12 @@ export class FrontImportService {
     if (!conversationId) {
       if (messageIds.length === 0) {
         logger.warn(`No importable messages in session ${sessionId} — skipping`);
-        return { conversationId: '', messageIds: [], commentIds: [] };
+        return { conversationId: '', messageIds: [], attachmentIds: [], commentIds: [] };
       }
       logger.warn(
         `Imported ${messageIds.length} message(s) for session ${sessionId} but could not resolve conversation ID`,
       );
-      return { conversationId: '', messageIds, commentIds: [] };
+      return { conversationId: '', messageIds, attachmentIds, commentIds: [] };
     }
 
     const commentIds: string[] = [];
@@ -196,9 +214,9 @@ export class FrontImportService {
     }
 
     logger.log(
-      `Imported session ${sessionId} → ${conversationId} (${messageIds.length} messages, ${commentIds.length} comments, resolved: ${isResolved})`,
+      `Imported session ${sessionId} → ${conversationId} (${messageIds.length} messages, ${attachmentIds.length} attachments, ${commentIds.length} comments, resolved: ${isResolved})`,
     );
-    return { conversationId, messageIds, commentIds };
+    return { conversationId, messageIds, attachmentIds, commentIds };
   }
 
   private async importOneMessage(
@@ -208,7 +226,7 @@ export class FrontImportService {
     sessionId: string,
     skipAttachments: boolean,
     userId?: string,
-  ): Promise<string | undefined> {
+  ): Promise<ImportedMessage | undefined> {
     const isInbound = msg.from === 'user';
     const deliveredAt = Math.floor((msg.timestamp || Date.now()) / 1000);
     // fingerprint/timestamp are stable across re-runs; fall back to a content hash so
@@ -232,7 +250,7 @@ export class FrontImportService {
     const body = this.extractMessageText(msg);
     if (!body) return undefined;
 
-    return this.postSyncMessage({
+    const messageUid = await this.postSyncMessage({
       isInbound,
       userEmail,
       userName,
@@ -242,6 +260,7 @@ export class FrontImportService {
       externalId,
       threadRef,
     });
+    return messageUid ? { messageUid, isAttachment: false } : undefined;
   }
 
   private async importFileMessage(
@@ -252,7 +271,7 @@ export class FrontImportService {
     deliveredAt: number,
     threadRef: string,
     isInbound: boolean,
-  ): Promise<string | undefined> {
+  ): Promise<ImportedMessage | undefined> {
     let fileData: { url?: string; name?: string; type?: string };
     try {
       const raw = msg.content;
@@ -280,7 +299,7 @@ export class FrontImportService {
 
     if (buffer) {
       try {
-        return await this.postSyncMessageWithAttachment({
+        const messageUid = await this.postSyncMessageWithAttachment({
           isInbound,
           userEmail,
           userName,
@@ -292,6 +311,7 @@ export class FrontImportService {
           externalId,
           threadRef,
         });
+        return messageUid ? { messageUid, isAttachment: true } : undefined;
       } catch (err) {
         logger.warn(
           `Attachment upload failed for ${fileName}, falling back to markdown link: ${(err as Error).message}`,
@@ -303,7 +323,7 @@ export class FrontImportService {
       ? `![${fileName}](${fileData.url})`
       : `📎 [${fileName}](${fileData.url})`;
 
-    return this.postSyncMessage({
+    const fallbackUid = await this.postSyncMessage({
       isInbound,
       userEmail,
       userName,
@@ -313,6 +333,7 @@ export class FrontImportService {
       externalId,
       threadRef,
     });
+    return fallbackUid ? { messageUid: fallbackUid, isAttachment: false } : undefined;
   }
 
   // Crisp attachments live on a public CDN (storage.crisp.chat) — no auth needed. Returns null

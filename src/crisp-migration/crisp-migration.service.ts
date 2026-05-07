@@ -97,6 +97,8 @@ export class CrispMigrationService {
         `Migration completed in ${duration}s — ` +
           `conversations: ${this.currentProgress.processedConversations}/${this.currentProgress.totalConversations}, ` +
           `messages: ${this.currentProgress.processedMessages}, ` +
+          `attachments: ${this.currentProgress.processedAttachments}/${this.currentProgress.totalAttachments}, ` +
+          `notes: ${this.currentProgress.processedNotes}/${this.currentProgress.totalNotes}, ` +
           `errors: ${this.migrationErrors.length}`,
       );
     } catch (err) {
@@ -293,9 +295,13 @@ export class CrispMigrationService {
     this.currentProgress!.processedConversations++;
     this.currentProgress!.processedMessages += options.dryRun ? data.messages.length : result.messageIds.length;
     this.currentProgress!.processedNotes += options.dryRun ? data.notes.length : result.commentIds.length;
-    if (!options.skipAttachments) {
-      this.currentProgress!.processedAttachments += data.messages.filter((m) => m.type === 'file').length;
-    }
+    // Count only attachments that were actually uploaded as Front attachments. File messages
+    // that fell back to a markdown link (Crisp CDN unreachable, oversize, or upload failed)
+    // are NOT counted here — they still appear in processedMessages but don't represent a
+    // successful binary import.
+    this.currentProgress!.processedAttachments += options.dryRun
+      ? data.messages.filter((m) => m.type === 'file').length
+      : result.attachmentIds.length;
 
     return {
       conversationId: result.conversationId || undefined,

@@ -61,12 +61,46 @@ export function buildAttachmentUrl(url: string): string {
   return `/front-chat/attachment-proxy?url=${encodeURIComponent(url)}`;
 }
 
-export function isValidAttachmentUrl(url: string): boolean {
+// Strictly parse a Front attachment URL and rebuild it from a hardcoded template.
+// Returns the rebuilt URL when valid, null otherwise. Important: the URL handed
+// to fetch is assembled from string literals + regex-extracted IDs — NO part of
+// the raw input is passed through. This is the SSRF defence: a hostname allowlist
+// alone isn't enough because static analysers (and humans) can't easily verify it.
+export function normalizeFrontAttachmentUrl(url: string): string | null {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return null;
+  }
+  if (parsed.protocol !== 'https:') return null;
+
+  // Tenant subdomain on the Front API host. The bare api2.frontapp.com host is
+  // intentionally not allowed for attachment downloads — Front's signed download
+  // URLs always live on the tenant subdomain.
+  const tenantMatch = parsed.hostname.match(/^([a-z0-9-]+)\.api\.frontapp\.com$/);
+  if (!tenantMatch) return null;
+  const tenant = tenantMatch[1];
+
+  // /messages/{msg_uid}/download/{fil_id}
+  const pathMatch = parsed.pathname.match(
+    /^\/messages\/([A-Za-z0-9_-]+)\/download\/([A-Za-z0-9_-]+)\/?$/,
+  );
+  if (!pathMatch) return null;
+  const [, messageId, fileId] = pathMatch;
+
+  return `https://${tenant}.api.frontapp.com/messages/${messageId}/download/${fileId}`;
+}
+
+// S3 presigned URLs (where Front redirects download requests) live on AWS hosts.
+// Validating the redirect target prevents an attacker who somehow got past the
+// Front URL check from pivoting via a 302.
+export function isAllowedS3RedirectTarget(url: string): boolean {
   try {
     const parsed = new URL(url);
     return (
       parsed.protocol === 'https:' &&
-      (parsed.hostname === 'api2.frontapp.com' || parsed.hostname.endsWith('.frontapp.com'))
+      (parsed.hostname === 'amazonaws.com' || parsed.hostname.endsWith('.amazonaws.com'))
     );
   } catch {
     return false;

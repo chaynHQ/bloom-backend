@@ -24,7 +24,7 @@ import {
   FRONT_CHAT_ATTACHMENT_ALLOWED_MIME_TYPES,
   FRONT_CHAT_ATTACHMENT_MAX_FILE_SIZE,
 } from 'src/utils/constants';
-import { isValidAttachmentUrl } from './front-chat.helpers';
+import { normalizeFrontAttachmentUrl } from './front-chat.helpers';
 import { ChatHistoryMessage, FrontChatService } from './front-chat.service';
 
 @ApiTags('Front Chat')
@@ -73,7 +73,7 @@ export class FrontChatController {
   @ApiBearerAuth('access-token')
   @UseGuards(FirebaseAuthGuard)
   async proxyAttachment(@Query('url') url: string, @Res() res: Response): Promise<void> {
-    if (!isValidAttachmentUrl(url ?? '')) {
+    if (!normalizeFrontAttachmentUrl(url ?? '')) {
       throw new BadRequestException('Invalid attachment URL');
     }
     let buffer: Buffer;
