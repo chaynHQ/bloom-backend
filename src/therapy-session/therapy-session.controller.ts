@@ -1,8 +1,8 @@
 import { Controller, Get, Param, Patch, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { Request } from 'express';
-import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
 import { ControllerDecorator } from 'src/utils/controller.decorator';
+import { formatTherapySessionObject, formatTherapySessionObjects } from 'src/utils/serialize';
 import { UserEntity } from '../entities/user.entity';
 import { FirebaseAuthGuard } from '../firebase/firebase-auth.guard';
 import { TherapySessionParamDto } from './dto/therapy-session-param.dto';
@@ -20,10 +20,10 @@ export class TherapySessionController {
     description: 'Returns user therapy sessions data.',
   })
   @UseGuards(FirebaseAuthGuard)
-  async getCourseUserByUserId(@Req() req: Request): Promise<TherapySessionEntity[]> {
+  async getCourseUserByUserId(@Req() req: Request) {
     const user = req['userEntity'] as UserEntity;
     const therapySessions = await this.therapySessionService.getUserTherapySessions(user.id);
-    return therapySessions;
+    return formatTherapySessionObjects(therapySessions);
   }
 
   @Patch(':id/cancel')
@@ -33,8 +33,8 @@ export class TherapySessionController {
     description: 'Cancels a therapy session for a user.',
   })
   @UseGuards(FirebaseAuthGuard)
-  async cancelTherapySession(@Param() params: TherapySessionParamDto): Promise<TherapySessionEntity> {
+  async cancelTherapySession(@Param() params: TherapySessionParamDto) {
     const therapySession = await this.therapySessionService.cancelTherapySession(params.id);
-    return therapySession;
+    return formatTherapySessionObject(therapySession);
   }
 }
