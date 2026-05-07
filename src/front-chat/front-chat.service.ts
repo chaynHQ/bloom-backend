@@ -712,13 +712,11 @@ export class FrontChatService {
       throw new Error('Invalid attachment URL');
     }
     const hostname = parsed.hostname.toLowerCase();
-    const isAllowedHost =
-      hostname === 'api2.frontapp.com' ||
-      hostname.endsWith('.frontapp.com') ||
-      hostname.endsWith('.crisp.chat') ||
-      hostname.endsWith('.amazonaws.com') ||
-      hostname.endsWith('.cloudfront.net');
-    if (!isAllowedHost) {
+    const allowedHosts = new Set([
+      'api2.frontapp.com',
+      'storage.crisp.chat',
+    ]);
+    if (!allowedHosts.has(hostname)) {
       throw new Error('Invalid attachment URL');
     }
     return parsed.toString();
