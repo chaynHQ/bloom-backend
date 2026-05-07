@@ -3,7 +3,7 @@ import { ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiTags } from '@nestjs
 import { Request } from 'express';
 import { UserEntity } from 'src/entities/user.entity';
 import { isProduction } from 'src/utils/constants';
-import { PartnerAccessEntity } from '../entities/partner-access.entity';
+import { formatPartnerAccessObject, formatPartnerAccessObjects } from 'src/utils/serialize';
 import { FirebaseAuthGuard } from '../firebase/firebase-auth.guard';
 import { PartnerAdminAuthGuard } from '../partner-admin/partner-admin-auth.guard';
 import { SuperAdminAuthGuard } from '../partner-admin/super-admin-auth.guard';
@@ -32,12 +32,13 @@ export class PartnerAccessController {
   async generatePartnerAccess(
     @Body() createPartnerAccessDto: CreatePartnerAccessDto,
     @Req() req: Request,
-  ): Promise<PartnerAccessEntity> {
-    return await this.partnerAccessService.createPartnerAccess(
+  ) {
+    const access = await this.partnerAccessService.createPartnerAccess(
       createPartnerAccessDto,
       req['partnerId'],
       req['partnerAdminId'],
     );
+    return formatPartnerAccessObject(access);
   }
 
   @ApiBearerAuth('access-token')
@@ -58,8 +59,9 @@ export class PartnerAccessController {
   @ApiBody({ type: GetPartnerAccessesDto, required: false })
   async getPartnerAccessCodes(
     @Body() getPartnerAccessDto: GetPartnerAccessesDto | undefined,
-  ): Promise<PartnerAccessEntity[]> {
-    return this.partnerAccessService.getPartnerAccessCodes(getPartnerAccessDto);
+  ) {
+    const accesses = await this.partnerAccessService.getPartnerAccessCodes(getPartnerAccessDto);
+    return formatPartnerAccessObjects(accesses);
   }
 
   @ApiBearerAuth('access-token')
@@ -83,8 +85,9 @@ export class PartnerAccessController {
   @ApiBody({ type: ValidatePartnerAccessCodeDto })
   async validatePartnerAccessCode(
     @Body() { partnerAccessCode }: ValidatePartnerAccessCodeDto,
-  ): Promise<PartnerAccessEntity> {
-    return this.partnerAccessService.getPartnerAccessByCode(partnerAccessCode.toUpperCase());
+  ) {
+    const access = await this.partnerAccessService.getPartnerAccessByCode(partnerAccessCode.toUpperCase());
+    return formatPartnerAccessObject(access);
   }
 
   @ApiBearerAuth('access-token')
@@ -94,13 +97,14 @@ export class PartnerAccessController {
   @Post('assign')
   @UseGuards(FirebaseAuthGuard)
   @ApiBody({ type: ValidatePartnerAccessCodeDto })
-  assignPartnerAccess(
+  async assignPartnerAccess(
     @Req() req: Request,
     @Body() { partnerAccessCode }: ValidatePartnerAccessCodeDto,
-  ): Promise<PartnerAccessEntity> {
-    return this.partnerAccessService.assignPartnerAccess(
+  ) {
+    const access = await this.partnerAccessService.assignPartnerAccess(
       req['userEntity'] as UserEntity,
       partnerAccessCode,
     );
+    return formatPartnerAccessObject(access);
   }
 }
