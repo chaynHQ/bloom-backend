@@ -95,7 +95,9 @@ export class FrontChatController {
     }
     if (
       parsed.protocol !== 'https:' ||
-      (parsed.hostname !== 'api2.frontapp.com' && !parsed.hostname.endsWith('.frontapp.com'))
+      (parsed.hostname !== 'api2.frontapp.com' &&
+        !parsed.hostname.endsWith('.frontapp.com') &&
+        !parsed.hostname.endsWith('.crisp.chat'))
     ) {
       throw new BadRequestException('Invalid attachment URL');
     }

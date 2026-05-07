@@ -42,5 +42,7 @@ export interface AgentReplyPayload {
   emittedAt: number;
   /** Relative proxy path, e.g. /front-chat/attachment-proxy?url=... — prefix with API_URL on the client */
   attachmentUrl?: string;
-  kind?: 'image' | 'voice';
+  /** Original filename — used by the widget to label the download link for `file` kind. */
+  attachmentName?: string;
+  kind?: 'image' | 'voice' | 'file';
 }

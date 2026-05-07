@@ -4,14 +4,27 @@ import * as https from 'https';
 import { ChatUserEntity } from 'src/entities/chat-user.entity';
 import { UserEntity } from 'src/entities/user.entity';
 import { Logger } from 'src/logger/logger';
-import { frontChannelId, frontChatApiToken, frontContactListId } from 'src/utils/constants';
+import { frontChannelId, frontChatApiToken, frontContactListId, frontSupportEmail } from 'src/utils/constants';
 import { formatAuthorName, stripHtml } from 'src/utils/html';
 import { isCypressTestEmail } from 'src/utils/utils';
 import { ILike, Repository } from 'typeorm';
 import { FrontChatContactCustomFields, FrontChatContactProfile } from './front-chat.interface';
 
 const FRONT_API_BASE_URL = 'https://api2.frontapp.com';
+// Retry delays (ms) applied only to message-send paths so a transient Front 429/5xx
+// doesn't surface as a lost user message. Keep small — the user is waiting on the ack.
+const FRONT_SEND_RETRY_DELAYS_MS = [200, 800];
 const logger = new Logger('FrontChatService');
+
+async function fetchFrontWithRetry(url: string, init: RequestInit): Promise<Response> {
+  for (let attempt = 0; ; attempt++) {
+    const response = await fetch(url, init);
+    const retriable = response.status === 429 || response.status >= 500;
+    if (!retriable || attempt >= FRONT_SEND_RETRY_DELAYS_MS.length) return response;
+    logger.warn(`Front API ${response.status} — retrying (attempt ${attempt + 1})`);
+    await new Promise((resolve) => setTimeout(resolve, FRONT_SEND_RETRY_DELAYS_MS[attempt]));
+  }
+}
 
 interface FrontChatUser {
   id: string;
@@ -22,9 +35,11 @@ interface FrontChatUser {
 export interface ChatHistoryMessage {
   id: string;
   direction: 'user' | 'agent';
-  kind?: 'image' | 'voice';
+  kind?: 'image' | 'voice' | 'file';
   text: string;
   attachmentUrl?: string;
+  /** Original filename — used by the widget to label the download link for `file` kind. */
+  attachmentName?: string;
   authorName?: string;
   createdAt: number;
 }
@@ -109,6 +124,15 @@ export class FrontChatService {
     return this.chatUserRepository.findOneBy({ userId });
   }
 
+  // Migration-only: bypass the "never overwrite frontConversationId" guard. The Crisp migration
+  // is authoritative for that user — if a stale ID was saved earlier (e.g. by a prior migration
+  // run or by the live chat before history existed), we want the freshly-resolved one to win.
+  async setMigratedConversationId(userId: string, conversationId: string): Promise<void> {
+    const chatUser = await this.getOrCreateChatUser(userId);
+    if (chatUser.frontConversationId === conversationId) return;
+    await this.chatUserRepository.save({ ...chatUser, frontConversationId: conversationId });
+  }
+
   async updateChatUser(
     userId: string,
     partial: Partial<ChatUserEntity>,
@@ -189,7 +213,11 @@ export class FrontChatService {
     return this.chatUserRepository.save({ ...chatUser, lastMessageReadAt: new Date() });
   }
 
-  async sendChannelTextMessage(user: FrontChatUser, text: string): Promise<ChatUserEntity | null> {
+  async sendChannelTextMessage(
+    user: FrontChatUser,
+    text: string,
+    existingChatUser?: ChatUserEntity | null,
+  ): Promise<ChatUserEntity | null> {
     if (isCypressTestEmail(user.email)) {
       logger.log('Skipping Front message send for Cypress test user');
       return null;
@@ -205,7 +233,7 @@ export class FrontChatService {
       },
     };
 
-    const response = await fetch(
+    const response = await fetchFrontWithRetry(
       `${FRONT_API_BASE_URL}/channels/${frontChannelId}/incoming_messages`,
       {
         method: 'POST',
@@ -227,7 +255,7 @@ export class FrontChatService {
     // Await the save so the returned chatUser has lastMessageSentAt set — callers use it
     // directly for Mailchimp sync to avoid a race condition on the subsequent DB fetch.
     const now = new Date();
-    const chatUser = await this.getOrCreateChatUser(user.id);
+    const chatUser = existingChatUser ?? (await this.getOrCreateChatUser(user.id));
     const saved = await this.chatUserRepository.save({ ...chatUser, lastMessageSentAt: now });
 
     if (data.message_uid) {
@@ -256,6 +284,8 @@ export class FrontChatService {
       file.originalname,
     );
 
+    // No retry for FormData uploads — undici consumes the body on the first fetch
+    // and a retry would send an empty body. Attachments are rare; users can re-upload.
     const response = await fetch(
       `${FRONT_API_BASE_URL}/channels/${frontChannelId}/incoming_messages`,
       {
@@ -355,19 +385,45 @@ export class FrontChatService {
         const audioAttachment = !imageAttachment
           ? attachments.find((a) => a.content_type?.startsWith('audio/') && a.url)
           : undefined;
+        // Anything else with a URL is a downloadable file (.txt, .pdf, .docx, etc.).
+        const fileAttachment =
+          !imageAttachment && !audioAttachment ? attachments.find((a) => a.url) : undefined;
+
+        // Fallback: Channel API imported messages store files as markdown in the body rather
+        // than as m.attachments. Parse them out so history renders them correctly.
+        let parsedImageUrl: string | undefined;
+        let parsedImageName: string | undefined;
+        if (!imageAttachment && m.body) {
+          const imgMatch = m.body.match(/!\[([^\]]*)\]\((https?:\/\/[^)\s]+)\)/);
+          if (imgMatch) {
+            parsedImageName = imgMatch[1] || 'image';
+            parsedImageUrl = imgMatch[2];
+          }
+        }
+
         const text = m.text ?? stripHtml(m.body ?? '');
-        if (!text && !imageAttachment && !audioAttachment) continue;
+        if (!text && !imageAttachment && !audioAttachment && !fileAttachment && !parsedImageUrl)
+          continue;
+
+        // Live agent replies have is_inbound === false. For Channel API imported messages
+        // everything arrives as is_inbound === true; detect imported operator messages by
+        // checking whether the sender handle was the support address.
+        const isAgent = !m.is_inbound || m.author?.email === frontSupportEmail;
 
         const histMsg: ChatHistoryMessage = {
           id: m.id,
-          direction: m.is_inbound ? 'user' : 'agent',
-          // Images: show filename. Voice: use message body text ("Voice note") for consistency
-          // with fresh messages. Fallback to plain text for everything else.
+          direction: isAgent ? 'agent' : 'user',
+          // Images/files: show filename. Voice: use message body text ("Voice note") for
+          // consistency with fresh messages. Fallback to plain text for everything else.
           text: imageAttachment
             ? (imageAttachment.filename ?? 'image')
-            : audioAttachment
-              ? text || 'Voice note'
-              : text,
+            : parsedImageUrl
+              ? (parsedImageName ?? 'image')
+              : audioAttachment
+                ? text || 'Voice note'
+                : fileAttachment
+                  ? (fileAttachment.filename ?? 'attachment')
+                  : text,
           authorName: formatAuthorName(m.author ?? undefined),
           createdAt: (m.created_at ?? Date.now() / 1000) * 1000,
         };
@@ -375,9 +431,19 @@ export class FrontChatService {
         if (imageAttachment) {
           histMsg.kind = 'image';
           histMsg.attachmentUrl = `/front-chat/attachment-proxy?url=${encodeURIComponent(imageAttachment.url)}`;
+          histMsg.attachmentName = imageAttachment.filename;
+        } else if (parsedImageUrl) {
+          histMsg.kind = 'image';
+          histMsg.attachmentUrl = `/front-chat/attachment-proxy?url=${encodeURIComponent(parsedImageUrl)}`;
+          histMsg.attachmentName = parsedImageName;
         } else if (audioAttachment) {
           histMsg.kind = 'voice';
           histMsg.attachmentUrl = `/front-chat/attachment-proxy?url=${encodeURIComponent(audioAttachment.url)}`;
+          histMsg.attachmentName = audioAttachment.filename;
+        } else if (fileAttachment) {
+          histMsg.kind = 'file';
+          histMsg.attachmentUrl = `/front-chat/attachment-proxy?url=${encodeURIComponent(fileAttachment.url)}`;
+          histMsg.attachmentName = fileAttachment.filename;
         }
 
         allMessages.push(histMsg);
@@ -543,7 +609,10 @@ export class FrontChatService {
     }
   }
 
-  private async findConversationIdByContact(userId: string, email: string): Promise<string | null> {
+  // Public so the Crisp migration can fall back to a contact-based lookup when its in-flight
+  // resolveConversationId polling times out — the conversation exists in Front but
+  // /messages/alt:uid:{uid} hasn't become consistent within the polling window yet.
+  async findConversationIdByContact(userId: string, email: string): Promise<string | null> {
     try {
       const inboxId = await this.getInboxId();
       if (!inboxId) return null;
@@ -587,12 +656,14 @@ export class FrontChatService {
     logger.log('Cypress Front Chat contact cleanup is handled by individual test teardown');
   }
 
-  private isValidFrontUrl(url: string): boolean {
+  private isValidAttachmentUrl(url: string): boolean {
     try {
       const parsed = new URL(url);
       return (
         parsed.protocol === 'https:' &&
-        (parsed.hostname === 'api2.frontapp.com' || parsed.hostname.endsWith('.frontapp.com'))
+        (parsed.hostname === 'api2.frontapp.com' ||
+          parsed.hostname.endsWith('.frontapp.com') ||
+          parsed.hostname.endsWith('.crisp.chat'))
       );
     } catch {
       return false;
@@ -636,10 +707,20 @@ export class FrontChatService {
   }
 
   async fetchAttachment(url: string): Promise<{ buffer: Buffer; contentType: string }> {
-    if (!this.isValidFrontUrl(url)) {
+    if (!this.isValidAttachmentUrl(url)) {
       throw new Error('Invalid attachment URL');
     }
 
+    // Crisp CDN attachments are public — fetch directly without Front auth.
+    const parsed = new URL(url);
+    if (parsed.hostname.endsWith('.crisp.chat')) {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`Crisp CDN fetch failed (${response.status})`);
+      const contentType = response.headers.get('content-type') ?? 'application/octet-stream';
+      return { buffer: Buffer.from(await response.arrayBuffer()), contentType };
+    }
+
+    // Front attachment URLs require auth and redirect to an S3 presigned URL.
     const initial = await this.frontAttachmentRequest(url);
 
     if (initial.statusCode >= 200 && initial.statusCode < 300 && initial.buffer) {

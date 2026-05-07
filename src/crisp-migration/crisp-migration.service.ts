@@ -4,7 +4,8 @@ import { UserEntity } from 'src/entities/user.entity';
 import { Logger } from 'src/logger/logger';
 import { ServiceUserProfilesService } from 'src/service-user-profiles/service-user-profiles.service';
 import { crispIdentifier, crispKey, crispWebsiteId } from 'src/utils/constants';
-import { Repository } from 'typeorm';
+import { ILike, Repository } from 'typeorm';
+import { FrontChatService } from 'src/front-chat/front-chat.service';
 import { CrispExportService } from './crisp-export.service';
 import { MigrationOptionsDto } from './dto/migration-options.dto';
 import { CrispConversation, MigrationProgress, MigrationResult } from './crisp-migration.interface';
@@ -24,6 +25,7 @@ export class CrispMigrationService {
   constructor(
     private readonly crispExport: CrispExportService,
     private readonly frontImport: FrontImportService,
+    private readonly frontChat: FrontChatService,
     private readonly serviceUserProfiles: ServiceUserProfilesService,
     @InjectRepository(UserEntity) private readonly userRepository: Repository<UserEntity>,
   ) {}
@@ -45,8 +47,6 @@ export class CrispMigrationService {
     if (this.isRunning()) {
       throw new Error('A migration is already in progress');
     }
-
-    this.validateEnv();
 
     const since = options.startDate
       ? new Date(options.startDate)
@@ -76,6 +76,10 @@ export class CrispMigrationService {
     );
 
     try {
+      // Inside the try block so missing env surfaces as a 'failed' status (controller fires
+      // runMigration with `void`, so an early throw would otherwise be an unhandled rejection).
+      this.validateEnv();
+
       if (options.specificSessionId) {
         await this.migrateSingleConversation(options.specificSessionId, options);
       } else {
@@ -157,6 +161,7 @@ export class CrispMigrationService {
     const name = firstConv?.meta?.nickname ?? firstConv?.nickname;
 
     const isAnonymous = email.startsWith('unknown-');
+    let userId: string | undefined;
 
     if (!isAnonymous) {
       if (!(options.dryRun ?? false)) {
@@ -165,13 +170,16 @@ export class CrispMigrationService {
         try {
           const user = email.includes('@')
             ? await this.userRepository.findOne({
-                where: { email },
+                // Case-insensitive: signup doesn't normalise the email column.
+                where: { email: ILike(email) },
                 relations: {
                   partnerAccess: { partner: true, therapySession: true },
                   courseUser: { course: true, sessionUser: { session: true } },
                 },
               })
             : null;
+
+          userId = user?.id;
 
           if (user) {
             await this.serviceUserProfiles.getOrCreateFrontContact(user);
@@ -193,23 +201,48 @@ export class CrispMigrationService {
       logger.log(`Skipping contact creation for anonymous session`);
     }
 
-    let existingConversationId: string | undefined;
+    let migratedConversationId: string | undefined;
+    let importedAnyMessage = false;
 
     for (const conv of userConversations) {
       if (!conv.session_id) continue;
 
       try {
-        existingConversationId = await this.migrateConversationById(
-          conv.session_id,
-          since,
-          options,
-          existingConversationId,
-        );
+        const result = await this.migrateConversationById(conv.session_id, since, options, userId);
+        if (result.conversationId && !migratedConversationId) migratedConversationId = result.conversationId;
+        if (result.messageCount > 0) importedAnyMessage = true;
       } catch (err) {
         const message = (err as Error).message || 'Unknown error';
         this.recordError({ sessionId: conv.session_id, email: conv.meta?.email ?? conv.email, error: message });
         if (!(options.continueOnError ?? true)) throw err;
         logger.warn(`Skipping session ${conv.session_id} after error: ${message}`);
+      }
+      await this.delay(INTER_REQUEST_DELAY_MS);
+    }
+
+    if (!userId || (options.dryRun ?? false)) return;
+
+    // Sync endpoints process asynchronously and /messages/alt:uid:{uid} can take longer than
+    // our polling window to become consistent. If in-flight resolution timed out, fall back
+    // to looking up the user's most-recent conversation via their contact — the conversation
+    // exists in Front by now, even if it wasn't visible during import.
+    if (!migratedConversationId && importedAnyMessage) {
+      const contactEmail = email.includes('@') ? email : `${email}@deleted.chayn.co`;
+      const fallback = await this.frontChat.findConversationIdByContact(userId, contactEmail);
+      if (fallback) {
+        migratedConversationId = fallback;
+        logger.log(`Recovered conversation ${fallback} for user ${userId} via contact fallback`);
+      }
+    }
+
+    if (migratedConversationId) {
+      try {
+        // Migration is authoritative — overwrite any stale frontConversationId that may have
+        // been saved by an earlier migration run pointing to a now-empty Front conversation.
+        await this.frontChat.setMigratedConversationId(userId, migratedConversationId);
+        logger.log(`Saved frontConversationId ${migratedConversationId} for user ${userId}`);
+      } catch (err) {
+        logger.warn(`Failed to save frontConversationId for user ${userId}: ${(err as Error).message}`);
       }
     }
   }
@@ -228,15 +261,15 @@ export class CrispMigrationService {
 
   private async migrateSingleConversation(sessionId: string, options: MigrationOptionsDto): Promise<void> {
     this.currentProgress!.totalConversations = 1;
-    await this.migrateConversationById(sessionId, new Date(0), options, undefined);
+    await this.migrateConversationById(sessionId, new Date(0), options);
   }
 
   private async migrateConversationById(
     sessionId: string,
     since: Date,
     options: MigrationOptionsDto,
-    existingConversationId: string | undefined,
-  ): Promise<string | undefined> {
+    userId?: string,
+  ): Promise<{ conversationId?: string; messageCount: number }> {
     logger.log(`Processing conversation ${sessionId}`);
 
     const data = await this.crispExport.getConversationData(sessionId, since);
@@ -244,6 +277,7 @@ export class CrispMigrationService {
 
     const cutoffMs = since.getTime();
     data.messages = data.messages.filter((m) => (m.timestamp ?? 0) >= cutoffMs);
+    data.notes = data.notes.filter((n) => n.timestamp >= cutoffMs);
 
     this.currentProgress!.totalMessages += data.messages.length;
     this.currentProgress!.totalNotes += data.notes.length;
@@ -253,7 +287,7 @@ export class CrispMigrationService {
       dryRun: options.dryRun ?? false,
       skipAttachments: options.skipAttachments ?? false,
       skipNotes: options.skipNotes ?? false,
-      existingConversationId,
+      userId,
     });
 
     this.currentProgress!.processedConversations++;
@@ -263,7 +297,10 @@ export class CrispMigrationService {
       this.currentProgress!.processedAttachments += data.messages.filter((m) => m.type === 'file').length;
     }
 
-    return result.conversationId || existingConversationId;
+    return {
+      conversationId: result.conversationId || undefined,
+      messageCount: options.dryRun ? data.messages.length : result.messageIds.length,
+    };
   }
 
   private validateEnv(): void {

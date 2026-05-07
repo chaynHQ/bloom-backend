@@ -153,6 +153,7 @@ export const frontChatWebhookToken = getEnv(
 );
 export const frontChannelSigningSecret =
   getEnv(process.env.FRONT_CHANNEL_SIGNING_SECRET, 'FRONT_CHANNEL_SIGNING_SECRET') || '';
+export const frontAppUid = getEnv(process.env.FRONT_APP_UID, 'FRONT_APP_UID');
 
 export const slackWebhookUrl = getEnv(process.env.SLACK_WEBHOOK_URL, 'SLACK_WEBHOOK_URL');
 export const slackBloomUsersWebhookUrl = getEnv(
@@ -220,3 +221,5 @@ export const mailchimpServerPrefix = getEnv(
 export const crispWebsiteId = getEnv(process.env.CRISP_WEBSITE_ID, 'CRISP_WEBSITE_ID');
 export const crispIdentifier = getEnv(process.env.CRISP_IDENTIFIER, 'CRISP_IDENTIFIER');
 export const crispKey = getEnv(process.env.CRISP_KEY, 'CRISP_KEY');
+
+export const frontSupportEmail = process.env.FRONT_SUPPORT_EMAIL || 'support@bloom.chayn.co';

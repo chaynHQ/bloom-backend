@@ -7,11 +7,15 @@ import { FrontChatService } from './front-chat.service';
 const mockFetch = jest.fn();
 global.fetch = mockFetch;
 
+// Must be a literal here — jest.mock factories are hoisted before const declarations.
+const TEST_SUPPORT_EMAIL = 'test-support@bloom.chayn.co';
+
 jest.mock('src/utils/constants', () => ({
   ...jest.requireActual('src/utils/constants'),
   frontChatApiToken: 'test-api-token',
   frontChannelId: 'cha_test',
   frontContactListId: 'grp_test',
+  frontSupportEmail: 'test-support@bloom.chayn.co',
 }));
 
 const mockChatUserRepository = {
@@ -46,7 +50,7 @@ describe('FrontChatService', () => {
   let service: FrontChatService;
 
   beforeEach(async () => {
-    jest.clearAllMocks();
+    jest.resetAllMocks();
 
     // Default: no existing chatUser
     mockChatUserRepository.findOneBy.mockResolvedValue(null);
@@ -593,13 +597,22 @@ describe('FrontChatService', () => {
       mockChatUserRepository.findOneBy.mockResolvedValueOnce(
         buildChatUser({ frontConversationId: null }),
       );
-      // First fetch: contact conversations lookup
+      const inboxUrl = 'https://api2.frontapp.com/inboxes/inb_test';
+      // First fetch: getInboxId → /channels/{id}
       mockFetch.mockResolvedValueOnce({
         ok: true,
         status: 200,
-        json: async () => ({ _results: [{ id: 'cnv_found' }] }),
+        json: async () => ({ _links: { related: { inbox: inboxUrl } } }),
       });
-      // Second fetch: messages for found conversation
+      // Second fetch: contact conversations lookup
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          _results: [{ id: 'cnv_found', _links: { related: { inbox: inboxUrl } } }],
+        }),
+      });
+      // Third fetch: messages for found conversation
       mockFetch.mockResolvedValueOnce({
         ok: true,
         status: 200,
@@ -608,9 +621,11 @@ describe('FrontChatService', () => {
 
       await service.getConversationHistory(user);
 
-      const contactsUrl = mockFetch.mock.calls[0][0] as string;
+      const inboxUrl2 = mockFetch.mock.calls[0][0] as string;
+      expect(inboxUrl2).toContain('/channels/cha_test');
+      const contactsUrl = mockFetch.mock.calls[1][0] as string;
       expect(contactsUrl).toContain('/contacts/alt:email:user%40example.com/conversations');
-      const messagesUrl = mockFetch.mock.calls[1][0] as string;
+      const messagesUrl = mockFetch.mock.calls[2][0] as string;
       expect(messagesUrl).toContain('/conversations/cnv_found/messages');
     });
 
@@ -773,6 +788,75 @@ describe('FrontChatService', () => {
 
       const { messages } = await service.getConversationHistory(user);
       expect(messages).toHaveLength(0);
+    });
+
+    it('parses markdown image links from body as image attachments (Channel API imported messages)', async () => {
+      mockChatUserRepository.findOneBy.mockResolvedValueOnce(
+        buildChatUser({ frontConversationId: 'cnv_abc' }),
+      );
+      const now = Math.floor(Date.now() / 1000);
+      const crispUrl = 'https://storage.crisp.chat/users/upload/photo.jpg';
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          _results: [
+            {
+              id: 'msg_1',
+              is_inbound: true,
+              body: `![photo.jpg](${crispUrl})`,
+              created_at: now,
+            },
+          ],
+          _pagination: {},
+        }),
+      });
+
+      const { messages } = await service.getConversationHistory(user);
+
+      expect(messages).toHaveLength(1);
+      expect(messages[0]).toMatchObject({
+        id: 'msg_1',
+        kind: 'image',
+        text: 'photo.jpg',
+        attachmentUrl: `/front-chat/attachment-proxy?url=${encodeURIComponent(crispUrl)}`,
+      });
+    });
+
+    it('marks imported operator messages as agent when author email matches support address', async () => {
+      mockChatUserRepository.findOneBy.mockResolvedValueOnce(
+        buildChatUser({ frontConversationId: 'cnv_abc' }),
+      );
+      const now = Math.floor(Date.now() / 1000);
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          _results: [
+            {
+              id: 'msg_1',
+              is_inbound: true,
+              text: 'Hello from user',
+              created_at: now - 10,
+            },
+            {
+              id: 'msg_2',
+              is_inbound: true,
+              text: 'Reply from support',
+              created_at: now,
+              // Imported operator message — handle was FRONT_SUPPORT_EMAIL
+              author: { email: TEST_SUPPORT_EMAIL },
+            },
+          ],
+          _pagination: {},
+        }),
+      });
+
+      const { messages } = await service.getConversationHistory(user);
+
+      expect(messages).toHaveLength(2);
+      expect(messages[0]).toMatchObject({ id: 'msg_1', direction: 'user' });
+      expect(messages[1]).toMatchObject({ id: 'msg_2', direction: 'agent' });
     });
   });
 

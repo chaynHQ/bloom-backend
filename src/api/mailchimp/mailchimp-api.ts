@@ -22,6 +22,37 @@ export function getEmailMD5Hash(email: string) {
   return createHash('md5').update(email.toLowerCase().trim()).digest('hex');
 }
 
+// Mailchimp SDK errors carry the API's structured response on `error.response.body`
+// (or `error.response.text`). The top-level `error.message` is just the HTTP status
+// phrase ("Bad Request"), so without this we lose the actual reason from the API.
+function formatMailchimpError(error: unknown): string {
+  if (!error || typeof error !== 'object') return 'unknown error';
+  const err = error as {
+    status?: number;
+    message?: string;
+    response?: { body?: unknown; text?: string };
+  };
+  const status = err.status ?? '?';
+  const body = err.response?.body;
+  let detail: string;
+  if (body && typeof body === 'object') {
+    const b = body as {
+      title?: string;
+      detail?: string;
+      errors?: Array<{ field?: string; message?: string }>;
+    };
+    const fieldErrors = b.errors?.length
+      ? ` errors=${JSON.stringify(b.errors)}`
+      : '';
+    detail = `${b.title ?? ''}: ${b.detail ?? ''}${fieldErrors}`.trim();
+  } else if (typeof err.response?.text === 'string') {
+    detail = err.response.text;
+  } else {
+    detail = err.message ?? 'unknown error';
+  }
+  return `status=${status} ${detail}`;
+}
+
 export const createMailchimpProfile = async (
   profileData: Partial<UpdateListMemberRequest>,
 ): Promise<ListMember> => {
@@ -33,9 +64,10 @@ export const createMailchimpProfile = async (
   try {
     return await mailchimp.lists.addListMember(mailchimpAudienceId, profileData);
   } catch (error) {
-    throw new Error(`Create mailchimp profile API call failed: ${error?.message || 'unknown error'}`, {
-      cause: error,
-    });
+    throw new Error(
+      `Create mailchimp profile API call failed: ${formatMailchimpError(error)}`,
+      { cause: error },
+    );
   }
 };
 
@@ -168,7 +200,7 @@ export const updateMailchimpProfile = async (
       return await createMailchimpProfile(createData);
     }
     throw new Error(
-      `Update mailchimp profile API call failed: ${error?.message || 'unknown error'}`,
+      `Update mailchimp profile API call failed: ${formatMailchimpError(error)}`,
       { cause: error },
     );
   }

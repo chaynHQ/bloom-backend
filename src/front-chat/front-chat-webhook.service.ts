@@ -130,7 +130,16 @@ export class FrontChatWebhookService {
     const audioAttachment = !imageAttachment
       ? attachments.find((a) => a.content_type?.startsWith('audio/') && a.url)
       : undefined;
-    const attachment = imageAttachment ?? audioAttachment;
+    const fileAttachment =
+      !imageAttachment && !audioAttachment ? attachments.find((a) => a.url) : undefined;
+    const attachment = imageAttachment ?? audioAttachment ?? fileAttachment;
+    const attachmentKind: 'image' | 'voice' | 'file' | undefined = imageAttachment
+      ? 'image'
+      : audioAttachment
+        ? 'voice'
+        : fileAttachment
+          ? 'file'
+          : undefined;
 
     if (recipientEmail && (messageBody || attachment)) {
       this.frontChatGateway.emitAgentReply(recipientEmail, {
@@ -139,10 +148,12 @@ export class FrontChatWebhookService {
         authorEmail: payload.author?.email,
         authorName: formatAuthorName(payload.author as FrontWebhookMessageAuthor | undefined),
         emittedAt: Math.floor(Date.now() / 1000),
-        ...(attachment?.url && {
-          attachmentUrl: `/front-chat/attachment-proxy?url=${encodeURIComponent(attachment.url)}`,
-          kind: imageAttachment ? 'image' : 'voice',
-        }),
+        ...(attachment?.url &&
+          attachmentKind && {
+            attachmentUrl: `/front-chat/attachment-proxy?url=${encodeURIComponent(attachment.url)}`,
+            attachmentName: attachment.filename,
+            kind: attachmentKind,
+          }),
       });
       this.logger.log(`Front Channel: forwarded agent reply to ${recipientEmail}`);
 
