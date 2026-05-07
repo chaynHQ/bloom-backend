@@ -75,7 +75,8 @@ export class PartnerAccessController {
     @Param() params: PartnerAccessParamDto,
     @Body() updates: UpdatePartnerAccessDto,
   ) {
-    return await this.partnerAccessService.updatePartnerAccess(params.id, updates);
+    const access = await this.partnerAccessService.updatePartnerAccess(params.id, updates);
+    return formatPartnerAccessObject(access);
   }
 
   @Post('validate-code')
