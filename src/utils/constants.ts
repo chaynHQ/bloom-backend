@@ -152,7 +152,26 @@ export const frontChatWebhookToken = getEnv(
   'FRONT_CHAT_WEBHOOK_TOKEN',
 );
 export const frontChannelSigningSecret =
-  (getEnv(process.env.FRONT_CHANNEL_SIGNING_SECRET, 'FRONT_CHANNEL_SIGNING_SECRET') || '').trim();
+  getEnv(process.env.FRONT_CHANNEL_SIGNING_SECRET, 'FRONT_CHANNEL_SIGNING_SECRET') || '';
+export const frontAppUid = getEnv(process.env.FRONT_APP_UID, 'FRONT_APP_UID');
+
+export const FRONT_API_BASE_URL = 'https://api2.frontapp.com';
+// Retry delays (ms) applied only to message-send paths so a transient Front 429/5xx
+// doesn't surface as a lost user message. Keep small — the user is waiting on the ack.
+export const FRONT_SEND_RETRY_DELAYS_MS = [200, 800];
+
+export const FRONT_CHAT_ATTACHMENT_ALLOWED_MIME_TYPES = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/gif',
+  'image/webp',
+  'audio/webm',
+  'audio/mp4',
+  'audio/mpeg',
+  'audio/ogg',
+  'application/pdf',
+]);
+export const FRONT_CHAT_ATTACHMENT_MAX_FILE_SIZE = 25 * 1024 * 1024; // 25 MB
 
 export const slackWebhookUrl = getEnv(process.env.SLACK_WEBHOOK_URL, 'SLACK_WEBHOOK_URL');
 export const slackBloomUsersWebhookUrl = getEnv(
@@ -220,3 +239,5 @@ export const mailchimpServerPrefix = getEnv(
 export const crispWebsiteId = getEnv(process.env.CRISP_WEBSITE_ID, 'CRISP_WEBSITE_ID');
 export const crispIdentifier = getEnv(process.env.CRISP_IDENTIFIER, 'CRISP_IDENTIFIER');
 export const crispKey = getEnv(process.env.CRISP_KEY, 'CRISP_KEY');
+
+export const frontSupportEmail = process.env.FRONT_SUPPORT_EMAIL || 'support@bloom.chayn.co';

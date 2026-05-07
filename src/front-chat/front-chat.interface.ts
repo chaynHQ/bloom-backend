@@ -1,3 +1,4 @@
+import { EVENT_NAME } from 'src/event-logger/event-logger.interface';
 import { EMAIL_REMINDERS_FREQUENCY } from 'src/utils/constants';
 
 // Front webhook event types: https://dev.frontapp.com/reference/events
@@ -6,6 +7,12 @@ export enum FRONT_WEBHOOK_EVENT_TYPE {
   OUTBOUND = 'outbound', // Agent sent a message
   OUT_REPLY = 'out_reply', // Agent replied to a conversation
 }
+
+export const FRONT_WEBHOOK_EVENT_TO_EVENT_NAME: Partial<Record<string, EVENT_NAME>> = {
+  [FRONT_WEBHOOK_EVENT_TYPE.INBOUND]: EVENT_NAME.CHAT_MESSAGE_SENT,
+  [FRONT_WEBHOOK_EVENT_TYPE.OUTBOUND]: EVENT_NAME.CHAT_MESSAGE_RECEIVED,
+  [FRONT_WEBHOOK_EVENT_TYPE.OUT_REPLY]: EVENT_NAME.CHAT_MESSAGE_RECEIVED,
+};
 
 export interface FrontChatContactCustomFields {
   signed_up_at?: string;
@@ -42,5 +49,59 @@ export interface AgentReplyPayload {
   emittedAt: number;
   /** Relative proxy path, e.g. /front-chat/attachment-proxy?url=... — prefix with API_URL on the client */
   attachmentUrl?: string;
-  kind?: 'image' | 'voice';
+  /** Original filename — used by the widget to label the download link for `file` kind. */
+  attachmentName?: string;
+  kind?: 'image' | 'voice' | 'file';
+}
+
+export interface FrontChatUser {
+  id: string;
+  email: string;
+  name?: string | null;
+}
+
+export interface ChatHistoryMessage {
+  id: string;
+  direction: 'user' | 'agent';
+  kind?: 'image' | 'voice' | 'file';
+  text: string;
+  attachmentUrl?: string;
+  /** Original filename — used by the widget to label the download link for `file` kind. */
+  attachmentName?: string;
+  authorName?: string;
+  createdAt: number;
+}
+
+// ── Front API response shapes ────────────────────────────────────────────────
+
+export interface FrontApiPaginated<T> {
+  _results: T[];
+  _pagination?: { next?: string | null };
+}
+
+export interface FrontApiAuthor {
+  email?: string;
+  username?: string;
+  first_name?: string;
+  last_name?: string;
+}
+
+export interface FrontApiAttachment {
+  url?: string;
+  filename?: string;
+  content_type?: string;
+}
+
+export interface FrontApiMessage {
+  id: string;
+  is_inbound?: boolean;
+  created_at?: number;
+  body?: string;
+  text?: string;
+  author?: FrontApiAuthor | null;
+  attachments?: FrontApiAttachment[];
+}
+
+export interface FrontApiMessageLinks {
+  _links?: { related?: { conversation?: string } };
 }

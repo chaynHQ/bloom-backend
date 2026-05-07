@@ -1,4 +1,4 @@
-import { Body, Controller, Headers, HttpCode, HttpStatus, Post, Request, UseGuards } from '@nestjs/common';
+import { Body, Controller, Headers, Post, Request, UseGuards } from '@nestjs/common';
 import { ApiBody, ApiTags } from '@nestjs/swagger';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
 import { FrontChatWebhookService } from 'src/front-chat/front-chat-webhook.service';
@@ -43,22 +43,19 @@ export class WebhooksController {
   // Body is typed loosely so the global ValidationPipe doesn't 400 the Channel API
   // payload (different shape from FrontChatWebhookDto).
   @Post('front-chat')
-  @HttpCode(HttpStatus.OK)
   @ApiBody({ type: FrontChatWebhookDto })
   async handleFrontChatWebhook(
     @Request() req,
     @Body() data: Record<string, unknown>,
     @Headers() headers,
   ): Promise<unknown> {
-    const proto = (headers['x-forwarded-proto'] as string) || req.protocol || 'https';
-    const host = headers['x-forwarded-host'] || headers['host'];
-    return this.frontChatWebhookService.handleFrontWebhook(
-      req.rawBody,
+    return this.frontChatWebhookService.handleFrontWebhook({
+      rawBody: req.rawBody,
       data,
       headers,
-      proto,
-      host,
-      req.originalUrl ?? req.url,
-    );
+      protocol: (headers['x-forwarded-proto'] as string) || req.protocol || 'https',
+      host: headers['x-forwarded-host'] || headers['host'],
+      originalUrl: req.originalUrl ?? req.url,
+    });
   }
 }

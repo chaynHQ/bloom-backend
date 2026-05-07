@@ -166,12 +166,12 @@ describe('FrontChatController', () => {
       const res = buildRes();
 
       await controller.proxyAttachment(
-        'https://api2.frontapp.com/attachments/file.jpg',
+        'https://chayneb55.api.frontapp.com/messages/msg_abc/download/fil_xyz',
         res as any,
       );
 
       expect(frontChatService.fetchAttachment).toHaveBeenCalledWith(
-        'https://api2.frontapp.com/attachments/file.jpg',
+        'https://chayneb55.api.frontapp.com/messages/msg_abc/download/fil_xyz',
       );
       expect(res.set).toHaveBeenCalledWith('Content-Type', 'image/jpeg');
       expect(res.set).toHaveBeenCalledWith('Cache-Control', 'private, max-age=3600');
@@ -183,7 +183,7 @@ describe('FrontChatController', () => {
       const res = buildRes();
 
       await expect(
-        controller.proxyAttachment('http://api2.frontapp.com/attachments/file.jpg', res as any),
+        controller.proxyAttachment('http://chayneb55.api.frontapp.com/messages/msg_abc/download/fil_xyz', res as any),
       ).rejects.toBeInstanceOf(BadRequestException);
       expect(frontChatService.fetchAttachment).not.toHaveBeenCalled();
     });
@@ -211,7 +211,7 @@ describe('FrontChatController', () => {
       const res = buildRes();
 
       await expect(
-        controller.proxyAttachment('https://api2.frontapp.com/attachments/missing.jpg', res as any),
+        controller.proxyAttachment('https://chayneb55.api.frontapp.com/messages/msg_abc/download/fil_missing', res as any),
       ).rejects.toBeInstanceOf(NotFoundException);
     });
   });
@@ -259,12 +259,12 @@ describe('FrontChatController', () => {
       const res = buildRes();
 
       await controller.proxyAttachment(
-        'https://api2.frontapp.com/attachments/file.jpg',
+        'https://chayneb55.api.frontapp.com/messages/msg_abc/download/fil_xyz',
         res as any,
       );
 
       expect(frontChatService.fetchAttachment).toHaveBeenCalledWith(
-        'https://api2.frontapp.com/attachments/file.jpg',
+        'https://chayneb55.api.frontapp.com/messages/msg_abc/download/fil_xyz',
       );
       expect(res.set).toHaveBeenCalledWith('Content-Type', 'image/jpeg');
       expect(res.set).toHaveBeenCalledWith('Cache-Control', 'private, max-age=3600');
@@ -276,7 +276,7 @@ describe('FrontChatController', () => {
       const res = buildRes();
 
       await expect(
-        controller.proxyAttachment('http://api2.frontapp.com/attachments/file.jpg', res as any),
+        controller.proxyAttachment('http://chayneb55.api.frontapp.com/messages/msg_abc/download/fil_xyz', res as any),
       ).rejects.toBeInstanceOf(BadRequestException);
       expect(frontChatService.fetchAttachment).not.toHaveBeenCalled();
     });
@@ -304,7 +304,7 @@ describe('FrontChatController', () => {
       const res = buildRes();
 
       await expect(
-        controller.proxyAttachment('https://api2.frontapp.com/attachments/missing.jpg', res as any),
+        controller.proxyAttachment('https://chayneb55.api.frontapp.com/messages/msg_abc/download/fil_missing', res as any),
       ).rejects.toBeInstanceOf(NotFoundException);
     });
   });

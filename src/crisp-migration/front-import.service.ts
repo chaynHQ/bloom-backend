@@ -1,6 +1,14 @@
+import { createHash, createHmac, randomUUID } from 'crypto';
 import { Injectable } from '@nestjs/common';
 import { Logger } from 'src/logger/logger';
-import { frontChannelId, frontChatApiToken, frontContactListId } from 'src/utils/constants';
+import {
+  frontAppUid,
+  frontChannelId,
+  frontChannelSigningSecret,
+  frontChatApiToken,
+  frontContactListId,
+  frontSupportEmail,
+} from 'src/utils/constants';
 import { ConversationMigrationData, CrispMessage, CrispNote } from './crisp-migration.interface';
 
 const FRONT_API_BASE_URL = 'https://api2.frontapp.com';
@@ -8,20 +16,32 @@ const logger = new Logger('FrontImportService');
 
 const INTER_MESSAGE_DELAY_MS = 200;
 const MAX_RETRIES = 3;
+// Front rejects requests above 25MB total; cap a bit lower for headroom on metadata + boundary.
+const MAX_ATTACHMENT_BYTES = 24 * 1024 * 1024;
 
-const SUPPORT_SENDER_HANDLE = process.env.FRONT_SUPPORT_EMAIL || 'support@bloom.chayn.co';
 const SUPPORT_SENDER_NAME = 'Bloom Support';
 
 interface ImportedConversationResult {
   conversationId: string;
   messageIds: string[];
+  // message_uids of messages whose binary attachment was successfully uploaded as
+  // a Front attachment. Excludes file messages that fell back to a markdown link
+  // (Crisp CDN unreachable, oversize, or Front upload failed). Subset of messageIds.
+  attachmentIds: string[];
   commentIds: string[];
 }
 
-// 202 Accepted response from POST /inboxes/{id}/imported_messages
-interface FrontImportAccepted {
-  status: string;
-  message_uid: string;
+// Result of importing a single Crisp message. `isAttachment` is true only when the
+// binary was uploaded to Front successfully — markdown-fallback messages have it false.
+interface ImportedMessage {
+  messageUid: string;
+  isAttachment: boolean;
+}
+
+// 202 Accepted response from POST /channels/{id}/inbound_messages or /outbound_messages
+interface FrontChannelAccepted {
+  status?: string;
+  message_uid?: string;
 }
 
 // GET /messages/alt:uid:{uid} — used to resolve the conversation ID
@@ -29,38 +49,9 @@ interface FrontMessageWithLinks {
   _links?: { related?: { conversation?: string } };
 }
 
-// GET /channels/{id} — used to discover the inbox linked to the channel
-interface FrontChannelResponse {
-  _links?: { related?: { inbox?: string } };
-}
-
 @Injectable()
 export class FrontImportService {
-  private resolvedInboxId: string | undefined;
-
-  async getInboxId(): Promise<string> {
-    if (this.resolvedInboxId) return this.resolvedInboxId;
-
-    if (!frontChannelId) {
-      throw new Error('FRONT_CHANNEL_ID is not set. Required to discover the linked inbox.');
-    }
-
-    logger.log(`Resolving inbox ID from channel ${frontChannelId}…`);
-
-    const channel = (await this.frontApiRequest(
-      'GET',
-      `/channels/${frontChannelId}`,
-    )) as FrontChannelResponse;
-    const inboxUrl = channel._links?.related?.inbox;
-
-    if (!inboxUrl) {
-      throw new Error(`Could not find inbox linked to channel ${frontChannelId}.`);
-    }
-
-    this.resolvedInboxId = inboxUrl.split('/').pop()!;
-    logger.log(`Resolved inbox ID: ${this.resolvedInboxId}`);
-    return this.resolvedInboxId;
-  }
+  private resolvedTeammateId: string | null | undefined;
 
   async getOrCreateFrontContact(email: string, name?: string): Promise<string> {
     const alias = `alt:email:${encodeURIComponent(email)}`;
@@ -108,18 +99,30 @@ export class FrontImportService {
       dryRun: boolean;
       skipAttachments: boolean;
       skipNotes: boolean;
-      existingConversationId?: string;
+      userId?: string;
     },
   ): Promise<ImportedConversationResult> {
     const { sessionId, email, name, messages, notes } = data;
+    const { userId } = options;
 
     if (options.dryRun) {
       logger.log(`[DRY RUN] Would import conversation ${sessionId} (${messages.length} messages)`);
-      return { conversationId: `dry-run-${sessionId}`, messageIds: [], commentIds: [] };
+      return {
+        conversationId: `dry-run-${sessionId}`,
+        messageIds: [],
+        attachmentIds: [],
+        commentIds: [],
+      };
     }
 
-    const inboxId = await this.getInboxId();
-    logger.log(`Importing ${sessionId} — ${messages.length} messages, ${notes.length} notes`);
+    if (!frontChannelId) {
+      throw new Error('FRONT_CHANNEL_ID is not set.');
+    }
+
+    logger.log(
+      `Importing ${sessionId} — ${messages.length} messages, ${notes.length} notes` +
+        (userId ? ` [thread: bloom-user-${userId}]` : ''),
+    );
 
     // Deleted users have a hashed ID as their Crisp email (no '@'); give them a stable fake address
     const userEmail = !email
@@ -132,29 +135,29 @@ export class FrontImportService {
 
     const isResolved = data.metadata.state === 'resolved';
     const messageIds: string[] = [];
-    let conversationId: string | undefined = options.existingConversationId;
+    const attachmentIds: string[] = [];
+    let conversationId: string | undefined;
     let lastMessageUid: string | undefined;
 
     for (const msg of sorted) {
       if (!this.isImportableMessage(msg)) continue;
 
-      const messageUid = await this.importOneMessage(
+      const imported = await this.importOneMessage(
         msg,
         userEmail,
         userName,
         sessionId,
-        conversationId,
-        inboxId,
         options.skipAttachments,
-        isResolved,
+        userId,
       );
 
-      if (messageUid) {
-        messageIds.push(messageUid);
-        lastMessageUid = messageUid;
+      if (imported) {
+        messageIds.push(imported.messageUid);
+        if (imported.isAttachment) attachmentIds.push(imported.messageUid);
+        lastMessageUid = imported.messageUid;
 
         if (!conversationId) {
-          conversationId = await this.resolveConversationId(messageUid);
+          conversationId = await this.resolveConversationId(imported.messageUid);
           if (conversationId) {
             logger.log(`Resolved conversation ${conversationId} for session ${sessionId}`);
           }
@@ -167,20 +170,25 @@ export class FrontImportService {
     if (!conversationId) {
       if (messageIds.length === 0) {
         logger.warn(`No importable messages in session ${sessionId} — skipping`);
-        return { conversationId: '', messageIds: [], commentIds: [] };
+        return { conversationId: '', messageIds: [], attachmentIds: [], commentIds: [] };
       }
       logger.warn(
-        `Imported ${messageIds.length} message(s) for session ${sessionId} but could not resolve conversation ID — messages may be fragmented across multiple Front conversations`,
+        `Imported ${messageIds.length} message(s) for session ${sessionId} but could not resolve conversation ID`,
       );
-      return { conversationId: '', messageIds, commentIds: [] };
+      return { conversationId: '', messageIds, attachmentIds, commentIds: [] };
     }
 
     const commentIds: string[] = [];
     if (!options.skipNotes && notes.length > 0) {
+      // Front comments have no native dedup key, so re-runs would duplicate notes. Fetch any
+      // existing comment bodies once and skip notes whose computed body already exists.
+      const existingBodies = await this.getExistingCommentBodies(conversationId);
       const sortedNotes = [...notes].sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
       for (const note of sortedNotes) {
+        const commentBody = this.buildCommentBody(note);
+        if (!commentBody || existingBodies.has(commentBody)) continue;
         try {
-          const commentId = await this.addComment(conversationId, note);
+          const commentId = await this.addComment(conversationId, note, commentBody);
           if (commentId) commentIds.push(commentId);
         } catch (err) {
           logger.warn(
@@ -206,9 +214,9 @@ export class FrontImportService {
     }
 
     logger.log(
-      `Imported session ${sessionId} → ${conversationId} (${messageIds.length} messages, ${commentIds.length} comments, resolved: ${isResolved})`,
+      `Imported session ${sessionId} → ${conversationId} (${messageIds.length} messages, ${attachmentIds.length} attachments, ${commentIds.length} comments, resolved: ${isResolved})`,
     );
-    return { conversationId, messageIds, commentIds };
+    return { conversationId, messageIds, attachmentIds, commentIds };
   }
 
   private async importOneMessage(
@@ -216,69 +224,54 @@ export class FrontImportService {
     userEmail: string,
     userName: string,
     sessionId: string,
-    conversationId: string | undefined,
-    inboxId: string,
     skipAttachments: boolean,
-    isResolved: boolean,
-  ): Promise<string | undefined> {
+    userId?: string,
+  ): Promise<ImportedMessage | undefined> {
     const isInbound = msg.from === 'user';
-    const createdAt = Math.floor((msg.timestamp || Date.now()) / 1000);
-    const externalId = `crisp-${sessionId}-${msg.fingerprint ?? msg.timestamp ?? Math.random()}`;
-
-    const sender = isInbound
-      ? { handle: userEmail, name: userName }
-      : { handle: SUPPORT_SENDER_HANDLE, name: this.resolveOperatorName(msg) };
-
-    const to = isInbound ? [SUPPORT_SENDER_HANDLE] : [userEmail];
+    const deliveredAt = Math.floor((msg.timestamp || Date.now()) / 1000);
+    // fingerprint/timestamp are stable across re-runs; fall back to a content hash so
+    // re-running the migration is idempotent for messages missing both identifiers.
+    const idSeed = msg.fingerprint ?? msg.timestamp ?? this.hashMessageContent(msg);
+    const externalId = `crisp-${sessionId}-${idSeed}`;
+    const threadRef = userId ? `bloom-user-${userId}` : `crisp-session-${sessionId}`;
 
     if (msg.type === 'file' && !skipAttachments) {
       return this.importFileMessage(
         msg,
-        sender,
-        to,
+        userEmail,
+        userName,
         externalId,
-        createdAt,
+        deliveredAt,
+        threadRef,
         isInbound,
-        conversationId,
-        inboxId,
-        isResolved,
       );
     }
 
     const body = this.extractMessageText(msg);
     if (!body) return undefined;
 
-    const payload: Record<string, unknown> = {
-      sender,
-      to,
+    const messageUid = await this.postSyncMessage({
+      isInbound,
+      userEmail,
+      userName,
+      operatorName: this.resolveOperatorName(msg),
       body,
-      body_format: 'markdown',
-      external_id: externalId,
-      created_at: createdAt,
-      metadata: { is_inbound: isInbound, is_archived: isResolved, should_skip_rules: true },
-    };
-    if (conversationId) payload.conversation_id = conversationId;
-
-    const response = (await this.frontApiRequest(
-      'POST',
-      `/inboxes/${inboxId}/imported_messages`,
-      payload,
-    )) as FrontImportAccepted;
-
-    return response.message_uid;
+      deliveredAt,
+      externalId,
+      threadRef,
+    });
+    return messageUid ? { messageUid, isAttachment: false } : undefined;
   }
 
   private async importFileMessage(
     msg: CrispMessage,
-    sender: { handle: string; name: string },
-    to: string[],
+    userEmail: string,
+    userName: string,
     externalId: string,
-    createdAt: number,
+    deliveredAt: number,
+    threadRef: string,
     isInbound: boolean,
-    conversationId: string | undefined,
-    inboxId: string,
-    isResolved: boolean,
-  ): Promise<string | undefined> {
+  ): Promise<ImportedMessage | undefined> {
     let fileData: { url?: string; name?: string; type?: string };
     try {
       const raw = msg.content;
@@ -294,28 +287,256 @@ export class FrontImportService {
     if (!fileData.url) return undefined;
 
     const fileName = fileData.name || 'Attachment';
+    const fileType = fileData.type || 'application/octet-stream';
     const isImage =
       fileData.type?.startsWith('image/') || /\.(jpe?g|png|gif|webp|svg|bmp)$/i.test(fileName);
 
-    const body = isImage ? `![${fileName}](${fileData.url})` : `📎 [${fileName}](${fileData.url})`;
+    // Try to upload the binary so Front (and the live-chat widget which proxies through Front)
+    // renders a real attachment. The legacy /imported_messages endpoint expanded markdown image
+    // links into attachments automatically; the sync endpoints don't, so a markdown body shows
+    // up as plain text. Falling back to a markdown link only on fetch/upload failure.
+    const buffer = await this.fetchCrispAttachment(fileData.url, fileName);
 
+    if (buffer) {
+      try {
+        const messageUid = await this.postSyncMessageWithAttachment({
+          isInbound,
+          userEmail,
+          userName,
+          operatorName: this.resolveOperatorName(msg),
+          fileName,
+          fileType,
+          fileBuffer: buffer,
+          deliveredAt,
+          externalId,
+          threadRef,
+        });
+        return messageUid ? { messageUid, isAttachment: true } : undefined;
+      } catch (err) {
+        logger.warn(
+          `Attachment upload failed for ${fileName}, falling back to markdown link: ${(err as Error).message}`,
+        );
+      }
+    }
+
+    const body = isImage
+      ? `![${fileName}](${fileData.url})`
+      : `📎 [${fileName}](${fileData.url})`;
+
+    const fallbackUid = await this.postSyncMessage({
+      isInbound,
+      userEmail,
+      userName,
+      operatorName: this.resolveOperatorName(msg),
+      body,
+      deliveredAt,
+      externalId,
+      threadRef,
+    });
+    return fallbackUid ? { messageUid: fallbackUid, isAttachment: false } : undefined;
+  }
+
+  // Crisp attachments live on a public CDN (storage.crisp.chat) — no auth needed. Returns null
+  // on any failure so the caller can fall back to a markdown link without aborting the message.
+  private async fetchCrispAttachment(url: string, fileName: string): Promise<Buffer | null> {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        logger.warn(`Crisp attachment fetch failed (${response.status}) for ${fileName}`);
+        return null;
+      }
+      const contentLength = parseInt(response.headers.get('content-length') ?? '0', 10);
+      if (contentLength > MAX_ATTACHMENT_BYTES) {
+        logger.warn(
+          `Skipping attachment ${fileName} — ${contentLength} bytes exceeds Front's 25MB limit`,
+        );
+        return null;
+      }
+      const buffer = Buffer.from(await response.arrayBuffer());
+      if (buffer.length > MAX_ATTACHMENT_BYTES) {
+        logger.warn(
+          `Skipping attachment ${fileName} — ${buffer.length} bytes exceeds Front's 25MB limit`,
+        );
+        return null;
+      }
+      return buffer;
+    } catch (err) {
+      logger.warn(`Crisp attachment fetch errored for ${fileName}: ${(err as Error).message}`);
+      return null;
+    }
+  }
+
+  // Multipart variant of postSyncMessage. Cannot reuse frontApiRequest because that path always
+  // sets Content-Type: application/json — multipart needs the boundary set by FormData itself.
+  private async postSyncMessageWithAttachment(args: {
+    isInbound: boolean;
+    userEmail: string;
+    userName: string;
+    operatorName: string;
+    fileName: string;
+    fileType: string;
+    fileBuffer: Buffer;
+    deliveredAt: number;
+    externalId: string;
+    threadRef: string;
+  }): Promise<string | undefined> {
+    const path = args.isInbound
+      ? `/channels/${frontChannelId}/inbound_messages`
+      : `/channels/${frontChannelId}/outbound_messages`;
+
+    const form = new FormData();
+
+    if (args.isInbound) {
+      form.append('sender[handle]', args.userEmail);
+      if (args.userName) form.append('sender[name]', args.userName);
+    } else {
+      form.append('to[0][handle]', args.userEmail);
+      if (args.userName) form.append('to[0][name]', args.userName);
+      form.append('sender_name', args.operatorName);
+      const authorId = await this.getSupportTeammateId();
+      if (authorId) form.append('author_id', authorId);
+    }
+
+    // Front renders the attachment alongside the body; using the filename as body keeps the
+    // conversation readable when the attachment fails to render (rare, but possible).
+    form.append('body', args.fileName);
+    form.append('body_format', 'markdown');
+    form.append('delivered_at', String(args.deliveredAt));
+    form.append('metadata[external_id]', args.externalId);
+    form.append('metadata[external_conversation_id]', args.threadRef);
+    form.append('metadata[thread_ref]', args.threadRef);
+
+    const blob = new Blob([new Uint8Array(args.fileBuffer)], { type: args.fileType });
+    form.append('attachments', blob, args.fileName);
+
+    const result = await this.frontFormDataRequest(path, form);
+    return result.message_uid;
+  }
+
+  private async frontFormDataRequest(
+    path: string,
+    form: FormData,
+    attempt = 0,
+  ): Promise<FrontChannelAccepted> {
+    const response = await fetch(`${FRONT_API_BASE_URL}${path}`, {
+      method: 'POST',
+      headers: { Authorization: this.getAuthHeader(path) },
+      body: form,
+    });
+
+    if (!response.ok) {
+      const errBody = await response.text();
+      if (response.status === 429 && attempt < MAX_RETRIES) {
+        const retryMs = this.parseRetryDelayMs(errBody) ?? 500;
+        logger.warn(
+          `Rate limited on POST ${path} — retrying in ${retryMs}ms (attempt ${attempt + 1}/${MAX_RETRIES})`,
+        );
+        await this.delay(retryMs + 50);
+        return this.frontFormDataRequest(path, form, attempt + 1);
+      }
+      const err = new Error(
+        `Front API POST ${path} failed (${response.status}): ${errBody}`,
+      ) as Error & { status?: number };
+      err.status = response.status;
+      throw err;
+    }
+
+    return (await response.json()) as FrontChannelAccepted;
+  }
+
+  // Sync endpoints (vs /incoming_messages live endpoint) accept delivered_at at the top level,
+  // which is what backdates the message timestamp shown in the Front conversation.
+  // Inbound (user) → /inbound_messages with sender handle = user email.
+  // Outbound (operator) → /outbound_messages attributed to the FRONT_SUPPORT_EMAIL teammate so
+  // the message renders on the agent side as if the teammate sent it. external_conversation_id
+  // is required by sync endpoints and groups all messages for a user (or session, for non-DB
+  // users) into the same conversation; thread_ref is sent alongside so it matches the live
+  // chat threading on /incoming_messages where Front honours that field instead.
+  private async postSyncMessage(args: {
+    isInbound: boolean;
+    userEmail: string;
+    userName: string;
+    operatorName: string;
+    body: string;
+    deliveredAt: number;
+    externalId: string;
+    threadRef: string;
+  }): Promise<string | undefined> {
+    const {
+      isInbound,
+      userEmail,
+      userName,
+      operatorName,
+      body,
+      deliveredAt,
+      externalId,
+      threadRef,
+    } = args;
+
+    const threadingMetadata = {
+      external_id: externalId,
+      external_conversation_id: threadRef,
+      thread_ref: threadRef,
+    };
+
+    if (isInbound) {
+      const payload: Record<string, unknown> = {
+        sender: { handle: userEmail, name: userName },
+        body,
+        body_format: 'markdown',
+        delivered_at: deliveredAt,
+        metadata: threadingMetadata,
+      };
+      const response = (await this.frontApiRequest(
+        'POST',
+        `/channels/${frontChannelId}/inbound_messages`,
+        payload,
+      )) as FrontChannelAccepted;
+      return response.message_uid;
+    }
+
+    const authorId = await this.getSupportTeammateId();
     const payload: Record<string, unknown> = {
-      sender,
-      to,
+      to: [{ handle: userEmail, name: userName }],
+      sender_name: operatorName,
       body,
       body_format: 'markdown',
-      external_id: externalId,
-      created_at: createdAt,
-      metadata: { is_inbound: isInbound, is_archived: isResolved, should_skip_rules: true },
+      delivered_at: deliveredAt,
+      metadata: threadingMetadata,
     };
-    if (conversationId) payload.conversation_id = conversationId;
+    if (authorId) payload.author_id = authorId;
 
-    const r = (await this.frontApiRequest(
+    const response = (await this.frontApiRequest(
       'POST',
-      `/inboxes/${inboxId}/imported_messages`,
+      `/channels/${frontChannelId}/outbound_messages`,
       payload,
-    )) as FrontImportAccepted;
-    return r.message_uid;
+    )) as FrontChannelAccepted;
+    return response.message_uid;
+  }
+
+  // Cached: a Crisp migration imports thousands of operator messages and the teammate ID never
+  // changes during a run. null = looked up but not found, so we don't retry.
+  private async getSupportTeammateId(): Promise<string | null> {
+    if (this.resolvedTeammateId !== undefined) return this.resolvedTeammateId;
+    if (!frontSupportEmail) {
+      this.resolvedTeammateId = null;
+      return null;
+    }
+    try {
+      const teammate = (await this.frontApiRequest(
+        'GET',
+        `/teammates/alt:email:${encodeURIComponent(frontSupportEmail)}`,
+      )) as { id: string };
+      this.resolvedTeammateId = teammate.id;
+      logger.log(`Resolved Front teammate for ${frontSupportEmail} → ${teammate.id}`);
+      return this.resolvedTeammateId;
+    } catch (err) {
+      logger.warn(
+        `Could not resolve Front teammate for ${frontSupportEmail}: ${(err as Error).message} — outbound messages will be unattributed`,
+      );
+      this.resolvedTeammateId = null;
+      return null;
+    }
   }
 
   private async waitForMessageProcessed(messageUid: string): Promise<void> {
@@ -339,8 +560,10 @@ export class FrontImportService {
   }
 
   private async resolveConversationId(messageUid: string): Promise<string | undefined> {
-    // Front processes imported messages asynchronously; poll until the message is visible.
-    const delays = [1000, 2000, 3000, 5000];
+    // Front processes channel messages asynchronously; poll until the message is visible.
+    // The contact-based fallback in CrispMigrationService.migrateUser handles cases where
+    // this still times out, so the migration itself is no longer blocked on resolution here.
+    const delays = [1500, 2500, 4000, 6000];
     for (let attempt = 0; attempt < delays.length; attempt++) {
       await this.delay(delays[attempt]);
       try {
@@ -364,22 +587,60 @@ export class FrontImportService {
     return undefined;
   }
 
-  private async addComment(conversationId: string, note: CrispNote): Promise<string | undefined> {
+  private buildCommentBody(note: CrispNote): string {
     const body = note.content?.trim();
-    if (!body) return undefined;
+    if (!body) return '';
 
     const authorLabel = note.user?.nickname ? ` (${note.user.nickname})` : '';
     const dateLabel = note.timestamp
-      ? ` on ${new Date(note.timestamp).toISOString().slice(0, 10)}`
+      ? ` on ${new Date(note.timestamp).toISOString().replace('T', ' ').slice(0, 16)} UTC`
       : '';
 
-    const commentBody = `**[Crisp Admin Note made by${authorLabel}${dateLabel}]**\n\n${body}`;
+    return `**[Crisp Admin Note made by${authorLabel}${dateLabel}]**\n\n${body}`;
+  }
+
+  // Comments don't accept external_id, so dedup re-runs by comparing computed bodies against
+  // the conversation's existing comments. One GET per conversation per migration run.
+  private async getExistingCommentBodies(conversationId: string): Promise<Set<string>> {
+    const bodies = new Set<string>();
+    try {
+      const result = (await this.frontApiRequest(
+        'GET',
+        `/conversations/${conversationId}/comments?limit=100`,
+      )) as { _results?: Array<{ body?: string }> };
+      for (const c of result._results ?? []) {
+        if (c.body) bodies.add(c.body);
+      }
+    } catch (err) {
+      logger.warn(
+        `Could not list existing comments on ${conversationId}: ${(err as Error).message} — proceeding without dedup`,
+      );
+    }
+    return bodies;
+  }
+
+  private async addComment(
+    conversationId: string,
+    note: CrispNote,
+    commentBody: string,
+  ): Promise<string | undefined> {
+    if (!commentBody) return undefined;
+
+    const payload: Record<string, unknown> = { body: commentBody };
+
+    // Front's comment API does not officially document backdating, but accepts these fields
+    // on other write paths (sync messages); send them so the comment timestamp reflects the
+    // original Crisp note time when honoured. The body header above is the guaranteed fallback.
+    if (note.timestamp) {
+      const seconds = Math.floor(note.timestamp / 1000);
+      payload.posted_at = seconds;
+      payload.created_at = seconds;
+    }
+
     const result = (await this.frontApiRequest(
       'POST',
       `/conversations/${conversationId}/comments`,
-      {
-        body: commentBody,
-      },
+      payload,
     )) as { id?: string };
 
     logger.log(`Added comment to ${conversationId}`);
@@ -388,6 +649,16 @@ export class FrontImportService {
 
   private resolveOperatorName(msg: CrispMessage): string {
     return msg.user?.nickname || SUPPORT_SENDER_NAME;
+  }
+
+  private hashMessageContent(msg: CrispMessage): string {
+    const content =
+      typeof msg.content === 'string'
+        ? msg.content
+        : msg.content
+          ? JSON.stringify(msg.content)
+          : '';
+    return createHash('sha1').update(`${msg.from}|${msg.type}|${content}`).digest('hex').slice(0, 16);
   }
 
   private extractMessageText(msg: CrispMessage): string {
@@ -444,6 +715,42 @@ export class FrontImportService {
     return true;
   }
 
+  // Channel API requires a short-lived HS256 JWT signed with the app channel secret.
+  // Regular Front API endpoints use the static API token.
+  private getAuthHeader(path: string): string {
+    if (path.includes('/inbound_messages') || path.includes('/outbound_messages')) {
+      if (!frontAppUid) throw new Error('FRONT_APP_UID is not set.');
+      if (!frontChannelSigningSecret) throw new Error('FRONT_CHANNEL_SIGNING_SECRET is not set.');
+
+      const header = this.base64url(JSON.stringify({ typ: 'JWT', alg: 'HS256' }));
+      const payload = this.base64url(
+        JSON.stringify({
+          iss: frontAppUid,
+          jti: randomUUID(),
+          sub: frontChannelId,
+          exp: Math.floor(Date.now() / 1000) + 10,
+        }),
+      );
+      const signingInput = `${header}.${payload}`;
+      const signature = createHmac('sha256', frontChannelSigningSecret)
+        .update(signingInput)
+        .digest('base64')
+        .replace(/=/g, '')
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_');
+      return `Bearer ${signingInput}.${signature}`;
+    }
+    return `Bearer ${frontChatApiToken}`;
+  }
+
+  private base64url(str: string): string {
+    return Buffer.from(str)
+      .toString('base64')
+      .replace(/=/g, '')
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_');
+  }
+
   private async frontApiRequest(
     method: string,
     path: string,
@@ -453,7 +760,7 @@ export class FrontImportService {
     const response = await fetch(`${FRONT_API_BASE_URL}${path}`, {
       method,
       headers: {
-        Authorization: `Bearer ${frontChatApiToken}`,
+        Authorization: this.getAuthHeader(path),
         'Content-Type': 'application/json',
       },
       ...(body !== undefined ? { body: JSON.stringify(body) } : {}),

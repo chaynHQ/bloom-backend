@@ -8,6 +8,7 @@ import {
   updateMailchimpProfile,
 } from 'src/api/mailchimp/mailchimp-api';
 import {
+  ListMemberCustomFields,
   ListMemberPartial,
   MAILCHIMP_MERGE_FIELD_TYPES,
 } from 'src/api/mailchimp/mailchimp-api.interfaces';
@@ -328,28 +329,28 @@ export class ServiceUserProfilesService {
       await updateMailchimpProfile(data.mailchimpSchema, email);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'unknown error';
-      logger.error(`Update Mailchimp chat activity error - ${message}`);
+      logger.error(`Update Mailchimp chat activity error for ${email} - ${message}`);
     }
   }
 
   serializeChatActivityData(chatUser: ChatUserEntity) {
-    const sentAt = chatUser.lastMessageSentAt?.toISOString() ?? '';
-    const receivedAt = chatUser.lastMessageReceivedAt?.toISOString() ?? '';
-    const readAt = chatUser.lastMessageReadAt?.toISOString() ?? '';
+    const sentAt = chatUser.lastMessageSentAt?.toISOString();
+    const receivedAt = chatUser.lastMessageReceivedAt?.toISOString();
+    const readAt = chatUser.lastMessageReadAt?.toISOString();
 
     const frontChatSchema = {
-      last_message_sent_at: sentAt,
-      last_message_received_at: receivedAt,
-      last_message_read_at: readAt,
+      last_message_sent_at: sentAt ?? '',
+      last_message_received_at: receivedAt ?? '',
+      last_message_read_at: readAt ?? '',
     };
 
-    const mailchimpSchema = {
-      merge_fields: {
-        CHATLSTMTX: sentAt,
-        CHATLSTMRX: receivedAt,
-        CHATMSGRD: readAt,
-      },
-    } as ListMemberPartial;
+    // Omit undefined timestamps — Mailchimp date merge fields reject empty strings with 400.
+    const mergeFields: ListMemberCustomFields = {};
+    if (sentAt) mergeFields.CHATLSTMTX = sentAt;
+    if (receivedAt) mergeFields.CHATLSTMRX = receivedAt;
+    if (readAt) mergeFields.CHATMSGRD = readAt;
+
+    const mailchimpSchema = { merge_fields: mergeFields } as ListMemberPartial;
 
     return { frontChatSchema, mailchimpSchema };
   }

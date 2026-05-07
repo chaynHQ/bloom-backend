@@ -75,14 +75,14 @@ describe('AppController', () => {
 
         await webhooksController.handleFrontChatWebhook(req, data, headers);
 
-        expect(mockFrontChatWebhookService.handleFrontWebhook).toHaveBeenCalledWith(
-          req.rawBody,
+        expect(mockFrontChatWebhookService.handleFrontWebhook).toHaveBeenCalledWith({
+          rawBody: req.rawBody,
           data,
           headers,
-          'https',
-          'example.com',
-          '/webhooks/front-chat',
-        );
+          protocol: 'https',
+          host: 'example.com',
+          originalUrl: '/webhooks/front-chat',
+        });
       });
     });
   });
