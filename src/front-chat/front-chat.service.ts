@@ -706,22 +706,42 @@ export class FrontChatService {
     });
   }
 
+  private getValidatedAttachmentFetchUrl(rawUrl: string): string {
+    const parsed = new URL(rawUrl);
+    if (parsed.protocol !== 'https:') {
+      throw new Error('Invalid attachment URL');
+    }
+    const hostname = parsed.hostname.toLowerCase();
+    const isAllowedHost =
+      hostname === 'api2.frontapp.com' ||
+      hostname.endsWith('.frontapp.com') ||
+      hostname.endsWith('.crisp.chat') ||
+      hostname.endsWith('.amazonaws.com') ||
+      hostname.endsWith('.cloudfront.net');
+    if (!isAllowedHost) {
+      throw new Error('Invalid attachment URL');
+    }
+    return parsed.toString();
+  }
+
   async fetchAttachment(url: string): Promise<{ buffer: Buffer; contentType: string }> {
     if (!this.isValidAttachmentUrl(url)) {
       throw new Error('Invalid attachment URL');
     }
 
+    const safeUrl = this.getValidatedAttachmentFetchUrl(url);
+
     // Crisp CDN attachments are public — fetch directly without Front auth.
-    const parsed = new URL(url);
+    const parsed = new URL(safeUrl);
     if (parsed.hostname.endsWith('.crisp.chat')) {
-      const response = await fetch(url);
+      const response = await fetch(safeUrl);
       if (!response.ok) throw new Error(`Crisp CDN fetch failed (${response.status})`);
       const contentType = response.headers.get('content-type') ?? 'application/octet-stream';
       return { buffer: Buffer.from(await response.arrayBuffer()), contentType };
     }
 
     // Front attachment URLs require auth and redirect to an S3 presigned URL.
-    const initial = await this.frontAttachmentRequest(url);
+    const initial = await this.frontAttachmentRequest(safeUrl);
 
     if (initial.statusCode >= 200 && initial.statusCode < 300 && initial.buffer) {
       return {
@@ -731,7 +751,8 @@ export class FrontChatService {
     }
 
     if (initial.statusCode >= 300 && initial.statusCode < 400 && initial.location) {
-      const cdnResponse = await fetch(initial.location);
+      const safeRedirectUrl = this.getValidatedAttachmentFetchUrl(initial.location);
+      const cdnResponse = await fetch(safeRedirectUrl);
       if (cdnResponse.ok) {
         const contentType = cdnResponse.headers.get('content-type') ?? 'application/octet-stream';
         return { buffer: Buffer.from(await cdnResponse.arrayBuffer()), contentType };
