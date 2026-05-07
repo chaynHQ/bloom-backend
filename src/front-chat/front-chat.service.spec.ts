@@ -1,11 +1,17 @@
+import { EventEmitter } from 'events';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { ChatUserEntity } from 'src/entities/chat-user.entity';
 import { UserEntity } from 'src/entities/user.entity';
-import { FrontChatService } from './front-chat.service';
+import { fetchFrontAttachment, FrontChatService } from './front-chat.service';
 
 const mockFetch = jest.fn();
 global.fetch = mockFetch;
+
+const mockHttpsGet = jest.fn();
+jest.mock('https', () => ({
+  get: (...args: unknown[]) => mockHttpsGet(...args),
+}));
 
 // Must be a literal here — jest.mock factories are hoisted before const declarations.
 const TEST_SUPPORT_EMAIL = 'test-support@bloom.chayn.co';
@@ -815,11 +821,13 @@ describe('FrontChatService', () => {
       const { messages } = await service.getConversationHistory(user);
 
       expect(messages).toHaveLength(1);
+      // Crisp CDN URLs are public — returned directly so the browser fetches them
+      // without going through our proxy (avoids SSRF on user-supplied URLs).
       expect(messages[0]).toMatchObject({
         id: 'msg_1',
         kind: 'image',
         text: 'photo.jpg',
-        attachmentUrl: `/front-chat/attachment-proxy?url=${encodeURIComponent(crispUrl)}`,
+        attachmentUrl: crispUrl,
       });
     });
 
@@ -860,73 +868,7 @@ describe('FrontChatService', () => {
     });
   });
 
-  // ── fetchAttachment ──────────────────────────────────────────────────────────
-
-  describe('fetchAttachment', () => {
-    it('returns buffer directly when Front responds with 200 (no redirect)', async () => {
-      const url = 'https://chayneb55.api.frontapp.com/messages/msg_abc/download/fil_xyz';
-      jest.spyOn(service as any, 'frontAttachmentRequest').mockResolvedValueOnce({
-        statusCode: 200,
-        buffer: Buffer.from([1, 2, 3]),
-        contentType: 'image/jpeg',
-      });
-
-      const result = await service.fetchAttachment(url);
-
-      expect(result.contentType).toBe('image/jpeg');
-      expect(result.buffer).toBeInstanceOf(Buffer);
-      expect(mockFetch).not.toHaveBeenCalled();
-    });
-
-    it('fetches CDN Location URL without auth when Front returns a redirect', async () => {
-      const url = 'https://chayneb55.api.frontapp.com/messages/msg_abc/download/fil_xyz';
-      const cdnUrl = 'https://s3.amazonaws.com/bucket/file?X-Amz-Signature=abc';
-
-      jest.spyOn(service as any, 'frontAttachmentRequest').mockResolvedValueOnce({
-        statusCode: 302,
-        location: cdnUrl,
-      });
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        headers: { get: () => 'audio/webm' },
-        arrayBuffer: async () => new ArrayBuffer(0),
-      });
-
-      const result = await service.fetchAttachment(url);
-
-      expect(mockFetch.mock.calls[0][0]).toBe(cdnUrl);
-      expect(result.contentType).toBe('audio/webm');
-    });
-
-    it('throws when Front returns non-ok and non-redirect', async () => {
-      const url = 'https://chayneb55.api.frontapp.com/messages/msg_abc/download/fil_xyz';
-      jest.spyOn(service as any, 'frontAttachmentRequest').mockResolvedValueOnce({
-        statusCode: 403,
-      });
-
-      await expect(service.fetchAttachment(url)).rejects.toThrow(
-        'Front attachment fetch failed (403)',
-      );
-    });
-
-    it('throws when CDN returns non-ok status', async () => {
-      const url = 'https://chayneb55.api.frontapp.com/messages/msg_abc/download/fil_xyz';
-      jest.spyOn(service as any, 'frontAttachmentRequest').mockResolvedValueOnce({
-        statusCode: 302,
-        location: 'https://s3.amazonaws.com/bucket/file?X-Amz-Signature=abc',
-      });
-      mockFetch.mockResolvedValueOnce({ ok: false, status: 403 });
-
-      await expect(service.fetchAttachment(url)).rejects.toThrow('CDN fetch failed (403)');
-    });
-
-    it('throws for non-frontapp URLs', async () => {
-      await expect(service.fetchAttachment('https://evil.com/image.jpg')).rejects.toThrow(
-        'Invalid attachment URL',
-      );
-      expect(mockFetch).not.toHaveBeenCalled();
-    });
-  });
+  // fetchAttachment behaviour is covered in front-api.spec.ts where the implementation lives.
 
   describe('getConversationHistory — audio attachments', () => {
     const user = { id: 'user-1', email: 'user@example.com', name: 'Alex' };
@@ -1084,5 +1026,108 @@ describe('FrontChatService', () => {
         'Front attachment upload failed (413)',
       );
     });
+  });
+});
+
+// ── fetchFrontAttachment (module-level) ────────────────────────────────────────
+
+function buildHttpsResponse({
+  statusCode,
+  headers = {},
+  body,
+}: {
+  statusCode: number;
+  headers?: Record<string, string>;
+  body?: Buffer;
+}): EventEmitter & { statusCode: number; headers: Record<string, string>; resume: () => void } {
+  const emitter = new EventEmitter() as EventEmitter & {
+    statusCode: number;
+    headers: Record<string, string>;
+    resume: () => void;
+  };
+  emitter.statusCode = statusCode;
+  emitter.headers = headers;
+  emitter.resume = () => undefined;
+  // Schedule data/end ticks after the caller's listeners attach.
+  process.nextTick(() => {
+    if (body) emitter.emit('data', body);
+    emitter.emit('end');
+  });
+  return emitter;
+}
+
+function mockHttpsResponse(args: {
+  statusCode: number;
+  headers?: Record<string, string>;
+  body?: Buffer;
+}) {
+  mockHttpsGet.mockImplementationOnce((_url: string, _opts: unknown, cb: (res: unknown) => void) => {
+    cb(buildHttpsResponse(args));
+    const reqEmitter = new EventEmitter();
+    return reqEmitter;
+  });
+}
+
+describe('fetchFrontAttachment', () => {
+  beforeEach(() => {
+    mockHttpsGet.mockReset();
+    mockFetch.mockReset();
+  });
+
+  it('returns buffer directly when Front responds with 200 (no redirect)', async () => {
+    const url = 'https://chayneb55.api.frontapp.com/messages/msg_abc/download/fil_xyz';
+    mockHttpsResponse({
+      statusCode: 200,
+      headers: { 'content-type': 'image/jpeg' },
+      body: Buffer.from([1, 2, 3]),
+    });
+
+    const result = await fetchFrontAttachment(url);
+
+    expect(result.contentType).toBe('image/jpeg');
+    expect(result.buffer).toBeInstanceOf(Buffer);
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it('fetches CDN Location URL without auth when Front returns a redirect', async () => {
+    const url = 'https://chayneb55.api.frontapp.com/messages/msg_abc/download/fil_xyz';
+    const cdnUrl = 'https://s3.amazonaws.com/bucket/file?X-Amz-Signature=abc';
+    mockHttpsResponse({ statusCode: 302, headers: { location: cdnUrl } });
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      headers: { get: () => 'audio/webm' },
+      arrayBuffer: async () => new ArrayBuffer(0),
+    });
+
+    const result = await fetchFrontAttachment(url);
+
+    expect(mockFetch.mock.calls[0][0]).toBe(cdnUrl);
+    expect(result.contentType).toBe('audio/webm');
+  });
+
+  it('throws when Front returns non-ok and non-redirect', async () => {
+    const url = 'https://chayneb55.api.frontapp.com/messages/msg_abc/download/fil_xyz';
+    mockHttpsResponse({ statusCode: 403 });
+
+    await expect(fetchFrontAttachment(url)).rejects.toThrow(
+      'Front attachment fetch failed (403)',
+    );
+  });
+
+  it('throws when CDN returns non-ok status', async () => {
+    const url = 'https://chayneb55.api.frontapp.com/messages/msg_abc/download/fil_xyz';
+    const cdnUrl = 'https://s3.amazonaws.com/bucket/file?X-Amz-Signature=abc';
+    mockHttpsResponse({ statusCode: 302, headers: { location: cdnUrl } });
+    mockFetch.mockResolvedValueOnce({ ok: false, status: 403 });
+
+    await expect(fetchFrontAttachment(url)).rejects.toThrow('CDN fetch failed (403)');
+  });
+
+  it('throws for non-frontapp URLs', async () => {
+    await expect(fetchFrontAttachment('https://evil.com/image.jpg')).rejects.toThrow(
+      'Invalid attachment URL',
+    );
+    expect(mockHttpsGet).not.toHaveBeenCalled();
+    expect(mockFetch).not.toHaveBeenCalled();
   });
 });

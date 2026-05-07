@@ -1,13 +1,11 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { createHmac, timingSafeEqual } from 'crypto';
-import { EVENT_NAME } from 'src/event-logger/event-logger.interface';
 import { EventLoggerService } from 'src/event-logger/event-logger.service';
 import { Logger } from 'src/logger/logger';
 import { ServiceUserProfilesService } from 'src/service-user-profiles/service-user-profiles.service';
 import { frontChannelSigningSecret, frontChatWebhookToken } from 'src/utils/constants';
 import { formatAuthorName } from 'src/utils/html';
 import {
-  FrontChannelAttachment,
   FrontChannelOutboundPayload,
   isChannelApiRequest,
 } from 'src/webhooks/dto/front-channel-webhook.dto';
@@ -16,8 +14,23 @@ import {
   FrontWebhookMessageAuthor,
 } from 'src/webhooks/dto/front-chat-webhook.dto';
 import { FrontChatGateway } from './front-chat.gateway';
-import { FRONT_WEBHOOK_EVENT_TYPE } from './front-chat.interface';
+import { buildAttachmentUrl, classifyAttachment } from './front-chat.helpers';
+import {
+  FRONT_WEBHOOK_EVENT_TO_EVENT_NAME,
+  FRONT_WEBHOOK_EVENT_TYPE,
+} from './front-chat.interface';
 import { buildThreadRef, FrontChatService } from './front-chat.service';
+
+const CHANNEL_API_TIMESTAMP_TOLERANCE_MS = 5 * 60 * 1000;
+
+export interface FrontWebhookRequest {
+  rawBody: Buffer | undefined;
+  data: Record<string, unknown>;
+  headers: Record<string, string>;
+  protocol: string;
+  host: string | undefined;
+  originalUrl: string;
+}
 
 @Injectable()
 export class FrontChatWebhookService {
@@ -32,42 +45,16 @@ export class FrontChatWebhookService {
 
   // Single entry point for the /webhooks/front-chat endpoint. Routes between the
   // Events API (bearer auth) and Channel API (HMAC auth + typed dispatch).
-  async handleFrontWebhook(
-    rawBody: Buffer | undefined,
-    data: Record<string, unknown>,
-    headers: Record<string, string>,
-    protocol: string,
-    host: string | undefined,
-    originalUrl: string,
-  ): Promise<unknown> {
-    if (isChannelApiRequest(data)) {
-      return this.handleFrontChannelRequest(rawBody, data, headers, protocol, host, originalUrl);
+  async handleFrontWebhook(req: FrontWebhookRequest): Promise<unknown> {
+    if (isChannelApiRequest(req.data)) {
+      return this.handleFrontChannelRequest(req);
     }
 
-    if (!frontChatWebhookToken) {
-      throw new HttpException(
-        'Front Chat webhook token not configured',
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
+    this.verifyFrontEventsBearer(req.headers);
+    return this.handleFrontEvent(req.data as unknown as FrontChatWebhookDto);
+  }
 
-    const authHeader: string | undefined = headers['authorization'];
-    if (!authHeader?.startsWith('Bearer ')) {
-      this.logger.error('Front Chat webhook - missing or invalid Authorization header');
-      throw new HttpException(
-        'Front Chat webhook error - missing or invalid Authorization header',
-        HttpStatus.UNAUTHORIZED,
-      );
-    }
-
-    const provided = Buffer.from(authHeader.slice(7));
-    const expected = Buffer.from(frontChatWebhookToken);
-    if (provided.length !== expected.length || !timingSafeEqual(provided, expected)) {
-      this.logger.error('Front Chat webhook - invalid token');
-      throw new HttpException('Front Chat webhook error - invalid token', HttpStatus.UNAUTHORIZED);
-    }
-
-    const webhookData = data as unknown as FrontChatWebhookDto;
+  private async handleFrontEvent(webhookData: FrontChatWebhookDto): Promise<void> {
     const email = webhookData?.conversation?.recipient?.handle;
     if (!email) {
       // Front sends events (e.g. "tag") with no conversation recipient — acknowledge
@@ -82,12 +69,7 @@ export class FrontChatWebhookService {
         .catch(() => {});
     }
 
-    const eventMap: Partial<Record<string, EVENT_NAME>> = {
-      [FRONT_WEBHOOK_EVENT_TYPE.INBOUND]: EVENT_NAME.CHAT_MESSAGE_SENT,
-      [FRONT_WEBHOOK_EVENT_TYPE.OUTBOUND]: EVENT_NAME.CHAT_MESSAGE_RECEIVED,
-      [FRONT_WEBHOOK_EVENT_TYPE.OUT_REPLY]: EVENT_NAME.CHAT_MESSAGE_RECEIVED,
-    };
-    const eventName = eventMap[webhookData.type];
+    const eventName = FRONT_WEBHOOK_EVENT_TO_EVENT_NAME[webhookData.type];
     if (!eventName) return;
 
     try {
@@ -125,21 +107,7 @@ export class FrontChatWebhookService {
       (data as FrontChannelOutboundPayload).metadata?.external_conversation_id ??
       (chatUser ? buildThreadRef(chatUser.userId) : externalId);
 
-    const attachments = (payload.attachments ?? []) as FrontChannelAttachment[];
-    const imageAttachment = attachments.find((a) => a.content_type?.startsWith('image/') && a.url);
-    const audioAttachment = !imageAttachment
-      ? attachments.find((a) => a.content_type?.startsWith('audio/') && a.url)
-      : undefined;
-    const fileAttachment =
-      !imageAttachment && !audioAttachment ? attachments.find((a) => a.url) : undefined;
-    const attachment = imageAttachment ?? audioAttachment ?? fileAttachment;
-    const attachmentKind: 'image' | 'voice' | 'file' | undefined = imageAttachment
-      ? 'image'
-      : audioAttachment
-        ? 'voice'
-        : fileAttachment
-          ? 'file'
-          : undefined;
+    const attachment = classifyAttachment(payload.attachments);
 
     if (recipientEmail && (messageBody || attachment)) {
       this.frontChatGateway.emitAgentReply(recipientEmail, {
@@ -148,21 +116,20 @@ export class FrontChatWebhookService {
         authorEmail: payload.author?.email,
         authorName: formatAuthorName(payload.author as FrontWebhookMessageAuthor | undefined),
         emittedAt: Math.floor(Date.now() / 1000),
-        ...(attachment?.url &&
-          attachmentKind && {
-            attachmentUrl: `/front-chat/attachment-proxy?url=${encodeURIComponent(attachment.url)}`,
-            attachmentName: attachment.filename,
-            kind: attachmentKind,
-          }),
+        ...(attachment && {
+          attachmentUrl: buildAttachmentUrl(attachment.url),
+          attachmentName: attachment.filename,
+          kind: attachment.kind,
+        }),
       });
       this.logger.log(`Front Channel: forwarded agent reply to ${recipientEmail}`);
 
       this.frontChatService
         .updateChatUserByEmail(recipientEmail, { lastMessageReceivedAt: new Date() })
-        .then((chatUser) => {
-          if (chatUser) {
+        .then((updated) => {
+          if (updated) {
             return this.serviceUserProfilesService.updateServiceUserProfilesChatActivity(
-              chatUser,
+              updated,
               recipientEmail,
             );
           }
@@ -181,17 +148,59 @@ export class FrontChatWebhookService {
     };
   }
 
+  private async handleFrontChannelRequest(req: FrontWebhookRequest): Promise<unknown> {
+    this.verifyFrontChannelSignature(req.rawBody, req.headers);
+
+    const type = (req.data as { type?: string }).type;
+
+    if (type === 'authorization') {
+      // Channel registration handshake — echo back the URL Front should use for future calls.
+      const webhookUrl = `${req.protocol}://${req.host}${req.originalUrl}`;
+      this.logger.log(`Front Channel authorization OK — echoing webhook_url=${webhookUrl}`);
+      return { type: 'success', webhook_url: webhookUrl };
+    }
+
+    if (type === 'message') {
+      return this.handleFrontChannelOutbound(req.data as unknown as FrontChannelOutboundPayload);
+    }
+
+    // Other channel events (delete, message_imported, etc.) — acknowledge generically.
+    this.logger.log(`Front Channel request type="${type}" acknowledged without handler`);
+    return { type: 'success' };
+  }
+
+  private verifyFrontEventsBearer(headers: Record<string, string>): void {
+    if (!frontChatWebhookToken) {
+      throw new HttpException(
+        'Front Chat webhook token not configured',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+
+    const authHeader = headers['authorization'];
+    if (!authHeader?.startsWith('Bearer ')) {
+      this.logger.error('Front Chat webhook - missing or invalid Authorization header');
+      throw new HttpException(
+        'Front Chat webhook error - missing or invalid Authorization header',
+        HttpStatus.UNAUTHORIZED,
+      );
+    }
+
+    const provided = Buffer.from(authHeader.slice(7));
+    const expected = Buffer.from(frontChatWebhookToken);
+    if (provided.length !== expected.length || !timingSafeEqual(provided, expected)) {
+      this.logger.error('Front Chat webhook - invalid token');
+      throw new HttpException('Front Chat webhook error - invalid token', HttpStatus.UNAUTHORIZED);
+    }
+  }
+
   // Spec: https://dev.frontapp.com/docs/security-1
   //   X-Front-Signature = base64(HMAC-SHA256(secret, `${ts}:${body}`))
   //   X-Front-Request-Timestamp = unix ms (docs say seconds but observed as ms in practice)
-  private async handleFrontChannelRequest(
+  private verifyFrontChannelSignature(
     rawBody: Buffer | undefined,
-    data: FrontChannelOutboundPayload,
     headers: Record<string, string>,
-    protocol: string,
-    host: string | undefined,
-    originalUrl: string,
-  ): Promise<unknown> {
+  ): void {
     if (!frontChannelSigningSecret) {
       this.logger.error('Front Channel signing secret not configured');
       throw new HttpException(
@@ -218,7 +227,7 @@ export class FrontChatWebhookService {
       throw new HttpException('Bad timestamp', HttpStatus.UNAUTHORIZED);
     }
     const tsMs = tsRaw > 1e12 ? tsRaw : tsRaw * 1000;
-    if (Math.abs(Date.now() - tsMs) > 5 * 60 * 1000) {
+    if (Math.abs(Date.now() - tsMs) > CHANNEL_API_TIMESTAMP_TOLERANCE_MS) {
       this.logger.error(
         `Front Channel webhook - timestamp out of range (header=${timestamp}, now=${Date.now()})`,
       );
@@ -242,23 +251,5 @@ export class FrontChatWebhookService {
       );
       throw new HttpException('Invalid signature', HttpStatus.UNAUTHORIZED);
     }
-
-    const type = (data as { type?: string }).type;
-
-    if (type === 'authorization') {
-      // Channel registration handshake — echo back the URL Front should use for future calls.
-      const webhookUrl = `${protocol}://${host}${originalUrl}`;
-      this.logger.log(`Front Channel authorization OK — echoing webhook_url=${webhookUrl}`);
-      return { type: 'success', webhook_url: webhookUrl };
-    }
-
-    if (type === 'message') {
-      return this.handleFrontChannelOutbound(data);
-    }
-
-    // Other channel events (delete, message_imported, etc.) — acknowledge generically.
-    this.logger.log(`Front Channel request type="${type}" acknowledged without handler`);
-    return { type: 'success' };
   }
-
 }

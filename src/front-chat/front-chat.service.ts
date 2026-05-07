@@ -5,22 +5,44 @@ import { ChatUserEntity } from 'src/entities/chat-user.entity';
 import { UserEntity } from 'src/entities/user.entity';
 import { Logger } from 'src/logger/logger';
 import {
+  FRONT_API_BASE_URL,
+  FRONT_SEND_RETRY_DELAYS_MS,
   frontChannelId,
   frontChatApiToken,
   frontContactListId,
-  frontSupportEmail,
 } from 'src/utils/constants';
-import { formatAuthorName, stripHtml } from 'src/utils/html';
 import { isCypressTestEmail } from 'src/utils/utils';
 import { ILike, Repository } from 'typeorm';
-import { FrontChatContactCustomFields, FrontChatContactProfile } from './front-chat.interface';
+import {
+  buildThreadRef,
+  getContactAlias,
+  isValidAttachmentUrl,
+  mapFrontMessageToHistory,
+  serializeCustomFields,
+} from './front-chat.helpers';
+import {
+  ChatHistoryMessage,
+  FrontApiMessage,
+  FrontApiMessageLinks,
+  FrontApiPaginated,
+  FrontChatContactCustomFields,
+  FrontChatContactProfile,
+  FrontChatUser,
+} from './front-chat.interface';
 
-const FRONT_API_BASE_URL = 'https://api2.frontapp.com';
-// Retry delays (ms) applied only to message-send paths so a transient Front 429/5xx
-// doesn't surface as a lost user message. Keep small — the user is waiting on the ack.
-const FRONT_SEND_RETRY_DELAYS_MS = [200, 800];
 const logger = new Logger('FrontChatService');
 
+// Re-export so existing consumers keep importing from this module.
+export { ChatHistoryMessage } from './front-chat.interface';
+export { buildThreadRef } from './front-chat.helpers';
+
+// ── Front HTTP client ──────────────────────────────────────────────────────────
+// Module-level so they're reused without `this` and unit-testable in isolation.
+
+type FrontApiError = Error & { status?: number };
+
+// Retries 429/5xx for message-send paths so a transient Front error doesn't surface
+// as a lost user message. Not used for one-shot reads.
 async function fetchFrontWithRetry(url: string, init: RequestInit): Promise<Response> {
   for (let attempt = 0; ; attempt++) {
     const response = await fetch(url, init);
@@ -31,59 +53,99 @@ async function fetchFrontWithRetry(url: string, init: RequestInit): Promise<Resp
   }
 }
 
-interface FrontChatUser {
-  id: string;
-  email: string;
-  name?: string | null;
+async function frontApiRequest(method: string, path: string, body?: unknown): Promise<unknown> {
+  const response = await fetch(`${FRONT_API_BASE_URL}${path}`, {
+    method,
+    headers: {
+      Authorization: `Bearer ${frontChatApiToken}`,
+      'Content-Type': 'application/json',
+    },
+    ...(body && { body: JSON.stringify(body) }),
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    const error = new Error(
+      `Front API ${method} ${path} failed (${response.status}): ${errorBody}`,
+    ) as FrontApiError;
+    error.status = response.status;
+    throw error;
+  }
+
+  if (response.status === 204) return null;
+  return response.json();
 }
 
-export interface ChatHistoryMessage {
-  id: string;
-  direction: 'user' | 'agent';
-  kind?: 'image' | 'voice' | 'file';
-  text: string;
-  attachmentUrl?: string;
-  /** Original filename — used by the widget to label the download link for `file` kind. */
-  attachmentName?: string;
-  authorName?: string;
-  createdAt: number;
+// Fetches an attachment URL with auth but without following redirects, so we can
+// capture the Location header and fetch the CDN URL separately without auth.
+// Front's download URLs redirect to S3 presigned URLs which reject an Authorization
+// header alongside their own query-string signature.
+function frontAttachmentRequest(url: string): Promise<{
+  statusCode: number;
+  location?: string;
+  buffer?: Buffer;
+  contentType?: string;
+}> {
+  return new Promise((resolve, reject) => {
+    const req = https.get(
+      url,
+      { headers: { Authorization: `Bearer ${frontChatApiToken}` } },
+      (res) => {
+        const statusCode = res.statusCode ?? 0;
+        if (statusCode >= 300 && statusCode < 400) {
+          res.resume();
+          return resolve({ statusCode, location: res.headers.location as string | undefined });
+        }
+        const chunks: Buffer[] = [];
+        res.on('data', (chunk: Buffer) => chunks.push(chunk));
+        res.on('end', () =>
+          resolve({
+            statusCode,
+            buffer: Buffer.concat(chunks),
+            contentType: res.headers['content-type'] as string | undefined,
+          }),
+        );
+        res.on('error', reject);
+      },
+    );
+    req.on('error', reject);
+  });
 }
 
-interface FrontApiPaginated<T> {
-  _results: T[];
-  _pagination?: { next?: string | null };
+export async function fetchFrontAttachment(
+  url: string,
+): Promise<{ buffer: Buffer; contentType: string }> {
+  if (!isValidAttachmentUrl(url)) {
+    throw new Error('Invalid attachment URL');
+  }
+
+  const initial = await frontAttachmentRequest(url);
+
+  if (initial.statusCode >= 200 && initial.statusCode < 300 && initial.buffer) {
+    return {
+      buffer: initial.buffer,
+      contentType: initial.contentType ?? 'application/octet-stream',
+    };
+  }
+
+  if (initial.statusCode >= 300 && initial.statusCode < 400 && initial.location) {
+    const cdnResponse = await fetch(initial.location);
+    if (cdnResponse.ok) {
+      const contentType = cdnResponse.headers.get('content-type') ?? 'application/octet-stream';
+      return { buffer: Buffer.from(await cdnResponse.arrayBuffer()), contentType };
+    }
+    throw new Error(`CDN fetch failed (${cdnResponse.status})`);
+  }
+
+  throw new Error(`Front attachment fetch failed (${initial.statusCode})`);
 }
 
-interface FrontApiAuthor {
-  email?: string;
-  username?: string;
-  first_name?: string;
-  last_name?: string;
+function isFrontContactNotFound(error: unknown): boolean {
+  const status = (error as FrontApiError)?.status;
+  if (status === 404) return true;
+  const message = (error as Error)?.message || '';
+  return message.includes('not_found');
 }
-
-interface FrontApiAttachment {
-  url: string;
-  filename?: string;
-  content_type?: string;
-}
-
-interface FrontApiMessage {
-  id: string;
-  is_inbound?: boolean;
-  created_at?: number;
-  body?: string;
-  text?: string;
-  author?: FrontApiAuthor | null;
-  attachments?: FrontApiAttachment[];
-}
-
-interface FrontApiMessageLinks {
-  _links?: { related?: { conversation?: string } };
-}
-
-// Front groups messages sharing a thread_ref into one conversation, so a stable
-// per-user value gives every user a single long-running conversation.
-export const buildThreadRef = (userId: string) => `bloom-user-${userId}`;
 
 @Injectable()
 export class FrontChatService {
@@ -95,6 +157,8 @@ export class FrontChatService {
     @InjectRepository(UserEntity)
     private readonly userRepository: Repository<UserEntity>,
   ) {}
+
+  // ── ChatUser repository ─────────────────────────────────────────────────────
 
   async getOrCreateChatUser(
     userId: string,
@@ -144,12 +208,10 @@ export class FrontChatService {
   ): Promise<ChatUserEntity | null> {
     const chatUser = await this.chatUserRepository.findOneBy({ userId });
     if (!chatUser) return null;
-
-    // Never overwrite an existing conversation ID with a new one
-    const { frontConversationId, ...rest } = partial;
-    const updates = chatUser.frontConversationId ? rest : { frontConversationId, ...rest };
-
-    return this.chatUserRepository.save({ ...chatUser, ...updates });
+    return this.chatUserRepository.save({
+      ...chatUser,
+      ...this.preserveConversationId(chatUser, partial),
+    });
   }
 
   async updateChatUserByEmail(
@@ -169,10 +231,10 @@ export class FrontChatService {
       chatUser = await this.getOrCreateChatUser(user.id);
     }
 
-    const { frontConversationId, ...rest } = partial;
-    const updates = chatUser.frontConversationId ? rest : { frontConversationId, ...rest };
-
-    return this.chatUserRepository.save({ ...chatUser, ...updates });
+    return this.chatUserRepository.save({
+      ...chatUser,
+      ...this.preserveConversationId(chatUser, partial),
+    });
   }
 
   async getChatUserByEmail(email: string): Promise<ChatUserEntity | null> {
@@ -211,15 +273,25 @@ export class FrontChatService {
     if (!chatUser.lastMessageReceivedAt) return null;
 
     // Already up to date — don't write or sync unnecessarily.
-    if (
-      chatUser.lastMessageReadAt &&
-      chatUser.lastMessageReadAt >= chatUser.lastMessageReceivedAt
-    ) {
+    if (chatUser.lastMessageReadAt && chatUser.lastMessageReadAt >= chatUser.lastMessageReceivedAt) {
       return null;
     }
 
     return this.chatUserRepository.save({ ...chatUser, lastMessageReadAt: new Date() });
   }
+
+  // Once a user is linked to a Front conversation that link is sticky — partial updates
+  // must never overwrite an existing frontConversationId.
+  private preserveConversationId(
+    chatUser: ChatUserEntity,
+    partial: Partial<ChatUserEntity>,
+  ): Partial<ChatUserEntity> {
+    if (!chatUser.frontConversationId) return partial;
+    const { frontConversationId: _omit, ...rest } = partial;
+    return rest;
+  }
+
+  // ── Sending messages to Front (Channel API) ─────────────────────────────────
 
   async sendChannelTextMessage(
     user: FrontChatUser,
@@ -259,18 +331,7 @@ export class FrontChatService {
     }
 
     const data = (await response.json()) as { message_uid?: string };
-
-    // Await the save so the returned chatUser has lastMessageSentAt set — callers use it
-    // directly for Mailchimp sync to avoid a race condition on the subsequent DB fetch.
-    const now = new Date();
-    const chatUser = existingChatUser ?? (await this.getOrCreateChatUser(user.id));
-    const saved = await this.chatUserRepository.save({ ...chatUser, lastMessageSentAt: now });
-
-    if (data.message_uid) {
-      this.scheduleConversationIdResolution(user.id, data.message_uid);
-    }
-
-    return saved;
+    return this.recordMessageSent(user.id, data.message_uid, existingChatUser);
   }
 
   async sendChannelAttachment(
@@ -312,13 +373,24 @@ export class FrontChatService {
     }
 
     const data = (await response.json()) as { message_uid?: string };
+    return this.recordMessageSent(user.id, data.message_uid);
+  }
 
-    const now = new Date();
-    const chatUser = await this.getOrCreateChatUser(user.id);
-    const saved = await this.chatUserRepository.save({ ...chatUser, lastMessageSentAt: now });
+  // Awaits the save so the returned chatUser has lastMessageSentAt set — callers use it
+  // directly for Mailchimp sync to avoid a race condition on the subsequent DB fetch.
+  private async recordMessageSent(
+    userId: string,
+    messageUid: string | undefined,
+    existingChatUser?: ChatUserEntity | null,
+  ): Promise<ChatUserEntity> {
+    const chatUser = existingChatUser ?? (await this.getOrCreateChatUser(userId));
+    const saved = await this.chatUserRepository.save({
+      ...chatUser,
+      lastMessageSentAt: new Date(),
+    });
 
-    if (data.message_uid) {
-      this.scheduleConversationIdResolution(user.id, data.message_uid);
+    if (messageUid) {
+      this.scheduleConversationIdResolution(userId, messageUid);
     }
 
     return saved;
@@ -339,7 +411,7 @@ export class FrontChatService {
     const chatUser = await this.chatUserRepository.findOneBy({ userId });
     if (chatUser?.frontConversationId) return;
 
-    const message = (await this.frontApiRequest(
+    const message = (await frontApiRequest(
       'GET',
       `/messages/alt:uid:${messageUid}`,
     )) as FrontApiMessageLinks;
@@ -353,6 +425,8 @@ export class FrontChatService {
       logger.log(`Resolved conversation ID ${conversationId} for user ${userId}`);
     }
   }
+
+  // ── Conversation history ────────────────────────────────────────────────────
 
   async getConversationHistory(
     user: FrontChatUser,
@@ -374,7 +448,7 @@ export class FrontChatService {
     while (nextPath) {
       let page: FrontApiPaginated<FrontApiMessage>;
       try {
-        page = (await this.frontApiRequest('GET', nextPath)) as FrontApiPaginated<FrontApiMessage>;
+        page = (await frontApiRequest('GET', nextPath)) as FrontApiPaginated<FrontApiMessage>;
       } catch (error) {
         if ((error as { status?: number })?.status === 404) {
           // Stale conversation ID — clear it so the next connection tries a fresh lookup.
@@ -389,75 +463,8 @@ export class FrontChatService {
       }
 
       for (const m of page._results ?? []) {
-        const attachments = m.attachments ?? [];
-        const imageAttachment = attachments.find(
-          (a) => a.content_type?.startsWith('image/') && a.url,
-        );
-        const audioAttachment = !imageAttachment
-          ? attachments.find((a) => a.content_type?.startsWith('audio/') && a.url)
-          : undefined;
-        // Anything else with a URL is a downloadable file (.txt, .pdf, .docx, etc.).
-        const fileAttachment =
-          !imageAttachment && !audioAttachment ? attachments.find((a) => a.url) : undefined;
-
-        // Fallback: Channel API imported messages store files as markdown in the body rather
-        // than as m.attachments. Parse them out so history renders them correctly.
-        let parsedImageUrl: string | undefined;
-        let parsedImageName: string | undefined;
-        if (!imageAttachment && m.body) {
-          const imgMatch = m.body.match(/!\[([^\]]*)\]\((https?:\/\/[^)\s]+)\)/);
-          if (imgMatch) {
-            parsedImageName = imgMatch[1] || 'image';
-            parsedImageUrl = imgMatch[2];
-          }
-        }
-
-        const text = m.text ?? stripHtml(m.body ?? '');
-        if (!text && !imageAttachment && !audioAttachment && !fileAttachment && !parsedImageUrl)
-          continue;
-
-        // Live agent replies have is_inbound === false. For Channel API imported messages
-        // everything arrives as is_inbound === true; detect imported operator messages by
-        // checking whether the sender handle was the support address.
-        const isAgent = !m.is_inbound || m.author?.email === frontSupportEmail;
-
-        const histMsg: ChatHistoryMessage = {
-          id: m.id,
-          direction: isAgent ? 'agent' : 'user',
-          // Images/files: show filename. Voice: use message body text ("Voice note") for
-          // consistency with fresh messages. Fallback to plain text for everything else.
-          text: imageAttachment
-            ? (imageAttachment.filename ?? 'image')
-            : parsedImageUrl
-              ? (parsedImageName ?? 'image')
-              : audioAttachment
-                ? text || 'Voice note'
-                : fileAttachment
-                  ? (fileAttachment.filename ?? 'attachment')
-                  : text,
-          authorName: formatAuthorName(m.author ?? undefined),
-          createdAt: (m.created_at ?? Date.now() / 1000) * 1000,
-        };
-
-        if (imageAttachment) {
-          histMsg.kind = 'image';
-          histMsg.attachmentUrl = `/front-chat/attachment-proxy?url=${encodeURIComponent(imageAttachment.url)}`;
-          histMsg.attachmentName = imageAttachment.filename;
-        } else if (parsedImageUrl) {
-          histMsg.kind = 'image';
-          histMsg.attachmentUrl = `/front-chat/attachment-proxy?url=${encodeURIComponent(parsedImageUrl)}`;
-          histMsg.attachmentName = parsedImageName;
-        } else if (audioAttachment) {
-          histMsg.kind = 'voice';
-          histMsg.attachmentUrl = `/front-chat/attachment-proxy?url=${encodeURIComponent(audioAttachment.url)}`;
-          histMsg.attachmentName = audioAttachment.filename;
-        } else if (fileAttachment) {
-          histMsg.kind = 'file';
-          histMsg.attachmentUrl = `/front-chat/attachment-proxy?url=${encodeURIComponent(fileAttachment.url)}`;
-          histMsg.attachmentName = fileAttachment.filename;
-        }
-
-        allMessages.push(histMsg);
+        const histMsg = mapFrontMessageToHistory(m);
+        if (histMsg) allMessages.push(histMsg);
       }
 
       const nextUrl = page._pagination?.next;
@@ -470,159 +477,6 @@ export class FrontChatService {
     };
   }
 
-  async contactExists(email: string): Promise<boolean> {
-    if (isCypressTestEmail(email)) return true;
-    try {
-      await this.frontApiRequest('GET', `/contacts/${this.getContactAlias(email)}`);
-      return true;
-    } catch (error) {
-      if (this.isContactNotFoundError(error)) return false;
-      throw error;
-    }
-  }
-
-  async createContact(
-    profile: FrontChatContactProfile & {
-      customFields?: FrontChatContactCustomFields;
-      userId?: string;
-    },
-  ) {
-    const { email, name, customFields, userId } = profile;
-
-    if (isCypressTestEmail(email)) {
-      logger.log('Skipping Front Chat contact creation for Cypress test email');
-      return null;
-    }
-
-    let contact: { id: string } & Record<string, unknown>;
-    try {
-      contact = (await this.frontApiRequest('POST', '/contacts', {
-        // 'email' handle for REST API lookups; 'custom' handle so Channel API messages
-        // (source type used by Application Channels) are linked to this contact instead
-        // of creating a separate auto-contact.
-        handles: [
-          { source: 'email', handle: email },
-          { source: 'custom', handle: email },
-        ],
-        ...(name && { name }),
-        ...(customFields && { custom_fields: this.serializeCustomFields(customFields) }),
-      })) as { id: string } & Record<string, unknown>;
-    } catch (error) {
-      throw new Error(
-        `Create Front Chat contact API call failed: ${error?.message || 'unknown error'}`,
-        { cause: error },
-      );
-    }
-
-    await this.addToFrontContactList(email, contact.id);
-
-    if (userId) {
-      await this.getOrCreateChatUser(userId, { frontContactId: contact.id });
-    }
-
-    return contact;
-  }
-
-  async updateContactProfile(profile: FrontChatContactProfile, email: string) {
-    if (isCypressTestEmail(email)) {
-      logger.log('Skipping Front Chat contact profile update for Cypress test email');
-      return null;
-    }
-
-    const contactId = this.getContactAlias(email);
-    const updateBody: Record<string, unknown> = {};
-    if (profile.name) updateBody.name = profile.name;
-    if (profile.email && profile.email !== email) {
-      updateBody.handles = [{ source: 'email', handle: profile.email }];
-    }
-
-    try {
-      const result = await this.frontApiRequest('PATCH', `/contacts/${contactId}`, updateBody);
-      await this.addToFrontContactList(profile.email ?? email);
-      // When email changes, the new email handle won't have the custom channel handle yet.
-      if (profile.email && profile.email !== email) {
-        this.addChannelHandle(profile.email).catch(() => {});
-      }
-      return result;
-    } catch (error) {
-      // Do NOT fall back to createContact here: it would create a contact with only name/email,
-      // losing all custom field data. getOrCreateFrontContact (widget open) handles backfill with
-      // full data if the contact is missing.
-      throw new Error(
-        `Update Front Chat contact profile API call failed: ${(error as Error)?.message || 'unknown error'}`,
-        { cause: error },
-      );
-    }
-  }
-
-  async updateContactCustomFields(customFields: FrontChatContactCustomFields, email: string) {
-    if (isCypressTestEmail(email)) {
-      logger.log('Skipping Front Chat contact custom fields update for Cypress test email');
-      return null;
-    }
-
-    const serialized = this.serializeCustomFields(customFields);
-
-    try {
-      const contactId = this.getContactAlias(email);
-      const result = await this.frontApiRequest('PATCH', `/contacts/${contactId}`, {
-        custom_fields: serialized,
-      });
-      await this.addToFrontContactList(email);
-      return result;
-    } catch (error) {
-      // Do NOT fall back to createContact here: it would create a contact with only the
-      // partial fields being updated (e.g. just chat-activity timestamps), losing all other
-      // data. Contact creation with full data is handled by createServiceUserProfiles (signup)
-      // and getOrCreateFrontContact (widget open). If the contact doesn't exist here, log and move on.
-      throw new Error(
-        `Update Front Chat contact custom fields API call failed: ${(error as Error)?.message || 'unknown error'}`,
-        { cause: error },
-      );
-    }
-  }
-
-  async deleteContact(email: string) {
-    try {
-      const contactId = this.getContactAlias(email);
-      await this.frontApiRequest('DELETE', `/contacts/${contactId}`);
-    } catch (error) {
-      throw new Error(
-        `Delete Front Chat contact API call failed: ${error?.message || 'unknown error'}`,
-        { cause: error },
-      );
-    }
-  }
-
-  // Without the 'custom' handle, Channel API messages create a separate auto-contact
-  // instead of linking to this one.
-  async addChannelHandle(email: string): Promise<void> {
-    if (isCypressTestEmail(email)) return;
-    try {
-      await this.frontApiRequest('PATCH', `/contacts/${this.getContactAlias(email)}`, {
-        handles: [{ source: 'custom', handle: email }],
-      });
-    } catch {
-      // Non-fatal: duplicate handle or contact not found
-    }
-  }
-
-  private async getInboxId(): Promise<string | null> {
-    if (this.resolvedInboxId) return this.resolvedInboxId;
-    if (!frontChannelId) return null;
-    try {
-      const channel = (await this.frontApiRequest('GET', `/channels/${frontChannelId}`)) as {
-        _links?: { related?: { inbox?: string } };
-      };
-      const inboxUrl = channel._links?.related?.inbox;
-      if (!inboxUrl) return null;
-      this.resolvedInboxId = inboxUrl.split('/').pop()!;
-      return this.resolvedInboxId;
-    } catch {
-      return null;
-    }
-  }
-
   // Public so the Crisp migration can fall back to a contact-based lookup when its in-flight
   // resolveConversationId polling times out — the conversation exists in Front but
   // /messages/alt:uid:{uid} hasn't become consistent within the polling window yet.
@@ -631,12 +485,11 @@ export class FrontChatService {
       const inboxId = await this.getInboxId();
       if (!inboxId) return null;
 
-      let nextPath: string | null =
-        `/contacts/${this.getContactAlias(email)}/conversations?limit=50`;
+      let nextPath: string | null = `/contacts/${getContactAlias(email)}/conversations?limit=50`;
       const matching: { id: string; created_at?: number }[] = [];
 
       while (nextPath) {
-        const data = (await this.frontApiRequest('GET', nextPath)) as FrontApiPaginated<{
+        const data = (await frontApiRequest('GET', nextPath)) as FrontApiPaginated<{
           id: string;
           created_at?: number;
           _links?: { related?: { inbox?: string } };
@@ -665,118 +518,154 @@ export class FrontChatService {
     }
   }
 
-  async deleteCypressFrontChatContacts() {
-    // Front API does not support searching contacts by email prefix — tests call deleteContact directly.
-    logger.log('Cypress Front Chat contact cleanup is handled by individual test teardown');
-  }
-
-  private isValidAttachmentUrl(url: string): boolean {
+  private async getInboxId(): Promise<string | null> {
+    if (this.resolvedInboxId) return this.resolvedInboxId;
+    if (!frontChannelId) return null;
     try {
-      const parsed = new URL(url);
-      return (
-        parsed.protocol === 'https:' &&
-        (parsed.hostname === 'api2.frontapp.com' ||
-          parsed.hostname.endsWith('.frontapp.com') ||
-          parsed.hostname.endsWith('.crisp.chat'))
-      );
-    } catch {
-      return false;
-    }
-  }
-
-  // Fetches an attachment URL with auth but without following redirects, so we can
-  // capture the Location header and fetch the CDN URL separately without auth.
-  // Front's download URLs redirect to S3 presigned URLs which reject an Authorization
-  // header alongside their own query-string signature.
-  private frontAttachmentRequest(url: string): Promise<{
-    statusCode: number;
-    location?: string;
-    buffer?: Buffer;
-    contentType?: string;
-  }> {
-    return new Promise((resolve, reject) => {
-      const req = https.get(
-        url,
-        { headers: { Authorization: `Bearer ${frontChatApiToken}` } },
-        (res) => {
-          const statusCode = res.statusCode ?? 0;
-          if (statusCode >= 300 && statusCode < 400) {
-            res.resume();
-            return resolve({ statusCode, location: res.headers.location as string | undefined });
-          }
-          const chunks: Buffer[] = [];
-          res.on('data', (chunk: Buffer) => chunks.push(chunk));
-          res.on('end', () =>
-            resolve({
-              statusCode,
-              buffer: Buffer.concat(chunks),
-              contentType: res.headers['content-type'] as string | undefined,
-            }),
-          );
-          res.on('error', reject);
-        },
-      );
-      req.on('error', reject);
-    });
-  }
-
-  async fetchAttachment(url: string): Promise<{ buffer: Buffer; contentType: string }> {
-    if (!this.isValidAttachmentUrl(url)) {
-      throw new Error('Invalid attachment URL');
-    }
-
-    // Crisp CDN attachments are public — fetch directly without Front auth.
-    const parsed = new URL(url);
-    if (parsed.hostname.endsWith('.crisp.chat')) {
-      const response = await fetch(url);
-      if (!response.ok) throw new Error(`Crisp CDN fetch failed (${response.status})`);
-      const contentType = response.headers.get('content-type') ?? 'application/octet-stream';
-      return { buffer: Buffer.from(await response.arrayBuffer()), contentType };
-    }
-
-    // Front attachment URLs require auth and redirect to an S3 presigned URL.
-    const initial = await this.frontAttachmentRequest(url);
-
-    if (initial.statusCode >= 200 && initial.statusCode < 300 && initial.buffer) {
-      return {
-        buffer: initial.buffer,
-        contentType: initial.contentType ?? 'application/octet-stream',
+      const channel = (await frontApiRequest('GET', `/channels/${frontChannelId}`)) as {
+        _links?: { related?: { inbox?: string } };
       };
+      const inboxUrl = channel._links?.related?.inbox;
+      if (!inboxUrl) return null;
+      this.resolvedInboxId = inboxUrl.split('/').pop()!;
+      return this.resolvedInboxId;
+    } catch {
+      return null;
     }
-
-    if (initial.statusCode >= 300 && initial.statusCode < 400 && initial.location) {
-      const cdnResponse = await fetch(initial.location);
-      if (cdnResponse.ok) {
-        const contentType = cdnResponse.headers.get('content-type') ?? 'application/octet-stream';
-        return { buffer: Buffer.from(await cdnResponse.arrayBuffer()), contentType };
-      }
-      throw new Error(`CDN fetch failed (${cdnResponse.status})`);
-    }
-
-    throw new Error(`Front attachment fetch failed (${initial.statusCode})`);
   }
 
-  private async frontApiRequest(method: string, path: string, body?: unknown): Promise<unknown> {
-    const response = await fetch(`${FRONT_API_BASE_URL}${path}`, {
-      method,
-      headers: {
-        Authorization: `Bearer ${frontChatApiToken}`,
-        'Content-Type': 'application/json',
-      },
-      ...(body && { body: JSON.stringify(body) }),
-    });
+  // ── Contact API ─────────────────────────────────────────────────────────────
 
-    if (!response.ok) {
-      const errorBody = await response.text();
-      const error = new Error(
-        `Front API ${method} ${path} failed (${response.status}): ${errorBody}`,
-      ) as Error & { status?: number };
-      error.status = response.status;
+  async contactExists(email: string): Promise<boolean> {
+    if (isCypressTestEmail(email)) return true;
+    try {
+      await frontApiRequest('GET', `/contacts/${getContactAlias(email)}`);
+      return true;
+    } catch (error) {
+      if (isFrontContactNotFound(error)) return false;
       throw error;
     }
+  }
 
-    if (response.status === 204) return null;
-    return response.json();
+  async createContact(
+    profile: FrontChatContactProfile & {
+      customFields?: FrontChatContactCustomFields;
+      userId?: string;
+    },
+  ) {
+    const { email, name, customFields, userId } = profile;
+
+    if (isCypressTestEmail(email)) {
+      logger.log('Skipping Front Chat contact creation for Cypress test email');
+      return null;
+    }
+
+    let contact: { id: string } & Record<string, unknown>;
+    try {
+      contact = (await frontApiRequest('POST', '/contacts', {
+        // 'email' handle for REST API lookups; 'custom' handle so Channel API messages
+        // (source type used by Application Channels) are linked to this contact instead
+        // of creating a separate auto-contact.
+        handles: [
+          { source: 'email', handle: email },
+          { source: 'custom', handle: email },
+        ],
+        ...(name && { name }),
+        ...(customFields && { custom_fields: serializeCustomFields(customFields) }),
+      })) as { id: string } & Record<string, unknown>;
+    } catch (error) {
+      throw new Error(
+        `Create Front Chat contact API call failed: ${error?.message || 'unknown error'}`,
+        { cause: error },
+      );
+    }
+
+    await this.addToFrontContactList(email, contact.id);
+
+    if (userId) {
+      await this.getOrCreateChatUser(userId, { frontContactId: contact.id });
+    }
+
+    return contact;
+  }
+
+  async updateContactProfile(profile: FrontChatContactProfile, email: string) {
+    if (isCypressTestEmail(email)) {
+      logger.log('Skipping Front Chat contact profile update for Cypress test email');
+      return null;
+    }
+
+    const contactId = getContactAlias(email);
+    const updateBody: Record<string, unknown> = {};
+    if (profile.name) updateBody.name = profile.name;
+    if (profile.email && profile.email !== email) {
+      updateBody.handles = [{ source: 'email', handle: profile.email }];
+    }
+
+    try {
+      const result = await frontApiRequest('PATCH', `/contacts/${contactId}`, updateBody);
+      await this.addToFrontContactList(profile.email ?? email);
+      // When email changes, the new email handle won't have the custom channel handle yet.
+      if (profile.email && profile.email !== email) {
+        this.addChannelHandle(profile.email).catch(() => {});
+      }
+      return result;
+    } catch (error) {
+      // Do NOT fall back to createContact here: it would create a contact with only name/email,
+      // losing all custom field data. getOrCreateFrontContact (widget open) handles backfill with
+      // full data if the contact is missing.
+      throw new Error(
+        `Update Front Chat contact profile API call failed: ${(error as Error)?.message || 'unknown error'}`,
+        { cause: error },
+      );
+    }
+  }
+
+  async updateContactCustomFields(customFields: FrontChatContactCustomFields, email: string) {
+    if (isCypressTestEmail(email)) {
+      logger.log('Skipping Front Chat contact custom fields update for Cypress test email');
+      return null;
+    }
+
+    try {
+      const contactId = getContactAlias(email);
+      const result = await frontApiRequest('PATCH', `/contacts/${contactId}`, {
+        custom_fields: serializeCustomFields(customFields),
+      });
+      await this.addToFrontContactList(email);
+      return result;
+    } catch (error) {
+      // Do NOT fall back to createContact here — it would replace the existing record with
+      // only the partial fields being updated and wipe the rest.
+      throw new Error(
+        `Update Front Chat contact custom fields API call failed: ${(error as Error)?.message || 'unknown error'}`,
+        { cause: error },
+      );
+    }
+  }
+
+  async deleteContact(email: string) {
+    try {
+      await frontApiRequest('DELETE', `/contacts/${getContactAlias(email)}`);
+    } catch (error) {
+      throw new Error(
+        `Delete Front Chat contact API call failed: ${error?.message || 'unknown error'}`,
+        { cause: error },
+      );
+    }
+  }
+
+  // Without the 'custom' handle, Channel API messages create a separate auto-contact
+  // instead of linking to this one.
+  async addChannelHandle(email: string): Promise<void> {
+    if (isCypressTestEmail(email)) return;
+    try {
+      await frontApiRequest('PATCH', `/contacts/${getContactAlias(email)}`, {
+        handles: [{ source: 'custom', handle: email }],
+      });
+    } catch {
+      // Non-fatal: duplicate handle or contact not found
+    }
   }
 
   // The contact_lists endpoint requires canonical contact IDs (crd_xxx), not aliases.
@@ -789,11 +678,11 @@ export class FrontChatService {
       resolvedId =
         contactId ??
         (
-          (await this.frontApiRequest('GET', `/contacts/${this.getContactAlias(email)}`)) as {
+          (await frontApiRequest('GET', `/contacts/${getContactAlias(email)}`)) as {
             id: string;
           }
         ).id;
-      await this.frontApiRequest('POST', `/contact_lists/${frontContactListId}/contacts`, {
+      await frontApiRequest('POST', `/contact_lists/${frontContactListId}/contacts`, {
         contact_ids: [resolvedId],
       });
     } catch (error) {
@@ -806,26 +695,15 @@ export class FrontChatService {
     }
   }
 
-  private getContactAlias(email: string): string {
-    return `alt:email:${encodeURIComponent(email)}`;
+  async deleteCypressFrontChatContacts() {
+    // Front API does not support searching contacts by email prefix — tests call deleteContact directly.
+    logger.log('Cypress Front Chat contact cleanup is handled by individual test teardown');
   }
 
-  private isContactNotFoundError(error: unknown): boolean {
-    const status = (error as { status?: number })?.status;
-    if (status === 404) return true;
-    const message = (error as Error)?.message || '';
-    return message.includes('not_found');
+  // ── Attachments ─────────────────────────────────────────────────────────────
+
+  fetchAttachment(url: string): Promise<{ buffer: Buffer; contentType: string }> {
+    return fetchFrontAttachment(url);
   }
 
-  private serializeCustomFields(
-    fields: FrontChatContactCustomFields,
-  ): Record<string, string | number | boolean> {
-    const serialized: Record<string, string | number | boolean> = {};
-    for (const [key, value] of Object.entries(fields)) {
-      if (value !== undefined && value !== null) {
-        serialized[key] = value;
-      }
-    }
-    return serialized;
-  }
 }

@@ -49,15 +49,13 @@ export class WebhooksController {
     @Body() data: Record<string, unknown>,
     @Headers() headers,
   ): Promise<unknown> {
-    const proto = (headers['x-forwarded-proto'] as string) || req.protocol || 'https';
-    const host = headers['x-forwarded-host'] || headers['host'];
-    return this.frontChatWebhookService.handleFrontWebhook(
-      req.rawBody,
+    return this.frontChatWebhookService.handleFrontWebhook({
+      rawBody: req.rawBody,
       data,
       headers,
-      proto,
-      host,
-      req.originalUrl ?? req.url,
-    );
+      protocol: (headers['x-forwarded-proto'] as string) || req.protocol || 'https',
+      host: headers['x-forwarded-host'] || headers['host'],
+      originalUrl: req.originalUrl ?? req.url,
+    });
   }
 }
