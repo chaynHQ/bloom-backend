@@ -4,7 +4,12 @@ import * as https from 'https';
 import { ChatUserEntity } from 'src/entities/chat-user.entity';
 import { UserEntity } from 'src/entities/user.entity';
 import { Logger } from 'src/logger/logger';
-import { frontChannelId, frontChatApiToken, frontContactListId, frontSupportEmail } from 'src/utils/constants';
+import {
+  frontChannelId,
+  frontChatApiToken,
+  frontContactListId,
+  frontSupportEmail,
+} from 'src/utils/constants';
 import { formatAuthorName, stripHtml } from 'src/utils/html';
 import { isCypressTestEmail } from 'src/utils/utils';
 import { ILike, Repository } from 'typeorm';
@@ -206,7 +211,10 @@ export class FrontChatService {
     if (!chatUser.lastMessageReceivedAt) return null;
 
     // Already up to date — don't write or sync unnecessarily.
-    if (chatUser.lastMessageReadAt && chatUser.lastMessageReadAt >= chatUser.lastMessageReceivedAt) {
+    if (
+      chatUser.lastMessageReadAt &&
+      chatUser.lastMessageReadAt >= chatUser.lastMessageReceivedAt
+    ) {
       return null;
     }
 
@@ -265,7 +273,10 @@ export class FrontChatService {
     return saved;
   }
 
-  async sendChannelAttachment(user: FrontChatUser, file: Express.Multer.File): Promise<ChatUserEntity | null> {
+  async sendChannelAttachment(
+    user: FrontChatUser,
+    file: Express.Multer.File,
+  ): Promise<ChatUserEntity | null> {
     if (isCypressTestEmail(user.email)) {
       logger.log('Skipping Front attachment send for Cypress test user');
       return null;
@@ -453,7 +464,10 @@ export class FrontChatService {
       nextPath = nextUrl ? nextUrl.replace(FRONT_API_BASE_URL, '') : null;
     }
 
-    return { messages: allMessages.sort((a, b) => a.createdAt - b.createdAt), conversationFound: true };
+    return {
+      messages: allMessages.sort((a, b) => a.createdAt - b.createdAt),
+      conversationFound: true,
+    };
   }
 
   async contactExists(email: string): Promise<boolean> {
@@ -706,40 +720,22 @@ export class FrontChatService {
     });
   }
 
-  private getValidatedAttachmentFetchUrl(rawUrl: string): string {
-    const parsed = new URL(rawUrl);
-    if (parsed.protocol !== 'https:') {
-      throw new Error('Invalid attachment URL');
-    }
-    const hostname = parsed.hostname.toLowerCase();
-    const allowedHosts = new Set([
-      'api2.frontapp.com',
-      'storage.crisp.chat',
-    ]);
-    if (!allowedHosts.has(hostname)) {
-      throw new Error('Invalid attachment URL');
-    }
-    return parsed.toString();
-  }
-
   async fetchAttachment(url: string): Promise<{ buffer: Buffer; contentType: string }> {
     if (!this.isValidAttachmentUrl(url)) {
       throw new Error('Invalid attachment URL');
     }
 
-    const safeUrl = this.getValidatedAttachmentFetchUrl(url);
-
     // Crisp CDN attachments are public — fetch directly without Front auth.
-    const parsed = new URL(safeUrl);
+    const parsed = new URL(url);
     if (parsed.hostname.endsWith('.crisp.chat')) {
-      const response = await fetch(safeUrl);
+      const response = await fetch(url);
       if (!response.ok) throw new Error(`Crisp CDN fetch failed (${response.status})`);
       const contentType = response.headers.get('content-type') ?? 'application/octet-stream';
       return { buffer: Buffer.from(await response.arrayBuffer()), contentType };
     }
 
     // Front attachment URLs require auth and redirect to an S3 presigned URL.
-    const initial = await this.frontAttachmentRequest(safeUrl);
+    const initial = await this.frontAttachmentRequest(url);
 
     if (initial.statusCode >= 200 && initial.statusCode < 300 && initial.buffer) {
       return {
@@ -749,8 +745,7 @@ export class FrontChatService {
     }
 
     if (initial.statusCode >= 300 && initial.statusCode < 400 && initial.location) {
-      const safeRedirectUrl = this.getValidatedAttachmentFetchUrl(initial.location);
-      const cdnResponse = await fetch(safeRedirectUrl);
+      const cdnResponse = await fetch(initial.location);
       if (cdnResponse.ok) {
         const contentType = cdnResponse.headers.get('content-type') ?? 'application/octet-stream';
         return { buffer: Buffer.from(await cdnResponse.arrayBuffer()), contentType };
