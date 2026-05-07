@@ -112,7 +112,6 @@ export const formatUserObject = (userObject: UserEntity): GetUserDto => {
       deletedAt: userObject.deletedAt,
       name: userObject.name,
       email: userObject.email,
-      firebaseUid: userObject.firebaseUid,
       isActive: userObject.isActive,
       lastActiveAt: userObject.lastActiveAt,
       isSuperAdmin: userObject.isSuperAdmin,
