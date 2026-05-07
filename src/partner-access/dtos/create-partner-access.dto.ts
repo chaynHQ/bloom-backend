@@ -22,6 +22,7 @@ export class CreatePartnerAccessDto {
 
   @IsInt()
   @Min(0)
+  @Max(0)
   @IsDefined()
   @ApiProperty({ type: Number })
   therapySessionsRedeemed: number;
