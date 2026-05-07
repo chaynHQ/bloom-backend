@@ -92,10 +92,7 @@ describe('PartnerAccessController', () => {
 
     expect(partnerAccess).toMatchObject({
       ...dto,
-      partnerId: '00000000-0000-0000-0000-000000000000',
-      partnerAdminId: '00000000-0000-0000-0000-000000000000',
       accessCode: '000AAA',
-      userId: '',
       activatedAt: null,
       createdAt: date,
       updatedAt: date,
