@@ -28,6 +28,7 @@ jest.mock('src/api/mailchimp/mailchimp-api');
 const mockFrontChatServiceMethods = {
   getOrCreateChatUser: jest.fn().mockResolvedValue({}),
   addChannelHandle: jest.fn().mockResolvedValue(undefined),
+  syncConversationLanguage: jest.fn().mockResolvedValue(undefined),
 };
 
 describe('Service user profiles', () => {
@@ -292,6 +293,7 @@ describe('Service user profiles', () => {
         mockUserEntity,
         false,
         false,
+        false,
         mockUserEntity.email,
       );
 
@@ -344,7 +346,7 @@ describe('Service user profiles', () => {
       } as any);
       const lastActiveAt = mockUserEntity.lastActiveAt.toISOString();
 
-      await service.updateServiceUserProfilesUser(mockUser, false, false, mockUser.email);
+      await service.updateServiceUserProfilesUser(mockUser, false, false, false, mockUser.email);
 
       expect(mockFrontChatService.updateContactCustomFields).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -380,6 +382,7 @@ describe('Service user profiles', () => {
         mockUserEntity,
         true,
         false,
+        false,
         mockUserEntity.email,
       );
 
@@ -401,6 +404,7 @@ describe('Service user profiles', () => {
         { ...mockUserEntity, email: newEmail },
         true,
         true,
+        false,
         oldEmail,
       );
       const serialisedMockUserData = service.serializeUserData(mockUserEntity);
@@ -419,7 +423,13 @@ describe('Service user profiles', () => {
       const mocked = jest.mocked(updateMailchimpProfile);
       mocked.mockRejectedValue(new Error('Mailchimp API call failed'));
       await expect(
-        service.updateServiceUserProfilesUser(mockUserEntity, false, false, mockUserEntity.email),
+        service.updateServiceUserProfilesUser(
+          mockUserEntity,
+          false,
+          false,
+          false,
+          mockUserEntity.email,
+        ),
       ).resolves.not.toThrow();
       mocked.mockReset();
     });
@@ -433,10 +443,32 @@ describe('Service user profiles', () => {
         mockUserEntity,
         false,
         false,
+        false,
         mockUserEntity.email,
       );
 
       expect(updateMailchimpProfile).toHaveBeenCalled();
+    });
+
+    it('should sync conversation language only when language changed', async () => {
+      await service.updateServiceUserProfilesUser(
+        mockUserEntity,
+        false,
+        false,
+        false,
+        mockUserEntity.email,
+      );
+      expect(mockFrontChatService.syncConversationLanguage).not.toHaveBeenCalled();
+
+      await service.updateServiceUserProfilesUser(
+        mockUserEntity,
+        true,
+        false,
+        true,
+        mockUserEntity.email,
+      );
+      expect(mockFrontChatService.syncConversationLanguage).toHaveBeenCalledTimes(1);
+      expect(mockFrontChatService.syncConversationLanguage).toHaveBeenCalledWith(mockUserEntity.id);
     });
   });
 

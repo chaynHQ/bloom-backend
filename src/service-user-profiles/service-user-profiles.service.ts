@@ -199,6 +199,7 @@ export class ServiceUserProfilesService {
     user: UserEntity,
     isProfileUpdateRequired: boolean,
     isEmailUpdateRequired: boolean,
+    isLanguageUpdateRequired: boolean,
     existingEmail: string,
   ) {
     const email = isEmailUpdateRequired ? user.email : existingEmail;
@@ -236,6 +237,13 @@ export class ServiceUserProfilesService {
 
     // Sync all custom fields to Front with the complete set (partial PATCH would wipe other fields).
     await this.syncFrontContactCustomFields(email);
+
+    // Mirror language onto the Front conversation only when it actually changed — otherwise
+    // every name/email/permissions/lastActiveAt update would re-PATCH the same value.
+    // New conversations get language set when their ID is first resolved (see front-chat.service.ts).
+    if (isLanguageUpdateRequired) {
+      await this.frontChatService.syncConversationLanguage(user.id);
+    }
 
     try {
       await updateMailchimpProfile(
