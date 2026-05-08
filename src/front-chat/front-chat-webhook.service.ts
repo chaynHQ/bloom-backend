@@ -63,9 +63,19 @@ export class FrontChatWebhookService {
     }
 
     // Capture conversation ID from inbound events so history loads immediately on reconnect.
+    // Skip when the chatUser already has an ID — Front sends an inbound webhook for every
+    // user message, and updateChatUserByEmail would no-op via preserveConversationId, so
+    // re-running syncConversationLanguage on each inbound just re-PATCHes the same value.
     if (webhookData.type === FRONT_WEBHOOK_EVENT_TYPE.INBOUND && webhookData.conversation?.id) {
       this.frontChatService
-        .updateChatUserByEmail(email, { frontConversationId: webhookData.conversation.id })
+        .getChatUserByEmail(email)
+        .then(async (existing) => {
+          if (existing?.frontConversationId) return;
+          const updated = await this.frontChatService.updateChatUserByEmail(email, {
+            frontConversationId: webhookData.conversation.id,
+          });
+          if (updated) await this.frontChatService.syncConversationLanguage(updated.userId);
+        })
         .catch(() => {});
     }
 

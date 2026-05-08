@@ -199,6 +199,7 @@ export class ServiceUserProfilesService {
     user: UserEntity,
     isProfileUpdateRequired: boolean,
     isEmailUpdateRequired: boolean,
+    isLanguageUpdateRequired: boolean,
     existingEmail: string,
   ) {
     const email = isEmailUpdateRequired ? user.email : existingEmail;
@@ -236,6 +237,13 @@ export class ServiceUserProfilesService {
 
     // Sync all custom fields to Front with the complete set (partial PATCH would wipe other fields).
     await this.syncFrontContactCustomFields(email);
+
+    // Mirror language onto the Front conversation only when it actually changed — otherwise
+    // every name/email/permissions/lastActiveAt update would re-PATCH the same value.
+    // New conversations get language set when their ID is first resolved (see front-chat.service.ts).
+    if (isLanguageUpdateRequired) {
+      await this.frontChatService.syncConversationLanguage(user.id);
+    }
 
     try {
       await updateMailchimpProfile(
@@ -338,13 +346,12 @@ export class ServiceUserProfilesService {
     const receivedAt = chatUser.lastMessageReceivedAt?.toISOString();
     const readAt = chatUser.lastMessageReadAt?.toISOString();
 
-    const frontChatSchema = {
-      last_message_sent_at: sentAt ?? '',
-      last_message_received_at: receivedAt ?? '',
-      last_message_read_at: readAt ?? '',
-    };
+    // Omit undefined timestamps — Front and Mailchimp datetime fields reject empty strings.
+    const frontChatSchema: FrontChatContactCustomFields = {};
+    if (sentAt) frontChatSchema.last_message_sent_at = sentAt;
+    if (receivedAt) frontChatSchema.last_message_received_at = receivedAt;
+    if (readAt) frontChatSchema.last_message_read_at = readAt;
 
-    // Omit undefined timestamps — Mailchimp date merge fields reject empty strings with 400.
     const mergeFields: ListMemberCustomFields = {};
     if (sentAt) mergeFields.CHATLSTMTX = sentAt;
     if (receivedAt) mergeFields.CHATLSTMRX = receivedAt;
@@ -487,15 +494,17 @@ export class ServiceUserProfilesService {
       lastActiveAt,
       emailRemindersFrequency,
     } = user;
-    const lastActiveAtString = lastActiveAt?.toISOString() || '';
+    const lastActiveAtString = lastActiveAt?.toISOString();
 
-    const frontChatSchema = {
+    const frontChatSchema: FrontChatContactCustomFields = {
       marketing_permission: contactPermission,
       service_emails_permission: serviceEmailsPermission,
-      last_active_at: lastActiveAtString,
       email_reminders_frequency: emailRemindersFrequency,
-      // Name and language handled on base level contact profile for Front Chat
+      language: signUpLanguage || LANGUAGE_DEFAULT,
+      // Name handled on base level contact profile for Front Chat
     };
+    // Omit undefined — Front datetime fields reject empty strings.
+    if (lastActiveAtString) frontChatSchema.last_active_at = lastActiveAtString;
 
     const mailchimpSchema = {
       status: serviceEmailsPermission ? 'subscribed' : 'unsubscribed',
@@ -563,8 +572,10 @@ export class ServiceUserProfilesService {
 
   serializeTherapyData(partnerAccesses: PartnerAccessEntity[]) {
     // TypeORM may return dates as strings in some query contexts — guard both cases.
-    const toIso = (d: Date | string | undefined | null): string => {
-      if (!d) return '';
+    // Returns undefined for missing dates so callers can omit the key (Front/Mailchimp
+    // datetime fields reject empty strings).
+    const toIso = (d: Date | string | undefined | null): string | undefined => {
+      if (!d) return undefined;
       return d instanceof Date ? d.toISOString() : new Date(d as string).toISOString();
     };
 

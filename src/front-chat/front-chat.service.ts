@@ -6,6 +6,7 @@ import { Logger } from 'src/logger/logger';
 import {
   FRONT_API_BASE_URL,
   FRONT_SEND_RETRY_DELAYS_MS,
+  LANGUAGE_DEFAULT,
   frontChannelId,
   frontChatApiToken,
   frontContactListId,
@@ -33,8 +34,8 @@ import {
 const logger = new Logger('FrontChatService');
 
 // Re-export so existing consumers keep importing from this module.
-export { ChatHistoryMessage } from './front-chat.interface';
 export { buildThreadRef } from './front-chat.helpers';
+export { ChatHistoryMessage } from './front-chat.interface';
 
 // ── Front HTTP client ──────────────────────────────────────────────────────────
 // Module-level so they're reused without `this` and unit-testable in isolation.
@@ -138,8 +139,6 @@ export class FrontChatService {
     private readonly userRepository: Repository<UserEntity>,
   ) {}
 
-  // ── ChatUser repository ─────────────────────────────────────────────────────
-
   async getOrCreateChatUser(
     userId: string,
     initial: Partial<ChatUserEntity> = {},
@@ -180,6 +179,7 @@ export class FrontChatService {
     const chatUser = await this.getOrCreateChatUser(userId);
     if (chatUser.frontConversationId === conversationId) return;
     await this.chatUserRepository.save({ ...chatUser, frontConversationId: conversationId });
+    await this.syncConversationLanguage(userId);
   }
 
   async updateChatUser(
@@ -253,7 +253,10 @@ export class FrontChatService {
     if (!chatUser.lastMessageReceivedAt) return null;
 
     // Already up to date — don't write or sync unnecessarily.
-    if (chatUser.lastMessageReadAt && chatUser.lastMessageReadAt >= chatUser.lastMessageReceivedAt) {
+    if (
+      chatUser.lastMessageReadAt &&
+      chatUser.lastMessageReadAt >= chatUser.lastMessageReceivedAt
+    ) {
       return null;
     }
 
@@ -270,8 +273,6 @@ export class FrontChatService {
     const { frontConversationId: _omit, ...rest } = partial;
     return rest;
   }
-
-  // ── Sending messages to Front (Channel API) ─────────────────────────────────
 
   async sendChannelTextMessage(
     user: FrontChatUser,
@@ -403,10 +404,31 @@ export class FrontChatService {
     if (conversationId) {
       await this.getOrCreateChatUser(userId, { frontConversationId: conversationId });
       logger.log(`Resolved conversation ID ${conversationId} for user ${userId}`);
+      await this.syncConversationLanguage(userId);
     }
   }
 
-  // ── Conversation history ────────────────────────────────────────────────────
+  // Mirror the user's language onto the conversation custom field so Front inbox views
+  // can filter by it (contact-level custom fields aren't filterable in conversation views).
+  async syncConversationLanguage(userId: string): Promise<void> {
+    try {
+      const [user, chatUser] = await Promise.all([
+        this.userRepository.findOneBy({ id: userId }),
+        this.chatUserRepository.findOneBy({ userId }),
+      ]);
+
+      const conversationId = chatUser?.frontConversationId;
+      if (!conversationId || !user || isCypressTestEmail(user.email)) return;
+
+      await frontApiRequest('PATCH', `/conversations/${conversationId}`, {
+        custom_fields: { language: user.signUpLanguage || LANGUAGE_DEFAULT },
+      });
+    } catch (error) {
+      logger.warn(
+        `Sync Front conversation language failed for user ${userId}: ${(error as Error)?.message || 'unknown error'}`,
+      );
+    }
+  }
 
   async getConversationHistory(
     user: FrontChatUser,
@@ -491,6 +513,7 @@ export class FrontChatService {
       if (conversationId) {
         await this.getOrCreateChatUser(userId, { frontConversationId: conversationId });
         logger.log(`Resolved conversation ${conversationId} for user ${userId} via contact lookup`);
+        await this.syncConversationLanguage(userId);
       }
       return conversationId;
     } catch {
@@ -513,8 +536,6 @@ export class FrontChatService {
       return null;
     }
   }
-
-  // ── Contact API ─────────────────────────────────────────────────────────────
 
   async contactExists(email: string): Promise<boolean> {
     if (isCypressTestEmail(email)) return true;
@@ -680,10 +701,7 @@ export class FrontChatService {
     logger.log('Cypress Front Chat contact cleanup is handled by individual test teardown');
   }
 
-  // ── Attachments ─────────────────────────────────────────────────────────────
-
   fetchAttachment(url: string): Promise<{ buffer: Buffer; contentType: string }> {
     return fetchFrontAttachment(url);
   }
-
 }

@@ -244,14 +244,16 @@ export class UserService {
     ) {
       // Do nothing, prevent unnecessay updates to service profiles when last active date is same date
     } else {
+      const isLanguageUpdateRequired =
+        updateUserDto.signUpLanguage !== undefined &&
+        user.signUpLanguage !== updateUserDto.signUpLanguage;
       const isProfileUpdateRequired =
-        isEmailUpdateRequired ||
-        user.signUpLanguage !== updateUserDto.signUpLanguage ||
-        user.name !== updateUserDto.name;
+        isEmailUpdateRequired || isLanguageUpdateRequired || user.name !== updateUserDto.name;
       this.serviceUserProfilesService.updateServiceUserProfilesUser(
         newUserData,
         isProfileUpdateRequired,
         isEmailUpdateRequired,
+        isLanguageUpdateRequired,
         user.email,
       );
     }
