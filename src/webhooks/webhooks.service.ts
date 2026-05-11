@@ -1,7 +1,7 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
-import { Logger } from 'src/logger/logger';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ISbStoryData } from '@storyblok/js';
+import { createHmac, timingSafeEqual } from 'crypto';
 import apiCall from 'src/api/apiCalls';
 import { SlackMessageClient } from 'src/api/slack/slack-api';
 import { CourseEntity } from 'src/entities/course.entity';
@@ -10,6 +10,7 @@ import { ResourceEntity } from 'src/entities/resource.entity';
 import { SessionEntity } from 'src/entities/session.entity';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
 import { UserEntity } from 'src/entities/user.entity';
+import { Logger } from 'src/logger/logger';
 import { ZapierSimplybookBodyDto } from 'src/partner-access/dtos/zapier-body.dto';
 import { ServiceUserProfilesService } from 'src/service-user-profiles/service-user-profiles.service';
 import { IUser } from 'src/user/user.interface';
@@ -23,12 +24,13 @@ import {
   STORYBLOK_PAGE_COMPONENTS,
   STORYBLOK_STORY_STATUS_ENUM,
   storyblokToken,
+  storyblokWebhookSecret,
 } from '../utils/constants';
 import { StoryWebhookDto } from './dto/story.dto';
 
 @Injectable()
 export class WebhooksService {
-  private readonly logger = new Logger('WebhookService');
+  private readonly logger = new Logger('WebhooksService');
 
   constructor(
     @InjectRepository(PartnerAccessEntity)
@@ -391,8 +393,32 @@ export class WebhooksService {
     }
   }
 
-  // Handle Storyblok story status change (published, unpublished, moved, deleted)
-  // Triggered by a webhook, this function handles updating our database records to sync with storyblok story data
+  async handleStoryblokWebhook(
+    rawBody: Buffer | undefined,
+    signature: string | undefined,
+    data: StoryWebhookDto,
+  ) {
+    if (!signature) {
+      const error = 'Storyblok webhook error - no signature provided';
+      this.logger.error(error);
+      throw new HttpException(error, HttpStatus.UNAUTHORIZED);
+    }
+    if (!rawBody) {
+      const error = 'Storyblok webhook error - raw body unavailable';
+      this.logger.error(error);
+      throw new HttpException(error, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+    const bodyHmac = createHmac('sha1', storyblokWebhookSecret).update(rawBody).digest('hex');
+    const expectedBuf = Buffer.from(bodyHmac);
+    const providedBuf = Buffer.from(signature);
+    if (expectedBuf.length !== providedBuf.length || !timingSafeEqual(expectedBuf, providedBuf)) {
+      const error = 'Storyblok webhook error - signature mismatch';
+      this.logger.error(error);
+      throw new HttpException(error, HttpStatus.UNAUTHORIZED);
+    }
+    return this.handleStoryUpdated(data);
+  }
+
   async handleStoryUpdated(data: StoryWebhookDto) {
     const status = data.action;
     const story_slug = data.full_slug;
@@ -446,4 +472,5 @@ export class WebhooksService {
     // Create or update the resource/course/session record in our database
     return this.updateOrCreateStoryData(story, status);
   }
+
 }

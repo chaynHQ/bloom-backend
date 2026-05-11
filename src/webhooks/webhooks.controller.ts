@@ -1,21 +1,11 @@
-import {
-  Body,
-  Controller,
-  Headers,
-  HttpException,
-  HttpStatus,
-  Logger,
-  Post,
-  Request,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Headers, Post, Request, UseGuards } from '@nestjs/common';
 import { ApiBody, ApiTags } from '@nestjs/swagger';
-import { createHmac, timingSafeEqual } from 'crypto';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
-import { storyblokWebhookSecret } from 'src/utils/constants';
+import { FrontChatWebhookService } from 'src/front-chat/front-chat-webhook.service';
 import { ControllerDecorator } from 'src/utils/controller.decorator';
 import { ZapierSimplybookBodyDto } from '../partner-access/dtos/zapier-body.dto';
 import { ZapierAuthGuard } from '../partner-access/zapier-auth.guard';
+import { FrontChatWebhookDto } from './dto/front-chat-webhook.dto';
 import { StoryWebhookDto } from './dto/story.dto';
 import { WebhooksService } from './webhooks.service';
 
@@ -23,8 +13,10 @@ import { WebhooksService } from './webhooks.service';
 @ControllerDecorator()
 @Controller('webhooks')
 export class WebhooksController {
-  constructor(private readonly webhooksService: WebhooksService) {}
-  private readonly logger = new Logger('WebhookService');
+  constructor(
+    private readonly webhooksService: WebhooksService,
+    private readonly frontChatWebhookService: FrontChatWebhookService,
+  ) {}
 
   @UseGuards(ZapierAuthGuard)
   @Post('simplybook')
@@ -37,24 +29,33 @@ export class WebhooksController {
 
   @Post('storyblok')
   @ApiBody({ type: StoryWebhookDto })
-  async handleStoryUpdated(@Request() req, @Body() data: StoryWebhookDto, @Headers() headers) {
-    const signature: string | undefined = headers['webhook-signature'];
-    // Verify storyblok signature uses storyblok webhook secret - see https://www.storyblok.com/docs/guide/in-depth/webhooks#securing-a-webhook
-    if (!signature) {
-      const error = `Storyblok webhook error - no signature provided`;
-      this.logger.error(error);
-      throw new HttpException(error, HttpStatus.UNAUTHORIZED);
-    }
-    req.setEncoding('utf8');
+  async handleStoryUpdated(
+    @Request() req,
+    @Body() data: StoryWebhookDto,
+    @Headers('webhook-signature') signature: string | undefined,
+  ): Promise<unknown> {
+    return this.webhooksService.handleStoryblokWebhook(req.rawBody, signature, data);
+  }
 
-    const bodyHmac = createHmac('sha1', storyblokWebhookSecret).update(req.rawBody).digest('hex');
-    const expected = Buffer.from(bodyHmac);
-    const provided = Buffer.from(signature);
-    if (expected.length !== provided.length || !timingSafeEqual(expected, provided)) {
-      const error = `Storyblok webhook error - signature mismatch`;
-      this.logger.error(error);
-      throw new HttpException(error, HttpStatus.UNAUTHORIZED);
-    }
-    return this.webhooksService.handleStoryUpdated(data);
+  // Single endpoint serves both Front integrations:
+  //   1. Events API     — inbound/outbound/out_reply notifications, Bearer auth.
+  //   2. Channel API    — outbound agent messages from Front UI, X-Front-Signature HMAC auth.
+  // Body is typed loosely so the global ValidationPipe doesn't 400 the Channel API
+  // payload (different shape from FrontChatWebhookDto).
+  @Post('front-chat')
+  @ApiBody({ type: FrontChatWebhookDto })
+  async handleFrontChatWebhook(
+    @Request() req,
+    @Body() data: Record<string, unknown>,
+    @Headers() headers,
+  ): Promise<unknown> {
+    return this.frontChatWebhookService.handleFrontWebhook({
+      rawBody: req.rawBody,
+      data,
+      headers,
+      protocol: (headers['x-forwarded-proto'] as string) || req.protocol || 'https',
+      host: headers['x-forwarded-host'] || headers['host'],
+      originalUrl: req.originalUrl ?? req.url,
+    });
   }
 }
