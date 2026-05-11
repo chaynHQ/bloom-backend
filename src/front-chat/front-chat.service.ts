@@ -202,16 +202,6 @@ export class FrontChatService {
     return this.chatUserRepository.findOneBy({ userId });
   }
 
-  // Migration-only: bypass the "never overwrite frontConversationId" guard. The Crisp migration
-  // is authoritative for that user — if a stale ID was saved earlier (e.g. by a prior migration
-  // run or by the live chat before history existed), we want the freshly-resolved one to win.
-  async setMigratedConversationId(userId: string, conversationId: string): Promise<void> {
-    const chatUser = await this.getOrCreateChatUser(userId);
-    if (chatUser.frontConversationId === conversationId) return;
-    await this.chatUserRepository.save({ ...chatUser, frontConversationId: conversationId });
-    await this.syncConversationLanguage(userId);
-  }
-
   async updateChatUser(
     userId: string,
     partial: Partial<ChatUserEntity>,
@@ -509,10 +499,7 @@ export class FrontChatService {
     };
   }
 
-  // Public so the Crisp migration can fall back to a contact-based lookup when its in-flight
-  // resolveConversationId polling times out — the conversation exists in Front but
-  // /messages/alt:uid:{uid} hasn't become consistent within the polling window yet.
-  async findConversationIdByContact(userId: string, email: string): Promise<string | null> {
+  private async findConversationIdByContact(userId: string, email: string): Promise<string | null> {
     try {
       const inboxId = await this.getInboxId();
       if (!inboxId) return null;

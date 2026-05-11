@@ -800,7 +800,7 @@ describe('FrontChatService', () => {
         buildChatUser({ frontConversationId: 'cnv_abc' }),
       );
       const now = Math.floor(Date.now() / 1000);
-      const crispUrl = 'https://storage.crisp.chat/users/upload/photo.jpg';
+      const imageUrl = 'https://chayn.api.frontapp.com/messages/msg_1/download/fil_1';
       mockFetch.mockResolvedValueOnce({
         ok: true,
         status: 200,
@@ -809,7 +809,7 @@ describe('FrontChatService', () => {
             {
               id: 'msg_1',
               is_inbound: true,
-              body: `![photo.jpg](${crispUrl})`,
+              body: `![photo.jpg](${imageUrl})`,
               created_at: now,
             },
           ],
@@ -820,12 +820,16 @@ describe('FrontChatService', () => {
       const { messages } = await service.getConversationHistory(user);
 
       expect(messages).toHaveLength(1);
-      // Crisp CDN URLs are public — returned directly so the browser fetches them
-      // without going through our proxy (avoids SSRF on user-supplied URLs).
       expect(messages[0]).toMatchObject({
         id: 'msg_1',
         text: 'photo.jpg',
-        attachments: [{ url: crispUrl, name: 'photo.jpg', kind: 'image' }],
+        attachments: [
+          {
+            url: `/front-chat/attachment-proxy?url=${encodeURIComponent(imageUrl)}`,
+            name: 'photo.jpg',
+            kind: 'image',
+          },
+        ],
       });
     });
 

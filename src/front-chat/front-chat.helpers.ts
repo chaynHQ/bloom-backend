@@ -56,17 +56,6 @@ export function classifyAttachments(
   return result;
 }
 
-// Crisp CDN is public — return the URL directly so the browser fetches it,
-// avoiding a server-side fetch of a user-supplied URL (SSRF).
-export function buildAttachmentUrl(url: string): string {
-  try {
-    if (new URL(url).hostname.endsWith('.crisp.chat')) return url;
-  } catch {
-    // fall through to proxy
-  }
-  return `/front-chat/attachment-proxy?url=${encodeURIComponent(url)}`;
-}
-
 // Strictly parse a Front attachment URL and rebuild it from a hardcoded template.
 // Returns the rebuilt URL when valid, null otherwise. Important: the URL handed
 // to fetch is assembled from string literals + regex-extracted IDs — NO part of
@@ -137,9 +126,7 @@ function isAgentMessage(message: FrontApiMessage): boolean {
   return !message.is_inbound || message.author?.email === frontSupportEmail;
 }
 
-export function mapFrontMessageToHistory(
-  message: FrontApiMessage,
-): ChatHistoryMessage | undefined {
+export function mapFrontMessageToHistory(message: FrontApiMessage): ChatHistoryMessage | undefined {
   const fileAttachments = classifyAttachments(message.attachments);
   // Inline markdown images (Channel API imported messages where the operator pasted an
   // image URL into the body) are promoted to image attachments and stripped from the
@@ -177,7 +164,7 @@ export function mapFrontMessageToHistory(
 
 export function toAgentReplyAttachment(attachment: ClassifiedAttachment): AgentReplyAttachment {
   return {
-    url: buildAttachmentUrl(attachment.url),
+    url: `/front-chat/attachment-proxy?url=${encodeURIComponent(attachment.url)}`,
     name: attachment.filename,
     kind: attachment.kind,
   };
