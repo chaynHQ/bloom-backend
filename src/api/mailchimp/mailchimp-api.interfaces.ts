@@ -15,7 +15,6 @@ export enum MAILCHIMP_MERGE_FIELD_TYPES {
 }
 
 export enum MAILCHIMP_CUSTOM_EVENTS {
-  CHAT_MESSAGE_RECEIVED = 'CRISP_MESSAGE_RECEIVED', // Mailchimp event name kept for backwards compatibility
   FRONT_MESSAGE_UNREAD = 'FRONT_MESSAGE_UNREAD',
 }
 
