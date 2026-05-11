@@ -1,6 +1,7 @@
 import { frontSupportEmail } from 'src/utils/constants';
 import { formatAuthorName, stripHtml } from 'src/utils/html';
 import {
+  AgentReplyAttachment,
   ChatHistoryMessage,
   FrontApiAttachment,
   FrontApiMessage,
@@ -35,19 +36,24 @@ export interface ClassifiedAttachment {
   kind: AttachmentKind;
 }
 
-// Picks one attachment with a precedence (image > voice > other-file). Mirrors how
-// Front delivers attachments on a message — we only render one.
-export function classifyAttachment(
+// Classifies every attachment Front delivered on the message, preserving order. Front
+// can attach multiple files (e.g. an .png alongside a .txt) and the widget renders
+// each one in the same bubble.
+export function classifyAttachments(
   attachments: FrontApiAttachment[] | undefined,
-): ClassifiedAttachment | undefined {
-  if (!attachments?.length) return undefined;
-  const image = attachments.find((a) => a.url && a.content_type?.startsWith('image/'));
-  if (image?.url) return { url: image.url, filename: image.filename, kind: 'image' };
-  const audio = attachments.find((a) => a.url && a.content_type?.startsWith('audio/'));
-  if (audio?.url) return { url: audio.url, filename: audio.filename, kind: 'voice' };
-  const file = attachments.find((a) => a.url);
-  if (file?.url) return { url: file.url, filename: file.filename, kind: 'file' };
-  return undefined;
+): ClassifiedAttachment[] {
+  if (!attachments?.length) return [];
+  const result: ClassifiedAttachment[] = [];
+  for (const a of attachments) {
+    if (!a.url) continue;
+    const kind: AttachmentKind = a.content_type?.startsWith('image/')
+      ? 'image'
+      : a.content_type?.startsWith('audio/')
+        ? 'voice'
+        : 'file';
+    result.push({ url: a.url, filename: a.filename, kind });
+  }
+  return result;
 }
 
 // Crisp CDN is public — return the URL directly so the browser fetches it,
@@ -109,11 +115,19 @@ export function isAllowedS3RedirectTarget(url: string): boolean {
 
 // Channel API imported messages can store inline images as markdown in the body
 // rather than as m.attachments. Parse them out so history renders them correctly.
-function parseInlineImage(body: string | undefined): { url: string; name: string } | undefined {
-  if (!body) return undefined;
-  const match = body.match(/!\[([^\]]*)\]\((https?:\/\/[^)\s]+)\)/);
-  if (!match) return undefined;
-  return { name: match[1] || 'image', url: match[2] };
+const INLINE_IMAGE_REGEX = /!\[([^\]]*)\]\((https?:\/\/[^)\s]+)\)/g;
+
+function parseInlineImages(body: string | undefined): Array<{ url: string; name: string }> {
+  if (!body) return [];
+  const results: Array<{ url: string; name: string }> = [];
+  for (const match of body.matchAll(INLINE_IMAGE_REGEX)) {
+    results.push({ name: match[1] || 'image', url: match[2] });
+  }
+  return results;
+}
+
+function stripInlineImages(text: string): string {
+  return text.replace(INLINE_IMAGE_REGEX, '').trim();
 }
 
 // Live agent replies have is_inbound === false. For Channel API imported messages
@@ -126,48 +140,60 @@ function isAgentMessage(message: FrontApiMessage): boolean {
 export function mapFrontMessageToHistory(
   message: FrontApiMessage,
 ): ChatHistoryMessage | undefined {
-  const attachment = classifyAttachment(message.attachments);
-  // Inline markdown image overrides non-image attachments (audio/file). This matches
-  // Channel API imported messages where the operator pasted an image URL into the body
-  // alongside e.g. an audio attachment — we want the image to render.
-  const inlineImage =
-    attachment?.kind !== 'image' ? parseInlineImage(message.body) : undefined;
-  const text = message.text ?? stripHtml(message.body ?? '');
+  const fileAttachments = classifyAttachments(message.attachments);
+  // Inline markdown images (Channel API imported messages where the operator pasted an
+  // image URL into the body) are promoted to image attachments and stripped from the
+  // displayed text so they don't render as raw markdown alongside the image.
+  const inlineImages = parseInlineImages(message.body);
+  const rawText = message.text ?? stripHtml(message.body ?? '');
+  const bodyText = inlineImages.length > 0 ? stripInlineImages(rawText) : rawText;
 
-  if (!text && !attachment && !inlineImage) return undefined;
+  const attachments: ClassifiedAttachment[] = [
+    ...inlineImages.map<ClassifiedAttachment>((img) => ({
+      url: img.url,
+      filename: img.name,
+      kind: 'image',
+    })),
+    ...fileAttachments,
+  ];
+
+  const text = deriveDisplayText(bodyText, attachments);
+  if (!text && attachments.length === 0) return undefined;
 
   const histMsg: ChatHistoryMessage = {
     id: message.id,
     direction: isAgentMessage(message) ? 'agent' : 'user',
-    text: deriveDisplayText(text, attachment, inlineImage),
+    text,
     authorName: formatAuthorName(message.author ?? undefined),
     createdAt: (message.created_at ?? Date.now() / 1000) * 1000,
   };
 
-  if (inlineImage) {
-    histMsg.kind = 'image';
-    histMsg.attachmentUrl = buildAttachmentUrl(inlineImage.url);
-    histMsg.attachmentName = inlineImage.name;
-  } else if (attachment) {
-    histMsg.kind = attachment.kind;
-    histMsg.attachmentUrl = buildAttachmentUrl(attachment.url);
-    histMsg.attachmentName = attachment.filename;
+  if (attachments.length > 0) {
+    histMsg.attachments = attachments.map(toAgentReplyAttachment);
   }
 
   return histMsg;
 }
 
-// Images/files: show filename. Voice: use message body text ("Voice note") for
-// consistency with fresh messages. Fallback to plain text for everything else.
-// Precedence matches mapFrontMessageToHistory: inline image overrides non-image attachments.
-function deriveDisplayText(
-  text: string,
-  attachment: ClassifiedAttachment | undefined,
-  inlineImage: { name: string } | undefined,
-): string {
-  if (attachment?.kind === 'image') return attachment.filename ?? 'image';
-  if (inlineImage) return inlineImage.name;
-  if (attachment?.kind === 'voice') return text || 'Voice note';
-  if (attachment?.kind === 'file') return attachment.filename ?? 'attachment';
+export function toAgentReplyAttachment(attachment: ClassifiedAttachment): AgentReplyAttachment {
+  return {
+    url: buildAttachmentUrl(attachment.url),
+    name: attachment.filename,
+    kind: attachment.kind,
+  };
+}
+
+// Single-attachment messages override generic body text with the filename (Front
+// auto-fills "Attachment" as the body when an agent uploads a file without typing).
+// Multi-attachment messages keep the body text; the frontend renders each filename
+// alongside its file.
+function deriveDisplayText(text: string, attachments: ClassifiedAttachment[]): string {
+  if (attachments.length > 1) return text;
+  if (attachments.length === 1) {
+    const [only] = attachments;
+    if (only.kind === 'image') return only.filename ?? 'image';
+    if (only.kind === 'voice') return text || 'Voice note';
+    return only.filename ?? 'attachment';
+  }
   return text;
 }

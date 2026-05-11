@@ -14,7 +14,7 @@ import {
   FrontWebhookMessageAuthor,
 } from 'src/webhooks/dto/front-chat-webhook.dto';
 import { FrontChatGateway } from './front-chat.gateway';
-import { buildAttachmentUrl, classifyAttachment } from './front-chat.helpers';
+import { classifyAttachments, toAgentReplyAttachment } from './front-chat.helpers';
 import {
   FRONT_WEBHOOK_EVENT_TO_EVENT_NAME,
   FRONT_WEBHOOK_EVENT_TYPE,
@@ -123,19 +123,18 @@ export class FrontChatWebhookService {
       (data as FrontChannelOutboundPayload).metadata?.external_conversation_id ??
       (chatUser ? buildThreadRef(chatUser.userId) : externalId);
 
-    const attachment = classifyAttachment(payload.attachments);
+    const attachments = classifyAttachments(payload.attachments);
+    const firstAttachment = attachments[0];
 
-    if (recipientEmail && (messageBody || attachment)) {
+    if (recipientEmail && (messageBody || attachments.length > 0)) {
       this.frontChatGateway.emitAgentReply(recipientEmail, {
         id: externalId,
-        body: messageBody || (attachment?.filename ?? 'Attachment'),
+        body: messageBody || (firstAttachment?.filename ?? 'Attachment'),
         authorEmail: payload.author?.email,
         authorName: formatAuthorName(payload.author as FrontWebhookMessageAuthor | undefined),
         emittedAt: Math.floor(Date.now() / 1000),
-        ...(attachment && {
-          attachmentUrl: buildAttachmentUrl(attachment.url),
-          attachmentName: attachment.filename,
-          kind: attachment.kind,
+        ...(attachments.length > 0 && {
+          attachments: attachments.map(toAgentReplyAttachment),
         }),
       });
       this.logger.log(`Front Channel: forwarded agent reply to ${recipientEmail}`);

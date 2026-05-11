@@ -735,7 +735,7 @@ describe('FrontChatService', () => {
       );
     });
 
-    it('maps image attachment messages with kind=image and an attachmentUrl proxy path', async () => {
+    it('maps image attachment messages with an attachments entry on the proxy path', async () => {
       mockChatUserRepository.findOneBy.mockResolvedValueOnce(
         buildChatUser({ frontConversationId: 'cnv_abc' }),
       );
@@ -766,9 +766,14 @@ describe('FrontChatService', () => {
       expect(messages).toHaveLength(1);
       expect(messages[0]).toMatchObject({
         id: 'msg_1',
-        kind: 'image',
         text: 'photo.jpg',
-        attachmentUrl: `/front-chat/attachment-proxy?url=${encodeURIComponent(attachmentUrl)}`,
+        attachments: [
+          {
+            url: `/front-chat/attachment-proxy?url=${encodeURIComponent(attachmentUrl)}`,
+            name: 'photo.jpg',
+            kind: 'image',
+          },
+        ],
       });
     });
 
@@ -819,9 +824,8 @@ describe('FrontChatService', () => {
       // without going through our proxy (avoids SSRF on user-supplied URLs).
       expect(messages[0]).toMatchObject({
         id: 'msg_1',
-        kind: 'image',
         text: 'photo.jpg',
-        attachmentUrl: crispUrl,
+        attachments: [{ url: crispUrl, name: 'photo.jpg', kind: 'image' }],
       });
     });
 
@@ -867,7 +871,7 @@ describe('FrontChatService', () => {
   describe('getConversationHistory — audio attachments', () => {
     const user = { id: 'user-1', email: 'user@example.com', name: 'Alex' };
 
-    it('maps audio attachment messages with kind=voice and an attachmentUrl proxy path', async () => {
+    it('maps audio attachment messages with kind=voice and a proxy URL on attachments', async () => {
       mockChatUserRepository.findOneBy.mockResolvedValueOnce(
         buildChatUser({ frontConversationId: 'cnv_abc' }),
       );
@@ -897,9 +901,62 @@ describe('FrontChatService', () => {
 
       expect(messages).toHaveLength(1);
       expect(messages[0]).toMatchObject({
-        kind: 'voice',
         text: 'Voice note',
-        attachmentUrl: `/front-chat/attachment-proxy?url=${encodeURIComponent(audioUrl)}`,
+        attachments: [
+          {
+            url: `/front-chat/attachment-proxy?url=${encodeURIComponent(audioUrl)}`,
+            name: 'voice-note.webm',
+            kind: 'voice',
+          },
+        ],
+      });
+    });
+
+    it('maps every attachment on a multi-attachment message, preserving order', async () => {
+      mockChatUserRepository.findOneBy.mockResolvedValueOnce(
+        buildChatUser({ frontConversationId: 'cnv_abc' }),
+      );
+      const now = Math.floor(Date.now() / 1000);
+      const imageUrl = 'https://api2.frontapp.com/download/att_1/photo.png';
+      const fileUrl = 'https://api2.frontapp.com/download/att_2/notes.txt';
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          _results: [
+            {
+              id: 'msg_1',
+              is_inbound: false,
+              body: 'Here you go',
+              text: 'Here you go',
+              created_at: now,
+              attachments: [
+                { url: imageUrl, filename: 'photo.png', content_type: 'image/png' },
+                { url: fileUrl, filename: 'notes.txt', content_type: 'text/plain' },
+              ],
+            },
+          ],
+          _pagination: {},
+        }),
+      });
+
+      const { messages } = await service.getConversationHistory(user);
+
+      expect(messages).toHaveLength(1);
+      expect(messages[0]).toMatchObject({
+        text: 'Here you go',
+        attachments: [
+          {
+            url: `/front-chat/attachment-proxy?url=${encodeURIComponent(imageUrl)}`,
+            name: 'photo.png',
+            kind: 'image',
+          },
+          {
+            url: `/front-chat/attachment-proxy?url=${encodeURIComponent(fileUrl)}`,
+            name: 'notes.txt',
+            kind: 'file',
+          },
+        ],
       });
     });
   });
