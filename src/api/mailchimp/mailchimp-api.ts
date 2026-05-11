@@ -51,6 +51,9 @@ function formatMailchimpError(error: unknown): string {
   return `status=${status} ${detail}`;
 }
 
+// PUT-based upsert: creates new members, updates existing, and reactivates archived ones.
+// addListMember (POST) returns 400 "Member Exists" for archived members, which would block
+// the recovery flows that recreate profiles after manual archive/deletion.
 export const createMailchimpProfile = async (
   profileData: Partial<UpdateListMemberRequest>,
 ): Promise<ListMember> => {
@@ -60,7 +63,11 @@ export const createMailchimpProfile = async (
   }
 
   try {
-    return await mailchimp.lists.addListMember(mailchimpAudienceId, profileData);
+    return await mailchimp.lists.setListMember(
+      mailchimpAudienceId,
+      getEmailMD5Hash(profileData.email_address),
+      { ...profileData, status_if_new: profileData.status ?? 'subscribed' },
+    );
   } catch (error) {
     throw new Error(`Create mailchimp profile API call failed: ${formatMailchimpError(error)}`, {
       cause: error,
@@ -273,8 +280,13 @@ export const sendMailchimpUserEvent = async (email: string, event: MAILCHIMP_CUS
       name: event,
     });
   } catch (error) {
-    throw new Error(`Send mailchimp user event failed: ${error?.message || 'unknown error'}`, {
-      cause: error,
-    });
+    // Surface status on the thrown error so callers can detect 404 (archived/missing member)
+    // and recover by recreating the profile before retrying the event.
+    const apiError = new Error(
+      `Send mailchimp user event failed: ${formatMailchimpError(error)}`,
+      { cause: error },
+    ) as Error & { status?: number };
+    apiError.status = (error as { status?: number })?.status;
+    throw apiError;
   }
 };

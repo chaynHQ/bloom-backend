@@ -149,7 +149,11 @@ export class FrontChatWebhookService {
             );
           }
         })
-        .catch(() => {});
+        .catch((err) => {
+          this.logger.error(
+            `Front Channel: failed to set lastMessageReceivedAt for ${recipientEmail}: ${(err as Error)?.message || 'unknown error'}`,
+          );
+        });
     } else {
       this.logger.warn(
         `Front Channel: missing recipient or body (recipient=${recipientEmail}, hasBody=${!!messageBody})`,
