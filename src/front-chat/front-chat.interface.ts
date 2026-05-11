@@ -37,6 +37,14 @@ export interface FrontChatContactProfile {
   name?: string;
 }
 
+export interface AgentReplyAttachment {
+  /** Relative proxy path, e.g. /front-chat/attachment-proxy?url=... — prefix with API_URL on the client */
+  url: string;
+  /** Original filename — used by the widget to label the download link for `file` kind. */
+  name?: string;
+  kind: 'image' | 'voice' | 'file';
+}
+
 export interface AgentReplyPayload {
   id: string;
   body: string;
@@ -44,11 +52,8 @@ export interface AgentReplyPayload {
   authorName?: string;
   /** Unix timestamp in seconds (multiply by 1000 on the frontend to get ms) */
   emittedAt: number;
-  /** Relative proxy path, e.g. /front-chat/attachment-proxy?url=... — prefix with API_URL on the client */
-  attachmentUrl?: string;
-  /** Original filename — used by the widget to label the download link for `file` kind. */
-  attachmentName?: string;
-  kind?: 'image' | 'voice' | 'file';
+  /** All files Front delivered on the message, in the order Front returned them. */
+  attachments?: AgentReplyAttachment[];
 }
 
 export interface FrontChatUser {
@@ -60,11 +65,8 @@ export interface FrontChatUser {
 export interface ChatHistoryMessage {
   id: string;
   direction: 'user' | 'agent';
-  kind?: 'image' | 'voice' | 'file';
   text: string;
-  attachmentUrl?: string;
-  /** Original filename — used by the widget to label the download link for `file` kind. */
-  attachmentName?: string;
+  attachments?: AgentReplyAttachment[];
   authorName?: string;
   createdAt: number;
 }
