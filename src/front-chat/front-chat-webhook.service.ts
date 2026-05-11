@@ -54,6 +54,23 @@ export class FrontChatWebhookService {
     return this.handleFrontEvent(req.data as unknown as FrontChatWebhookDto);
   }
 
+  private async syncChatUserFromInbound(email: string, conversationId: string): Promise<void> {
+    const existing = await this.frontChatService.getChatUserByEmail(email);
+
+    // Backfill custom fields on the first inbound — covers Channel-API auto-created
+    // contacts. The sync writes frontContactId via addToFrontContactList, so subsequent
+    // inbounds skip this branch.
+    if (!existing?.frontContactId) {
+      await this.serviceUserProfilesService.syncFrontContactCustomFields(email);
+    }
+
+    if (existing?.frontConversationId) return;
+    const updated = await this.frontChatService.updateChatUserByEmail(email, {
+      frontConversationId: conversationId,
+    });
+    if (updated) await this.frontChatService.syncConversationLanguage(updated.userId);
+  }
+
   private async handleFrontEvent(webhookData: FrontChatWebhookDto): Promise<void> {
     const email = webhookData?.conversation?.recipient?.handle;
     if (!email) {
@@ -62,21 +79,10 @@ export class FrontChatWebhookService {
       return;
     }
 
-    // Capture conversation ID from inbound events so history loads immediately on reconnect.
-    // Skip when the chatUser already has an ID — Front sends an inbound webhook for every
-    // user message, and updateChatUserByEmail would no-op via preserveConversationId, so
-    // re-running syncConversationLanguage on each inbound just re-PATCHes the same value.
+    // Capture conversation ID and backfill custom fields on first inbound — gated on local
+    // chatUser state so we don't re-do work on every message.
     if (webhookData.type === FRONT_WEBHOOK_EVENT_TYPE.INBOUND && webhookData.conversation?.id) {
-      this.frontChatService
-        .getChatUserByEmail(email)
-        .then(async (existing) => {
-          if (existing?.frontConversationId) return;
-          const updated = await this.frontChatService.updateChatUserByEmail(email, {
-            frontConversationId: webhookData.conversation.id,
-          });
-          if (updated) await this.frontChatService.syncConversationLanguage(updated.userId);
-        })
-        .catch(() => {});
+      this.syncChatUserFromInbound(email, webhookData.conversation.id).catch(() => {});
     }
 
     const eventName = FRONT_WEBHOOK_EVENT_TO_EVENT_NAME[webhookData.type];

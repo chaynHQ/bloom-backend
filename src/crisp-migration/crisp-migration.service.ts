@@ -1,14 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { UserEntity } from 'src/entities/user.entity';
+import { FrontChatService } from 'src/front-chat/front-chat.service';
 import { Logger } from 'src/logger/logger';
 import { ServiceUserProfilesService } from 'src/service-user-profiles/service-user-profiles.service';
 import { crispIdentifier, crispKey, crispWebsiteId } from 'src/utils/constants';
 import { ILike, Repository } from 'typeorm';
-import { FrontChatService } from 'src/front-chat/front-chat.service';
 import { CrispExportService } from './crisp-export.service';
-import { MigrationOptionsDto } from './dto/migration-options.dto';
 import { CrispConversation, MigrationProgress, MigrationResult } from './crisp-migration.interface';
+import { MigrationOptionsDto } from './dto/migration-options.dto';
 import { FrontImportService } from './front-import.service';
 
 const logger = new Logger('CrispMigrationService');
@@ -30,7 +30,11 @@ export class CrispMigrationService {
     @InjectRepository(UserEntity) private readonly userRepository: Repository<UserEntity>,
   ) {}
 
-  getStatus(): { status: MigrationProgress['status'] | 'idle'; progress?: MigrationProgress; errors?: MigrationResult['errors'] } {
+  getStatus(): {
+    status: MigrationProgress['status'] | 'idle';
+    progress?: MigrationProgress;
+    errors?: MigrationResult['errors'];
+  } {
     if (!this.currentProgress) return { status: 'idle' };
     return {
       status: this.currentProgress.status,
@@ -130,14 +134,17 @@ export class CrispMigrationService {
       conversations = conversations.filter((c) =>
         (c.meta?.email ?? c.email)?.toLowerCase().endsWith(domain),
       );
-      logger.log(`Filtered to ${conversations.length} conversations matching domain "${options.emailDomainFilter}"`);
+      logger.log(
+        `Filtered to ${conversations.length} conversations matching domain "${options.emailDomainFilter}"`,
+      );
     }
 
     this.currentProgress!.totalConversations = conversations.length;
 
     const byEmail = new Map<string, CrispConversation[]>();
     for (const conv of conversations) {
-      const email = (conv.meta?.email ?? conv.email ?? '').toLowerCase() || `unknown-${conv.session_id}`;
+      const email =
+        (conv.meta?.email ?? conv.email ?? '').toLowerCase() || `unknown-${conv.session_id}`;
       if (!byEmail.has(email)) byEmail.set(email, []);
       byEmail.get(email)!.push(conv);
     }
@@ -146,7 +153,11 @@ export class CrispMigrationService {
     logger.log(`Found ${conversations.length} conversations across ${byEmail.size} contacts`);
 
     await this.runWithConcurrency(
-      [...byEmail.entries()].map(([email, convs]) => () => this.migrateUser(email, convs, since, options)),
+      [...byEmail.entries()].map(
+        ([email, convs]) =>
+          () =>
+            this.migrateUser(email, convs, since, options),
+      ),
       3,
     );
   }
@@ -184,7 +195,8 @@ export class CrispMigrationService {
           userId = user?.id;
 
           if (user) {
-            await this.serviceUserProfiles.getOrCreateFrontContact(user);
+            // Authoritative re-sync — refreshes fields on existing contacts and creates on 404.
+            await this.serviceUserProfiles.syncFrontContactCustomFields(user.email);
             logger.log(`Populated Front custom fields from DB for ${email}`);
           } else {
             logger.log(`No DB user found for ${email} — creating minimal Front contact`);
@@ -211,11 +223,16 @@ export class CrispMigrationService {
 
       try {
         const result = await this.migrateConversationById(conv.session_id, since, options, userId);
-        if (result.conversationId && !migratedConversationId) migratedConversationId = result.conversationId;
+        if (result.conversationId && !migratedConversationId)
+          migratedConversationId = result.conversationId;
         if (result.messageCount > 0) importedAnyMessage = true;
       } catch (err) {
         const message = (err as Error).message || 'Unknown error';
-        this.recordError({ sessionId: conv.session_id, email: conv.meta?.email ?? conv.email, error: message });
+        this.recordError({
+          sessionId: conv.session_id,
+          email: conv.meta?.email ?? conv.email,
+          error: message,
+        });
         if (!(options.continueOnError ?? true)) throw err;
         logger.warn(`Skipping session ${conv.session_id} after error: ${message}`);
       }
@@ -244,12 +261,17 @@ export class CrispMigrationService {
         await this.frontChat.setMigratedConversationId(userId, migratedConversationId);
         logger.log(`Saved frontConversationId ${migratedConversationId} for user ${userId}`);
       } catch (err) {
-        logger.warn(`Failed to save frontConversationId for user ${userId}: ${(err as Error).message}`);
+        logger.warn(
+          `Failed to save frontConversationId for user ${userId}: ${(err as Error).message}`,
+        );
       }
     }
   }
 
-  private async runWithConcurrency(tasks: (() => Promise<unknown>)[], concurrency: number): Promise<void> {
+  private async runWithConcurrency(
+    tasks: (() => Promise<unknown>)[],
+    concurrency: number,
+  ): Promise<void> {
     const executing = new Set<Promise<unknown>>();
     for (const task of tasks) {
       const p = task().finally(() => executing.delete(p));
@@ -261,7 +283,10 @@ export class CrispMigrationService {
     await Promise.all(executing);
   }
 
-  private async migrateSingleConversation(sessionId: string, options: MigrationOptionsDto): Promise<void> {
+  private async migrateSingleConversation(
+    sessionId: string,
+    options: MigrationOptionsDto,
+  ): Promise<void> {
     this.currentProgress!.totalConversations = 1;
     await this.migrateConversationById(sessionId, new Date(0), options);
   }
@@ -293,8 +318,12 @@ export class CrispMigrationService {
     });
 
     this.currentProgress!.processedConversations++;
-    this.currentProgress!.processedMessages += options.dryRun ? data.messages.length : result.messageIds.length;
-    this.currentProgress!.processedNotes += options.dryRun ? data.notes.length : result.commentIds.length;
+    this.currentProgress!.processedMessages += options.dryRun
+      ? data.messages.length
+      : result.messageIds.length;
+    this.currentProgress!.processedNotes += options.dryRun
+      ? data.notes.length
+      : result.commentIds.length;
     // Count only attachments that were actually uploaded as Front attachments. File messages
     // that fell back to a markdown link (Crisp CDN unreachable, oversize, or upload failed)
     // are NOT counted here — they still appear in processedMessages but don't represent a
@@ -323,7 +352,9 @@ export class CrispMigrationService {
     const record = { ...entry, timestamp: new Date() };
     this.migrationErrors.push(record);
     this.currentProgress?.errors.push(record.error);
-    logger.error(`Migration error${entry.sessionId ? ` [${entry.sessionId}]` : ''}: ${entry.error}`);
+    logger.error(
+      `Migration error${entry.sessionId ? ` [${entry.sessionId}]` : ''}: ${entry.error}`,
+    );
   }
 
   private delay(ms: number): Promise<void> {

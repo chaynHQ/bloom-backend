@@ -41,9 +41,7 @@ function formatMailchimpError(error: unknown): string {
       detail?: string;
       errors?: Array<{ field?: string; message?: string }>;
     };
-    const fieldErrors = b.errors?.length
-      ? ` errors=${JSON.stringify(b.errors)}`
-      : '';
+    const fieldErrors = b.errors?.length ? ` errors=${JSON.stringify(b.errors)}` : '';
     detail = `${b.title ?? ''}: ${b.detail ?? ''}${fieldErrors}`.trim();
   } else if (typeof err.response?.text === 'string') {
     detail = err.response.text;
@@ -64,10 +62,9 @@ export const createMailchimpProfile = async (
   try {
     return await mailchimp.lists.addListMember(mailchimpAudienceId, profileData);
   } catch (error) {
-    throw new Error(
-      `Create mailchimp profile API call failed: ${formatMailchimpError(error)}`,
-      { cause: error },
-    );
+    throw new Error(`Create mailchimp profile API call failed: ${formatMailchimpError(error)}`, {
+      cause: error,
+    });
   }
 };
 
@@ -112,7 +109,9 @@ export const batchCreateMailchimpProfiles = async (
           );
         })
         .catch((err) => {
-          logger.warn(`Mailchimp batch create status check failed - batchId: ${batchRequest.id}: ${err?.message || 'unknown error'}`);
+          logger.warn(
+            `Mailchimp batch create status check failed - batchId: ${batchRequest.id}: ${err?.message || 'unknown error'}`,
+          );
         });
     }, 120000);
   } catch (error) {
@@ -164,13 +163,18 @@ export const batchUpdateMailchimpProfiles = async (
           );
         })
         .catch((err) => {
-          logger.warn(`Mailchimp batch update status check failed - batchId: ${batchRequest.id}: ${err?.message || 'unknown error'}`);
+          logger.warn(
+            `Mailchimp batch update status check failed - batchId: ${batchRequest.id}: ${err?.message || 'unknown error'}`,
+          );
         });
     }, 120000);
   } catch (error) {
-    throw new Error(`Batch update mailchimp profiles API call failed: ${error?.message || 'unknown error'}`, {
-      cause: error,
-    });
+    throw new Error(
+      `Batch update mailchimp profiles API call failed: ${error?.message || 'unknown error'}`,
+      {
+        cause: error,
+      },
+    );
   }
 };
 
@@ -190,19 +194,13 @@ export const updateMailchimpProfile = async (
       newProfileData,
     );
   } catch (error) {
-    if (error.status === 404 || error.message?.includes('not found')) {
-      // Profile doesn't exist, create it using existing function
-      const createData = {
-        email_address: email,
-        status: newProfileData.status || 'subscribed',
-        ...newProfileData,
-      };
-      return await createMailchimpProfile(createData);
-    }
-    throw new Error(
+    // Callers handle 404 recovery to create the profile if it doesn't exist
+    const apiError = new Error(
       `Update mailchimp profile API call failed: ${formatMailchimpError(error)}`,
       { cause: error },
-    );
+    ) as Error & { status?: number };
+    apiError.status = (error as { status?: number })?.status;
+    throw apiError;
   }
 };
 

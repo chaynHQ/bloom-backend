@@ -29,6 +29,9 @@ const mockFrontChatServiceMethods = {
   getOrCreateChatUser: jest.fn().mockResolvedValue({}),
   addChannelHandle: jest.fn().mockResolvedValue(undefined),
   syncConversationLanguage: jest.fn().mockResolvedValue(undefined),
+  // Default to null so deep-mock doesn't return a truthy mock chatUser that adds chat
+  // activity fields to every profile expectation; tests opt in by overriding this mock.
+  getChatUser: jest.fn().mockResolvedValue(null),
 };
 
 describe('Service user profiles', () => {
