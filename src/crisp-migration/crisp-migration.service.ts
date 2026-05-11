@@ -125,10 +125,19 @@ export class CrispMigrationService {
     let conversations = await this.crispExport.getConversationsSince(since);
 
     if (options.specificEmail) {
-      conversations = conversations.filter(
-        (c) => (c.meta?.email ?? c.email)?.toLowerCase() === options.specificEmail!.toLowerCase(),
+      const emails = new Set(
+        options.specificEmail
+          .split(',')
+          .map((e) => e.trim().toLowerCase())
+          .filter((e) => e.length > 0),
       );
-      logger.log(`Filtered to ${conversations.length} conversations for ${options.specificEmail}`);
+      conversations = conversations.filter((c) => {
+        const email = (c.meta?.email ?? c.email)?.toLowerCase();
+        return email ? emails.has(email) : false;
+      });
+      logger.log(
+        `Filtered to ${conversations.length} conversations for ${emails.size} email(s): ${[...emails].join(', ')}`,
+      );
     } else if (options.emailDomainFilter) {
       const domain = options.emailDomainFilter.toLowerCase();
       conversations = conversations.filter((c) =>
