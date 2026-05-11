@@ -223,9 +223,15 @@ export class UserService {
       }
     }
 
+    // class-transformer instantiates the DTO with all declared properties, so any field
+    // omitted from the request body is `undefined` (not absent). Spreading would overwrite
+    // user fields like `email` with undefined — strip undefined entries first.
+    const dtoUpdates = Object.fromEntries(
+      Object.entries(updateUserDto).filter(([, v]) => v !== undefined),
+    );
     const newUserData: UserEntity = {
       ...user,
-      ...updateUserDto,
+      ...dtoUpdates,
     };
     const updatedUser = await this.userRepository.save(newUserData);
     this.logger.log({

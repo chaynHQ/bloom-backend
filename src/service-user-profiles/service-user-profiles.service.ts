@@ -183,7 +183,6 @@ export class ServiceUserProfilesService {
         );
       } catch (err) {
         if (this.isFrontContactNotFound(err)) {
-          logger.warn(`Front contact missing for ${email} — creating with full custom fields`);
           await this.getOrCreateFrontContact(user);
         } else {
           throw err;
@@ -194,9 +193,7 @@ export class ServiceUserProfilesService {
         (error as { cause?: { status?: number }; status?: number })?.cause?.status ??
         (error as { status?: number })?.status;
       const message = error instanceof Error ? error.message : 'unknown error';
-      logger.error(
-        `Sync Front Chat contact custom fields error for ${email} (status=${status}): ${message}`,
-      );
+      logger.error(`Sync Front Chat contact custom fields error (status=${status}): ${message}`);
     }
   }
 
@@ -229,9 +226,6 @@ export class ServiceUserProfilesService {
         logger.error(`Update Mailchimp ${context} error (status=${status}) - ${message}`);
         return;
       }
-      logger.warn(
-        `Mailchimp PATCH 404 for ${targetEmail} (${context}) — recreating profile from DB (lookup=${recoveryEmail})`,
-      );
       try {
         const user = await this.userRepository.findOne({
           where: { email: ILike(recoveryEmail) },
@@ -241,7 +235,7 @@ export class ServiceUserProfilesService {
           },
         });
         if (!user) {
-          logger.error(`Mailchimp 404 recovery: no DB user for ${recoveryEmail}`);
+          logger.error(`Mailchimp 404 recovery (${context}): user not found in DB`);
           return;
         }
         const chatUser = await this.frontChatService.getChatUser(user.id);
@@ -251,12 +245,11 @@ export class ServiceUserProfilesService {
           ...(partialUpdate.merge_fields ?? {}),
         };
         await createMailchimpProfile(profileData);
-        logger.warn(`Recreated Mailchimp profile for ${user.email}`);
       } catch (recoverError) {
         const recoverStatus = (recoverError as { status?: number })?.status;
         const message = recoverError instanceof Error ? recoverError.message : 'unknown error';
         logger.error(
-          `Recreate Mailchimp profile failed for ${recoveryEmail} (status=${recoverStatus}) - ${message}`,
+          `Recreate Mailchimp profile failed (${context}, status=${recoverStatus}) - ${message}`,
         );
       }
     }
@@ -276,18 +269,13 @@ export class ServiceUserProfilesService {
       const status = (error as { status?: number })?.status;
       if (!this.isMailchimpNotFound(error)) {
         const message = error instanceof Error ? error.message : 'unknown error';
-        logger.error(
-          `Send Mailchimp event ${event} for ${email} failed (status=${status}) - ${message}`,
-        );
+        logger.error(`Send Mailchimp event ${event} failed (status=${status}) - ${message}`);
         return;
       }
-      logger.warn(
-        `Mailchimp event ${event} 404 for ${email} — recreating profile via syncMailchimpProfile then retrying`,
-      );
       try {
         const user = await this.userRepository.findOneBy({ email: ILike(email) });
         if (!user) {
-          logger.error(`Cannot recover Mailchimp profile: no DB user for ${email}`);
+          logger.error(`Mailchimp event ${event} recovery: user not found in DB`);
           return;
         }
         await this.syncMailchimpProfile(
@@ -300,7 +288,7 @@ export class ServiceUserProfilesService {
         const retryStatus = (retryError as { status?: number })?.status;
         const message = retryError instanceof Error ? retryError.message : 'unknown error';
         logger.error(
-          `Send Mailchimp event ${event} for ${email} retry failed (status=${retryStatus}) - ${message}`,
+          `Send Mailchimp event ${event} retry failed (status=${retryStatus}) - ${message}`,
         );
       }
     }
@@ -313,6 +301,10 @@ export class ServiceUserProfilesService {
     isLanguageUpdateRequired: boolean,
     existingEmail: string,
   ) {
+    // Defensive: caller spreads updateUserDto over the user entity, so user.email can be
+    // undefined when the DTO has `email: undefined`. Fall back to existingEmail so recovery
+    // (createContact / contactExists) has a real address to work with.
+    if (!user.email) user = { ...user, email: existingEmail };
     const email = isEmailUpdateRequired ? user.email : existingEmail;
 
     if (isCypressTestEmail(email) || isCypressTestEmail(existingEmail)) {
@@ -330,15 +322,12 @@ export class ServiceUserProfilesService {
       try {
         await this.frontChatService.updateContactProfile(profilePayload, existingEmail);
       } catch (error) {
-        const status =
-          (error as { cause?: { status?: number }; status?: number })?.cause?.status ??
-          (error as { status?: number })?.status;
         if (this.isFrontContactNotFound(error)) {
-          logger.warn(
-            `Front contact missing for ${existingEmail} (status=${status}) — creating at ${user.email} with full data`,
-          );
           await this.getOrCreateFrontContact(user);
         } else {
+          const status =
+            (error as { cause?: { status?: number }; status?: number })?.cause?.status ??
+            (error as { status?: number })?.status;
           const message = error instanceof Error ? error.message : 'unknown error';
           logger.error(`Update Front Chat user profile error (status=${status}) - ${message}`);
         }
