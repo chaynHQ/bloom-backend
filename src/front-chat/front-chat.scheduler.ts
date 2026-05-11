@@ -21,7 +21,7 @@ export class FrontChatScheduler {
 
     this.logger.log(`FrontChatScheduler: notifying ${unread.length} user(s) of unread messages`);
 
-    await Promise.allSettled(
+    const results = await Promise.allSettled(
       unread.map(async ({ chatUser, email }) => {
         // Mark notified in the DB before sending so a restart between these two
         // operations doesn't cause a duplicate notification on the next cron fire.
@@ -41,5 +41,13 @@ export class FrontChatScheduler {
         );
       }),
     );
+
+    for (const result of results) {
+      if (result.status === 'rejected') {
+        this.logger.error(
+          `FrontChatScheduler: unhandled error sending unread notification: ${(result.reason as Error)?.message || result.reason}`,
+        );
+      }
+    }
   }
 }

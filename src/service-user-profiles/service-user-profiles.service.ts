@@ -284,17 +284,17 @@ export class ServiceUserProfilesService {
       logger.warn(
         `Mailchimp event ${event} 404 for ${email} — recreating profile via syncMailchimpProfile then retrying`,
       );
-      const user = await this.userRepository.findOneBy({ email: ILike(email) });
-      if (!user) {
-        logger.error(`Cannot recover Mailchimp profile: no DB user for ${email}`);
-        return;
-      }
-      await this.syncMailchimpProfile(
-        this.serializeUserData(user).mailchimpSchema,
-        email,
-        `event ${event} pre-retry`,
-      );
       try {
+        const user = await this.userRepository.findOneBy({ email: ILike(email) });
+        if (!user) {
+          logger.error(`Cannot recover Mailchimp profile: no DB user for ${email}`);
+          return;
+        }
+        await this.syncMailchimpProfile(
+          this.serializeUserData(user).mailchimpSchema,
+          email,
+          `event ${event} pre-retry`,
+        );
         await sendMailchimpUserEvent(email, event);
       } catch (retryError) {
         const retryStatus = (retryError as { status?: number })?.status;
