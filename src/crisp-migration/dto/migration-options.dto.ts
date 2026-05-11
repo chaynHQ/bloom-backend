@@ -19,7 +19,7 @@ export class MigrationOptionsDto {
 
   @IsOptional()
   @IsString()
-  specificEmail?: string; // Migrate only a specific contact
+  specificEmail?: string; // Migrate only specific contacts — single email or comma-separated list (e.g. "a@x.com,b@y.com")
 
   @IsOptional()
   @IsString()

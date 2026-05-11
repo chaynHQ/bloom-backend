@@ -5,11 +5,13 @@ import {
   batchUpdateMailchimpProfiles,
   createMailchimpMergeField,
   createMailchimpProfile,
+  sendMailchimpUserEvent,
   updateMailchimpProfile,
 } from 'src/api/mailchimp/mailchimp-api';
 import {
   ListMemberCustomFields,
   ListMemberPartial,
+  MAILCHIMP_CUSTOM_EVENTS,
   MAILCHIMP_MERGE_FIELD_TYPES,
 } from 'src/api/mailchimp/mailchimp-api.interfaces';
 import { ChatUserEntity } from 'src/entities/chat-user.entity';
@@ -181,15 +183,20 @@ export class ServiceUserProfilesService {
         );
       } catch (err) {
         if (this.isFrontContactNotFound(err)) {
-          logger.log(`Front contact missing for ${email} — creating with full custom fields`);
+          logger.warn(`Front contact missing for ${email} — creating with full custom fields`);
           await this.getOrCreateFrontContact(user);
         } else {
           throw err;
         }
       }
     } catch (error) {
+      const status =
+        (error as { cause?: { status?: number }; status?: number })?.cause?.status ??
+        (error as { status?: number })?.status;
       const message = error instanceof Error ? error.message : 'unknown error';
-      logger.error(`Sync Front Chat contact custom fields error for ${email}: ${message}`);
+      logger.error(
+        `Sync Front Chat contact custom fields error for ${email} (status=${status}): ${message}`,
+      );
     }
   }
 
@@ -216,12 +223,15 @@ export class ServiceUserProfilesService {
     try {
       await updateMailchimpProfile(partialUpdate, targetEmail);
     } catch (error) {
+      const status = (error as { status?: number })?.status;
       if (!this.isMailchimpNotFound(error)) {
         const message = error instanceof Error ? error.message : 'unknown error';
-        logger.error(`Update Mailchimp ${context} error - ${message}`);
+        logger.error(`Update Mailchimp ${context} error (status=${status}) - ${message}`);
         return;
       }
-      // 404 recovery — recreate from the full DB record so we don't leave a partial profile.
+      logger.warn(
+        `Mailchimp PATCH 404 for ${targetEmail} (${context}) — recreating profile from DB (lookup=${recoveryEmail})`,
+      );
       try {
         const user = await this.userRepository.findOne({
           where: { email: ILike(recoveryEmail) },
@@ -231,21 +241,67 @@ export class ServiceUserProfilesService {
           },
         });
         if (!user) {
-          logger.warn(`Mailchimp 404 recovery: no DB user for ${recoveryEmail}; skipping`);
+          logger.error(`Mailchimp 404 recovery: no DB user for ${recoveryEmail}`);
           return;
         }
         const chatUser = await this.frontChatService.getChatUser(user.id);
         const profileData = this.createCompleteMailchimpUserProfile(user, chatUser);
-
         profileData.merge_fields = {
           ...profileData.merge_fields,
           ...(partialUpdate.merge_fields ?? {}),
         };
         await createMailchimpProfile(profileData);
-        logger.log(`Recovered Mailchimp profile for ${user.email}`);
+        logger.warn(`Recreated Mailchimp profile for ${user.email}`);
       } catch (recoverError) {
+        const recoverStatus = (recoverError as { status?: number })?.status;
         const message = recoverError instanceof Error ? recoverError.message : 'unknown error';
-        logger.error(`Recover Mailchimp profile failed for ${recoveryEmail} - ${message}`);
+        logger.error(
+          `Recreate Mailchimp profile failed for ${recoveryEmail} (status=${recoverStatus}) - ${message}`,
+        );
+      }
+    }
+  }
+
+  // Send a Mailchimp custom event with 404 recovery — for archived/missing members,
+  // pipes through syncMailchimpProfile's existing recovery (PATCHes user data → 404 →
+  // recreates full profile) then retries the event so the email still fires.
+  async sendMailchimpUserEventWithRecovery(
+    email: string,
+    event: MAILCHIMP_CUSTOM_EVENTS,
+  ): Promise<void> {
+    if (isCypressTestEmail(email)) return;
+    try {
+      await sendMailchimpUserEvent(email, event);
+    } catch (error) {
+      const status = (error as { status?: number })?.status;
+      if (!this.isMailchimpNotFound(error)) {
+        const message = error instanceof Error ? error.message : 'unknown error';
+        logger.error(
+          `Send Mailchimp event ${event} for ${email} failed (status=${status}) - ${message}`,
+        );
+        return;
+      }
+      logger.warn(
+        `Mailchimp event ${event} 404 for ${email} — recreating profile via syncMailchimpProfile then retrying`,
+      );
+      try {
+        const user = await this.userRepository.findOneBy({ email: ILike(email) });
+        if (!user) {
+          logger.error(`Cannot recover Mailchimp profile: no DB user for ${email}`);
+          return;
+        }
+        await this.syncMailchimpProfile(
+          this.serializeUserData(user).mailchimpSchema,
+          email,
+          `event ${event} pre-retry`,
+        );
+        await sendMailchimpUserEvent(email, event);
+      } catch (retryError) {
+        const retryStatus = (retryError as { status?: number })?.status;
+        const message = retryError instanceof Error ? retryError.message : 'unknown error';
+        logger.error(
+          `Send Mailchimp event ${event} for ${email} retry failed (status=${retryStatus}) - ${message}`,
+        );
       }
     }
   }
@@ -274,16 +330,17 @@ export class ServiceUserProfilesService {
       try {
         await this.frontChatService.updateContactProfile(profilePayload, existingEmail);
       } catch (error) {
+        const status =
+          (error as { cause?: { status?: number }; status?: number })?.cause?.status ??
+          (error as { status?: number })?.status;
         if (this.isFrontContactNotFound(error)) {
-          // getOrCreateFrontContact creates at user.email with name + full custom fields, so
-          // no retry is needed (and retrying existingEmail would 404 again on email changes).
-          logger.log(
-            `Front contact missing for ${existingEmail} — creating at ${user.email} with full data`,
+          logger.warn(
+            `Front contact missing for ${existingEmail} (status=${status}) — creating at ${user.email} with full data`,
           );
           await this.getOrCreateFrontContact(user);
         } else {
           const message = error instanceof Error ? error.message : 'unknown error';
-          logger.error(`Update Front Chat user profile error - ${message}`);
+          logger.error(`Update Front Chat user profile error (status=${status}) - ${message}`);
         }
       }
     }

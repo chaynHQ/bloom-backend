@@ -1,15 +1,18 @@
 import { Injectable } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { sendMailchimpUserEvent } from 'src/api/mailchimp/mailchimp-api';
 import { MAILCHIMP_CUSTOM_EVENTS } from 'src/api/mailchimp/mailchimp-api.interfaces';
 import { Logger } from 'src/logger/logger';
+import { ServiceUserProfilesService } from 'src/service-user-profiles/service-user-profiles.service';
 import { FrontChatService } from './front-chat.service';
 
 @Injectable()
 export class FrontChatScheduler {
   private readonly logger = new Logger('FrontChatScheduler');
 
-  constructor(private readonly frontChatService: FrontChatService) {}
+  constructor(
+    private readonly frontChatService: FrontChatService,
+    private readonly serviceUserProfilesService: ServiceUserProfilesService,
+  ) {}
 
   @Cron(CronExpression.EVERY_MINUTE)
   async checkUnreadMessages(): Promise<void> {
@@ -18,7 +21,7 @@ export class FrontChatScheduler {
 
     this.logger.log(`FrontChatScheduler: notifying ${unread.length} user(s) of unread messages`);
 
-    await Promise.allSettled(
+    const results = await Promise.allSettled(
       unread.map(async ({ chatUser, email }) => {
         // Mark notified in the DB before sending so a restart between these two
         // operations doesn't cause a duplicate notification on the next cron fire.
@@ -30,14 +33,21 @@ export class FrontChatScheduler {
           );
           return;
         }
-        try {
-          await sendMailchimpUserEvent(email, MAILCHIMP_CUSTOM_EVENTS.FRONT_MESSAGE_UNREAD);
-        } catch (err) {
-          this.logger.warn(
-            `FrontChatScheduler: failed to notify ${email}: ${(err as Error)?.message || 'unknown error'}`,
-          );
-        }
+        // Recovery wrapper: recreates an archived/missing Mailchimp profile before retrying
+        // the event so the unread-message email still fires.
+        await this.serviceUserProfilesService.sendMailchimpUserEventWithRecovery(
+          email,
+          MAILCHIMP_CUSTOM_EVENTS.FRONT_MESSAGE_UNREAD,
+        );
       }),
     );
+
+    for (const result of results) {
+      if (result.status === 'rejected') {
+        this.logger.error(
+          `FrontChatScheduler: unhandled error sending unread notification: ${(result.reason as Error)?.message || result.reason}`,
+        );
+      }
+    }
   }
 }

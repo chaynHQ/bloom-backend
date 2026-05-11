@@ -147,7 +147,11 @@ export class FrontChatGateway implements OnGatewayConnection, OnGatewayDisconnec
       if (!existingChatUser?.frontContactId) {
         await this.awaitFrontContactReady(user);
       }
-      const chatUser = await this.frontChatService.sendChannelTextMessage(user, payload.text, existingChatUser);
+      const chatUser = await this.frontChatService.sendChannelTextMessage(
+        user,
+        payload.text,
+        existingChatUser,
+      );
 
       if (chatUser) {
         this.serviceUserProfilesService
