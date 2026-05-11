@@ -19,6 +19,13 @@ async function bootstrap() {
     rawBody: true,
   });
 
+  app.use((req, res, next) => {
+    res.setHeader('Strict-Transport-Security', 'max-age=15552000; includeSubDomains');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+    res.setHeader('Referrer-Policy', 'no-referrer');
+    next();
+  });
   app.setGlobalPrefix('api');
 
   // Starts listening for shutdown hooks

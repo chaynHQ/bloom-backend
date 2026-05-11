@@ -11,6 +11,7 @@ import { TherapySessionEntity } from '../entities/therapy-session.entity';
 import { UserEntity } from '../entities/user.entity';
 import { ZapierSimplybookBodyDto } from '../partner-access/dtos/zapier-body.dto';
 import { ISubscriptionUser } from '../subscription-user/subscription-user.interface';
+import { GetTherapySessionDto } from '../therapy-session/dto/get-therapy-session.dto';
 import { GetUserDto } from '../user/dtos/get-user.dto';
 
 export const formatCourseUserObjects = (courseUserObjects: CourseUserEntity[]) => {
@@ -67,40 +68,42 @@ const formatPartnerAdminObjects = (partnerAdminObject: PartnerAdminEntity) => {
   };
 };
 
-const formatPartnerAccessObjects = (partnerAccessObjects: PartnerAccessEntity[]) => {
-  return partnerAccessObjects.map((partnerAccess) => {
-    return {
-      id: partnerAccess.id,
-      createdAt: partnerAccess.createdAt,
-      updatedAt: partnerAccess.updatedAt,
-      activatedAt: partnerAccess.activatedAt,
-      featureLiveChat: partnerAccess.featureLiveChat,
-      featureTherapy: partnerAccess.featureTherapy,
-      accessCode: partnerAccess.accessCode,
-      active: partnerAccess.active,
-      therapySessionsRemaining: partnerAccess.therapySessionsRemaining,
-      therapySessionsRedeemed: partnerAccess.therapySessionsRedeemed,
-      partner: partnerAccess.partner ? formatPartnerObject(partnerAccess.partner) : null,
-      therapySessions:
-        partnerAccess.therapySession?.length === 0
-          ? []
-          : partnerAccess.therapySession?.map((ts) => {
-              return {
-                id: ts.id,
-                action: ts.action,
-                clientTimezone: ts.clientTimezone,
-                serviceName: ts.serviceName,
-                serviceProviderName: ts.serviceProviderName,
-                serviceProviderEmail: ts.serviceProviderEmail,
-                startDateTime: ts.startDateTime,
-                endDateTime: ts.endDateTime,
-                cancelledAt: ts.cancelledAt,
-                rescheduledFrom: ts.rescheduledFrom,
-                completedAt: ts.completedAt,
-              };
-            }),
-    };
-  });
+export const formatPartnerAccessObject = (partnerAccess: PartnerAccessEntity) => {
+  return {
+    id: partnerAccess.id,
+    createdAt: partnerAccess.createdAt,
+    updatedAt: partnerAccess.updatedAt,
+    activatedAt: partnerAccess.activatedAt,
+    featureLiveChat: partnerAccess.featureLiveChat,
+    featureTherapy: partnerAccess.featureTherapy,
+    accessCode: partnerAccess.accessCode,
+    active: partnerAccess.active,
+    therapySessionsRemaining: partnerAccess.therapySessionsRemaining,
+    therapySessionsRedeemed: partnerAccess.therapySessionsRedeemed,
+    partner: partnerAccess.partner ? formatPartnerObject(partnerAccess.partner) : null,
+    therapySessions:
+      partnerAccess.therapySession?.length === 0
+        ? []
+        : partnerAccess.therapySession?.map((ts) => {
+            return {
+              id: ts.id,
+              action: ts.action,
+              clientTimezone: ts.clientTimezone,
+              serviceName: ts.serviceName,
+              serviceProviderName: ts.serviceProviderName,
+              serviceProviderEmail: ts.serviceProviderEmail,
+              startDateTime: ts.startDateTime,
+              endDateTime: ts.endDateTime,
+              cancelledAt: ts.cancelledAt,
+              rescheduledFrom: ts.rescheduledFrom,
+              completedAt: ts.completedAt,
+            };
+          }),
+  };
+};
+
+export const formatPartnerAccessObjects = (partnerAccessObjects: PartnerAccessEntity[]) => {
+  return partnerAccessObjects.map(formatPartnerAccessObject);
 };
 
 export const formatUserObject = (userObject: UserEntity): GetUserDto => {
@@ -112,7 +115,6 @@ export const formatUserObject = (userObject: UserEntity): GetUserDto => {
       deletedAt: userObject.deletedAt,
       name: userObject.name,
       email: userObject.email,
-      firebaseUid: userObject.firebaseUid,
       isActive: userObject.isActive,
       lastActiveAt: userObject.lastActiveAt,
       isSuperAdmin: userObject.isSuperAdmin,
@@ -169,6 +171,29 @@ export const serializeZapierSimplyBookDtoToTherapySessionEntity = (
     partnerAccessId: partnerAccess.id,
     userId: partnerAccess.userId,
   };
+};
+
+export const formatTherapySessionObject = (session: TherapySessionEntity): GetTherapySessionDto => {
+  return {
+    id: session.id,
+    action: session.action,
+    serviceName: session.serviceName,
+    serviceProviderName: session.serviceProviderName,
+    clientTimezone: session.clientTimezone,
+    startDateTime: session.startDateTime,
+    endDateTime: session.endDateTime,
+    cancelledAt: session.cancelledAt,
+    rescheduledFrom: session.rescheduledFrom,
+    completedAt: session.completedAt,
+    createdAt: session.createdAt,
+    updatedAt: session.updatedAt,
+  };
+};
+
+export const formatTherapySessionObjects = (
+  sessions: TherapySessionEntity[],
+): GetTherapySessionDto[] => {
+  return sessions.map(formatTherapySessionObject);
 };
 
 export const formatSubscriptionObject = (

@@ -590,7 +590,6 @@ describe('UserService', () => {
           isSuperAdmin: false,
           signUpLanguage: 'en',
           emailRemindersFrequency: 'TWO_MONTHS',
-          firebaseUid: '123',
           deletedAt: null,
           contactPermission: true,
           serviceEmailsPermission: true,
