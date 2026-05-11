@@ -54,7 +54,27 @@ async function fetchFrontWithRetry(url: string, init: RequestInit): Promise<Resp
   }
 }
 
-async function frontApiRequest(method: string, path: string, body?: unknown): Promise<unknown> {
+// Per-minute rate limits don't embed a retry-in time in the error body — default to 60 s so
+// we clear the window rather than hammering Front with rapid retries that will 429 again.
+const FRONT_429_RETRY_DELAYS_MS = [500, 5_000, 60_000];
+
+function parseFrontRetryDelayMs(errorBody: string): number | undefined {
+  try {
+    const parsed = JSON.parse(errorBody) as { _error?: { message?: string } };
+    const match = parsed._error?.message?.match(/retry in (\d+) milliseconds/i);
+    if (match) return parseInt(match[1], 10);
+  } catch {
+    // ignore
+  }
+  return undefined;
+}
+
+async function frontApiRequest(
+  method: string,
+  path: string,
+  body?: unknown,
+  attempt = 0,
+): Promise<unknown> {
   const response = await fetch(`${FRONT_API_BASE_URL}${path}`, {
     method,
     headers: {
@@ -66,6 +86,16 @@ async function frontApiRequest(method: string, path: string, body?: unknown): Pr
 
   if (!response.ok) {
     const errorBody = await response.text();
+
+    if (response.status === 429 && attempt < FRONT_429_RETRY_DELAYS_MS.length) {
+      const retryMs = parseFrontRetryDelayMs(errorBody) ?? FRONT_429_RETRY_DELAYS_MS[attempt];
+      logger.warn(
+        `Front API rate limited on ${method} ${path} — retrying in ${retryMs}ms (attempt ${attempt + 1}/${FRONT_429_RETRY_DELAYS_MS.length})`,
+      );
+      await new Promise((resolve) => setTimeout(resolve, retryMs));
+      return frontApiRequest(method, path, body, attempt + 1);
+    }
+
     const error = new Error(
       `Front API ${method} ${path} failed (${response.status}): ${errorBody}`,
     ) as FrontApiError;

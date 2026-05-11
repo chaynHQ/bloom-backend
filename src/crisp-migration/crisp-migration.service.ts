@@ -158,7 +158,7 @@ export class CrispMigrationService {
           () =>
             this.migrateUser(email, convs, since, options),
       ),
-      3,
+      1,
     );
   }
 
