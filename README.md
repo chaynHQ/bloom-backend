@@ -29,7 +29,7 @@ Technologies Used:
 - [Simplybook](https://simplybook.me/en/) - Appointment booking system used for therapy
 - [Slack](https://api.slack.com/messaging/webhooks) - Slack webhooks to send messages to the team
 - [Rollbar](https://rollbar.com/) - Error reporting
-- [Crisp](https://crisp.chat/en/) - User messaging
+- [Front](https://front.com) - User messaging
 - [Mailchimp](https://mailchimp.com/developer/marketing/) - Transactional email
 - [Docker](https://www.docker.com/) - Containers for api and db
 - [Render](https://render.com) - Build, deploy and operate staging and production apps

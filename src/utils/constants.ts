@@ -236,8 +236,4 @@ export const mailchimpServerPrefix = getEnv(
   'MAILCHIMP_SERVER_PREFIX',
 );
 
-export const crispWebsiteId = getEnv(process.env.CRISP_WEBSITE_ID, 'CRISP_WEBSITE_ID');
-export const crispIdentifier = getEnv(process.env.CRISP_IDENTIFIER, 'CRISP_IDENTIFIER');
-export const crispKey = getEnv(process.env.CRISP_KEY, 'CRISP_KEY');
-
 export const frontSupportEmail = process.env.FRONT_SUPPORT_EMAIL || 'support@bloom.chayn.co';
