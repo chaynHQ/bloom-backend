@@ -16,6 +16,7 @@ import axios from 'axios';
 import { authenticator } from 'otplib';
 import { Logger } from 'src/logger/logger';
 import {
+  isProduction,
   simplybookCompanyName,
   simplybookCredentials,
   simplybookTotpSecret,
@@ -52,21 +53,24 @@ let cachedToken: { token: string; expiresAt: number } | null = null;
 let inFlightAuth: Promise<string> | null = null;
 
 const performAuth = async (): Promise<string> => {
-  const response = await axios.post(
-    `${SIMPLYBOOK_API_BASE_URL}/auth`,
-    JSON.parse(simplybookCredentials),
-    {
-      headers: {
-        'Content-Type': 'application/json',
-      },
+  const credentials = JSON.parse(simplybookCredentials);
+  const response = await axios.post(`${SIMPLYBOOK_API_BASE_URL}/auth`, credentials, {
+    headers: {
+      'Content-Type': 'application/json',
     },
-  );
+  });
 
   let token: string;
 
   if (!response.data.require2fa) {
     token = response.data.token;
   } else {
+    if (!simplybookTotpSecret && isProduction) {
+      throw new Error(
+        'Simplybook requires 2FA but SIMPLYBOOK_TOTP_SECRET is not configured. ' +
+          'Set the env var to the base32 TOTP secret from Simplybook admin 2FA setup.',
+      );
+    }
     const normalisedSecret = simplybookTotpSecret.toUpperCase().replace(/\s/g, '');
     // If fewer than 3 seconds remain in the current 30s window, wait for the next one
     // to avoid sending a code that expires before Simplybook receives the request
@@ -75,7 +79,6 @@ const performAuth = async (): Promise<string> => {
       await new Promise((resolve) => setTimeout(resolve, (secondsRemaining + 1) * 1000));
     }
     const code = authenticator.generate(normalisedSecret);
-    const credentials = JSON.parse(simplybookCredentials);
     const twoFaResponse = await axios.post(
       `${SIMPLYBOOK_API_BASE_URL}/auth/2fa`,
       {
@@ -122,7 +125,7 @@ export const getBookingId: (bookingCode: string) => Promise<number> = async (
 
   try {
     const bookingsResponse = await axios.get(
-      `${SIMPLYBOOK_API_BASE_URL}/bookings?filter[search]=${bookingCode}`,
+      `${SIMPLYBOOK_API_BASE_URL}/bookings?filter[search]=${encodeURIComponent(bookingCode)}`,
       {
         headers: {
           'Content-Type': 'application/json',
@@ -198,5 +201,7 @@ const handleError = (message: string, error) => {
   // Don't log error.response.data — booking responses contain client emails and other PII.
   // The caller's message already includes the bookingId/bookingCode to identify the record.
   logger.error(`${message}: ${errorDetail}${status ? ` (status ${status})` : ''}`);
-  throw new Error(`${message}: ${errorDetail}`);
+  // Preserve the original error (stack trace, AxiosError properties) via Error.cause
+  // so downstream callers can inspect it if they need to differentiate failure modes.
+  throw new Error(`${message}: ${errorDetail}`, { cause: error });
 };

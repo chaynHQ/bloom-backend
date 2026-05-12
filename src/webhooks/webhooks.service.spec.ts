@@ -709,34 +709,40 @@ describe('WebhooksService', () => {
       ).resolves.toHaveProperty('action', SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING);
     });
 
-    it('should add therapyRemaining to original partner access when action is cancel', async () => {
-      const partnerAccessSaveSpy = jest.spyOn(mockedPartnerAccessRepository, 'save');
+    it('should credit therapyRemaining back to original partner access when action is cancel', async () => {
+      const incrementSpy = jest.spyOn(mockedPartnerAccessRepository, 'increment');
+      const decrementSpy = jest.spyOn(mockedPartnerAccessRepository, 'decrement');
       await expect(
         service.updatePartnerAccessTherapy({
           ...mockSimplybookBodyBase,
           ...{ action: SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING },
         }),
       ).resolves.toHaveProperty('action', SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING);
-      expect(partnerAccessSaveSpy).toHaveBeenCalledWith({
-        ...mockPartnerAccessEntity,
-        therapySessionsRemaining: mockPartnerAccessEntity.therapySessionsRemaining + 1,
-        therapySessionsRedeemed: mockPartnerAccessEntity.therapySessionsRedeemed - 1,
-      });
+      expect(incrementSpy).toHaveBeenCalledWith(
+        { id: mockTherapySessionEntity.partnerAccessId },
+        'therapySessionsRemaining',
+        1,
+      );
+      expect(decrementSpy).toHaveBeenCalledWith(
+        { id: mockTherapySessionEntity.partnerAccessId },
+        'therapySessionsRedeemed',
+        1,
+      );
     });
 
-    it('should set a booking as cancelled when action is cancel and there are no therapy sessions remaining TODO', async () => {
-      const partnerAccessFindSpy = jest
-        .spyOn(mockedPartnerAccessRepository, 'findOneBy')
-        .mockImplementationOnce(async () => {
-          return { ...mockPartnerAccessEntity, therapySessionsRemaining: 0 };
-        });
+    it('should still credit back when partner access has zero remaining (cancel path uses atomic increment)', async () => {
+      const incrementSpy = jest.spyOn(mockedPartnerAccessRepository, 'increment');
       await expect(
         service.updatePartnerAccessTherapy({
           ...mockSimplybookBodyBase,
           ...{ action: SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING },
         }),
       ).resolves.toHaveProperty('action', SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING);
-      expect(partnerAccessFindSpy).toHaveBeenCalled();
+      expect(incrementSpy).toHaveBeenCalledWith(
+        { id: mockTherapySessionEntity.partnerAccessId },
+        'therapySessionsRemaining',
+        1,
+      );
     });
 
     it('should throw if no partnerAccess exists when user tries to create a booking', async () => {
@@ -758,25 +764,37 @@ describe('WebhooksService', () => {
         ];
       });
 
-      const partnerAccessSaveSpy = jest.spyOn(mockedPartnerAccessRepository, 'save');
+      const decrementSpy = jest.spyOn(mockedPartnerAccessRepository, 'decrement');
+      const incrementSpy = jest.spyOn(mockedPartnerAccessRepository, 'increment');
       await expect(
         service.updatePartnerAccessTherapy({
           ...mockSimplybookBodyBase,
           ...{ action: SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING },
         }),
       ).resolves.toHaveProperty('action', SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING);
-      expect(partnerAccessSaveSpy).toHaveBeenCalledWith(mockPartnerAccessEntity);
+      expect(decrementSpy).toHaveBeenCalledWith(
+        { id: mockPartnerAccessEntity.id },
+        'therapySessionsRemaining',
+        1,
+      );
+      expect(incrementSpy).toHaveBeenCalledWith(
+        { id: mockPartnerAccessEntity.id },
+        'therapySessionsRedeemed',
+        1,
+      );
     });
 
-    it('should not update partner access when user updates booking', async () => {
-      const partnerAccessSaveSpy = jest.spyOn(mockedPartnerAccessRepository, 'save');
+    it('should not increment/decrement partner access counters when user updates booking', async () => {
+      const incrementSpy = jest.spyOn(mockedPartnerAccessRepository, 'increment');
+      const decrementSpy = jest.spyOn(mockedPartnerAccessRepository, 'decrement');
       await expect(
         service.updatePartnerAccessTherapy({
           ...mockSimplybookBodyBase,
           ...{ action: SIMPLYBOOK_ACTION_ENUM.UPDATED_BOOKING },
         }),
       ).resolves.toHaveProperty('action', SIMPLYBOOK_ACTION_ENUM.UPDATED_BOOKING);
-      expect(partnerAccessSaveSpy).not.toHaveBeenCalled();
+      expect(incrementSpy).not.toHaveBeenCalled();
+      expect(decrementSpy).not.toHaveBeenCalled();
     });
     it('should error if user creates booking when no therapy sessions remaining ', async () => {
       jest.spyOn(mockedPartnerAccessRepository, 'find').mockImplementationOnce(async () => {
