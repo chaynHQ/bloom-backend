@@ -1,3 +1,17 @@
+/**
+ * Simplybook REST Admin API client (https://user-api-v2.simplybook.me/admin).
+ *
+ * Auth model: login + password via POST /auth, returning a token used in `X-Token` headers.
+ * When 2FA is enabled on the Simplybook account, /auth responds with `require2fa: true` and
+ * we follow up with POST /auth/2fa carrying a TOTP code generated from SIMPLYBOOK_TOTP_SECRET.
+ *
+ * Future migration: Simplybook also exposes a "public" JSON-RPC API at https://user-api.simplybook.me
+ * (Company Public Service API) that authenticates via an API key + secret key signature pattern
+ * (`md5(bookingId + bookingHash + secretKey)`). It is not affected by admin 2FA and is the
+ * recommended path for server-to-server integrations. Migrating the three methods used here
+ * (getBookingId, cancelBooking, getBookingDetails → public `getBooking`, `cancelBooking`) would
+ * let us drop the 2FA flow, the token mutex, and the SIMPLYBOOK_TOTP_SECRET env var.
+ */
 import axios from 'axios';
 import { authenticator } from 'otplib';
 import { Logger } from 'src/logger/logger';
