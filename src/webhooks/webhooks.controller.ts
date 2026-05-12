@@ -1,13 +1,16 @@
 import { Body, Controller, Get, Headers, Post, Query, Request, UseGuards } from '@nestjs/common';
-import { ApiBody, ApiTags } from '@nestjs/swagger';
+import { ApiBody, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
 import { FrontChatWebhookService } from 'src/front-chat/front-chat-webhook.service';
 import { ControllerDecorator } from 'src/utils/controller.decorator';
-import { ZapierSimplybookBodyDto } from '../partner-access/dtos/zapier-body.dto';
+import { SimplybookBodyDto } from '../partner-access/dtos/simplybook-body.dto';
 import { ZapierAuthGuard } from '../partner-access/zapier-auth.guard';
 import { FrontChatWebhookDto } from './dto/front-chat-webhook.dto';
 import { MailchimpWebhookDto } from './dto/mailchimp-webhook.dto';
+import { SimplybookWebhookDto } from './dto/simplybook-webhook.dto';
 import { StoryWebhookDto } from './dto/story.dto';
+import { SimplybookWebhookGuard } from './guards/simplybook-webhook.guard';
 import { WebhooksService } from './webhooks.service';
 
 @ApiTags('Webhooks')
@@ -21,11 +24,25 @@ export class WebhooksController {
 
   @UseGuards(ZapierAuthGuard)
   @Post('simplybook')
-  @ApiBody({ type: ZapierSimplybookBodyDto })
+  @ApiBody({ type: SimplybookBodyDto })
   async updatePartnerAccessTherapy(
-    @Body() simplybookBodyDto: ZapierSimplybookBodyDto,
+    @Body() simplybookBodyDto: SimplybookBodyDto,
   ): Promise<TherapySessionEntity> {
     return this.webhooksService.updatePartnerAccessTherapy(simplybookBodyDto);
+  }
+
+  // Tight rate limit: real Simplybook traffic is a handful of events/minute at peak.
+  // 30/min leaves headroom for burst deliveries (e.g. backfills) while deterring brute-force
+  // attempts to guess the token in the URL.
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
+  @UseGuards(SimplybookWebhookGuard)
+  @Post('simplybook-admin')
+  @ApiBody({ type: SimplybookWebhookDto })
+  @ApiQuery({ name: 'token', required: true, description: 'Webhook secret token' })
+  async handleSimplybookWebhook(
+    @Body() webhookDto: SimplybookWebhookDto,
+  ): Promise<TherapySessionEntity | void> {
+    return this.webhooksService.handleSimplybookWebhook(webhookDto);
   }
 
   @Post('storyblok')
