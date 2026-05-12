@@ -173,6 +173,22 @@ export const FRONT_CHAT_ATTACHMENT_ALLOWED_MIME_TYPES = new Set([
 ]);
 export const FRONT_CHAT_ATTACHMENT_MAX_FILE_SIZE = 25 * 1024 * 1024; // 25 MB
 
+export const simplybookWebhookSecret = getEnv(
+  process.env.SIMPLYBOOK_WEBHOOK_SECRET,
+  'SIMPLYBOOK_WEBHOOK_SECRET',
+);
+// Fail fast in production rather than silently rejecting every Simplybook webhook
+// with a 401. SIMPLYBOOK_TOTP_SECRET is intentionally not required at startup because
+// it's only needed when 2FA is enabled on the Simplybook account.
+if (isProduction && !simplybookWebhookSecret) {
+  throw new Error('SIMPLYBOOK_WEBHOOK_SECRET is required in production');
+}
+
+export const simplybookTotpSecret = getEnv(
+  process.env.SIMPLYBOOK_TOTP_SECRET,
+  'SIMPLYBOOK_TOTP_SECRET',
+);
+
 export const slackWebhookUrl = getEnv(process.env.SLACK_WEBHOOK_URL, 'SLACK_WEBHOOK_URL');
 export const slackBloomUsersWebhookUrl = getEnv(
   process.env.SLACK_BLOOM_USERS_WEBHOOK_URL,

@@ -50,6 +50,9 @@ export const mockWebhooksServiceMethods: PartialFuncReturn<WebhooksService> = {
   updatePartnerAccessTherapy: async () => {
     return mockTherapySessionEntity;
   },
+  handleSimplybookWebhook: async () => {
+    return mockTherapySessionEntity;
+  },
 };
 
 export const mockClsService = {

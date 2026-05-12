@@ -4,18 +4,22 @@
 
 To run Bloom's backend:
 
-1. Install prerequisites
-2. Configure environment variables
-3. Install dependencies
-4. Run the app using Docker, Dev Containers, or Manually
-5. Populate the database
+1. [Install prerequisites](#1-prerequisites)
+2. [Configure environment variables](#2-configure-environment-variables)
+3. [Install dependencies](#3-install-dependencies-with-yarn)
+4. [Run the app using Docker, Dev Containers, or Manually](#4-run-the-app-locally)
+5. [Populate the database](#5-populate-the-database-and-database-migrations)
 
 To test the backend:
 
-- Run unit tests
-- Run e2e integration tests from the frontend for full-stack contributions
+6. [Run unit tests](#6-unit-testing)
+7. [Run e2e integration tests from the frontend for full-stack contributions](#7-format-and-linting)
 
-## Prerequisites
+- [Git Flow and Deployment](#git-flow-and-deployment)
+- [APIs](#apis)
+
+
+## 1. Prerequisites
 
 - NodeJS v22.x
 - Yarn v1.x
@@ -23,17 +27,17 @@ To test the backend:
 
 _Recommended Minimum System Requirements: CPU: Quad-core 2.5 GHz (i5/Ryzen 5), Memory: 16 GB RAM, Storage: 512 GB, OS: Linux, macOS, Windows, or WSL2 (latest versions), Internet Connection: For accessing dependencies and external APIs/services._
 
-## Configure Environment Variables
+## 2. Configure Environment Variables
 
 See [configure-env.md](configure-env.md) for instructions on configuring environment variables.
 
-## Install dependencies with yarn
+## 3. Install dependencies with yarn
 
 ```bash
 yarn
 ```
 
-## Run the App Locally
+## 4. Run the App Locally
 
 There are 3 methods you can use to run Bloom’s backend locally:
 
@@ -97,7 +101,13 @@ You should see this in the shell output:
 Listening on localhost:35001, CTRL+C to stop
 ```
 
-## Unit Testing
+## 5. Populate the Database and Database Migrations
+
+Populating your local database with test data is required for running Cypress integration tests and testing Bloom’s full-stack functionality.
+
+See the [database-guide.md](database-guide.md) for instructions.
+
+## 6. Unit Testing
 
 To run all unit tests
 
@@ -111,7 +121,7 @@ To have your unit tests running in the background as you change code:
 yarn test:watch
 ```
 
-## Format and Linting
+## 7. Format and Linting
 
 Linting and formatting are provided by [ESLint](https://eslint.org/) and [Prettier](https://prettier.io/). We recommend VSCode users to utilize the workspace settings in [.vscode/settings.json](.vscode/settings.json) and install the extensions in [.vscode/extensions](.vscode/extensions.json) for automated consistency.
 
@@ -134,12 +144,6 @@ Run format and fix:
 ```bash
 yarn format
 ```
-
-# Populate the Database and Database Migrations
-
-Populating your local database with test data is required for running Cypress integration tests and testing Bloom’s full-stack functionality.
-
-See the [database-guide.md](database-guide.md) for instructions.
 
 # Git Flow and Deployment
 
