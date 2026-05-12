@@ -15,7 +15,7 @@ export class SimplybookBodyDto {
   client_email: string;
 
   @SecureInput('text', { required: false, maxLength: 100 })
-  @ApiProperty({ type: String })
+  @ApiProperty({ type: String, required: false })
   user_id?: string;
 
   @IsOptional()
@@ -24,8 +24,8 @@ export class SimplybookBodyDto {
   booking_id?: number;
 
   @SecureInput('text', { required: false, maxLength: 50 })
-  @ApiProperty({ type: String })
-  client_timezone: string;
+  @ApiProperty({ type: String, required: false })
+  client_timezone?: string;
 
   @SecureInput('text', { required: true, maxLength: 100 })
   @IsDefined()

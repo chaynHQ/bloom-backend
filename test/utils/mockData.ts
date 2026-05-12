@@ -30,7 +30,7 @@ import {
 import {
   SimplybookNotificationType,
   SimplybookWebhookDto,
-} from 'src/webhooks/dtos/simplybook-webhook.dto';
+} from 'src/webhooks/dto/simplybook-webhook.dto';
 
 export const mockSessionStoryblokResult = {
   data: {
@@ -279,7 +279,6 @@ export const mockSimplybookBodyBase: SimplybookBodyDto = {
 
 export const mockSimplybookWebhookDto: SimplybookWebhookDto = {
   booking_id: 123,
-  booking_hash: 'abc123def456abc123def456abc123de',
   company: 'chayn',
   notification_type: SimplybookNotificationType.CREATE,
 };

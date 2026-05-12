@@ -22,13 +22,14 @@ import {
   isProduction,
   RESOURCE_CATEGORIES,
   SIMPLYBOOK_ACTION_ENUM,
+  simplybookCompanyName,
   STORYBLOK_PAGE_COMPONENTS,
   STORYBLOK_STORY_STATUS_ENUM,
   storyblokToken,
   storyblokWebhookSecret,
 } from '../utils/constants';
+import { SimplybookNotificationType, SimplybookWebhookDto } from './dto/simplybook-webhook.dto';
 import { StoryWebhookDto } from './dto/story.dto';
-import { SimplybookNotificationType, SimplybookWebhookDto } from './dtos/simplybook-webhook.dto';
 
 @Injectable()
 export class WebhooksService {
@@ -91,8 +92,25 @@ export class WebhooksService {
     // Updating an existing therapy session
     existingTherapySession.action = action;
 
-    // If the booking is cancelled, increment the therapy sessions remaining on related partner access
-    if (action === SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING) {
+    // Reconcile bookingId. The lookup uses clientEmail + bookingCode, so a mismatched
+    // bookingId means we matched the wrong record (or Simplybook reused a code) — bail
+    // out rather than silently overwrite and risk corrupting accounting.
+    if (simplyBookDto.booking_id !== undefined) {
+      if (existingTherapySession.bookingId == null) {
+        existingTherapySession.bookingId = simplyBookDto.booking_id;
+      } else if (existingTherapySession.bookingId !== simplyBookDto.booking_id) {
+        const error = `UpdatePartnerAccessTherapy - bookingId mismatch for booking_code ${booking_code}: existing ${existingTherapySession.bookingId}, incoming ${simplyBookDto.booking_id}`;
+        this.logger.error(error);
+        throw new HttpException(error, HttpStatus.CONFLICT);
+      }
+    }
+
+    // If the booking is cancelled, increment the therapy sessions remaining on related partner access.
+    // Guard against duplicate webhook deliveries: only credit the session back once.
+    if (
+      action === SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING &&
+      !existingTherapySession.cancelledAt
+    ) {
       try {
         const partnerAccess = await this.partnerAccessRepository.findOneBy({
           id: existingTherapySession.partnerAccessId,
@@ -147,6 +165,12 @@ export class WebhooksService {
   async handleSimplybookWebhook(
     webhookDto: SimplybookWebhookDto,
   ): Promise<TherapySessionEntity | void> {
+    if (webhookDto.company !== simplybookCompanyName) {
+      const error = `Simplybook webhook received for unexpected company ${webhookDto.company}`;
+      this.logger.error(error);
+      throw new HttpException(error, HttpStatus.UNAUTHORIZED);
+    }
+
     if (webhookDto.notification_type === SimplybookNotificationType.NOTIFY) {
       this.logger.log(
         `Simplybook reminder webhook received for booking ${webhookDto.booking_id} - ignoring`,
@@ -154,7 +178,10 @@ export class WebhooksService {
       return;
     }
 
-    const notificationTypeToAction: Record<string, SIMPLYBOOK_ACTION_ENUM> = {
+    const notificationTypeToAction: Record<
+      Exclude<SimplybookNotificationType, SimplybookNotificationType.NOTIFY>,
+      SIMPLYBOOK_ACTION_ENUM
+    > = {
       [SimplybookNotificationType.CREATE]: SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING,
       [SimplybookNotificationType.CANCEL]: SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING,
       [SimplybookNotificationType.CHANGE]: SIMPLYBOOK_ACTION_ENUM.UPDATED_BOOKING,
@@ -163,18 +190,9 @@ export class WebhooksService {
     const action = notificationTypeToAction[webhookDto.notification_type];
     const bookingDetails = await getBookingDetails(webhookDto.booking_id);
 
-    // NOTE: user_id pre-fill is currently broken on the frontend.
-    // The user_id intake field is set to "not visible" in Simplybook admin, which causes
-    // Simplybook to drop it from the form submission — the predefined value is never passed
-    // through to the booking payload, so userId will always be undefined here.
-    //
-    // The fallback in updatePartnerAccessTherapy handles this: it looks up the user by
-    // client_email, which Simplybook always submits and the frontend pre-fills reliably.
-    //
-    // Possible fixes (tracked on the frontend):
-    // 1. Make the user_id field visible in Simplybook admin — fixes it but exposes a raw UUID.
-    // 2. Pre-fill with the user's active therapy access code instead — less confusing to users,
-    //    but needs a reliable way to select one code when a user has multiple active ones.
+    // user_id is sourced from a Simplybook intake field. It is currently unset in production
+    // because the field is "not visible" in admin, so Simplybook drops it from submissions.
+    // updatePartnerAccessTherapy falls back to client_email lookup when userId is undefined.
     const userId =
       bookingDetails.additional_fields.find((f) => f.field_name === 'user_id')?.value || undefined;
 
@@ -183,14 +201,13 @@ export class WebhooksService {
       booking_id: webhookDto.booking_id,
       booking_code: bookingDetails.code,
       client_email: bookingDetails.client.email,
-      client_timezone: undefined,
       service_name: bookingDetails.service.name,
       service_provider_name: bookingDetails.provider.name,
       service_provider_email: bookingDetails.provider.email,
       start_date_time: bookingDetails.start_datetime,
       end_date_time: bookingDetails.end_datetime,
       user_id: userId,
-    } as SimplybookBodyDto;
+    };
 
     return this.updatePartnerAccessTherapy(internalDto);
   }

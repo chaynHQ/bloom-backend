@@ -50,7 +50,7 @@ import {
   mockUserRepositoryMethods,
 } from 'test/utils/mockedServices';
 import { ILike, Repository } from 'typeorm';
-import { SimplybookNotificationType } from './dtos/simplybook-webhook.dto';
+import { SimplybookNotificationType } from './dto/simplybook-webhook.dto';
 import { WebhooksService } from './webhooks.service';
 
 jest.mock('src/api/apiCalls');
@@ -60,19 +60,12 @@ jest.mock('src/utils/constants', () => {
   return {
     ...actual,
     storyblokToken: 'test-storyblok-token',
+    simplybookCompanyName: 'chayn',
   };
 });
 
 jest.mock('src/api/simplybook/simplybook-api', () => {
   return {
-    getBookingsForDate: jest.fn(async () => [
-      {
-        bookingCode: 'bookingCodeA',
-        clientEmail: 'ellie@chayn.co',
-        date: new Date(2022, 9, 10),
-      },
-    ]),
-    getAuthToken: jest.fn(async () => 'token'),
     getBookingDetails: jest.fn(async () => ({
       id: 123,
       code: 'abc',
@@ -905,6 +898,16 @@ describe('WebhooksService', () => {
       expect(updateTherapySpy).toHaveBeenCalledWith(
         expect.objectContaining({ user_id: undefined }),
       );
+    });
+
+    it('should reject when company does not match', async () => {
+      await expect(
+        service.handleSimplybookWebhook({
+          ...mockSimplybookWebhookDto,
+          company: 'someone-else',
+        }),
+      ).rejects.toThrow(/unexpected company/);
+      expect(getBookingDetailsSpy).not.toHaveBeenCalled();
     });
   });
 });
