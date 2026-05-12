@@ -9,7 +9,7 @@ import { PartnerAccessEntity } from '../entities/partner-access.entity';
 import { SubscriptionUserEntity } from '../entities/subscription-user.entity';
 import { TherapySessionEntity } from '../entities/therapy-session.entity';
 import { UserEntity } from '../entities/user.entity';
-import { ZapierSimplybookBodyDto } from '../partner-access/dtos/zapier-body.dto';
+import { SimplybookBodyDto } from '../partner-access/dtos/simplybook-body.dto';
 import { ISubscriptionUser } from '../subscription-user/subscription-user.interface';
 import { GetTherapySessionDto } from '../therapy-session/dto/get-therapy-session.dto';
 import { GetUserDto } from '../user/dtos/get-user.dto';
@@ -151,13 +151,14 @@ export const formatPartnerObject = (partnerObject: PartnerEntity): IPartner => {
   };
 };
 
-export const serializeZapierSimplyBookDtoToTherapySessionEntity = (
-  therapySession: ZapierSimplybookBodyDto,
+export const serializeSimplybookDtoToTherapySessionEntity = (
+  therapySession: SimplybookBodyDto,
   partnerAccess: PartnerAccessEntity,
 ): Partial<TherapySessionEntity> => {
   return {
     action: therapySession.action,
     bookingCode: therapySession.booking_code,
+    ...(therapySession.booking_id !== undefined && { bookingId: therapySession.booking_id }),
     clientEmail: therapySession.client_email,
     clientTimezone: therapySession.client_timezone,
     serviceName: therapySession.service_name,
