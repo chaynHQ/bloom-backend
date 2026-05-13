@@ -1,10 +1,10 @@
 import { mockPartnerAccessEntity, mockSimplybookBodyBase } from 'test/utils/mockData';
-import { serializeZapierSimplyBookDtoToTherapySessionEntity } from './serialize';
+import { serializeSimplybookDtoToTherapySessionEntity } from './serialize';
 
 describe('Serialize', () => {
-  describe('serializeZapierSimplyBookDtoToTherapySessionEntity', () => {
+  describe('serializeSimplybookDtoToTherapySessionEntity', () => {
     it('should format object correctly when valid object is supplied', () => {
-      const randomString = serializeZapierSimplyBookDtoToTherapySessionEntity(
+      const randomString = serializeSimplybookDtoToTherapySessionEntity(
         mockSimplybookBodyBase,
         mockPartnerAccessEntity,
       );

@@ -158,7 +158,7 @@ describe('buildReportBlocks', () => {
     expect(serialized).not.toContain('_no baseline_');
   });
 
-  it('daily renders headline + errors only; all topic grids dropped', () => {
+  it('daily renders headline (DB-first) + key GA activity + errors; detailed topic sections dropped', () => {
     const ga4 = {
       overview: {
         activeUsers: 10,
@@ -167,7 +167,11 @@ describe('buildReportBlocks', () => {
         screenPageViews: 40,
         averageSessionDuration: 45,
       },
-      events: [{ eventName: 'LOGIN_ERROR', eventCount: 2, totalUsers: 2 }],
+      events: [
+        { eventName: 'LOGIN_ERROR', eventCount: 2, totalUsers: 2 },
+        { eventName: 'REGISTER_SUCCESS', eventCount: 5, totalUsers: 5 },
+        { eventName: 'SESSION_COMPLETE_SUCCESS', eventCount: 3, totalUsers: 3 },
+      ],
       breakdowns: [],
       eventBreakdowns: [],
     };
@@ -181,13 +185,19 @@ describe('buildReportBlocks', () => {
         trigger: 'scheduled',
       }),
     );
+    // Full detail sections must not appear on daily.
     expect(daily).not.toContain('*Detail (Analytics events)*');
     expect(daily).not.toContain('*Flows (Analytics events)*');
     expect(daily).not.toContain('*Breakdowns*');
-    // Headline + Errors render.
+    // DB-first headline renders.
     expect(daily).toContain(':sparkles: Headline');
+    // Key GA activity section supplements the DB headline.
+    expect(daily).toContain(':bar_chart: Key activity');
+    expect(daily).toContain('Active users');
+    expect(daily).toContain('Registrations');
+    // Errors render.
     expect(daily).toContain('Login errors');
-    // Per-topic grids are dropped on daily.
+    // Per-topic detail grids are dropped on daily.
     expect(daily).not.toContain('Users & accounts');
     expect(daily).not.toContain(':headphones: Resources');
     expect(daily).not.toContain(':books: Courses');
