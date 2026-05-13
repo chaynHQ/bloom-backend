@@ -1,4 +1,4 @@
-import { Column, Entity, Generated, OneToMany, OneToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, OneToMany, OneToOne, PrimaryGeneratedColumn } from 'typeorm';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
 import { PartnerAdminEntity } from '../entities/partner-admin.entity';
 import { EMAIL_REMINDERS_FREQUENCY } from '../utils/constants';
@@ -72,7 +72,4 @@ export class UserEntity extends BaseBloomEntity {
   @OneToMany(() => EventLogEntity, (eventLog) => eventLog.user, { cascade: true })
   eventLog: EventLogEntity[];
 
-  @Column({ unique: true })
-  @Generated('uuid')
-  crispTokenId: string;
 }

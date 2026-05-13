@@ -1,0 +1,31 @@
+# Dependencies and build output
+
+node_modules/
+dist/
+coverage/
+
+# Environment secrets
+
+.env
+.env.\*
+!.env.example
+
+# Logs
+
+\*.log
+logs/
+
+# Docker volumes / data
+
+postgres-data/
+
+# OS / editor noise
+
+.DS*Store
+*.swp
+\_.swo
+
+# Large lock files (yarn.lock is still useful for context)
+
+package-lock.json
+yarn.lock

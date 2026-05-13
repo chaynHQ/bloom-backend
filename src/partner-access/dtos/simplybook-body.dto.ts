@@ -1,9 +1,9 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsDefined, IsEnum } from 'class-validator';
+import { IsDefined, IsEnum, IsInt, IsOptional } from 'class-validator';
 import { SIMPLYBOOK_ACTION_ENUM } from '../../utils/constants';
 import { SecureInput } from '../../utils/sanitization.decorators';
 
-export class ZapierSimplybookBodyDto {
+export class SimplybookBodyDto {
   @IsEnum(SIMPLYBOOK_ACTION_ENUM)
   @IsDefined()
   @ApiProperty({ type: String })
@@ -15,12 +15,17 @@ export class ZapierSimplybookBodyDto {
   client_email: string;
 
   @SecureInput('text', { required: false, maxLength: 100 })
-  @ApiProperty({ type: String })
+  @ApiProperty({ type: String, required: false })
   user_id?: string;
 
+  @IsOptional()
+  @IsInt()
+  @ApiProperty({ type: Number, required: false })
+  booking_id?: number;
+
   @SecureInput('text', { required: false, maxLength: 50 })
-  @ApiProperty({ type: String })
-  client_timezone: string;
+  @ApiProperty({ type: String, required: false })
+  client_timezone?: string;
 
   @SecureInput('text', { required: true, maxLength: 100 })
   @IsDefined()

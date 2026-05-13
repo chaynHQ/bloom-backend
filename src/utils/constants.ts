@@ -141,9 +141,53 @@ export const firebaseMeasurementId = getEnv(
 
 export const zapierToken = getEnv(process.env.ZAPIER_TOKEN, 'ZAPIER_TOKEN');
 
-export const crispPluginId = getEnv(process.env.CRISP_PLUGIN_ID, 'CRISP_PLUGIN_ID');
-export const crispPluginKey = getEnv(process.env.CRISP_PLUGIN_KEY, 'CRISP_PLUGIN_KEY');
-export const crispWebsiteId = getEnv(process.env.CRISP_WEBSITE_ID, 'CRISP_WEBSITE_ID');
+export const frontChatApiToken = getEnv(process.env.FRONT_CHAT_API_TOKEN, 'FRONT_CHAT_API_TOKEN');
+export const frontChannelId = getEnv(process.env.FRONT_CHANNEL_ID, 'FRONT_CHANNEL_ID');
+export const frontContactListId = getEnv(
+  process.env.FRONT_CONTACT_LIST_ID,
+  'FRONT_CONTACT_LIST_ID',
+);
+export const frontChatWebhookToken = getEnv(
+  process.env.FRONT_CHAT_WEBHOOK_TOKEN,
+  'FRONT_CHAT_WEBHOOK_TOKEN',
+);
+export const frontChannelSigningSecret =
+  getEnv(process.env.FRONT_CHANNEL_SIGNING_SECRET, 'FRONT_CHANNEL_SIGNING_SECRET') || '';
+export const frontAppUid = getEnv(process.env.FRONT_APP_UID, 'FRONT_APP_UID');
+
+export const FRONT_API_BASE_URL = 'https://api2.frontapp.com';
+// Retry delays (ms) applied only to message-send paths so a transient Front 429/5xx
+// doesn't surface as a lost user message. Keep small — the user is waiting on the ack.
+export const FRONT_SEND_RETRY_DELAYS_MS = [200, 800];
+
+export const FRONT_CHAT_ATTACHMENT_ALLOWED_MIME_TYPES = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/gif',
+  'image/webp',
+  'audio/webm',
+  'audio/mp4',
+  'audio/mpeg',
+  'audio/ogg',
+  'application/pdf',
+]);
+export const FRONT_CHAT_ATTACHMENT_MAX_FILE_SIZE = 25 * 1024 * 1024; // 25 MB
+
+export const simplybookWebhookSecret = getEnv(
+  process.env.SIMPLYBOOK_WEBHOOK_SECRET,
+  'SIMPLYBOOK_WEBHOOK_SECRET',
+);
+// Fail fast in production rather than silently rejecting every Simplybook webhook
+// with a 401. SIMPLYBOOK_TOTP_SECRET is intentionally not required at startup because
+// it's only needed when 2FA is enabled on the Simplybook account.
+if (isProduction && !simplybookWebhookSecret) {
+  throw new Error('SIMPLYBOOK_WEBHOOK_SECRET is required in production');
+}
+
+export const simplybookTotpSecret = getEnv(
+  process.env.SIMPLYBOOK_TOTP_SECRET,
+  'SIMPLYBOOK_TOTP_SECRET',
+);
 
 export const slackWebhookUrl = getEnv(process.env.SLACK_WEBHOOK_URL, 'SLACK_WEBHOOK_URL');
 export const slackBloomUsersWebhookUrl = getEnv(
@@ -207,3 +251,5 @@ export const mailchimpServerPrefix = getEnv(
   process.env.MAILCHIMP_SERVER_PREFIX,
   'MAILCHIMP_SERVER_PREFIX',
 );
+
+export const frontSupportEmail = process.env.FRONT_SUPPORT_EMAIL || 'support@bloom.chayn.co';

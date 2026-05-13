@@ -323,7 +323,7 @@ function therapyTopic(payload: ReportPayload, ctx: RenderContext): Block[] {
 // ---------- topic: messaging ----------
 
 function messagingTopic(payload: ReportPayload, ctx: RenderContext): Block[] {
-  // No DB grid — chat send/compose isn't persisted by Crisp.
+  // No DB grid — chat events are not persisted in the database.
   if (!ctx.withDetail) return [];
   return renderTopicEventGroups('messaging', payload.ga4, ctx);
 }
