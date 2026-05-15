@@ -40,7 +40,7 @@ const buildChatUser = (overrides: Partial<ChatUserEntity> = {}): ChatUserEntity 
     lastMessageSentAt: null,
     lastMessageReceivedAt: null,
     lastMessageReadAt: null,
-    lastUnreadNotifiedAt: null,
+    unreadNotificationAttemptedAt: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     ...overrides,

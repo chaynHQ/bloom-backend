@@ -10,6 +10,8 @@ import { ResourceEntity } from 'src/entities/resource.entity';
 import { SessionEntity } from 'src/entities/session.entity';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
 import { UserEntity } from 'src/entities/user.entity';
+import { UNREAD_NOTIFICATION_STATUS } from 'src/front-chat/front-chat.interface';
+import { FrontChatService } from 'src/front-chat/front-chat.service';
 import { Logger } from 'src/logger/logger';
 import { ZapierSimplybookBodyDto } from 'src/partner-access/dtos/zapier-body.dto';
 import { ServiceUserProfilesService } from 'src/service-user-profiles/service-user-profiles.service';
@@ -19,6 +21,7 @@ import { ILike, MoreThan, Repository } from 'typeorm';
 import { CoursePartnerService } from '../course-partner/course-partner.service';
 import {
   isProduction,
+  mailchimpWebhookSecret,
   RESOURCE_CATEGORIES,
   SIMPLYBOOK_ACTION_ENUM,
   STORYBLOK_PAGE_COMPONENTS,
@@ -26,6 +29,7 @@ import {
   storyblokToken,
   storyblokWebhookSecret,
 } from '../utils/constants';
+import { MailchimpWebhookDto } from './dto/mailchimp-webhook.dto';
 import { StoryWebhookDto } from './dto/story.dto';
 
 @Injectable()
@@ -44,6 +48,7 @@ export class WebhooksService {
     private therapySessionRepository: Repository<TherapySessionEntity>,
     private serviceUserProfilesService: ServiceUserProfilesService,
     private slackMessageClient: SlackMessageClient,
+    private readonly frontChatService: FrontChatService,
   ) {}
 
   async updatePartnerAccessTherapy(
@@ -473,4 +478,50 @@ export class WebhooksService {
     return this.updateOrCreateStoryData(story, status);
   }
 
+  async handleMailchimpWebhook(dto: MailchimpWebhookDto, secret: string): Promise<void> {
+    if (!mailchimpWebhookSecret || secret !== mailchimpWebhookSecret) {
+      this.logger.error('Mailchimp webhook error - invalid secret');
+      throw new HttpException('Mailchimp webhook error - invalid secret', HttpStatus.UNAUTHORIZED);
+    }
+
+    const { type, data } = dto;
+    const email = data?.email;
+
+    if (!email) {
+      this.logger.warn(`Mailchimp webhook: no email in payload for event type "${type}"`);
+      return;
+    }
+
+    // Hard bounces and cleaned addresses indicate permanent delivery failure.
+    // Soft bounces are transient — Mailchimp retries internally so we leave those alone.
+    const isHardBounce = type === 'bounce' && data.action === 'hard';
+    const isCleaned = type === 'cleaned';
+
+    if (!isHardBounce && !isCleaned) return;
+
+    const reason = data.reason ?? data.action ?? type;
+    this.logger.log(
+      `Mailchimp webhook: ${type} for ${email} (reason=${reason}) — recording delivery outcome`,
+    );
+
+    try {
+      if (isHardBounce) {
+        await this.frontChatService.markUnreadNotificationDeliveryFailure(
+          email,
+          UNREAD_NOTIFICATION_STATUS.BOUNCED,
+          `mailchimp_bounce: ${reason}`,
+        );
+      } else {
+        await this.frontChatService.markUnreadNotificationDeliveryFailure(
+          email,
+          UNREAD_NOTIFICATION_STATUS.CLEANED,
+          `mailchimp_cleaned: ${reason}`,
+        );
+      }
+    } catch (err) {
+      this.logger.error(
+        `Mailchimp webhook: failed to record ${type} for ${email}: ${(err as Error)?.message || 'unknown error'}`,
+      );
+    }
+  }
 }

@@ -1,6 +1,19 @@
 import { EVENT_NAME } from 'src/event-logger/event-logger.interface';
 import { EMAIL_REMINDERS_FREQUENCY } from 'src/utils/constants';
 
+// PENDING  — claim row before the Mailchimp call; prevents double-send on restart.
+// SENT     — Mailchimp accepted the event trigger (API 2xx). Closest to "sent" we can know.
+// FAILED   — internal/API error. Retry-eligible up to UNREAD_NOTIFICATION_MAX_ATTEMPTS.
+// BOUNCED  — Mailchimp bounce webhook fired. Terminal — email address is dead.
+// CLEANED  — Mailchimp cleaned the address from the audience. Terminal.
+export enum UNREAD_NOTIFICATION_STATUS {
+  PENDING = 'pending',
+  SENT = 'sent',
+  FAILED = 'failed',
+  BOUNCED = 'bounced',
+  CLEANED = 'cleaned',
+}
+
 // Front webhook event types: https://dev.frontapp.com/reference/events
 export enum FRONT_WEBHOOK_EVENT_TYPE {
   INBOUND = 'inbound', // Visitor sent a message

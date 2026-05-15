@@ -1,4 +1,4 @@
-import { Body, Controller, Headers, Post, Request, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Headers, Post, Query, Request, UseGuards } from '@nestjs/common';
 import { ApiBody, ApiTags } from '@nestjs/swagger';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
 import { FrontChatWebhookService } from 'src/front-chat/front-chat-webhook.service';
@@ -6,6 +6,7 @@ import { ControllerDecorator } from 'src/utils/controller.decorator';
 import { ZapierSimplybookBodyDto } from '../partner-access/dtos/zapier-body.dto';
 import { ZapierAuthGuard } from '../partner-access/zapier-auth.guard';
 import { FrontChatWebhookDto } from './dto/front-chat-webhook.dto';
+import { MailchimpWebhookDto } from './dto/mailchimp-webhook.dto';
 import { StoryWebhookDto } from './dto/story.dto';
 import { WebhooksService } from './webhooks.service';
 
@@ -35,6 +36,22 @@ export class WebhooksController {
     @Headers('webhook-signature') signature: string | undefined,
   ): Promise<unknown> {
     return this.webhooksService.handleStoryblokWebhook(req.rawBody, signature, data);
+  }
+
+  // Mailchimp sends a GET to verify the endpoint on initial setup, and POSTs for events.
+  // Authentication is via a shared secret in the query string configured in Mailchimp's dashboard.
+  @Get('mailchimp')
+  verifyMailchimpWebhook(@Query('secret') secret: string): void {
+    if (!secret) return;
+  }
+
+  @Post('mailchimp')
+  @ApiBody({ type: MailchimpWebhookDto })
+  async handleMailchimpWebhook(
+    @Query('secret') secret: string,
+    @Body() dto: MailchimpWebhookDto,
+  ): Promise<void> {
+    return this.webhooksService.handleMailchimpWebhook(dto, secret);
   }
 
   // Single endpoint serves both Front integrations:
