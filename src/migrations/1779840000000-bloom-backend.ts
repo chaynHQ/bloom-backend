@@ -1,12 +1,12 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class BloomBackend1778630400000 implements MigrationInterface {
-  name = 'BloomBackend1778630400000';
+export class BloomBackend1779840000000 implements MigrationInterface {
+  name = 'BloomBackend1779840000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`
       CREATE TYPE "chat_user_unreadnotificationstatus_enum" AS ENUM (
-        'pending', 'sent', 'failed', 'bounced', 'cleaned'
+        'PENDING', 'SENT', 'FAILED', 'BOUNCED', 'CLEANED'
       )
     `);
     await queryRunner.query(`
