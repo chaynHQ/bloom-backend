@@ -5,8 +5,6 @@
  * the group.
  */
 
-import { FUNNELS } from './reporting.funnels';
-
 interface EventItem {
   event: string;
   label: string;
@@ -27,11 +25,9 @@ export type EventTopic =
   | 'courses'
   | 'resources'
   | 'therapy'
-  | 'messaging'
   | 'communications'
   | 'app'
   | 'navigation'
-  | 'promo'
   | 'admin'
   | 'errors';
 
@@ -50,47 +46,42 @@ export const EVENT_GROUPS: EventGroup[] = [
     title: 'Auth & onboarding',
     emoji: ':key:',
     lines: [
-      { label: 'Header login clicks', items: [{ event: 'HEADER_LOGIN_CLICKED', label: 'clicks' }] },
-      { label: 'Logins', items: [{ event: 'LOGIN_SUCCESS', label: 'success' }] },
-      { label: 'Logouts', items: [{ event: 'LOGOUT_SUCCESS', label: 'completed' }] },
-      { label: 'Registrations', items: [{ event: 'REGISTER_SUCCESS', label: 'completed' }] },
       {
-        label: 'Reset-password link clicks',
-        items: [{ event: 'RESET_PASSWORD_HERE_CLICKED', label: 'clicks' }],
-      },
-      {
-        label: 'Password resets',
-        items: [{ event: 'RESET_PASSWORD_SUCCESS', label: 'completed' }],
-      },
-      {
-        label: 'Create-account link',
-        items: [{ event: 'CREATE_ACCOUNT_LINK_CLICKED', label: 'clicks' }],
-      },
-      {
-        label: 'Signup survey',
+        label: 'Login flow',
         items: [
-          { event: 'SIGNUP_SURVEY_COMPLETED', label: 'completed' },
-          { event: 'SIGNUP_SURVEY_SKIPPED', label: 'skipped' },
+          { event: 'HEADER_LOGIN_CLICKED', label: 'header clicks' },
+          { event: 'LOGIN_SUCCESS', label: 'success' },
+          { event: 'LOGOUT_SUCCESS', label: 'logouts' },
+        ],
+      },
+      {
+        label: 'Password reset',
+        items: [
+          { event: 'RESET_PASSWORD_HERE_CLICKED', label: 'link clicks' },
+          { event: 'RESET_PASSWORD_SUCCESS', label: 'completed' },
+        ],
+      },
+      {
+        label: 'Sign-up flow',
+        items: [
+          { event: 'CREATE_ACCOUNT_LINK_CLICKED', label: 'link clicks' },
+          { event: 'SIGNUP_SURVEY_COMPLETED', label: 'survey completed' },
+          { event: 'SIGNUP_SURVEY_SKIPPED', label: 'survey skipped' },
         ],
       },
       {
         label: 'About you form',
         items: [
           { event: 'ABOUT_YOU_VIEWED', label: 'viewed' },
-          { event: 'ABOUT_YOU_DEMO_SUCCESS', label: 'demographics submitted' },
+          { event: 'ABOUT_YOU_DEMO_SUCCESS', label: 'demo submitted' },
           { event: 'ABOUT_YOU_SETA_SUCCESS', label: 'SETA submitted' },
         ],
       },
       {
-        label: 'Apply-a-code page viewed',
-        items: [{ event: 'ASSIGN_NEW_PARTNER_VIEWED', label: 'views' }],
-      },
-      {
         label: 'Partner access codes',
         items: [
-          { event: 'VALIDATE_ACCESS_CODE_SUCCESS', label: 'redeemed' },
+          { event: 'ASSIGN_NEW_PARTNER_VIEWED', label: 'apply page views' },
           { event: 'VALIDATE_ACCESS_CODE_INVALID', label: 'invalid (client)' },
-          { event: 'ASSIGN_NEW_PARTNER_ACCESS_SUCCESS', label: 'new partner assigned' },
           { event: 'ASSIGN_NEW_PARTNER_ACCESS_INVALID', label: 'invalid (server)' },
         ],
         breakdownParam: 'customEvent:partner',
@@ -107,8 +98,6 @@ export const EVENT_GROUPS: EventGroup[] = [
       {
         label: 'Course overview viewed',
         items: [{ event: 'COURSE_OVERVIEW_VIEWED', label: 'views' }],
-        breakdownParam: 'customEvent:course_progress',
-        paramLabel: 'progress',
       },
       {
         label: 'Course intro video',
@@ -137,8 +126,6 @@ export const EVENT_GROUPS: EventGroup[] = [
       {
         label: 'Session viewed',
         items: [{ event: 'SESSION_VIEWED', label: 'views' }],
-        breakdownParam: 'customEvent:session_progress',
-        paramLabel: 'progress',
       },
       {
         label: 'Session video',
@@ -148,24 +135,11 @@ export const EVENT_GROUPS: EventGroup[] = [
         ],
       },
       {
-        label: 'Session progression',
-        items: [
-          { event: 'SESSION_STARTED_SUCCESS', label: 'started' },
-          { event: 'SESSION_COMPLETE_SUCCESS', label: 'completed' },
-        ],
-      },
-      {
         label: 'Session transcript',
         items: [
           { event: 'SESSION_TRANSCRIPT_OPENED', label: 'opened' },
           { event: 'SESSION_TRANSCRIPT_CLOSED', label: 'closed' },
         ],
-      },
-      {
-        label: 'Session feedback (GA)',
-        items: [{ event: 'SESSION_FEEDBACK_SUBMITTED', label: 'submitted' }],
-        breakdownParam: 'customEvent:feedbackTags',
-        paramLabel: 'tag',
       },
       {
         label: 'Session chat CTA',
@@ -178,34 +152,28 @@ export const EVENT_GROUPS: EventGroup[] = [
     title: 'Therapy events',
     emoji: ':speech_balloon:',
     lines: [
-      // THERAPY_BOOKINGS_VIEWED (plural) fires when a user opens their *own
-      // list* of existing bookings — distinct from THERAPY_BOOKING_VIEWED
-      // (singular) which fires on the book-a-new-session page.
       {
-        label: 'My bookings list viewed',
-        items: [{ event: 'THERAPY_BOOKINGS_VIEWED', label: 'views' }],
-      },
-      {
-        label: 'Book-a-session flow',
+        label: 'Therapy booking flow',
         items: [
           { event: 'THERAPY_BOOKING_VIEWED', label: 'page views' },
           { event: 'THERAPY_BOOKING_OPENED', label: 'booking opened' },
-          { event: 'THERAPY_CONFIRMATION_VIEWED', label: 'confirmed' },
+          { event: 'THERAPY_CONFIRMATION_VIEWED', label: 'confirmation page' },
         ],
       },
       {
-        label: 'Therapy cancellations',
+        label: 'Therapy cancellation flow',
         items: [
           { event: 'THERAPY_BOOKING_CANCEL_DIALOG_OPENED', label: 'dialog opened' },
           { event: 'THERAPY_BOOKING_CANCEL_CONFIRMED', label: 'confirmed' },
-          { event: 'THERAPY_BOOKING_CANCELLED', label: 'cancelled' },
         ],
       },
       {
-        label: 'Therapy joining',
-        items: [{ event: 'THERAPY_VIDEO_LINK_CLICKED', label: 'video link clicked' }],
+        label: 'Therapy engagement',
+        items: [
+          { event: 'THERAPY_VIDEO_LINK_CLICKED', label: 'video link clicks' },
+          { event: 'THERAPY_FAQ_OPENED', label: 'FAQ opens' },
+        ],
       },
-      { label: 'Therapy FAQ', items: [{ event: 'THERAPY_FAQ_OPENED', label: 'opened' }] },
     ],
   },
   {
@@ -217,12 +185,9 @@ export const EVENT_GROUPS: EventGroup[] = [
         label: 'Conversations',
         items: [
           { event: 'RESOURCE_CONVERSATION_VIEWED', label: 'viewed' },
-          { event: 'RESOURCE_CONVERSATION_AUDIO_STARTED', label: 'started' },
-          { event: 'RESOURCE_CONVERSATION_AUDIO_FINISHED', label: 'finished' },
-          { event: 'RESOURCE_CONVERSATION_COMPLETE_SUCCESS', label: 'completed' },
+          { event: 'RESOURCE_CONVERSATION_AUDIO_STARTED', label: 'audio started' },
+          { event: 'RESOURCE_CONVERSATION_AUDIO_FINISHED', label: 'audio finished' },
         ],
-        breakdownParam: 'customEvent:resource_name',
-        paramLabel: 'resource',
       },
       {
         label: 'Short videos',
@@ -230,10 +195,7 @@ export const EVENT_GROUPS: EventGroup[] = [
           { event: 'RESOURCE_SHORT_VIDEO_VIEWED', label: 'viewed' },
           { event: 'RESOURCE_SHORT_VIDEO_STARTED', label: 'started' },
           { event: 'RESOURCE_SHORT_VIDEO_FINISHED', label: 'finished' },
-          { event: 'RESOURCE_SHORT_VIDEO_COMPLETE_SUCCESS', label: 'completed' },
         ],
-        breakdownParam: 'customEvent:resource_name',
-        paramLabel: 'resource',
       },
       {
         label: 'Single videos',
@@ -241,16 +203,7 @@ export const EVENT_GROUPS: EventGroup[] = [
           { event: 'RESOURCE_SINGLE_VIDEO_VIEWED', label: 'viewed' },
           { event: 'RESOURCE_SINGLE_VIDEO_VIDEO_STARTED', label: 'started' },
           { event: 'RESOURCE_SINGLE_VIDEO_VIDEO_FINISHED', label: 'finished' },
-          { event: 'RESOURCE_SINGLE_VIDEO_COMPLETE_SUCCESS', label: 'completed' },
         ],
-        breakdownParam: 'customEvent:resource_name',
-        paramLabel: 'resource',
-      },
-      {
-        label: 'Resource feedback (GA)',
-        items: [{ event: 'RESOURCE_FEEDBACK_SUBMITTED', label: 'submitted' }],
-        breakdownParam: 'customEvent:feedbackTags',
-        paramLabel: 'tag',
       },
       {
         label: 'Resource → session navigation',
@@ -261,10 +214,16 @@ export const EVENT_GROUPS: EventGroup[] = [
       },
     ],
   },
+  // Notes-from-Bloom (formerly WhatsApp) subscribe/unsubscribe counts are
+  // DB-authoritative (see whatsappSubscribed / whatsappUnsubscribed). Chat
+  // message counts (messagesSent / messagesReceived) are also DB-authoritative
+  // from event_log — the GA4 CHAT_MESSAGE_SENT event below is retained as a
+  // supplementary engagement signal (open/compose funnel). Errors live in the
+  // Errors group because those are frontend-side failures the DB never sees.
   {
-    topic: 'messaging',
-    title: 'Chat',
-    emoji: ':left_speech_bubble:',
+    topic: 'communications',
+    title: 'Chat & comms',
+    emoji: ':inbox_tray:',
     lines: [
       {
         label: 'Chat',
@@ -274,19 +233,8 @@ export const EVENT_GROUPS: EventGroup[] = [
           { event: 'CHAT_MESSAGE_SENT', label: 'sent' },
         ],
       },
-    ],
-  },
-  // WhatsApp subscribe/unsubscribe success counts are DB-authoritative — see
-  // whatsappSubscribed / whatsappUnsubscribed in DB_METRIC_KEYS. Errors live
-  // in the Errors group below because those are frontend-side failures the
-  // DB never sees.
-  {
-    topic: 'communications',
-    title: 'Email & comms',
-    emoji: ':inbox_tray:',
-    lines: [
       {
-        label: 'Email reminders (GA — no DB date column)',
+        label: 'Email reminders',
         items: [
           { event: 'EMAIL_REMINDERS_SET_SUCCESS', label: 'set' },
           { event: 'EMAIL_REMINDERS_UNSET_SUCCESS', label: 'unset' },
@@ -338,17 +286,16 @@ export const EVENT_GROUPS: EventGroup[] = [
   },
   {
     topic: 'navigation',
-    title: 'Header',
+    title: 'Navigation',
     emoji: ':compass:',
     lines: [
       {
-        label: 'Header nav',
+        label: 'Header',
         items: [
           { event: 'HEADER_NAVIGATION_MENU_OPENED', label: 'menu opened' },
-          { event: 'HEADER_NAVIGATION_MENU_CLOSED', label: 'menu closed' },
           { event: 'HEADER_HOME_LOGO_CLICKED', label: 'home logo' },
-          { event: 'HEADER_ACCOUNT_ICON_CLICKED', label: 'account icon' },
-          { event: 'HEADER_APPLY_A_CODE_CLICKED', label: 'apply-code' },
+          { event: 'HEADER_ACCOUNT_ICON_CLICKED', label: 'account' },
+          { event: 'HEADER_APPLY_A_CODE_CLICKED', label: 'apply code' },
           { event: 'HEADER_OUR_BLOOM_TEAM_CLICKED', label: 'our team' },
           { event: 'HEADER_IMMEDIATE_HELP_CLICKED', label: 'immediate help' },
           { event: 'HEADER_ADMIN_CLICKED', label: 'admin' },
@@ -363,9 +310,6 @@ export const EVENT_GROUPS: EventGroup[] = [
           { event: 'DRAWER_NOTES_CLICKED', label: 'notes' },
           { event: 'DRAWER_ACTIVITIES_CLICKED', label: 'activities' },
           { event: 'DRAWER_GROUNDING_CLICKED', label: 'grounding' },
-          { event: 'DRAWER_OUR_BLOOM_TEAM_CLICKED', label: 'our team' },
-          { event: 'DRAWER_IMMEDIATE_HELP_CLICKED', label: 'immediate help' },
-          { event: 'DRAWER_ADMIN_CLICKED', label: 'admin' },
           { event: 'DRAWER_LOGIN_CLICKED', label: 'login' },
         ],
       },
@@ -381,16 +325,11 @@ export const EVENT_GROUPS: EventGroup[] = [
         ],
       },
       {
-        label: 'Language menu',
-        items: [{ event: 'HEADER_LANGUAGE_MENU_CLICKED', label: 'opens' }],
-      },
-      {
-        // Event names produced dynamically by
-        // bloom-frontend/lib/constants/events.ts::generateLanguageMenuEvent
-        // using the `locales` list in bloom-frontend/i18n/routing.ts
-        // (en, de, fr, es, pt, hi). Add a locale here if the frontend adds one.
+        // Dynamic event names from bloom-frontend's `locales` list (en/de/fr/
+        // es/pt/hi). Add a locale here if the frontend adds one.
         label: 'Language switches',
         items: [
+          { event: 'HEADER_LANGUAGE_MENU_CLICKED', label: 'menu opens' },
           { event: 'HEADER_LANGUAGE_EN_CLICKED', label: 'EN' },
           { event: 'HEADER_LANGUAGE_DE_CLICKED', label: 'DE' },
           { event: 'HEADER_LANGUAGE_FR_CLICKED', label: 'FR' },
@@ -406,7 +345,7 @@ export const EVENT_GROUPS: EventGroup[] = [
           { event: 'ACCORDION_OPENED', label: 'accordion opens' },
           { event: 'RELATED_CONTENT_CARD_CLICK', label: 'related content' },
           { event: 'MEET_THE_TEAM_VIEWED', label: 'meet team' },
-          { event: 'LEAVE_SITE_BUTTON_CLICKED', label: 'leave-site button' },
+          { event: 'LEAVE_SITE_BUTTON_CLICKED', label: 'leave-site' },
         ],
         breakdownParam: 'customEvent:accordionTitle',
         paramLabel: 'accordion title',
@@ -417,13 +356,11 @@ export const EVENT_GROUPS: EventGroup[] = [
           { event: 'SOCIAL_LINK_CLICKED', label: 'social' },
           { event: 'PARTNER_SOCIAL_LINK_CLICKED', label: 'partner social' },
         ],
-        breakdownParam: 'customEvent:social_account',
-        paramLabel: 'account',
       },
     ],
   },
   {
-    topic: 'promo',
+    topic: 'navigation',
     title: 'Promo & banners',
     emoji: ':loudspeaker:',
     lines: [
@@ -482,7 +419,7 @@ export const EVENT_GROUPS: EventGroup[] = [
   {
     topic: 'errors',
     title: 'Errors',
-    emoji: ':rotating_light:',
+    emoji: ':warning:',
     errorsOnly: true,
     lines: [
       { label: 'Login errors', items: [{ event: 'LOGIN_ERROR', label: 'errors' }] },
@@ -582,19 +519,17 @@ export const BREAKDOWNS: BreakdownSpec[] = [
   { apiName: 'sessionSource', displayName: 'Top traffic sources' },
   { apiName: 'deviceCategory', displayName: 'Device category' },
   { apiName: 'country', displayName: 'Top countries' },
-  { apiName: 'customEvent:account_type', displayName: 'Account type (public vs partner)' },
 ];
 
-/** Events the Slack message references via EVENT_GROUPS / FUNNELS. Used by
- *  persistence to trim daily ga4Events rows; weekly+ keeps the full
- *  literal copy. Memoised because the iteration is ~200 items across fn
- *  calls but the result never changes at runtime. */
+/** Events the Slack message references via EVENT_GROUPS. Used by persistence
+ *  to trim daily ga4Events rows; weekly+ keeps the full literal copy.
+ *  Memoised because the iteration is ~200 items across fn calls but the
+ *  result never changes at runtime. */
 let _renderedNames: Set<string> | null = null;
 export function renderedEventNames(): ReadonlySet<string> {
   if (_renderedNames) return _renderedNames;
   const set = new Set<string>();
   for (const g of EVENT_GROUPS) for (const l of g.lines) for (const i of l.items) set.add(i.event);
-  for (const f of FUNNELS) for (const s of f.steps) set.add(s.event);
   _renderedNames = set;
   return set;
 }
@@ -609,14 +544,12 @@ export interface AnomalyWatchedEvent {
 }
 
 export const ANOMALY_WATCHED_EVENTS: ReadonlyArray<AnomalyWatchedEvent> = [
-  // Key conversions — a sudden drop in any of these is the first thing
-  // worth paging on even if no error bucket spiked.
-  { event: 'REGISTER_SUCCESS', label: 'Registrations' },
+  // Key conversions GA tracks but DB doesn't directly capture as a metric.
+  // (Registrations, session completions, partner-code redemptions etc. are
+  // DB-authoritative and already anomaly-watched via the DB metrics path.)
   { event: 'LOGIN_SUCCESS', label: 'Logins' },
-  { event: 'SESSION_COMPLETE_SUCCESS', label: 'Session completions (GA)' },
-  { event: 'THERAPY_CONFIRMATION_VIEWED', label: 'Therapy bookings confirmed' },
-  { event: 'VALIDATE_ACCESS_CODE_SUCCESS', label: 'Partner codes redeemed' },
-  // Errors
+  { event: 'REGISTER_SUCCESS', label: 'New users' },
+  // Errors (frontend-side — DB never sees them)
   { event: 'LOGIN_ERROR', label: 'Login errors' },
   { event: 'REGISTER_ERROR', label: 'Registration errors' },
   { event: 'RESET_PASSWORD_ERROR', label: 'Password reset errors' },

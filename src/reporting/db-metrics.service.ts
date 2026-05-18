@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CourseUserEntity } from 'src/entities/course-user.entity';
+import { EventLogEntity } from 'src/entities/event-log.entity';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { ResourceFeedbackEntity } from 'src/entities/resource-feedback.entity';
 import { ResourceUserEntity } from 'src/entities/resource-user.entity';
@@ -9,14 +10,15 @@ import { SessionUserEntity } from 'src/entities/session-user.entity';
 import { SubscriptionUserEntity } from 'src/entities/subscription-user.entity';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
 import { UserEntity } from 'src/entities/user.entity';
+import { EVENT_NAME } from 'src/event-logger/event-logger.interface';
+import { Logger } from 'src/logger/logger';
 import { SIMPLYBOOK_ACTION_ENUM } from 'src/utils/constants';
-import { Between, IsNull, LessThanOrEqual, Not, Repository } from 'typeorm';
+import { Between, IsNull, Not, Repository } from 'typeorm';
 import {
   DbBreakdowns,
   DbMetrics,
   DbNamedCount,
   DbResourceCategoryBreakdownRow,
-  DbTotals,
   ReportWindow,
 } from './reporting.types';
 
@@ -29,6 +31,8 @@ const PUBLIC_PARTNER_LABEL = 'Public (no partner)';
 
 @Injectable()
 export class DbMetricsService {
+  private readonly logger = new Logger('DbMetricsService');
+
   constructor(
     @InjectRepository(UserEntity)
     private readonly userRepository: Repository<UserEntity>,
@@ -48,14 +52,23 @@ export class DbMetricsService {
     private readonly sessionFeedbackRepository: Repository<SessionFeedbackEntity>,
     @InjectRepository(ResourceFeedbackEntity)
     private readonly resourceFeedbackRepository: Repository<ResourceFeedbackEntity>,
+    @InjectRepository(EventLogEntity)
+    private readonly eventLogRepository: Repository<EventLogEntity>,
   ) {}
 
+  /** Each metric runs in its own try/catch — a single failing query yields
+   *  `null` for that key only and is logged, while every other metric still
+   *  reports a real value. Distinct from `0`, which is a genuine observation. */
   async collect({ from, to }: ReportWindow): Promise<DbMetrics> {
     const range = Between(from, to);
+    const tally = (label: keyof DbMetrics, run: () => Promise<number>) =>
+      this.tryMetric(label, run);
 
     const [
       newUsers,
+      newPartnerUsers,
       deletedUsers,
+      activeUsers,
       coursesStarted,
       coursesCompleted,
       sessionsStarted,
@@ -64,41 +77,108 @@ export class DbMetricsService {
       resourcesCompleted,
       therapyBookingsBooked,
       therapyBookingsCancelled,
-      therapyBookingsScheduledForPeriod,
+      therapySessionsCompleted,
       partnerAccessGrants,
       partnerAccessActivations,
       whatsappSubscribed,
       whatsappUnsubscribed,
       sessionFeedbackSubmitted,
       resourceFeedbackSubmitted,
-      activationRates,
+      messagesSent,
+      messagesReceived,
     ] = await Promise.all([
-      // "New users" = net-new retained accounts; exclude any soft-deleted since.
-      this.userRepository.count({ where: { createdAt: range, deletedAt: IsNull() } }),
-      this.userRepository.count({ where: { deletedAt: range } }),
-      this.courseUserRepository.count({ where: { createdAt: range } }),
-      this.courseUserRepository.count({ where: { completedAt: range } }),
-      this.sessionUserRepository.count({ where: { createdAt: range } }),
-      this.sessionUserRepository.count({ where: { completedAt: range } }),
-      this.resourceUserRepository.count({ where: { createdAt: range } }),
-      this.resourceUserRepository.count({ where: { completedAt: range } }),
-      this.therapySessionRepository.count({ where: { createdAt: range } }),
-      this.therapySessionRepository.count({ where: { cancelledAt: range } }),
-      this.therapySessionRepository.count({
-        where: { startDateTime: range, action: Not(SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING) },
-      }),
-      this.partnerAccessRepository.count({ where: { createdAt: range } }),
-      this.partnerAccessRepository.count({ where: { activatedAt: range } }),
-      this.countWhatsappByDate('su."createdAt"', from, to),
-      this.countWhatsappByDate('su."cancelledAt"', from, to),
-      this.sessionFeedbackRepository.count({ where: { createdAt: range } }),
-      this.resourceFeedbackRepository.count({ where: { createdAt: range } }),
-      this.computeActivationRates(from, to),
+      tally('newUsers', () =>
+        this.userRepository.count({ where: { createdAt: range, deletedAt: IsNull() } }),
+      ),
+      // New users created in window with ≥1 partner_access row attached.
+      // Whether they redeemed a code themselves or were granted access
+      // doesn't matter — the partner signup is the signal.
+      tally('newPartnerUsers', () =>
+        this.userRepository
+          .createQueryBuilder('u')
+          .innerJoin('u.partnerAccess', 'pa')
+          .where('u."createdAt" BETWEEN :from AND :to', { from, to })
+          .andWhere('u."deletedAt" IS NULL')
+          .getCount(),
+      ),
+      tally('deletedUsers', () => this.userRepository.count({ where: { deletedAt: range } })),
+      // `lastActiveAt` is set on each user-record fetch by the backend — counts
+      // users who interacted with the API in the window. Narrower than GA
+      // active users (which counts any page view).
+      tally('activeUsers', () =>
+        this.userRepository.count({
+          where: { lastActiveAt: range, deletedAt: IsNull() },
+        }),
+      ),
+      tally('coursesStarted', () => this.courseUserRepository.count({ where: { createdAt: range } })),
+      tally('coursesCompleted', () =>
+        this.courseUserRepository.count({ where: { completedAt: range } }),
+      ),
+      tally('sessionsStarted', () =>
+        this.sessionUserRepository.count({ where: { createdAt: range } }),
+      ),
+      tally('sessionsCompleted', () =>
+        this.sessionUserRepository.count({ where: { completedAt: range } }),
+      ),
+      tally('resourcesStarted', () =>
+        this.resourceUserRepository.count({ where: { createdAt: range } }),
+      ),
+      tally('resourcesCompleted', () =>
+        this.resourceUserRepository.count({ where: { completedAt: range } }),
+      ),
+      tally('therapyBookingsBooked', () =>
+        this.therapySessionRepository.count({ where: { createdAt: range } }),
+      ),
+      tally('therapyBookingsCancelled', () =>
+        this.therapySessionRepository.count({ where: { cancelledAt: range } }),
+      ),
+      // Proxy for sessions delivered: scheduled to start in the window AND
+      // not cancelled. (SimplyBook's COMPLETED_BOOKING webhook isn't wired,
+      // so we can't directly observe attendance.)
+      tally('therapySessionsCompleted', () =>
+        this.therapySessionRepository.count({
+          where: { startDateTime: range, action: Not(SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING) },
+        }),
+      ),
+      tally('partnerAccessGrants', () =>
+        this.partnerAccessRepository.count({ where: { createdAt: range } }),
+      ),
+      tally('partnerAccessActivations', () =>
+        this.partnerAccessRepository.count({ where: { activatedAt: range } }),
+      ),
+      tally('whatsappSubscribed', () =>
+        this.countWhatsappByDate('su."createdAt"', from, to),
+      ),
+      tally('whatsappUnsubscribed', () =>
+        this.countWhatsappByDate('su."cancelledAt"', from, to),
+      ),
+      tally('sessionFeedbackSubmitted', () =>
+        this.sessionFeedbackRepository.count({ where: { createdAt: range } }),
+      ),
+      tally('resourceFeedbackSubmitted', () =>
+        this.resourceFeedbackRepository.count({ where: { createdAt: range } }),
+      ),
+      // Authoritative chat message counts from event_log — distinct from the
+      // GA4 CHAT_MESSAGE_SENT event which is lossy under ad-blockers / consent.
+      // `date` is the emit time from Front (webhook `emitted_at`), so it's the
+      // accurate timestamp for windowing — `createdAt` is when we wrote the row.
+      tally('messagesSent', () =>
+        this.eventLogRepository.count({
+          where: { event: EVENT_NAME.CHAT_MESSAGE_SENT, date: range },
+        }),
+      ),
+      tally('messagesReceived', () =>
+        this.eventLogRepository.count({
+          where: { event: EVENT_NAME.CHAT_MESSAGE_RECEIVED, date: range },
+        }),
+      ),
     ]);
 
     return {
       newUsers,
+      newPartnerUsers,
       deletedUsers,
+      activeUsers,
       coursesStarted,
       coursesCompleted,
       sessionsStarted,
@@ -107,61 +187,30 @@ export class DbMetricsService {
       resourcesCompleted,
       therapyBookingsBooked,
       therapyBookingsCancelled,
-      therapyBookingsScheduledForPeriod,
+      therapySessionsCompleted,
       partnerAccessGrants,
       partnerAccessActivations,
       whatsappSubscribed,
       whatsappUnsubscribed,
       sessionFeedbackSubmitted,
       resourceFeedbackSubmitted,
-      activationRate: activationRates.activationRate,
-      partnerActivationRate: activationRates.partnerActivationRate,
+      messagesSent,
+      messagesReceived,
     };
   }
 
-  /** One pass over new-user cohort → both activation rates.
-   *  - activationRate        = % of new users who completed ≥1 session
-   *                            in the same window.
-   *  - partnerActivationRate = % of new users with any activated partner_access
-   *                            by query time.
-   *  Zero cohort → both rates return 0 (treated as "no sample" via the
-   *  flatline-zero hide rule in the renderer). */
-  private async computeActivationRates(
-    from: Date,
-    to: Date,
-  ): Promise<{ activationRate: number; partnerActivationRate: number }> {
-    const row = await this.userRepository
-      .createQueryBuilder('u')
-      .select('COUNT(*)', 'total')
-      .addSelect(
-        `COUNT(*) FILTER (WHERE EXISTS (
-          SELECT 1 FROM session_user su
-          INNER JOIN course_user cu ON cu."courseUserId" = su."courseUserId"
-          WHERE cu."userId" = u.id
-            AND su."completedAt" BETWEEN :from AND :to
-        ))`,
-        'activated',
-      )
-      .addSelect(
-        `COUNT(*) FILTER (WHERE EXISTS (
-          SELECT 1 FROM partner_access pa
-          WHERE pa."userId" = u.id AND pa."activatedAt" IS NOT NULL
-        ))`,
-        'partnerActivated',
-      )
-      .where('u."createdAt" BETWEEN :from AND :to')
-      .andWhere('u."deletedAt" IS NULL')
-      .setParameters({ from, to })
-      .getRawOne<{ total: string; activated: string; partnerActivated: string }>();
-
-    const total = Number(row?.total ?? 0);
-    if (total === 0) return { activationRate: 0, partnerActivationRate: 0 };
-    const activated = Number(row?.activated ?? 0);
-    const partnerActivated = Number(row?.partnerActivated ?? 0);
-    return {
-      activationRate: Math.round((activated / total) * 100),
-      partnerActivationRate: Math.round((partnerActivated / total) * 100),
-    };
+  private async tryMetric(
+    label: keyof DbMetrics,
+    run: () => Promise<number>,
+  ): Promise<number | null> {
+    try {
+      return await run();
+    } catch (err) {
+      this.logger.error(
+        `DbMetrics: ${label} failed: ${err?.message || 'unknown error'}`,
+      );
+      return null;
+    }
   }
 
   /** Query-builder join (not a nested-where) because SubscriptionUserEntity
@@ -496,45 +545,4 @@ export class DbMetricsService {
     return rows.map((r) => ({ name: r.name, count: Number(r.count) }));
   }
 
-  /** Not window-bounded. See DbTotals for field definitions. */
-  async collectTotals(now: Date): Promise<DbTotals> {
-    const [
-      liveUsers,
-      activeWhatsappSubscribers,
-      activatedPartnerAccess,
-      totalSessionsCompleted,
-      totalCoursesCompleted,
-      totalResourcesCompleted,
-      totalTherapyBookings,
-    ] = await Promise.all([
-      this.userRepository.count({ where: { deletedAt: IsNull() } }),
-      this.subscriptionUserRepository
-        .createQueryBuilder('su')
-        .innerJoin('su.subscription', 's')
-        .where('s.name = :name', { name: WHATSAPP_SUBSCRIPTION_NAME })
-        .andWhere('su."cancelledAt" IS NULL')
-        .getCount(),
-      this.partnerAccessRepository.count({ where: { activatedAt: Not(IsNull()) } }),
-      this.sessionUserRepository.count({ where: { completedAt: Not(IsNull()) } }),
-      this.courseUserRepository.count({ where: { completedAt: Not(IsNull()) } }),
-      this.resourceUserRepository.count({ where: { completedAt: Not(IsNull()) } }),
-      // Past-dated, non-cancelled. Not "delivered" — COMPLETED_BOOKING isn't wired.
-      this.therapySessionRepository.count({
-        where: {
-          startDateTime: LessThanOrEqual(now),
-          action: Not(SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING),
-        },
-      }),
-    ]);
-
-    return {
-      liveUsers,
-      activeWhatsappSubscribers,
-      activatedPartnerAccess,
-      totalSessionsCompleted,
-      totalCoursesCompleted,
-      totalResourcesCompleted,
-      totalTherapyBookings,
-    };
-  }
 }
