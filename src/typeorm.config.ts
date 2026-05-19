@@ -2,6 +2,7 @@ import { ConfigService } from '@nestjs/config';
 import { config } from 'dotenv';
 import * as PostgressConnectionStringParser from 'pg-connection-string';
 import { DataSource, DataSourceOptions } from 'typeorm';
+import { ChatUserEntity } from './entities/chat-user.entity';
 import { CoursePartnerEntity } from './entities/course-partner.entity';
 import { CourseUserEntity } from './entities/course-user.entity';
 import { CourseEntity } from './entities/course.entity';
@@ -21,7 +22,6 @@ import { SessionEntity } from './entities/session.entity';
 import { SubscriptionUserEntity } from './entities/subscription-user.entity';
 import { SubscriptionEntity } from './entities/subscription.entity';
 import { TherapySessionEntity } from './entities/therapy-session.entity';
-import { ChatUserEntity } from './entities/chat-user.entity';
 import { UserEntity } from './entities/user.entity';
 import { bloomBackend1637704119795 } from './migrations/1637704119795-bloom_backend';
 import { bloomBackend1638992987868 } from './migrations/1638992987868-bloom_backend';
@@ -66,6 +66,7 @@ import { BloomBackend1776686083659 } from './migrations/1776686083659-bloom-back
 import { BloomBackend1777046400000 } from './migrations/1777046400000-bloom-backend';
 import { BloomBackend1777593600000 } from './migrations/1777593600000-bloom-backend';
 import { BloomBackend1779235200000 } from './migrations/1779235200000-bloom-backend';
+import { BloomBackend1779840000000 } from './migrations/1779840000000-bloom-backend';
 import { databaseUrl } from './utils/constants';
 
 config();
@@ -153,6 +154,7 @@ export const dataSourceOptions = {
     BloomBackend1777046400000,
     BloomBackend1777593600000,
     BloomBackend1779235200000,
+    BloomBackend1779840000000,
   ],
   subscribers: [],
   ssl: isProduction || isStaging,

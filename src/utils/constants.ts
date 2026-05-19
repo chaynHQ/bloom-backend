@@ -260,4 +260,6 @@ export const mailchimpServerPrefix = getEnv(
   'MAILCHIMP_SERVER_PREFIX',
 );
 
+export const mailchimpWebhookSecret = process.env.MAILCHIMP_WEBHOOK_SECRET || '';
+
 export const frontSupportEmail = process.env.FRONT_SUPPORT_EMAIL || 'support@bloom.chayn.co';

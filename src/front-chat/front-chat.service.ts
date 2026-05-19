@@ -12,7 +12,7 @@ import {
   frontContactListId,
 } from 'src/utils/constants';
 import { isCypressTestEmail } from 'src/utils/utils';
-import { ILike, Repository } from 'typeorm';
+import { Brackets, ILike, Repository } from 'typeorm';
 import {
   buildThreadRef,
   getContactAlias,
@@ -29,7 +29,11 @@ import {
   FrontChatContactCustomFields,
   FrontChatContactProfile,
   FrontChatUser,
+  UNREAD_NOTIFICATION_STATUS,
 } from './front-chat.interface';
+
+const UNREAD_NOTIFICATION_MAX_ATTEMPTS = 3;
+const UNREAD_NOTIFICATION_COOLDOWN_HOURS = 2;
 
 const logger = new Logger('FrontChatService');
 
@@ -251,18 +255,92 @@ export class FrontChatService {
       .createQueryBuilder('cu')
       .innerJoinAndSelect('cu.user', 'u')
       .where('cu.lastMessageReceivedAt IS NOT NULL')
-      .andWhere('cu.lastMessageReceivedAt < :cutoff', { cutoff })
       .andWhere('(cu.lastMessageReadAt IS NULL OR cu.lastMessageReadAt < cu.lastMessageReceivedAt)')
+      // Never re-trigger for dead addresses — Mailchimp delivery is impossible and retries hurt sender reputation.
       .andWhere(
-        '(cu.lastUnreadNotifiedAt IS NULL OR cu.lastUnreadNotifiedAt < cu.lastMessageReceivedAt)',
+        '(cu.unreadNotificationStatus IS NULL OR cu.unreadNotificationStatus NOT IN (:...terminalStatuses))',
+        {
+          terminalStatuses: [
+            UNREAD_NOTIFICATION_STATUS.BOUNCED,
+            UNREAD_NOTIFICATION_STATUS.CLEANED,
+          ],
+        },
+      )
+      .andWhere(
+        new Brackets((qb) => {
+          qb
+            // New unread: first notification (no prior attempt), or a follow-up message
+            // that the agent sent more than 2 hours after the last notification — i.e. an
+            // intentional re-contact, not a burst of messages in the same session.
+            .where(
+              'cu.lastMessageReceivedAt < :cutoff AND (cu.unreadNotificationAttemptedAt IS NULL OR cu.lastMessageReceivedAt - cu.unreadNotificationAttemptedAt > :cooldownInterval::interval)',
+              { cutoff, cooldownInterval: `${UNREAD_NOTIFICATION_COOLDOWN_HOURS} hours` },
+            )
+            // Transient failure: previous trigger threw and retries remain.
+            // Cooldown does not apply — retries must fire promptly.
+            .orWhere(
+              'cu.unreadNotificationStatus = :failedStatus AND cu.unreadNotificationAttempts < :maxAttempts',
+              {
+                failedStatus: UNREAD_NOTIFICATION_STATUS.FAILED,
+                maxAttempts: UNREAD_NOTIFICATION_MAX_ATTEMPTS,
+              },
+            );
+        }),
       )
       .getMany();
 
     return rows.map((cu) => ({ chatUser: cu, email: cu.user.email }));
   }
 
-  async markUnreadNotified(chatUserId: string): Promise<void> {
-    await this.chatUserRepository.update({ id: chatUserId }, { lastUnreadNotifiedAt: new Date() });
+  async markUnreadNotificationPending(chatUserId: string): Promise<void> {
+    await this.chatUserRepository.update(
+      { id: chatUserId },
+      {
+        unreadNotificationAttemptedAt: new Date(),
+        unreadNotificationStatus: UNREAD_NOTIFICATION_STATUS.PENDING,
+        unreadNotificationAttempts: () => '"unreadNotificationAttempts" + 1',
+        unreadNotificationError: null,
+      },
+    );
+  }
+
+  async markUnreadNotificationSent(chatUserId: string): Promise<void> {
+    await this.chatUserRepository.update(
+      { id: chatUserId, unreadNotificationStatus: UNREAD_NOTIFICATION_STATUS.PENDING },
+      {
+        unreadNotificationStatus: UNREAD_NOTIFICATION_STATUS.SENT,
+        unreadNotificationAttempts: 0,
+      },
+    );
+  }
+
+  async markUnreadNotificationFailed(chatUserId: string, error: string): Promise<void> {
+    await this.chatUserRepository.update(
+      { id: chatUserId, unreadNotificationStatus: UNREAD_NOTIFICATION_STATUS.PENDING },
+      {
+        unreadNotificationStatus: UNREAD_NOTIFICATION_STATUS.FAILED,
+        unreadNotificationError: error,
+      },
+    );
+  }
+
+  async markUnreadNotificationDeliveryFailure(
+    email: string,
+    status: UNREAD_NOTIFICATION_STATUS.BOUNCED | UNREAD_NOTIFICATION_STATUS.CLEANED,
+    error: string,
+  ): Promise<void> {
+    const chatUser = await this.getChatUserByEmail(email);
+    if (!chatUser) return;
+    if (
+      chatUser.unreadNotificationStatus === UNREAD_NOTIFICATION_STATUS.BOUNCED ||
+      chatUser.unreadNotificationStatus === UNREAD_NOTIFICATION_STATUS.CLEANED
+    ) {
+      return;
+    }
+    await this.chatUserRepository.update(
+      { id: chatUser.id },
+      { unreadNotificationStatus: status, unreadNotificationError: error },
+    );
   }
 
   async markAsRead(userId: string): Promise<ChatUserEntity | null> {

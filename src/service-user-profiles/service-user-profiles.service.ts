@@ -258,6 +258,8 @@ export class ServiceUserProfilesService {
   // Send a Mailchimp custom event with 404 recovery — for archived/missing members,
   // pipes through syncMailchimpProfile's existing recovery (PATCHes user data → 404 →
   // recreates full profile) then retries the event so the email still fires.
+  // Throws on terminal failure so callers (e.g. FrontChatScheduler) can record FAILED
+  // and retry on the next cron tick.
   async sendMailchimpUserEventWithRecovery(
     email: string,
     event: MAILCHIMP_CUSTOM_EVENTS,
@@ -265,18 +267,20 @@ export class ServiceUserProfilesService {
     if (isCypressTestEmail(email)) return;
     try {
       await sendMailchimpUserEvent(email, event);
+      return;
     } catch (error) {
       const status = (error as { status?: number })?.status;
       if (!this.isMailchimpNotFound(error)) {
         const message = error instanceof Error ? error.message : 'unknown error';
         logger.error(`Send Mailchimp event ${event} failed (status=${status}) - ${message}`);
-        return;
+        throw error instanceof Error ? error : new Error(message);
       }
       try {
         const user = await this.userRepository.findOneBy({ email: ILike(email) });
         if (!user) {
-          logger.error(`Mailchimp event ${event} recovery: user not found in DB`);
-          return;
+          const message = `Mailchimp event ${event} recovery: user not found in DB`;
+          logger.error(message);
+          throw new Error(message, { cause: error });
         }
         await this.syncMailchimpProfile(
           this.serializeUserData(user).mailchimpSchema,
@@ -290,6 +294,7 @@ export class ServiceUserProfilesService {
         logger.error(
           `Send Mailchimp event ${event} retry failed (status=${retryStatus}) - ${message}`,
         );
+        throw retryError instanceof Error ? retryError : new Error(message);
       }
     }
   }
