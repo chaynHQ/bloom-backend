@@ -18,6 +18,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiTags } from '@nestjs/swagger';
 import { Response } from 'express';
 import { memoryStorage } from 'multer';
+import { ChatUserService } from 'src/chat-user/chat-user.service';
 import { FirebaseAuthGuard } from 'src/firebase/firebase-auth.guard';
 import { ServiceUserProfilesService } from 'src/service-user-profiles/service-user-profiles.service';
 import {
@@ -32,6 +33,7 @@ import { ChatHistoryMessage, FrontChatService } from './front-chat.service';
 export class FrontChatController {
   constructor(
     private readonly frontChatService: FrontChatService,
+    private readonly chatUserService: ChatUserService,
     private readonly serviceUserProfilesService: ServiceUserProfilesService,
   ) {}
 
@@ -61,7 +63,7 @@ export class FrontChatController {
   )
   async uploadAttachment(@Request() req, @UploadedFile() file: Express.Multer.File): Promise<void> {
     if (!file) throw new BadRequestException('No file provided');
-    const existingChatUser = await this.frontChatService.getChatUser(req.userEntity.id);
+    const existingChatUser = await this.chatUserService.getChatUser(req.userEntity.id);
     if (!existingChatUser?.frontContactId) {
       await this.serviceUserProfilesService.getOrCreateFrontContact(req.userEntity);
     }
@@ -102,12 +104,12 @@ export class FrontChatController {
   @ApiBearerAuth('access-token')
   @UseGuards(FirebaseAuthGuard)
   async markAsRead(@Request() req): Promise<void> {
-    const chatUser = await this.frontChatService.markAsRead(req.userEntity.id);
+    const chatUser = await this.chatUserService.markAsRead(req.userEntity.id);
     this.syncChatActivity(chatUser, req.userEntity.email);
   }
 
   // Fire-and-forget — chat activity sync is best-effort and must not block the user.
-  private syncChatActivity(chatUser: Awaited<ReturnType<FrontChatService['markAsRead']>>, email: string) {
+  private syncChatActivity(chatUser: Awaited<ReturnType<ChatUserService['markAsRead']>>, email: string) {
     if (!chatUser) return;
     this.serviceUserProfilesService
       .updateServiceUserProfilesChatActivity(chatUser, email)

@@ -14,7 +14,7 @@ import { ResourceEntity } from 'src/entities/resource.entity';
 import { SessionEntity } from 'src/entities/session.entity';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
 import { UserEntity } from 'src/entities/user.entity';
-import { FrontChatService } from 'src/front-chat/front-chat.service';
+import { ChatUserService } from 'src/chat-user/chat-user.service';
 import { PartnerService } from 'src/partner/partner.service';
 import { ServiceUserProfilesService } from 'src/service-user-profiles/service-user-profiles.service';
 import {
@@ -168,8 +168,8 @@ describe('WebhooksService', () => {
           useValue: mockedSlackMessageClient,
         },
         {
-          provide: FrontChatService,
-          useValue: createMock<FrontChatService>(),
+          provide: ChatUserService,
+          useValue: createMock<ChatUserService>(),
         },
         PartnerService,
       ],

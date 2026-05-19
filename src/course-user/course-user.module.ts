@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { SlackMessageClient } from 'src/api/slack/slack-api';
 import { ZapierWebhookClient } from 'src/api/zapier/zapier-webhook-client';
-import { ChatUserEntity } from 'src/entities/chat-user.entity';
+import { ChatUserModule } from 'src/chat-user/chat-user.module';
 import { CourseUserEntity } from 'src/entities/course-user.entity';
 import { EventLogEntity } from 'src/entities/event-log.entity';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
@@ -27,7 +27,6 @@ import { CoursesUserController } from './courses-user.controller';
 @Module({
   imports: [
     TypeOrmModule.forFeature([
-      ChatUserEntity,
       CourseUserEntity,
       UserEntity,
       PartnerAccessEntity,
@@ -37,6 +36,7 @@ import { CoursesUserController } from './courses-user.controller';
       SubscriptionEntity,
       EventLogEntity,
     ]),
+    ChatUserModule,
     FirebaseModule,
   ],
   controllers: [CoursesUserController],

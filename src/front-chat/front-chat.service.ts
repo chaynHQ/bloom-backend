@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { ChatUserService } from 'src/chat-user/chat-user.service';
 import { ChatUserEntity } from 'src/entities/chat-user.entity';
 import { UserEntity } from 'src/entities/user.entity';
 import { Logger } from 'src/logger/logger';
@@ -12,7 +13,7 @@ import {
   frontContactListId,
 } from 'src/utils/constants';
 import { isCypressTestEmail } from 'src/utils/utils';
-import { Brackets, ILike, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import {
   buildThreadRef,
   getContactAlias,
@@ -29,11 +30,7 @@ import {
   FrontChatContactCustomFields,
   FrontChatContactProfile,
   FrontChatUser,
-  UNREAD_NOTIFICATION_STATUS,
 } from './front-chat.interface';
-
-const UNREAD_NOTIFICATION_MAX_ATTEMPTS = 3;
-const UNREAD_NOTIFICATION_COOLDOWN_HOURS = 2;
 
 const logger = new Logger('FrontChatService');
 
@@ -167,210 +164,10 @@ export class FrontChatService {
   private resolvedInboxId: string | undefined;
 
   constructor(
-    @InjectRepository(ChatUserEntity)
-    private readonly chatUserRepository: Repository<ChatUserEntity>,
+    private readonly chatUserService: ChatUserService,
     @InjectRepository(UserEntity)
     private readonly userRepository: Repository<UserEntity>,
   ) {}
-
-  async getOrCreateChatUser(
-    userId: string,
-    initial: Partial<ChatUserEntity> = {},
-  ): Promise<ChatUserEntity> {
-    const existing = await this.chatUserRepository.findOneBy({ userId });
-    if (existing) {
-      const updates: Partial<ChatUserEntity> = {};
-      for (const [key, value] of Object.entries(initial) as [keyof ChatUserEntity, unknown][]) {
-        if (value != null && existing[key] == null) {
-          (updates as Record<string, unknown>)[key] = value;
-        }
-      }
-      if (Object.keys(updates).length > 0) {
-        return this.chatUserRepository.save({ ...existing, ...updates });
-      }
-      return existing;
-    }
-
-    try {
-      const chatUser = this.chatUserRepository.create({ userId, ...initial });
-      return await this.chatUserRepository.save(chatUser);
-    } catch {
-      // Handle unique constraint race condition
-      const retry = await this.chatUserRepository.findOneBy({ userId });
-      if (retry) return retry;
-      throw new Error(`Failed to create ChatUser for userId ${userId}`);
-    }
-  }
-
-  async getChatUser(userId: string): Promise<ChatUserEntity | null> {
-    return this.chatUserRepository.findOneBy({ userId });
-  }
-
-  async updateChatUser(
-    userId: string,
-    partial: Partial<ChatUserEntity>,
-  ): Promise<ChatUserEntity | null> {
-    const chatUser = await this.chatUserRepository.findOneBy({ userId });
-    if (!chatUser) return null;
-    return this.chatUserRepository.save({
-      ...chatUser,
-      ...this.preserveConversationId(chatUser, partial),
-    });
-  }
-
-  async updateChatUserByEmail(
-    email: string,
-    partial: Partial<ChatUserEntity>,
-  ): Promise<ChatUserEntity | null> {
-    let chatUser = await this.chatUserRepository
-      .createQueryBuilder('cu')
-      .innerJoin('cu.user', 'u')
-      .where('LOWER(u.email) = LOWER(:email)', { email })
-      .getOne();
-
-    if (!chatUser) {
-      // User predates ChatUser table — look up the user and create a record
-      const user = await this.userRepository.findOneBy({ email: ILike(email) });
-      if (!user) return null;
-      chatUser = await this.getOrCreateChatUser(user.id);
-    }
-
-    return this.chatUserRepository.save({
-      ...chatUser,
-      ...this.preserveConversationId(chatUser, partial),
-    });
-  }
-
-  async getChatUserByEmail(email: string): Promise<ChatUserEntity | null> {
-    return this.chatUserRepository
-      .createQueryBuilder('cu')
-      .innerJoin('cu.user', 'u')
-      .where('LOWER(u.email) = LOWER(:email)', { email })
-      .getOne();
-  }
-
-  async getUsersWithUnreadMessages(): Promise<{ chatUser: ChatUserEntity; email: string }[]> {
-    const cutoff = new Date(Date.now() - 5 * 60 * 1000);
-    const rows = await this.chatUserRepository
-      .createQueryBuilder('cu')
-      .innerJoinAndSelect('cu.user', 'u')
-      .where('cu.lastMessageReceivedAt IS NOT NULL')
-      .andWhere('(cu.lastMessageReadAt IS NULL OR cu.lastMessageReadAt < cu.lastMessageReceivedAt)')
-      // Never re-trigger for dead addresses — Mailchimp delivery is impossible and retries hurt sender reputation.
-      .andWhere(
-        '(cu.unreadNotificationStatus IS NULL OR cu.unreadNotificationStatus NOT IN (:...terminalStatuses))',
-        {
-          terminalStatuses: [
-            UNREAD_NOTIFICATION_STATUS.BOUNCED,
-            UNREAD_NOTIFICATION_STATUS.CLEANED,
-          ],
-        },
-      )
-      .andWhere(
-        new Brackets((qb) => {
-          qb
-            // New unread: first notification (no prior attempt), or a follow-up message
-            // that the agent sent more than 2 hours after the last notification — i.e. an
-            // intentional re-contact, not a burst of messages in the same session.
-            .where(
-              'cu.lastMessageReceivedAt < :cutoff AND (cu.unreadNotificationAttemptedAt IS NULL OR cu.lastMessageReceivedAt - cu.unreadNotificationAttemptedAt > :cooldownInterval::interval)',
-              { cutoff, cooldownInterval: `${UNREAD_NOTIFICATION_COOLDOWN_HOURS} hours` },
-            )
-            // Transient failure: previous trigger threw and retries remain.
-            // Cooldown does not apply — retries must fire promptly.
-            .orWhere(
-              'cu.unreadNotificationStatus = :failedStatus AND cu.unreadNotificationAttempts < :maxAttempts',
-              {
-                failedStatus: UNREAD_NOTIFICATION_STATUS.FAILED,
-                maxAttempts: UNREAD_NOTIFICATION_MAX_ATTEMPTS,
-              },
-            );
-        }),
-      )
-      .getMany();
-
-    return rows.map((cu) => ({ chatUser: cu, email: cu.user.email }));
-  }
-
-  async markUnreadNotificationPending(chatUserId: string): Promise<void> {
-    await this.chatUserRepository.update(
-      { id: chatUserId },
-      {
-        unreadNotificationAttemptedAt: new Date(),
-        unreadNotificationStatus: UNREAD_NOTIFICATION_STATUS.PENDING,
-        unreadNotificationAttempts: () => '"unreadNotificationAttempts" + 1',
-        unreadNotificationError: null,
-      },
-    );
-  }
-
-  async markUnreadNotificationSent(chatUserId: string): Promise<void> {
-    await this.chatUserRepository.update(
-      { id: chatUserId, unreadNotificationStatus: UNREAD_NOTIFICATION_STATUS.PENDING },
-      {
-        unreadNotificationStatus: UNREAD_NOTIFICATION_STATUS.SENT,
-        unreadNotificationAttempts: 0,
-      },
-    );
-  }
-
-  async markUnreadNotificationFailed(chatUserId: string, error: string): Promise<void> {
-    await this.chatUserRepository.update(
-      { id: chatUserId, unreadNotificationStatus: UNREAD_NOTIFICATION_STATUS.PENDING },
-      {
-        unreadNotificationStatus: UNREAD_NOTIFICATION_STATUS.FAILED,
-        unreadNotificationError: error,
-      },
-    );
-  }
-
-  async markUnreadNotificationDeliveryFailure(
-    email: string,
-    status: UNREAD_NOTIFICATION_STATUS.BOUNCED | UNREAD_NOTIFICATION_STATUS.CLEANED,
-    error: string,
-  ): Promise<void> {
-    const chatUser = await this.getChatUserByEmail(email);
-    if (!chatUser) return;
-    if (
-      chatUser.unreadNotificationStatus === UNREAD_NOTIFICATION_STATUS.BOUNCED ||
-      chatUser.unreadNotificationStatus === UNREAD_NOTIFICATION_STATUS.CLEANED
-    ) {
-      return;
-    }
-    await this.chatUserRepository.update(
-      { id: chatUser.id },
-      { unreadNotificationStatus: status, unreadNotificationError: error },
-    );
-  }
-
-  async markAsRead(userId: string): Promise<ChatUserEntity | null> {
-    const chatUser = await this.chatUserRepository.findOneBy({ userId });
-    if (!chatUser) return null;
-
-    // Nothing to mark as read if the agent has never sent a message.
-    if (!chatUser.lastMessageReceivedAt) return null;
-
-    // Already up to date — don't write or sync unnecessarily.
-    if (
-      chatUser.lastMessageReadAt &&
-      chatUser.lastMessageReadAt >= chatUser.lastMessageReceivedAt
-    ) {
-      return null;
-    }
-
-    return this.chatUserRepository.save({ ...chatUser, lastMessageReadAt: new Date() });
-  }
-
-  // Once a user is linked to a Front conversation that link is sticky — partial updates
-  // must never overwrite an existing frontConversationId.
-  private preserveConversationId(
-    chatUser: ChatUserEntity,
-    partial: Partial<ChatUserEntity>,
-  ): Partial<ChatUserEntity> {
-    if (!chatUser.frontConversationId) return partial;
-    const { frontConversationId: _omit, ...rest } = partial;
-    return rest;
-  }
 
   async sendChannelTextMessage(
     user: FrontChatUser,
@@ -462,11 +259,8 @@ export class FrontChatService {
     messageUid: string | undefined,
     existingChatUser?: ChatUserEntity | null,
   ): Promise<ChatUserEntity> {
-    const chatUser = existingChatUser ?? (await this.getOrCreateChatUser(userId));
-    const saved = await this.chatUserRepository.save({
-      ...chatUser,
-      lastMessageSentAt: new Date(),
-    });
+    const chatUser = existingChatUser ?? (await this.chatUserService.getOrCreateChatUser(userId));
+    const saved = await this.chatUserService.setLastMessageSentAt(chatUser, new Date());
 
     if (messageUid) {
       this.scheduleConversationIdResolution(userId, messageUid);
@@ -487,7 +281,7 @@ export class FrontChatService {
   }
 
   private async resolveAndSaveConversationId(userId: string, messageUid: string): Promise<void> {
-    const chatUser = await this.chatUserRepository.findOneBy({ userId });
+    const chatUser = await this.chatUserService.getChatUser(userId);
     if (chatUser?.frontConversationId) return;
 
     const message = (await frontApiRequest(
@@ -500,7 +294,7 @@ export class FrontChatService {
 
     const conversationId = conversationUrl.split('/').pop();
     if (conversationId) {
-      await this.getOrCreateChatUser(userId, { frontConversationId: conversationId });
+      await this.chatUserService.getOrCreateChatUser(userId, { frontConversationId: conversationId });
       logger.log(`Resolved conversation ID ${conversationId} for user ${userId}`);
       await this.syncConversationLanguage(userId);
     }
@@ -512,7 +306,7 @@ export class FrontChatService {
     try {
       const [user, chatUser] = await Promise.all([
         this.userRepository.findOneBy({ id: userId }),
-        this.chatUserRepository.findOneBy({ userId }),
+        this.chatUserService.getChatUser(userId),
       ]);
 
       const conversationId = chatUser?.frontConversationId;
@@ -533,7 +327,7 @@ export class FrontChatService {
   ): Promise<{ messages: ChatHistoryMessage[]; conversationFound: boolean }> {
     if (isCypressTestEmail(user.email)) return { messages: [], conversationFound: false };
 
-    const chatUser = await this.chatUserRepository.findOneBy({ userId: user.id });
+    const chatUser = await this.chatUserService.getChatUser(user.id);
 
     let conversationId = chatUser?.frontConversationId ?? null;
     if (!conversationId) {
@@ -552,7 +346,7 @@ export class FrontChatService {
       } catch (error) {
         if ((error as { status?: number })?.status === 404) {
           // Stale conversation ID — clear it so the next connection tries a fresh lookup.
-          await this.chatUserRepository.update({ userId: user.id }, { frontConversationId: null });
+          await this.chatUserService.clearConversationId(user.id);
           logger.warn(`Cleared stale conversation ${conversationId} for user ${user.id}`);
           return { messages: allMessages, conversationFound: false };
         }
@@ -606,7 +400,7 @@ export class FrontChatService {
         matching.sort((a, b) => (b.created_at ?? 0) - (a.created_at ?? 0))[0]?.id ?? null;
 
       if (conversationId) {
-        await this.getOrCreateChatUser(userId, { frontConversationId: conversationId });
+        await this.chatUserService.getOrCreateChatUser(userId, { frontConversationId: conversationId });
         logger.log(`Resolved conversation ${conversationId} for user ${userId} via contact lookup`);
         await this.syncConversationLanguage(userId);
       }
@@ -679,7 +473,7 @@ export class FrontChatService {
     await this.addToFrontContactList(email, contact.id);
 
     if (userId) {
-      await this.getOrCreateChatUser(userId, { frontContactId: contact.id });
+      await this.chatUserService.getOrCreateChatUser(userId, { frontContactId: contact.id });
     }
 
     return contact;
@@ -782,12 +576,14 @@ export class FrontChatService {
         contact_ids: [resolvedId],
       });
     } catch (error) {
-      logger.warn(`Front add-to-list failed for ${email}: ${error?.message || 'unknown error'}`);
+      logger.warn(
+        `Front add-to-list failed${resolvedId ? ` (contact ${resolvedId})` : ''}: ${error?.message || 'unknown error'}`,
+      );
     }
 
     // Save frontContactId even if the list-add failed — the canonical ID is still valid.
     if (resolvedId) {
-      this.updateChatUserByEmail(email, { frontContactId: resolvedId }).catch(() => {});
+      this.chatUserService.updateChatUserByEmail(email, { frontContactId: resolvedId }).catch(() => {});
     }
   }
 
