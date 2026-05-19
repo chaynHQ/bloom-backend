@@ -280,7 +280,7 @@ export class ServiceUserProfilesService {
         if (!user) {
           const message = `Mailchimp event ${event} recovery: user not found in DB`;
           logger.error(message);
-          throw new Error(message);
+          throw new Error(message, { cause: error });
         }
         await this.syncMailchimpProfile(
           this.serializeUserData(user).mailchimpSchema,
