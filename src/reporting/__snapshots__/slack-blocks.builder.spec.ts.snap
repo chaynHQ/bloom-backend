@@ -1,10 +1,10 @@
 // Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
-exports[`buildReportBlocks renders a full weekly digest topic-sectioned (snapshot) 1`] = `
+exports[`buildReportBlocks renders a full weekly digest (snapshot covers structure, breakdowns, GA events + sub-row breakdowns, anomalies, baselines) 1`] = `
 [
   {
     "text": {
-      "text": "Bloom weekly digest — 2026-W16 (2026-04-12 → 2026-04-19)",
+      "text": "Bloom weekly digest — 2026-W16 (2026-04-13 → 2026-04-19)",
       "type": "plain_text",
     },
     "type": "header",
@@ -12,11 +12,7 @@ exports[`buildReportBlocks renders a full weekly digest topic-sectioned (snapsho
   {
     "elements": [
       {
-        "text": "trigger: *manual* · tz: Europe/London · run: run-123",
-        "type": "mrkdwn",
-      },
-      {
-        "text": "_DB = source of truth · Analytics events supplement where the DB has no equivalent_",
+        "text": "trigger: *manual* · tz: Europe/London · baseline: last 4 periods · run: run-123",
         "type": "mrkdwn",
       },
     ],
@@ -26,17 +22,25 @@ exports[`buildReportBlocks renders a full weekly digest topic-sectioned (snapsho
     "type": "divider",
   },
   {
-    "text": {
-      "text": "*:sparkles: Headline* _(top-line across the period)_",
-      "type": "mrkdwn",
-    },
-    "type": "section",
-  },
-  {
     "fields": [
       {
         "text": "*New users*
-12",
+12  ·  ↑ 20% vs avg 10",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*New partner users*
+8",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Deleted users*
+1",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Active users*
+540",
         "type": "mrkdwn",
       },
       {
@@ -45,18 +49,8 @@ exports[`buildReportBlocks renders a full weekly digest topic-sectioned (snapsho
         "type": "mrkdwn",
       },
       {
-        "text": "*Courses completed*
-3",
-        "type": "mrkdwn",
-      },
-      {
         "text": "*Sessions started*
 24",
-        "type": "mrkdwn",
-      },
-      {
-        "text": "*Sessions completed*
-9",
         "type": "mrkdwn",
       },
       {
@@ -65,23 +59,18 @@ exports[`buildReportBlocks renders a full weekly digest topic-sectioned (snapsho
         "type": "mrkdwn",
       },
       {
-        "text": "*Resources completed*
+        "text": "*Therapy sessions completed*
 7",
         "type": "mrkdwn",
       },
       {
-        "text": "*Therapy bookings made*
-5",
+        "text": "*Messages sent*
+18",
         "type": "mrkdwn",
       },
       {
-        "text": "*Therapy scheduled*
-7",
-        "type": "mrkdwn",
-      },
-      {
-        "text": "*Active users*
-1,234",
+        "text": "*Notes from Bloom subscribed*
+6",
         "type": "mrkdwn",
       },
     ],
@@ -91,8 +80,25 @@ exports[`buildReportBlocks renders a full weekly digest topic-sectioned (snapsho
     "type": "divider",
   },
   {
+    "fields": [
+      {
+        "text": "*New users (DB)*
+12  ·  ↑ 20% vs avg 10",
+        "type": "mrkdwn",
+      },
+    ],
     "text": {
-      "text": "*:bust_in_silhouette: Users & accounts*",
+      "text": "*:mag: Worth looking at* _(vs last 4-period baseline)_",
+      "type": "mrkdwn",
+    },
+    "type": "section",
+  },
+  {
+    "type": "divider",
+  },
+  {
+    "text": {
+      "text": "*:busts_in_silhouette: Users & accounts*",
       "type": "mrkdwn",
     },
     "type": "section",
@@ -101,12 +107,22 @@ exports[`buildReportBlocks renders a full weekly digest topic-sectioned (snapsho
     "fields": [
       {
         "text": "*New users*
-12",
+12  ·  ↑ 20% vs avg 10",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*New partner users*
+8",
         "type": "mrkdwn",
       },
       {
         "text": "*Deleted users*
 1",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Active users*
+540",
         "type": "mrkdwn",
       },
       {
@@ -119,63 +135,13 @@ exports[`buildReportBlocks renders a full weekly digest topic-sectioned (snapsho
 2",
         "type": "mrkdwn",
       },
-      {
-        "text": "*Activation rate (%)*
-23",
-        "type": "mrkdwn",
-      },
-      {
-        "text": "*Partner activation rate (%)*
-41",
-        "type": "mrkdwn",
-      },
     ],
     "type": "section",
   },
   {
-    "fields": [
-      {
-        "text": "*Active users*
-1,234",
-        "type": "mrkdwn",
-      },
-      {
-        "text": "*New users (GA)*
-210",
-        "type": "mrkdwn",
-      },
-      {
-        "text": "*Sessions*
-1,890",
-        "type": "mrkdwn",
-      },
-      {
-        "text": "*Pageviews*
-4,212",
-        "type": "mrkdwn",
-      },
-      {
-        "text": "*Avg session (s)*
-123.4",
-        "type": "mrkdwn",
-      },
-    ],
     "text": {
-      "text": "_Analytics: traffic overview_",
-      "type": "mrkdwn",
-    },
-    "type": "section",
-  },
-  {
-    "text": {
-      "text": "*Breakdowns*
-• New users by partner (DB): Bumble (8) · Public (no partner) (4)
-• New users by signup language (DB): en (10)
-• Partner-access grants by partner (DB): Bumble (4)
-• Partner-access activations by partner (DB): Bumble (2)
-
-*Flows (Analytics events)*
-• *Signup flow* — Registrations 28 → Survey completed 0 (0%)",
+      "text": "*New users by partner*
+Bumble (8) · Public (no partner) (4)",
       "type": "mrkdwn",
     },
     "type": "section",
@@ -183,70 +149,28 @@ exports[`buildReportBlocks renders a full weekly digest topic-sectioned (snapsho
   {
     "fields": [
       {
-        "text": "*Header login clicks*
-0",
+        "text": "*Login flow*
+success (142)",
         "type": "mrkdwn",
       },
-      {
-        "text": "*Logins*
-142",
-        "type": "mrkdwn",
-      },
-      {
-        "text": "*Logouts*
-0",
-        "type": "mrkdwn",
-      },
-      {
-        "text": "*Registrations*
-28",
-        "type": "mrkdwn",
-      },
-      {
-        "text": "*Reset-password link clicks*
-0",
-        "type": "mrkdwn",
-      },
-      {
-        "text": "*Password resets*
-0",
-        "type": "mrkdwn",
-      },
-      {
-        "text": "*Create-account link*
-0",
-        "type": "mrkdwn",
-      },
-      {
-        "text": "*Signup survey*
-completed (0) · skipped (0)",
-        "type": "mrkdwn",
-      },
-      {
-        "text": "*About you form*
-viewed (0) · demographics submitted (0) · SETA submitted (0)",
-        "type": "mrkdwn",
-      },
-      {
-        "text": "*Apply-a-code page viewed*
-0",
-        "type": "mrkdwn",
-      },
-    ],
-    "text": {
-      "text": "_Auth & onboarding_",
-      "type": "mrkdwn",
-    },
-    "type": "section",
-  },
-  {
-    "fields": [
       {
         "text": "*Partner access codes*
-redeemed (0) · invalid (client) (0) · new partner assigned (0) · invalid (server) (0)",
+invalid (client) (14)
+↳ partner: badcode-org (9) · oldcode (4)",
         "type": "mrkdwn",
       },
     ],
+    "text": {
+      "text": "*Analytics events*",
+      "type": "mrkdwn",
+    },
+    "type": "section",
+  },
+  {
+    "text": {
+      "text": " ",
+      "type": "mrkdwn",
+    },
     "type": "section",
   },
   {
@@ -254,7 +178,7 @@ redeemed (0) · invalid (client) (0) · new partner assigned (0) · invalid (ser
   },
   {
     "text": {
-      "text": "*:books: Courses & sessions*",
+      "text": "*:open_book: Courses & sessions*",
       "type": "mrkdwn",
     },
     "type": "section",
@@ -290,16 +214,15 @@ redeemed (0) · invalid (client) (0) · new partner assigned (0) · invalid (ser
     "type": "section",
   },
   {
+    "fields": [
+      {
+        "text": "*Foundations*
+6 started · 2 completed",
+        "type": "mrkdwn",
+      },
+    ],
     "text": {
-      "text": "*Courses & sessions (DB)*
-• *Foundations* — courses: 6 started · 2 completed · sessions: 14 started · 8 completed
-    ↳ Intro (9 started · 5 completed) · Reflection (5 started · 3 completed)
-
-*Breakdowns*
-• Session feedback by tag (DB): useful (3)
-
-*Flows (Analytics events)*
-• *Session flow* — Viewed 56 → Started 0 (0%) → Completed 0 (0%) → Feedback 0 (0%)",
+      "text": "*Courses*",
       "type": "mrkdwn",
     },
     "type": "section",
@@ -307,38 +230,33 @@ redeemed (0) · invalid (client) (0) · new partner assigned (0) · invalid (ser
   {
     "fields": [
       {
-        "text": "*Session viewed*
-56",
+        "text": "*Foundations: Intro*
+9 started · 5 completed",
         "type": "mrkdwn",
       },
       {
-        "text": "*Session video*
-started (32) · finished (0)",
-        "type": "mrkdwn",
-      },
-      {
-        "text": "*Session progression*
-started (0) · completed (0)",
-        "type": "mrkdwn",
-      },
-      {
-        "text": "*Session transcript*
-opened (0) · closed (0)",
-        "type": "mrkdwn",
-      },
-      {
-        "text": "*Session feedback (GA)*
-0",
-        "type": "mrkdwn",
-      },
-      {
-        "text": "*Session chat CTA*
-0",
+        "text": "*Foundations: Reflection*
+5 started · 3 completed",
         "type": "mrkdwn",
       },
     ],
     "text": {
-      "text": "_Sessions_",
+      "text": "*Sessions*",
+      "type": "mrkdwn",
+    },
+    "type": "section",
+  },
+  {
+    "text": {
+      "text": "*Session feedback by tag*
+useful (3)",
+      "type": "mrkdwn",
+    },
+    "type": "section",
+  },
+  {
+    "text": {
+      "text": " ",
       "type": "mrkdwn",
     },
     "type": "section",
@@ -374,13 +292,35 @@ opened (0) · closed (0)",
     "type": "section",
   },
   {
+    "fields": [
+      {
+        "text": "*Short videos: Breathing*
+6 started · 3 completed",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Short videos: Grounding*
+3 started · 2 completed",
+        "type": "mrkdwn",
+      },
+    ],
     "text": {
-      "text": "*Resources (DB)*
-• *Short videos* — 9 started · 5 completed
-    ↳ Breathing (6 started · 3 completed) · Grounding (3 started · 2 completed)
-
-*Breakdowns*
-• Resource feedback by tag (DB): relatable (3)",
+      "text": "*Resources*",
+      "type": "mrkdwn",
+    },
+    "type": "section",
+  },
+  {
+    "text": {
+      "text": "*Resource feedback by tag*
+relatable (3)",
+      "type": "mrkdwn",
+    },
+    "type": "section",
+  },
+  {
+    "text": {
+      "text": " ",
       "type": "mrkdwn",
     },
     "type": "section",
@@ -390,7 +330,7 @@ opened (0) · closed (0)",
   },
   {
     "text": {
-      "text": "*:speech_balloon: Therapy*",
+      "text": "*:cherry_blossom: Therapy*",
       "type": "mrkdwn",
     },
     "type": "section",
@@ -403,13 +343,13 @@ opened (0) · closed (0)",
         "type": "mrkdwn",
       },
       {
-        "text": "*Therapy cancellations*
-1",
+        "text": "*Therapy sessions completed*
+7",
         "type": "mrkdwn",
       },
       {
-        "text": "*Therapy scheduled*
-7",
+        "text": "*Therapy cancellations*
+1",
         "type": "mrkdwn",
       },
     ],
@@ -417,9 +357,15 @@ opened (0) · closed (0)",
   },
   {
     "text": {
-      "text": "*Breakdowns*
-• Therapy by therapist (DB): Dr Jane Smith (4)
-• Therapy by partner (DB): Bumble (5)",
+      "text": "*Therapy by therapist*
+Dr Jane Smith (4)",
+      "type": "mrkdwn",
+    },
+    "type": "section",
+  },
+  {
+    "text": {
+      "text": " ",
       "type": "mrkdwn",
     },
     "type": "section",
@@ -429,7 +375,7 @@ opened (0) · closed (0)",
   },
   {
     "text": {
-      "text": "*:inbox_tray: Communications*",
+      "text": "*:envelope_with_arrow: Communications*",
       "type": "mrkdwn",
     },
     "type": "section",
@@ -437,12 +383,22 @@ opened (0) · closed (0)",
   {
     "fields": [
       {
-        "text": "*WhatsApp subscribed*
+        "text": "*Messages sent*
+18",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Messages received*
+22",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Notes from Bloom subscribed*
 6",
         "type": "mrkdwn",
       },
       {
-        "text": "*WhatsApp unsubscribed*
+        "text": "*Notes from Bloom unsubscribed*
 1",
         "type": "mrkdwn",
       },
@@ -450,20 +406,8 @@ opened (0) · closed (0)",
     "type": "section",
   },
   {
-    "type": "divider",
-  },
-  {
     "text": {
-      "text": "*:iphone: App & traffic*",
-      "type": "mrkdwn",
-    },
-    "type": "section",
-  },
-  {
-    "text": {
-      "text": "*Top traffic breakdowns (Analytics events)*
-_Top pages_
-• /courses — 500 (200 users)",
+      "text": " ",
       "type": "mrkdwn",
     },
     "type": "section",
@@ -473,7 +417,7 @@ _Top pages_
   },
   {
     "text": {
-      "text": "*:rotating_light: Errors*",
+      "text": "*:warning: Errors*",
       "type": "mrkdwn",
     },
     "type": "section",
@@ -487,7 +431,79 @@ _Top pages_
       },
     ],
     "text": {
-      "text": "_Errors_",
+      "text": "*Analytics events*",
+      "type": "mrkdwn",
+    },
+    "type": "section",
+  },
+  {
+    "text": {
+      "text": " ",
+      "type": "mrkdwn",
+    },
+    "type": "section",
+  },
+  {
+    "type": "divider",
+  },
+  {
+    "text": {
+      "text": "*:chart_with_upwards_trend: Site analytics*",
+      "type": "mrkdwn",
+    },
+    "type": "section",
+  },
+  {
+    "fields": [
+      {
+        "text": "*Active users (GA)*
+1,234",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*New users (GA)*
+210",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Sessions (GA)*
+1,890",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Pageviews*
+4,212",
+        "type": "mrkdwn",
+      },
+      {
+        "text": "*Avg session (s)*
+123.4",
+        "type": "mrkdwn",
+      },
+    ],
+    "text": {
+      "text": "*Analytics traffic*",
+      "type": "mrkdwn",
+    },
+    "type": "section",
+  },
+  {
+    "fields": [
+      {
+        "text": "*Top pages*
+/courses (500)",
+        "type": "mrkdwn",
+      },
+    ],
+    "text": {
+      "text": "*Top traffic*",
+      "type": "mrkdwn",
+    },
+    "type": "section",
+  },
+  {
+    "text": {
+      "text": " ",
       "type": "mrkdwn",
     },
     "type": "section",

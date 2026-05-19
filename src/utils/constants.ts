@@ -198,9 +198,17 @@ export const slackDeletedUsersWebhookUrl = getEnv(
   process.env.SLACK_BLOOM_DELETED_USERS_WEBHOOK_URL,
   'SLACK_BLOOM_DELETED_USERS_WEBHOOK_URL',
 );
-export const slackReportingWebhookUrl = getEnv(
-  process.env.SLACK_REPORTING_WEBHOOK_URL,
-  'SLACK_REPORTING_WEBHOOK_URL',
+// Bot-token + channel for threaded reporting digests. Required for the
+// reporting flow (single-message webhooks cannot post thread replies) — no
+// webhook fallback; missing config causes the run to fail loudly so the gap
+// is visible in logs rather than silently degrading to a truncated message.
+export const slackReportingBotToken = getEnv(
+  process.env.SLACK_REPORTING_BOT_TOKEN,
+  'SLACK_REPORTING_BOT_TOKEN',
+);
+export const slackReportingChannelId = getEnv(
+  process.env.SLACK_REPORTING_CHANNEL_ID,
+  'SLACK_REPORTING_CHANNEL_ID',
 );
 
 // Optional with a default — read process.env directly rather than via

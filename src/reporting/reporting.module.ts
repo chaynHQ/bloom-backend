@@ -5,6 +5,7 @@ import { Ga4DataClient } from 'src/api/ga4/ga4-data.client';
 import { SlackMessageClient } from 'src/api/slack/slack-api';
 import { AuthModule } from 'src/auth/auth.module';
 import { CourseUserEntity } from 'src/entities/course-user.entity';
+import { EventLogEntity } from 'src/entities/event-log.entity';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { ReportingRunEntity } from 'src/entities/reporting-run.entity';
 import { ResourceFeedbackEntity } from 'src/entities/resource-feedback.entity';
@@ -34,6 +35,7 @@ import { ReportingService } from './reporting.service';
       SessionFeedbackEntity,
       ResourceFeedbackEntity,
       ReportingRunEntity,
+      EventLogEntity,
     ]),
   ],
   controllers: [ReportingController],
