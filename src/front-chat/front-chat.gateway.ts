@@ -11,6 +11,7 @@ import {
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { AuthService } from 'src/auth/auth.service';
+import { ChatUserService } from 'src/chat-user/chat-user.service';
 import { UserEntity } from 'src/entities/user.entity';
 import { IFirebaseUser } from 'src/firebase/firebase-user.interface';
 import { Logger } from 'src/logger/logger';
@@ -50,6 +51,7 @@ export class FrontChatGateway implements OnGatewayConnection, OnGatewayDisconnec
     private readonly authService: AuthService,
     private readonly userService: UserService,
     private readonly frontChatService: FrontChatService,
+    private readonly chatUserService: ChatUserService,
     private readonly serviceUserProfilesService: ServiceUserProfilesService,
   ) {}
 
@@ -143,7 +145,7 @@ export class FrontChatGateway implements OnGatewayConnection, OnGatewayDisconnec
     }
 
     try {
-      const existingChatUser = await this.frontChatService.getChatUser(user.id);
+      const existingChatUser = await this.chatUserService.getChatUser(user.id);
       if (!existingChatUser?.frontContactId) {
         await this.awaitFrontContactReady(user);
       }
