@@ -5,6 +5,7 @@ import { createHmac, timingSafeEqual } from 'crypto';
 import apiCall from 'src/api/apiCalls';
 import { getBookingDetails } from 'src/api/simplybook/simplybook-api';
 import { SlackMessageClient } from 'src/api/slack/slack-api';
+import { ChatUserService } from 'src/chat-user/chat-user.service';
 import { CourseEntity } from 'src/entities/course.entity';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { ResourceEntity } from 'src/entities/resource.entity';
@@ -12,7 +13,6 @@ import { SessionEntity } from 'src/entities/session.entity';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
 import { UserEntity } from 'src/entities/user.entity';
 import { UNREAD_NOTIFICATION_STATUS } from 'src/front-chat/front-chat.interface';
-import { FrontChatService } from 'src/front-chat/front-chat.service';
 import { Logger } from 'src/logger/logger';
 import { SimplybookBodyDto } from 'src/partner-access/dtos/simplybook-body.dto';
 import { ServiceUserProfilesService } from 'src/service-user-profiles/service-user-profiles.service';
@@ -51,7 +51,7 @@ export class WebhooksService {
     private therapySessionRepository: Repository<TherapySessionEntity>,
     private serviceUserProfilesService: ServiceUserProfilesService,
     private slackMessageClient: SlackMessageClient,
-    private readonly frontChatService: FrontChatService,
+    private readonly chatUserService: ChatUserService,
   ) {}
 
   async updatePartnerAccessTherapy(
@@ -606,18 +606,18 @@ export class WebhooksService {
 
     const reason = data.reason ?? data.action ?? type;
     this.logger.log(
-      `Mailchimp webhook: ${type} for ${email} (reason=${reason}) — recording delivery outcome`,
+      `Mailchimp webhook: ${type} (reason=${reason}) — recording delivery outcome`,
     );
 
     try {
       if (isHardBounce) {
-        await this.frontChatService.markUnreadNotificationDeliveryFailure(
+        await this.chatUserService.markUnreadNotificationDeliveryFailure(
           email,
           UNREAD_NOTIFICATION_STATUS.BOUNCED,
           `mailchimp_bounce: ${reason}`,
         );
       } else {
-        await this.frontChatService.markUnreadNotificationDeliveryFailure(
+        await this.chatUserService.markUnreadNotificationDeliveryFailure(
           email,
           UNREAD_NOTIFICATION_STATUS.CLEANED,
           `mailchimp_cleaned: ${reason}`,
@@ -625,7 +625,7 @@ export class WebhooksService {
       }
     } catch (err) {
       this.logger.error(
-        `Mailchimp webhook: failed to record ${type} for ${email}: ${(err as Error)?.message || 'unknown error'}`,
+        `Mailchimp webhook: failed to record ${type}: ${(err as Error)?.message || 'unknown error'}`,
       );
     }
   }

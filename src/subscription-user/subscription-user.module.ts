@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { SlackMessageClient } from 'src/api/slack/slack-api';
-import { ChatUserEntity } from 'src/entities/chat-user.entity';
+import { ChatUserModule } from 'src/chat-user/chat-user.module';
 import { EventLogEntity } from 'src/entities/event-log.entity';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { PartnerAdminEntity } from 'src/entities/partner-admin.entity';
@@ -26,7 +26,6 @@ import { SubscriptionUserService } from './subscription-user.service';
 @Module({
   imports: [
     TypeOrmModule.forFeature([
-      ChatUserEntity,
       SubscriptionUserEntity,
       SubscriptionEntity,
       UserEntity,
@@ -36,6 +35,7 @@ import { SubscriptionUserService } from './subscription-user.service';
       TherapySessionEntity,
       EventLogEntity,
     ]),
+    ChatUserModule,
     FirebaseModule,
   ],
   controllers: [SubscriptionUserController],

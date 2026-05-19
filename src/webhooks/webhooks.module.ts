@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { SlackMessageClient } from 'src/api/slack/slack-api';
+import { ChatUserModule } from 'src/chat-user/chat-user.module';
 import { CoursePartnerService } from 'src/course-partner/course-partner.service';
 import { CoursePartnerEntity } from 'src/entities/course-partner.entity';
 import { CourseEntity } from 'src/entities/course.entity';
@@ -34,6 +35,7 @@ import { WebhooksService } from './webhooks.service';
       EventLogEntity,
       ResourceEntity,
     ]),
+    ChatUserModule,
     FrontChatModule,
   ],
   providers: [

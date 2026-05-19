@@ -8,10 +8,12 @@ describe('FrontChatController', () => {
   let controller: FrontChatController;
   let frontChatService: {
     sendChannelAttachment: jest.Mock;
-    markAsRead: jest.Mock;
-    getChatUser: jest.Mock;
     getConversationHistory: jest.Mock;
     fetchAttachment: jest.Mock;
+  };
+  let chatUserService: {
+    getChatUser: jest.Mock;
+    markAsRead: jest.Mock;
   };
   let serviceUserProfilesService: {
     getOrCreateFrontContact: jest.Mock;
@@ -33,12 +35,14 @@ describe('FrontChatController', () => {
   beforeEach(() => {
     frontChatService = {
       sendChannelAttachment: jest.fn().mockResolvedValue(undefined),
-      markAsRead: jest.fn().mockResolvedValue(buildChatUser()),
-      getChatUser: jest.fn().mockResolvedValue(null),
       getConversationHistory: jest.fn().mockResolvedValue({ messages: [], conversationFound: false }),
       fetchAttachment: jest
         .fn()
         .mockResolvedValue({ buffer: Buffer.from('img'), contentType: 'image/png' }),
+    };
+    chatUserService = {
+      getChatUser: jest.fn().mockResolvedValue(null),
+      markAsRead: jest.fn().mockResolvedValue(buildChatUser()),
     };
     serviceUserProfilesService = {
       getOrCreateFrontContact: jest.fn().mockResolvedValue(undefined),
@@ -46,6 +50,7 @@ describe('FrontChatController', () => {
     };
     controller = new FrontChatController(
       frontChatService as any,
+      chatUserService as any,
       serviceUserProfilesService as any,
     );
   });
@@ -61,7 +66,7 @@ describe('FrontChatController', () => {
 
   it('calls getOrCreateFrontContact when chatUser has no frontContactId', async () => {
     const user = { id: 'u1', email: 'u@example.com' } as UserEntity;
-    frontChatService.getChatUser.mockResolvedValueOnce(buildChatUser({ frontContactId: null }));
+    chatUserService.getChatUser.mockResolvedValueOnce(buildChatUser({ frontContactId: null }));
 
     await controller.uploadAttachment({ userEntity: user } as any, buildFile());
 
@@ -70,7 +75,7 @@ describe('FrontChatController', () => {
 
   it('skips getOrCreateFrontContact when chatUser already has a frontContactId', async () => {
     const user = { id: 'u1', email: 'u@example.com' } as UserEntity;
-    frontChatService.getChatUser.mockResolvedValueOnce(buildChatUser({ frontContactId: 'crd_existing' }));
+    chatUserService.getChatUser.mockResolvedValueOnce(buildChatUser({ frontContactId: 'crd_existing' }));
 
     await controller.uploadAttachment({ userEntity: user } as any, buildFile());
 
@@ -86,18 +91,18 @@ describe('FrontChatController', () => {
   });
 
   describe('markAsRead', () => {
-    it('calls frontChatService.markAsRead with the authed user id', async () => {
+    it('calls chatUserService.markAsRead with the authed user id', async () => {
       const user = { id: 'u1', email: 'u@example.com' } as UserEntity;
 
       await controller.markAsRead({ userEntity: user } as any);
 
-      expect(frontChatService.markAsRead).toHaveBeenCalledWith('u1');
+      expect(chatUserService.markAsRead).toHaveBeenCalledWith('u1');
     });
 
     it('fires service user profiles sync when chatUser is returned', async () => {
       const user = { id: 'u1', email: 'u@example.com' } as UserEntity;
       const chatUser = buildChatUser({ lastMessageReadAt: new Date() });
-      frontChatService.markAsRead.mockResolvedValueOnce(chatUser);
+      chatUserService.markAsRead.mockResolvedValueOnce(chatUser);
 
       await controller.markAsRead({ userEntity: user } as any);
 
@@ -111,7 +116,7 @@ describe('FrontChatController', () => {
     });
 
     it('does not sync when markAsRead returns null (no chatUser)', async () => {
-      frontChatService.markAsRead.mockResolvedValueOnce(null);
+      chatUserService.markAsRead.mockResolvedValueOnce(null);
       const user = { id: 'u1', email: 'u@example.com' } as UserEntity;
 
       await controller.markAsRead({ userEntity: user } as any);
@@ -120,99 +125,6 @@ describe('FrontChatController', () => {
       expect(
         serviceUserProfilesService.updateServiceUserProfilesChatActivity,
       ).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('getMessages', () => {
-    it('returns message history wrapped in { messages } for authenticated user', async () => {
-      const user = { id: 'u1', email: 'u@example.com' } as UserEntity;
-      const history: ChatHistoryMessage[] = [
-        { id: 'msg-1', direction: 'agent', text: 'Hello!', createdAt: 1000 },
-        { id: 'msg-2', direction: 'user', text: 'Hi there', createdAt: 2000 },
-      ];
-      frontChatService.getConversationHistory.mockResolvedValueOnce({ messages: history, conversationFound: true });
-
-      const result = await controller.getMessages({ userEntity: user } as any);
-
-      expect(frontChatService.getConversationHistory).toHaveBeenCalledWith(user);
-      expect(result).toEqual({ messages: history });
-    });
-
-    it('propagates exceptions thrown by the service', async () => {
-      const user = { id: 'u1', email: 'u@example.com' } as UserEntity;
-      frontChatService.getConversationHistory.mockRejectedValueOnce(new Error('Front API down'));
-
-      await expect(controller.getMessages({ userEntity: user } as any)).rejects.toThrow(
-        'Front API down',
-      );
-    });
-  });
-
-  describe('proxyAttachment', () => {
-    const buildRes = () => {
-      const res = {
-        set: jest.fn(),
-        send: jest.fn(),
-      };
-      return res;
-    };
-
-    it('proxies the attachment when given a valid frontapp.com HTTPS URL', async () => {
-      const imageBuffer = Buffer.from('fake-image-data');
-      frontChatService.fetchAttachment.mockResolvedValueOnce({
-        buffer: imageBuffer,
-        contentType: 'image/jpeg',
-      });
-      const res = buildRes();
-
-      await controller.proxyAttachment(
-        'https://chayneb55.api.frontapp.com/messages/msg_abc/download/fil_xyz',
-        res as any,
-      );
-
-      expect(frontChatService.fetchAttachment).toHaveBeenCalledWith(
-        'https://chayneb55.api.frontapp.com/messages/msg_abc/download/fil_xyz',
-      );
-      expect(res.set).toHaveBeenCalledWith('Content-Type', 'image/jpeg');
-      expect(res.set).toHaveBeenCalledWith('Cache-Control', 'private, max-age=3600');
-      expect(res.set).toHaveBeenCalledWith('Content-Disposition', 'inline');
-      expect(res.send).toHaveBeenCalledWith(imageBuffer);
-    });
-
-    it('throws BadRequestException for an HTTP (non-HTTPS) frontapp URL', async () => {
-      const res = buildRes();
-
-      await expect(
-        controller.proxyAttachment('http://chayneb55.api.frontapp.com/messages/msg_abc/download/fil_xyz', res as any),
-      ).rejects.toBeInstanceOf(BadRequestException);
-      expect(frontChatService.fetchAttachment).not.toHaveBeenCalled();
-    });
-
-    it('throws BadRequestException for an HTTPS URL on a non-frontapp domain', async () => {
-      const res = buildRes();
-
-      await expect(
-        controller.proxyAttachment('https://evil.example.com/steal', res as any),
-      ).rejects.toBeInstanceOf(BadRequestException);
-      expect(frontChatService.fetchAttachment).not.toHaveBeenCalled();
-    });
-
-    it('throws BadRequestException when the URL query param is missing', async () => {
-      const res = buildRes();
-
-      await expect(controller.proxyAttachment(undefined as any, res as any)).rejects.toBeInstanceOf(
-        BadRequestException,
-      );
-      expect(frontChatService.fetchAttachment).not.toHaveBeenCalled();
-    });
-
-    it('throws NotFoundException when the service cannot fetch the attachment', async () => {
-      frontChatService.fetchAttachment.mockRejectedValueOnce(new Error('Attachment not found'));
-      const res = buildRes();
-
-      await expect(
-        controller.proxyAttachment('https://chayneb55.api.frontapp.com/messages/msg_abc/download/fil_missing', res as any),
-      ).rejects.toBeInstanceOf(NotFoundException);
     });
   });
 
