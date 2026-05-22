@@ -5,12 +5,16 @@ import {
   batchUpdateMailchimpProfiles,
   createMailchimpMergeField,
   createMailchimpProfile,
+  sendMailchimpUserEvent,
   updateMailchimpProfile,
 } from 'src/api/mailchimp/mailchimp-api';
 import {
+  ListMemberCustomFields,
   ListMemberPartial,
+  MAILCHIMP_CUSTOM_EVENTS,
   MAILCHIMP_MERGE_FIELD_TYPES,
 } from 'src/api/mailchimp/mailchimp-api.interfaces';
+import { ChatUserService } from 'src/chat-user/chat-user.service';
 import { ChatUserEntity } from 'src/entities/chat-user.entity';
 import { CourseUserEntity } from 'src/entities/course-user.entity';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
@@ -19,7 +23,7 @@ import { UserEntity } from 'src/entities/user.entity';
 import { FrontChatContactCustomFields } from 'src/front-chat/front-chat.interface';
 import { FrontChatService } from 'src/front-chat/front-chat.service';
 import { Logger } from 'src/logger/logger';
-import { And, Raw, Repository } from 'typeorm';
+import { And, ILike, Raw, Repository } from 'typeorm';
 import {
   LANGUAGE_DEFAULT,
   PROGRESS_STATUS,
@@ -39,6 +43,7 @@ export class ServiceUserProfilesService {
   constructor(
     @InjectRepository(UserEntity) private userRepository: Repository<UserEntity>,
     private frontChatService: FrontChatService,
+    private chatUserService: ChatUserService,
   ) {}
 
   async createServiceUserProfiles(
@@ -55,7 +60,9 @@ export class ServiceUserProfilesService {
 
     const userData = this.serializeUserData(user);
     // partnerAccess.therapySession may not be loaded at signup time — default to empty.
-    const partnerAccesses = partnerAccess ? [{ ...partnerAccess, partner, therapySession: partnerAccess.therapySession ?? [] }] : [];
+    const partnerAccesses = partnerAccess
+      ? [{ ...partnerAccess, partner, therapySession: partnerAccess.therapySession ?? [] }]
+      : [];
     const partnerData = this.serializePartnerAccessData(partnerAccesses);
     const therapyData = this.serializeTherapyData(partnerAccesses);
     const userSignedUpAt = user.createdAt?.toISOString();
@@ -106,7 +113,7 @@ export class ServiceUserProfilesService {
       exists = await this.frontChatService.contactExists(email);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'unknown error';
-      logger.error(`getOrCreateFrontContact existence check failed for ${email}: ${message}`);
+      logger.error(`getOrCreateFrontContact existence check failed for user ${user.id}: ${message}`);
       return;
     }
 
@@ -128,10 +135,10 @@ export class ServiceUserProfilesService {
           customFields: this.buildFrontCustomFields(hydratedUser),
           userId: hydratedUser.id,
         });
-        logger.log(`Backfilled Front contact for ${email}`);
+        logger.log(`Backfilled Front contact for user ${hydratedUser.id}`);
       } catch (error) {
         const message = error instanceof Error ? error.message : 'unknown error';
-        logger.error(`getOrCreateFrontContact create failed for ${email}: ${message}`);
+        logger.error(`getOrCreateFrontContact create failed for user ${hydratedUser.id}: ${message}`);
       }
     } else {
       // Contact already exists — ensure the channel handle is present so Channel API
@@ -158,23 +165,139 @@ export class ServiceUserProfilesService {
     };
   }
 
-  // Fetches the full user from DB and syncs ALL custom fields to Front in one PATCH.
   // Front's custom_fields PATCH replaces all fields, so partial updates would wipe data —
-  // this always sends the complete set to avoid that.
-  private async syncFrontContactCustomFields(email: string): Promise<void> {
+  // this always sends the complete set.
+  async syncFrontContactCustomFields(email: string): Promise<void> {
     try {
+      // Case-insensitive: signup doesn't normalise the email column.
       const user = await this.userRepository.findOne({
-        where: { email },
+        where: { email: ILike(email) },
         relations: {
           partnerAccess: { partner: true, therapySession: true },
           courseUser: { course: true, sessionUser: { session: true } },
         },
       });
       if (!user) return;
-      await this.frontChatService.updateContactCustomFields(this.buildFrontCustomFields(user), email);
+      try {
+        await this.frontChatService.updateContactCustomFields(
+          this.buildFrontCustomFields(user),
+          email,
+        );
+      } catch (err) {
+        if (this.isFrontContactNotFound(err)) {
+          await this.getOrCreateFrontContact(user);
+        } else {
+          throw err;
+        }
+      }
     } catch (error) {
+      const status =
+        (error as { cause?: { status?: number }; status?: number })?.cause?.status ??
+        (error as { status?: number })?.status;
       const message = error instanceof Error ? error.message : 'unknown error';
-      logger.error(`Sync Front Chat contact custom fields error for ${email}: ${message}`);
+      logger.error(`Sync Front Chat contact custom fields error (status=${status}): ${message}`);
+    }
+  }
+
+  private isFrontContactNotFound(error: unknown): boolean {
+    const cause = (error as { cause?: { status?: number } })?.cause;
+    if (cause?.status === 404) return true;
+    return (error as Error)?.message?.includes('(404)') ?? false;
+  }
+
+  private isMailchimpNotFound(error: unknown): boolean {
+    const status = (error as { status?: number })?.status;
+    if (status === 404) return true;
+    const cause = (error as { cause?: { status?: number } })?.cause;
+    if (cause?.status === 404) return true;
+    return (error as Error)?.message?.includes('status=404') ?? false;
+  }
+
+  private async syncMailchimpProfile(
+    partialUpdate: ListMemberPartial,
+    targetEmail: string,
+    context: string,
+    recoveryEmail: string = targetEmail,
+  ): Promise<void> {
+    try {
+      await updateMailchimpProfile(partialUpdate, targetEmail);
+    } catch (error) {
+      const status = (error as { status?: number })?.status;
+      if (!this.isMailchimpNotFound(error)) {
+        const message = error instanceof Error ? error.message : 'unknown error';
+        logger.error(`Update Mailchimp ${context} error (status=${status}) - ${message}`);
+        return;
+      }
+      try {
+        const user = await this.userRepository.findOne({
+          where: { email: ILike(recoveryEmail) },
+          relations: {
+            partnerAccess: { partner: true, therapySession: true },
+            courseUser: { course: true, sessionUser: { session: true } },
+          },
+        });
+        if (!user) {
+          logger.error(`Mailchimp 404 recovery (${context}): user not found in DB`);
+          return;
+        }
+        const chatUser = await this.chatUserService.getChatUser(user.id);
+        const profileData = this.createCompleteMailchimpUserProfile(user, chatUser);
+        profileData.merge_fields = {
+          ...profileData.merge_fields,
+          ...(partialUpdate.merge_fields ?? {}),
+        };
+        await createMailchimpProfile(profileData);
+      } catch (recoverError) {
+        const recoverStatus = (recoverError as { status?: number })?.status;
+        const message = recoverError instanceof Error ? recoverError.message : 'unknown error';
+        logger.error(
+          `Recreate Mailchimp profile failed (${context}, status=${recoverStatus}) - ${message}`,
+        );
+      }
+    }
+  }
+
+  // Send a Mailchimp custom event with 404 recovery — for archived/missing members,
+  // pipes through syncMailchimpProfile's existing recovery (PATCHes user data → 404 →
+  // recreates full profile) then retries the event so the email still fires.
+  // Throws on terminal failure so callers (e.g. FrontChatScheduler) can record FAILED
+  // and retry on the next cron tick.
+  async sendMailchimpUserEventWithRecovery(
+    email: string,
+    event: MAILCHIMP_CUSTOM_EVENTS,
+  ): Promise<void> {
+    if (isCypressTestEmail(email)) return;
+    try {
+      await sendMailchimpUserEvent(email, event);
+      return;
+    } catch (error) {
+      const status = (error as { status?: number })?.status;
+      if (!this.isMailchimpNotFound(error)) {
+        const message = error instanceof Error ? error.message : 'unknown error';
+        logger.error(`Send Mailchimp event ${event} failed (status=${status}) - ${message}`);
+        throw error instanceof Error ? error : new Error(message);
+      }
+      try {
+        const user = await this.userRepository.findOneBy({ email: ILike(email) });
+        if (!user) {
+          const message = `Mailchimp event ${event} recovery: user not found in DB`;
+          logger.error(message);
+          throw new Error(message, { cause: error });
+        }
+        await this.syncMailchimpProfile(
+          this.serializeUserData(user).mailchimpSchema,
+          email,
+          `event ${event} pre-retry`,
+        );
+        await sendMailchimpUserEvent(email, event);
+      } catch (retryError) {
+        const retryStatus = (retryError as { status?: number })?.status;
+        const message = retryError instanceof Error ? retryError.message : 'unknown error';
+        logger.error(
+          `Send Mailchimp event ${event} retry failed (status=${retryStatus}) - ${message}`,
+        );
+        throw retryError instanceof Error ? retryError : new Error(message);
+      }
     }
   }
 
@@ -182,8 +305,13 @@ export class ServiceUserProfilesService {
     user: UserEntity,
     isProfileUpdateRequired: boolean,
     isEmailUpdateRequired: boolean,
+    isLanguageUpdateRequired: boolean,
     existingEmail: string,
   ) {
+    // Defensive: caller spreads updateUserDto over the user entity, so user.email can be
+    // undefined when the DTO has `email: undefined`. Fall back to existingEmail so recovery
+    // (createContact / contactExists) has a real address to work with.
+    if (!user.email) user = { ...user, email: existingEmail };
     const email = isEmailUpdateRequired ? user.email : existingEmail;
 
     if (isCypressTestEmail(email) || isCypressTestEmail(existingEmail)) {
@@ -194,35 +322,45 @@ export class ServiceUserProfilesService {
     const userData = this.serializeUserData(user);
 
     if (isProfileUpdateRequired) {
+      const profilePayload = {
+        ...(isEmailUpdateRequired && { email: email }),
+        name: user.name,
+      };
       try {
-        await this.frontChatService.updateContactProfile(
-          {
-            ...(isEmailUpdateRequired && { email: email }),
-            name: user.name,
-          },
-          existingEmail,
-        );
+        await this.frontChatService.updateContactProfile(profilePayload, existingEmail);
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'unknown error';
-        logger.error(`Update Front Chat user profile error - ${message}`);
+        if (this.isFrontContactNotFound(error)) {
+          await this.getOrCreateFrontContact(user);
+        } else {
+          const status =
+            (error as { cause?: { status?: number }; status?: number })?.cause?.status ??
+            (error as { status?: number })?.status;
+          const message = error instanceof Error ? error.message : 'unknown error';
+          logger.error(`Update Front Chat user profile error (status=${status}) - ${message}`);
+        }
       }
     }
 
     // Sync all custom fields to Front with the complete set (partial PATCH would wipe other fields).
     await this.syncFrontContactCustomFields(email);
 
-    try {
-      await updateMailchimpProfile(
-        {
-          ...userData.mailchimpSchema,
-          ...(isEmailUpdateRequired && { email_address: email }),
-        },
-        existingEmail,
-      );
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'unknown error';
-      logger.error(`Update Mailchimp user profile error - ${message}`);
+    // Mirror language onto the Front conversation only when it actually changed — otherwise
+    // every name/email/permissions/lastActiveAt update would re-PATCH the same value.
+    // New conversations get language set when their ID is first resolved (see front-chat.service.ts).
+    if (isLanguageUpdateRequired) {
+      await this.frontChatService.syncConversationLanguage(user.id);
     }
+
+    // Recovery looks up by user.email (post-update) — existingEmail may have just been changed.
+    await this.syncMailchimpProfile(
+      {
+        ...userData.mailchimpSchema,
+        ...(isEmailUpdateRequired && { email_address: email }),
+      },
+      existingEmail,
+      'user profile',
+      user.email,
+    );
 
     logger.log('Updated service user profiles user');
   }
@@ -241,12 +379,7 @@ export class ServiceUserProfilesService {
     // Sync all custom fields to Front with the complete set (partial PATCH would wipe other fields).
     await this.syncFrontContactCustomFields(email);
 
-    try {
-      await updateMailchimpProfile(partnerAccessData.mailchimpSchema, email);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'unknown error';
-      logger.error(`Update Mailchimp partner access error - ${message}`);
-    }
+    await this.syncMailchimpProfile(partnerAccessData.mailchimpSchema, email, 'partner access');
   }
 
   async updateServiceUserProfilesTherapy(partnerAccesses: PartnerAccessEntity[], email) {
@@ -260,12 +393,7 @@ export class ServiceUserProfilesService {
     // Sync all custom fields to Front with the complete set (partial PATCH would wipe other fields).
     await this.syncFrontContactCustomFields(email);
 
-    try {
-      await updateMailchimpProfile(therapyData.mailchimpSchema, email);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'unknown error';
-      logger.error(`Update Mailchimp therapy error - ${message}`);
-    }
+    await this.syncMailchimpProfile(therapyData.mailchimpSchema, email, 'therapy');
   }
 
   async updateServiceUserProfilesCourse(courseUser: CourseUserEntity, email: string) {
@@ -279,12 +407,7 @@ export class ServiceUserProfilesService {
     // Sync all custom fields to Front with the complete set (partial PATCH would wipe other fields).
     await this.syncFrontContactCustomFields(email);
 
-    try {
-      await updateMailchimpProfile(courseData.mailchimpSchema, email);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'unknown error';
-      logger.error(`Update Mailchimp course error - ${message}`);
-    }
+    await this.syncMailchimpProfile(courseData.mailchimpSchema, email, 'course');
   }
 
   async updateServiceUserProfilesChatActivity(
@@ -293,40 +416,28 @@ export class ServiceUserProfilesService {
   ): Promise<void> {
     if (isCypressTestEmail(email)) return;
 
+    // Chat activity timestamps are Mailchimp-only by design.
     const data = this.serializeChatActivityData(chatUser);
-
-    // Front custom fields not updated here — partial PATCH replaces all custom fields,
-    // and last_message_* timestamps are Mailchimp-only. getOrCreateFrontContact (widget open)
-    // refreshes Front with the full field set.
-
-    try {
-      await updateMailchimpProfile(data.mailchimpSchema, email);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'unknown error';
-      logger.error(`Update Mailchimp chat activity error - ${message}`);
-    }
+    await this.syncMailchimpProfile(
+      data.mailchimpSchema,
+      email,
+      `chat activity for user ${chatUser.userId}`,
+    );
   }
 
   serializeChatActivityData(chatUser: ChatUserEntity) {
-    const sentAt = chatUser.lastMessageSentAt?.toISOString() ?? '';
-    const receivedAt = chatUser.lastMessageReceivedAt?.toISOString() ?? '';
-    const readAt = chatUser.lastMessageReadAt?.toISOString() ?? '';
+    const sentAt = chatUser.lastMessageSentAt?.toISOString();
+    const receivedAt = chatUser.lastMessageReceivedAt?.toISOString();
+    const readAt = chatUser.lastMessageReadAt?.toISOString();
 
-    const frontChatSchema = {
-      last_message_sent_at: sentAt,
-      last_message_received_at: receivedAt,
-      last_message_read_at: readAt,
-    };
+    const mergeFields: ListMemberCustomFields = {};
+    if (sentAt) mergeFields.CHATLSTMTX = sentAt;
+    if (receivedAt) mergeFields.CHATLSTMRX = receivedAt;
+    if (readAt) mergeFields.CHATMSGRD = readAt;
 
-    const mailchimpSchema = {
-      merge_fields: {
-        CHATLSTMTX: sentAt,
-        CHATLSTMRX: receivedAt,
-        CHATMSGRD: readAt,
-      },
-    } as ListMemberPartial;
+    const mailchimpSchema = { merge_fields: mergeFields } as ListMemberPartial;
 
-    return { frontChatSchema, mailchimpSchema };
+    return { mailchimpSchema };
   }
 
   // Mailchimp merge fields must be created before they can be written to.
@@ -355,7 +466,10 @@ export class ServiceUserProfilesService {
     }
   }
 
-  createCompleteMailchimpUserProfile(user: UserEntity): ListMemberPartial {
+  createCompleteMailchimpUserProfile(
+    user: UserEntity,
+    chatUser?: ChatUserEntity | null,
+  ): ListMemberPartial {
     const userData = this.serializeUserData(user);
     const partnerData = this.serializePartnerAccessData(user.partnerAccess);
     const therapyData = this.serializeTherapyData(user.partnerAccess);
@@ -368,6 +482,10 @@ export class ServiceUserProfilesService {
       });
     });
 
+    const chatFields = chatUser
+      ? this.serializeChatActivityData(chatUser).mailchimpSchema.merge_fields
+      : {};
+
     const profileData = {
       email_address: user.email,
       ...userData.mailchimpSchema,
@@ -378,6 +496,7 @@ export class ServiceUserProfilesService {
         ...partnerData.mailchimpSchema.merge_fields,
         ...therapyData.mailchimpSchema.merge_fields,
         ...courseData,
+        ...chatFields,
       },
     };
     return profileData;
@@ -461,15 +580,17 @@ export class ServiceUserProfilesService {
       lastActiveAt,
       emailRemindersFrequency,
     } = user;
-    const lastActiveAtString = lastActiveAt?.toISOString() || '';
+    const lastActiveAtString = lastActiveAt?.toISOString();
 
-    const frontChatSchema = {
+    const frontChatSchema: FrontChatContactCustomFields = {
       marketing_permission: contactPermission,
       service_emails_permission: serviceEmailsPermission,
-      last_active_at: lastActiveAtString,
       email_reminders_frequency: emailRemindersFrequency,
-      // Name and language handled on base level contact profile for Front Chat
+      language: signUpLanguage || LANGUAGE_DEFAULT,
+      // Name handled on base level contact profile for Front Chat
     };
+    // Omit undefined — Front datetime fields reject empty strings.
+    if (lastActiveAtString) frontChatSchema.last_active_at = lastActiveAtString;
 
     const mailchimpSchema = {
       status: serviceEmailsPermission ? 'subscribed' : 'unsubscribed',
@@ -537,28 +658,43 @@ export class ServiceUserProfilesService {
 
   serializeTherapyData(partnerAccesses: PartnerAccessEntity[]) {
     // TypeORM may return dates as strings in some query contexts — guard both cases.
-    const toIso = (d: Date | string | undefined | null): string => {
-      if (!d) return '';
+    // Returns undefined for missing dates so callers can omit the key (Front/Mailchimp
+    // datetime fields reject empty strings).
+    const toIso = (d: Date | string | undefined | null): string | undefined => {
+      if (!d) return undefined;
       return d instanceof Date ? d.toISOString() : new Date(d as string).toISOString();
     };
 
     const therapySessions = partnerAccesses
       .flatMap((partnerAccess) => partnerAccess.therapySession ?? [])
       .filter(
-        (therapySession) => !!therapySession && therapySession.action !== SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING,
+        (therapySession) =>
+          !!therapySession && therapySession.action !== SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING,
       )
       .sort((a, b) => {
-        const aMs = a.startDateTime instanceof Date ? a.startDateTime.getTime() : new Date(a.startDateTime as unknown as string).getTime();
-        const bMs = b.startDateTime instanceof Date ? b.startDateTime.getTime() : new Date(b.startDateTime as unknown as string).getTime();
+        const aMs =
+          a.startDateTime instanceof Date
+            ? a.startDateTime.getTime()
+            : new Date(a.startDateTime as unknown as string).getTime();
+        const bMs =
+          b.startDateTime instanceof Date
+            ? b.startDateTime.getTime()
+            : new Date(b.startDateTime as unknown as string).getTime();
         return aMs - bMs;
       });
 
     const now = new Date().getTime();
     const pastTherapySessions = therapySessions.filter(
-      (therapySession) => (therapySession.startDateTime instanceof Date ? therapySession.startDateTime.getTime() : new Date(therapySession.startDateTime as unknown as string).getTime()) < now,
+      (therapySession) =>
+        (therapySession.startDateTime instanceof Date
+          ? therapySession.startDateTime.getTime()
+          : new Date(therapySession.startDateTime as unknown as string).getTime()) < now,
     );
     const futureTherapySessions = therapySessions.filter(
-      (therapySession) => (therapySession.startDateTime instanceof Date ? therapySession.startDateTime.getTime() : new Date(therapySession.startDateTime as unknown as string).getTime()) > now,
+      (therapySession) =>
+        (therapySession.startDateTime instanceof Date
+          ? therapySession.startDateTime.getTime()
+          : new Date(therapySession.startDateTime as unknown as string).getTime()) > now,
     );
 
     const firstTherapySessionAt = toIso(therapySessions?.at(0)?.startDateTime);

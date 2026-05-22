@@ -1,4 +1,18 @@
-import { EMAIL_REMINDERS_FREQUENCY } from 'src/utils/constants';
+import { EVENT_NAME } from '../event-logger/event-logger.interface';
+import { EMAIL_REMINDERS_FREQUENCY } from '../utils/constants';
+
+// PENDING  — claim row before the Mailchimp call; prevents double-send on restart.
+// SENT     — Mailchimp accepted the event trigger (API 2xx). Closest to "sent" we can know.
+// FAILED   — internal/API error. Retry-eligible up to UNREAD_NOTIFICATION_MAX_ATTEMPTS.
+// BOUNCED  — Mailchimp bounce webhook fired. Terminal — email address is dead.
+// CLEANED  — Mailchimp cleaned the address from the audience. Terminal.
+export enum UNREAD_NOTIFICATION_STATUS {
+  PENDING = 'PENDING',
+  SENT = 'SENT',
+  FAILED = 'FAILED',
+  BOUNCED = 'BOUNCED',
+  CLEANED = 'CLEANED',
+}
 
 // Front webhook event types: https://dev.frontapp.com/reference/events
 export enum FRONT_WEBHOOK_EVENT_TYPE {
@@ -6,6 +20,12 @@ export enum FRONT_WEBHOOK_EVENT_TYPE {
   OUTBOUND = 'outbound', // Agent sent a message
   OUT_REPLY = 'out_reply', // Agent replied to a conversation
 }
+
+export const FRONT_WEBHOOK_EVENT_TO_EVENT_NAME: Partial<Record<string, EVENT_NAME>> = {
+  [FRONT_WEBHOOK_EVENT_TYPE.INBOUND]: EVENT_NAME.CHAT_MESSAGE_SENT,
+  [FRONT_WEBHOOK_EVENT_TYPE.OUTBOUND]: EVENT_NAME.CHAT_MESSAGE_RECEIVED,
+  [FRONT_WEBHOOK_EVENT_TYPE.OUT_REPLY]: EVENT_NAME.CHAT_MESSAGE_RECEIVED,
+};
 
 export interface FrontChatContactCustomFields {
   signed_up_at?: string;
@@ -22,15 +42,20 @@ export interface FrontChatContactCustomFields {
   therapy_session_first_at?: string;
   therapy_session_next_at?: string;
   therapy_session_last_at?: string;
-  last_message_sent_at?: string;
-  last_message_received_at?: string;
-  last_message_read_at?: string;
   [key: string]: string | number | boolean | undefined;
 }
 
 export interface FrontChatContactProfile {
   email?: string;
   name?: string;
+}
+
+export interface AgentReplyAttachment {
+  /** Relative proxy path, e.g. /front-chat/attachment-proxy?url=... — prefix with API_URL on the client */
+  url: string;
+  /** Original filename — used by the widget to label the download link for `file` kind. */
+  name?: string;
+  kind: 'image' | 'voice' | 'file';
 }
 
 export interface AgentReplyPayload {
@@ -40,7 +65,55 @@ export interface AgentReplyPayload {
   authorName?: string;
   /** Unix timestamp in seconds (multiply by 1000 on the frontend to get ms) */
   emittedAt: number;
-  /** Relative proxy path, e.g. /front-chat/attachment-proxy?url=... — prefix with API_URL on the client */
-  attachmentUrl?: string;
-  kind?: 'image' | 'voice';
+  /** All files Front delivered on the message, in the order Front returned them. */
+  attachments?: AgentReplyAttachment[];
+}
+
+export interface FrontChatUser {
+  id: string;
+  email: string;
+  name?: string | null;
+}
+
+export interface ChatHistoryMessage {
+  id: string;
+  direction: 'user' | 'agent';
+  text: string;
+  attachments?: AgentReplyAttachment[];
+  authorName?: string;
+  createdAt: number;
+}
+
+// ── Front API response shapes ────────────────────────────────────────────────
+
+export interface FrontApiPaginated<T> {
+  _results: T[];
+  _pagination?: { next?: string | null };
+}
+
+export interface FrontApiAuthor {
+  email?: string;
+  username?: string;
+  first_name?: string;
+  last_name?: string;
+}
+
+export interface FrontApiAttachment {
+  url?: string;
+  filename?: string;
+  content_type?: string;
+}
+
+export interface FrontApiMessage {
+  id: string;
+  is_inbound?: boolean;
+  created_at?: number;
+  body?: string;
+  text?: string;
+  author?: FrontApiAuthor | null;
+  attachments?: FrontApiAttachment[];
+}
+
+export interface FrontApiMessageLinks {
+  _links?: { related?: { conversation?: string } };
 }

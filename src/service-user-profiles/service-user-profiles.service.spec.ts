@@ -6,6 +6,7 @@ import {
   createMailchimpProfile,
   updateMailchimpProfile,
 } from 'src/api/mailchimp/mailchimp-api';
+import { ChatUserService } from 'src/chat-user/chat-user.service';
 import { UserEntity } from 'src/entities/user.entity';
 import { FrontChatService } from 'src/front-chat/front-chat.service';
 import { ServiceUserProfilesService } from 'src/service-user-profiles/service-user-profiles.service';
@@ -26,14 +27,21 @@ import {
 
 jest.mock('src/api/mailchimp/mailchimp-api');
 const mockFrontChatServiceMethods = {
-  getOrCreateChatUser: jest.fn().mockResolvedValue({}),
   addChannelHandle: jest.fn().mockResolvedValue(undefined),
+  syncConversationLanguage: jest.fn().mockResolvedValue(undefined),
+};
+const mockChatUserServiceMethods = {
+  getOrCreateChatUser: jest.fn().mockResolvedValue({}),
+  // Default to null so deep-mock doesn't return a truthy mock chatUser that adds chat
+  // activity fields to every profile expectation; tests opt in by overriding this mock.
+  getChatUser: jest.fn().mockResolvedValue(null),
 };
 
 describe('Service user profiles', () => {
   let service: ServiceUserProfilesService;
   const mockedUserRepository = createMock<Repository<UserEntity>>(mockUserRepositoryMethods);
   const mockFrontChatService = createMock<FrontChatService>(mockFrontChatServiceMethods);
+  const mockChatUserService = createMock<ChatUserService>(mockChatUserServiceMethods);
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -46,6 +54,7 @@ describe('Service user profiles', () => {
           useValue: mockedUserRepository,
         },
         { provide: FrontChatService, useValue: mockFrontChatService },
+        { provide: ChatUserService, useValue: mockChatUserService },
       ],
     }).compile();
 
@@ -57,11 +66,8 @@ describe('Service user profiles', () => {
   });
 
   describe('createServiceUserProfiles', () => {
-    const therapyTimestamps = {
-      therapy_session_first_at: '',
-      therapy_session_next_at: '',
-      therapy_session_last_at: '',
-    };
+    // No therapy sessions — Front/Mailchimp datetime fields are omitted (not sent as '').
+    const therapyTimestamps = {};
 
     it('should create Front Chat and mailchimp profiles for a public user', async () => {
       await service.createServiceUserProfiles(mockUserEntity);
@@ -79,6 +85,7 @@ describe('Service user profiles', () => {
           marketing_permission: mockUserEntity.contactPermission,
           service_emails_permission: mockUserEntity.serviceEmailsPermission,
           email_reminders_frequency: EMAIL_REMINDERS_FREQUENCY.TWO_MONTHS,
+          language: mockUserEntity.signUpLanguage,
           last_active_at: lastActiveAt,
           feature_live_chat: true,
           feature_therapy: false,
@@ -138,6 +145,7 @@ describe('Service user profiles', () => {
           marketing_permission: mockUserEntity.contactPermission,
           service_emails_permission: mockUserEntity.serviceEmailsPermission,
           email_reminders_frequency: EMAIL_REMINDERS_FREQUENCY.TWO_MONTHS,
+          language: mockUserEntity.signUpLanguage,
           last_active_at: lastActiveAt,
           partners: partnerName,
           feature_live_chat: mockPartnerAccessEntity.featureLiveChat,
@@ -146,7 +154,6 @@ describe('Service user profiles', () => {
           therapy_sessions_redeemed: mockPartnerAccessEntity.therapySessionsRedeemed,
           therapy_session_first_at: therapySessionAt,
           therapy_session_last_at: therapySessionAt,
-          therapy_session_next_at: '',
         },
       });
       expect(mockFrontChatService.updateContactCustomFields).not.toHaveBeenCalled();
@@ -195,21 +202,19 @@ describe('Service user profiles', () => {
   });
 
   describe('getOrCreateFrontContact', () => {
-    // mockUserEntity has empty partnerAccess/courseUser, so therapy timestamps are ''
+    // mockUserEntity has empty partnerAccess/courseUser, so therapy timestamps are omitted.
     const expectedCustomFields = {
       signed_up_at: mockUserEntity.createdAt.toISOString(),
       marketing_permission: mockUserEntity.contactPermission,
       service_emails_permission: mockUserEntity.serviceEmailsPermission,
       email_reminders_frequency: EMAIL_REMINDERS_FREQUENCY.TWO_MONTHS,
+      language: mockUserEntity.signUpLanguage,
       last_active_at: mockUserEntity.lastActiveAt.toISOString(),
       feature_live_chat: true,
       feature_therapy: false,
       partners: '',
       therapy_sessions_redeemed: 0,
       therapy_sessions_remaining: 0,
-      therapy_session_first_at: '',
-      therapy_session_next_at: '',
-      therapy_session_last_at: '',
     };
 
     it('creates contact with custom fields when contact does not yet exist', async () => {
@@ -292,6 +297,7 @@ describe('Service user profiles', () => {
         mockUserEntity,
         false,
         false,
+        false,
         mockUserEntity.email,
       );
 
@@ -344,7 +350,7 @@ describe('Service user profiles', () => {
       } as any);
       const lastActiveAt = mockUserEntity.lastActiveAt.toISOString();
 
-      await service.updateServiceUserProfilesUser(mockUser, false, false, mockUser.email);
+      await service.updateServiceUserProfilesUser(mockUser, false, false, false, mockUser.email);
 
       expect(mockFrontChatService.updateContactCustomFields).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -380,6 +386,7 @@ describe('Service user profiles', () => {
         mockUserEntity,
         true,
         false,
+        false,
         mockUserEntity.email,
       );
 
@@ -401,6 +408,7 @@ describe('Service user profiles', () => {
         { ...mockUserEntity, email: newEmail },
         true,
         true,
+        false,
         oldEmail,
       );
       const serialisedMockUserData = service.serializeUserData(mockUserEntity);
@@ -419,7 +427,13 @@ describe('Service user profiles', () => {
       const mocked = jest.mocked(updateMailchimpProfile);
       mocked.mockRejectedValue(new Error('Mailchimp API call failed'));
       await expect(
-        service.updateServiceUserProfilesUser(mockUserEntity, false, false, mockUserEntity.email),
+        service.updateServiceUserProfilesUser(
+          mockUserEntity,
+          false,
+          false,
+          false,
+          mockUserEntity.email,
+        ),
       ).resolves.not.toThrow();
       mocked.mockReset();
     });
@@ -433,10 +447,32 @@ describe('Service user profiles', () => {
         mockUserEntity,
         false,
         false,
+        false,
         mockUserEntity.email,
       );
 
       expect(updateMailchimpProfile).toHaveBeenCalled();
+    });
+
+    it('should sync conversation language only when language changed', async () => {
+      await service.updateServiceUserProfilesUser(
+        mockUserEntity,
+        false,
+        false,
+        false,
+        mockUserEntity.email,
+      );
+      expect(mockFrontChatService.syncConversationLanguage).not.toHaveBeenCalled();
+
+      await service.updateServiceUserProfilesUser(
+        mockUserEntity,
+        true,
+        false,
+        true,
+        mockUserEntity.email,
+      );
+      expect(mockFrontChatService.syncConversationLanguage).toHaveBeenCalledTimes(1);
+      expect(mockFrontChatService.syncConversationLanguage).toHaveBeenCalledWith(mockUserEntity.id);
     });
   });
 
@@ -552,7 +588,6 @@ describe('Service user profiles', () => {
 
       const firstTherapySessionAt = therapySession.startDateTime.toISOString();
       const nextTherapySessionAt = therapySession.startDateTime.toISOString();
-      const lastTherapySessionAt = '';
 
       expect(mockFrontChatService.updateContactCustomFields).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -560,7 +595,6 @@ describe('Service user profiles', () => {
           therapy_sessions_redeemed: 1,
           therapy_session_first_at: firstTherapySessionAt,
           therapy_session_next_at: nextTherapySessionAt,
-          therapy_session_last_at: lastTherapySessionAt,
         }),
         mockUserEntity.email,
       );
@@ -572,7 +606,6 @@ describe('Service user profiles', () => {
             THERREDEEM: 1,
             THERFIRSAT: firstTherapySessionAt,
             THERNEXTAT: nextTherapySessionAt,
-            THERLASTAT: lastTherapySessionAt,
           },
         },
         mockUserEntity.email,
@@ -685,7 +718,6 @@ describe('Service user profiles', () => {
           therapy_sessions_remaining: 9,
           therapy_sessions_redeemed: 3,
           therapy_session_first_at: firstTherapySessionAt,
-          therapy_session_next_at: '',
           therapy_session_last_at: lastTherapySessionAt,
         }),
         mockUserEntity.email,
@@ -697,7 +729,6 @@ describe('Service user profiles', () => {
             THERREMAIN: 9,
             THERREDEEM: 3,
             THERFIRSAT: firstTherapySessionAt,
-            THERNEXTAT: '',
             THERLASTAT: lastTherapySessionAt,
           },
         },

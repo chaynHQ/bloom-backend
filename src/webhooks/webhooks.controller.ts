@@ -1,12 +1,16 @@
-import { Body, Controller, Headers, Post, Request, UseGuards } from '@nestjs/common';
-import { ApiBody, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Get, Headers, Post, Query, Request, UseGuards } from '@nestjs/common';
+import { ApiBody, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
 import { FrontChatWebhookService } from 'src/front-chat/front-chat-webhook.service';
 import { ControllerDecorator } from 'src/utils/controller.decorator';
-import { ZapierSimplybookBodyDto } from '../partner-access/dtos/zapier-body.dto';
+import { SimplybookBodyDto } from '../partner-access/dtos/simplybook-body.dto';
 import { ZapierAuthGuard } from '../partner-access/zapier-auth.guard';
 import { FrontChatWebhookDto } from './dto/front-chat-webhook.dto';
+import { MailchimpWebhookDto } from './dto/mailchimp-webhook.dto';
+import { SimplybookWebhookDto } from './dto/simplybook-webhook.dto';
 import { StoryWebhookDto } from './dto/story.dto';
+import { SimplybookWebhookGuard } from './guards/simplybook-webhook.guard';
 import { WebhooksService } from './webhooks.service';
 
 @ApiTags('Webhooks')
@@ -20,11 +24,25 @@ export class WebhooksController {
 
   @UseGuards(ZapierAuthGuard)
   @Post('simplybook')
-  @ApiBody({ type: ZapierSimplybookBodyDto })
+  @ApiBody({ type: SimplybookBodyDto })
   async updatePartnerAccessTherapy(
-    @Body() simplybookBodyDto: ZapierSimplybookBodyDto,
+    @Body() simplybookBodyDto: SimplybookBodyDto,
   ): Promise<TherapySessionEntity> {
     return this.webhooksService.updatePartnerAccessTherapy(simplybookBodyDto);
+  }
+
+  // Tight rate limit: real Simplybook traffic is a handful of events/minute at peak.
+  // 30/min leaves headroom for burst deliveries (e.g. backfills) while deterring brute-force
+  // attempts to guess the token in the URL.
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
+  @UseGuards(SimplybookWebhookGuard)
+  @Post('simplybook-admin')
+  @ApiBody({ type: SimplybookWebhookDto })
+  @ApiQuery({ name: 'token', required: true, description: 'Webhook secret token' })
+  async handleSimplybookWebhook(
+    @Body() webhookDto: SimplybookWebhookDto,
+  ): Promise<TherapySessionEntity | void> {
+    return this.webhooksService.handleSimplybookWebhook(webhookDto);
   }
 
   @Post('storyblok')
@@ -35,6 +53,22 @@ export class WebhooksController {
     @Headers('webhook-signature') signature: string | undefined,
   ): Promise<unknown> {
     return this.webhooksService.handleStoryblokWebhook(req.rawBody, signature, data);
+  }
+
+  // Mailchimp sends a GET to verify the endpoint on initial setup, and POSTs for events.
+  // Authentication is via a shared secret in the query string configured in Mailchimp's dashboard.
+  @Get('mailchimp')
+  verifyMailchimpWebhook(@Query('secret') secret: string): void {
+    if (!secret) return;
+  }
+
+  @Post('mailchimp')
+  @ApiBody({ type: MailchimpWebhookDto })
+  async handleMailchimpWebhook(
+    @Query('secret') secret: string,
+    @Body() dto: MailchimpWebhookDto,
+  ): Promise<void> {
+    return this.webhooksService.handleMailchimpWebhook(dto, secret);
   }
 
   // Single endpoint serves both Front integrations:
@@ -49,15 +83,13 @@ export class WebhooksController {
     @Body() data: Record<string, unknown>,
     @Headers() headers,
   ): Promise<unknown> {
-    const proto = (headers['x-forwarded-proto'] as string) || req.protocol || 'https';
-    const host = headers['x-forwarded-host'] || headers['host'];
-    return this.frontChatWebhookService.handleFrontWebhook(
-      req.rawBody,
+    return this.frontChatWebhookService.handleFrontWebhook({
+      rawBody: req.rawBody,
       data,
       headers,
-      proto,
-      host,
-      req.originalUrl ?? req.url,
-    );
+      protocol: (headers['x-forwarded-proto'] as string) || req.protocol || 'https',
+      host: headers['x-forwarded-host'] || headers['host'],
+      originalUrl: req.originalUrl ?? req.url,
+    });
   }
 }

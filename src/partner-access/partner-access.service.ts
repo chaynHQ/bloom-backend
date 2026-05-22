@@ -56,7 +56,7 @@ export class PartnerAccessService {
     const existingPartnerAccess = await this.partnerAccessRepository.findOneBy({ accessCode });
 
     if (existingPartnerAccess) {
-      await this.generateAccessCode(6);
+      return this.generateAccessCode(6);
     }
     return accessCode;
   }

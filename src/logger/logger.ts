@@ -96,6 +96,18 @@ export class Logger extends ConsoleLogger {
         captureUncaught: true,
         captureUnhandledRejections: true,
         captureIp: 'anonymize',
+        // Rollbar replaces (does not merge with) its default scrubFields when this option is set,
+        // so include the standard list and add 'token' to also mask the Simplybook webhook URL param.
+        scrubFields: [
+          'passwd',
+          'password',
+          'secret',
+          'confirm_password',
+          'password_confirmation',
+          'auth',
+          'authentication',
+          'token',
+        ],
         ignoredMessages: [...Object.values(FIREBASE_ERRORS)],
       });
     }

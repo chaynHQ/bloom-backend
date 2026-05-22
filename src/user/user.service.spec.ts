@@ -3,6 +3,7 @@ import { HttpException, HttpStatus } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { createMailchimpProfile, updateMailchimpProfile } from 'src/api/mailchimp/mailchimp-api';
+import { ChatUserService } from 'src/chat-user/chat-user.service';
 import { FrontChatService } from 'src/front-chat/front-chat.service';
 import { EventLogEntity } from 'src/entities/event-log.entity';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
@@ -117,6 +118,7 @@ describe('UserService', () => {
           useValue: mockEventLogRepository,
         },
         { provide: FrontChatService, useValue: mockFrontChatService },
+        { provide: ChatUserService, useValue: createMock<ChatUserService>() },
         { provide: EventLoggerService, useValue: mockEventLoggerService },
       ],
     }).compile();
@@ -590,7 +592,6 @@ describe('UserService', () => {
           isSuperAdmin: false,
           signUpLanguage: 'en',
           emailRemindersFrequency: 'TWO_MONTHS',
-          firebaseUid: '123',
           deletedAt: null,
           contactPermission: true,
           serviceEmailsPermission: true,

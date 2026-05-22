@@ -14,7 +14,6 @@ export class CreateUserDto {
   @ApiProperty({ type: String })
   email: string;
 
-  // TODO: Add @IsStrongPassword() if needed
   @SecureInput('password', { required: true, maxLength: 128 })
   @IsDefined()
   @ApiProperty({ type: String })

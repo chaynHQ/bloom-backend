@@ -1,4 +1,5 @@
 import { Column, Entity, JoinColumn, OneToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { UNREAD_NOTIFICATION_STATUS } from '../front-chat/front-chat.interface';
 import { BaseBloomEntity } from './base.entity';
 import { UserEntity } from './user.entity';
 
@@ -30,5 +31,19 @@ export class ChatUserEntity extends BaseBloomEntity {
   lastMessageReadAt: Date | null;
 
   @Column({ type: 'timestamptz', nullable: true })
-  lastUnreadNotifiedAt: Date | null;
+  unreadNotificationAttemptedAt: Date | null;
+
+  @Column({
+    type: 'enum',
+    enum: UNREAD_NOTIFICATION_STATUS,
+    enumName: 'chat_user_unreadnotificationstatus_enum',
+    nullable: true,
+  })
+  unreadNotificationStatus: UNREAD_NOTIFICATION_STATUS | null;
+
+  @Column({ nullable: true })
+  unreadNotificationError: string | null;
+
+  @Column({ default: 0 })
+  unreadNotificationAttempts: number;
 }

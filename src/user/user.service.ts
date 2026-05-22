@@ -223,9 +223,15 @@ export class UserService {
       }
     }
 
+    // class-transformer instantiates the DTO with all declared properties, so any field
+    // omitted from the request body is `undefined` (not absent). Spreading would overwrite
+    // user fields like `email` with undefined — strip undefined entries first.
+    const dtoUpdates = Object.fromEntries(
+      Object.entries(updateUserDto).filter(([, v]) => v !== undefined),
+    );
     const newUserData: UserEntity = {
       ...user,
-      ...updateUserDto,
+      ...dtoUpdates,
     };
     const updatedUser = await this.userRepository.save(newUserData);
     this.logger.log({
@@ -244,14 +250,16 @@ export class UserService {
     ) {
       // Do nothing, prevent unnecessay updates to service profiles when last active date is same date
     } else {
+      const isLanguageUpdateRequired =
+        updateUserDto.signUpLanguage !== undefined &&
+        user.signUpLanguage !== updateUserDto.signUpLanguage;
       const isProfileUpdateRequired =
-        isEmailUpdateRequired ||
-        user.signUpLanguage !== updateUserDto.signUpLanguage ||
-        user.name !== updateUserDto.name;
+        isEmailUpdateRequired || isLanguageUpdateRequired || user.name !== updateUserDto.name;
       this.serviceUserProfilesService.updateServiceUserProfilesUser(
         newUserData,
         isProfileUpdateRequired,
         isEmailUpdateRequired,
+        isLanguageUpdateRequired,
         user.email,
       );
     }

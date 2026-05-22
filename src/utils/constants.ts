@@ -153,6 +153,41 @@ export const frontChatWebhookToken = getEnv(
 );
 export const frontChannelSigningSecret =
   getEnv(process.env.FRONT_CHANNEL_SIGNING_SECRET, 'FRONT_CHANNEL_SIGNING_SECRET') || '';
+export const frontAppUid = getEnv(process.env.FRONT_APP_UID, 'FRONT_APP_UID');
+
+export const FRONT_API_BASE_URL = 'https://api2.frontapp.com';
+// Retry delays (ms) applied only to message-send paths so a transient Front 429/5xx
+// doesn't surface as a lost user message. Keep small — the user is waiting on the ack.
+export const FRONT_SEND_RETRY_DELAYS_MS = [200, 800];
+
+export const FRONT_CHAT_ATTACHMENT_ALLOWED_MIME_TYPES = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/gif',
+  'image/webp',
+  'audio/webm',
+  'audio/mp4',
+  'audio/mpeg',
+  'audio/ogg',
+  'application/pdf',
+]);
+export const FRONT_CHAT_ATTACHMENT_MAX_FILE_SIZE = 25 * 1024 * 1024; // 25 MB
+
+export const simplybookWebhookSecret = getEnv(
+  process.env.SIMPLYBOOK_WEBHOOK_SECRET,
+  'SIMPLYBOOK_WEBHOOK_SECRET',
+);
+// Fail fast in production rather than silently rejecting every Simplybook webhook
+// with a 401. SIMPLYBOOK_TOTP_SECRET is intentionally not required at startup because
+// it's only needed when 2FA is enabled on the Simplybook account.
+if (isProduction && !simplybookWebhookSecret) {
+  throw new Error('SIMPLYBOOK_WEBHOOK_SECRET is required in production');
+}
+
+export const simplybookTotpSecret = getEnv(
+  process.env.SIMPLYBOOK_TOTP_SECRET,
+  'SIMPLYBOOK_TOTP_SECRET',
+);
 
 export const slackWebhookUrl = getEnv(process.env.SLACK_WEBHOOK_URL, 'SLACK_WEBHOOK_URL');
 export const slackBloomUsersWebhookUrl = getEnv(
@@ -163,9 +198,17 @@ export const slackDeletedUsersWebhookUrl = getEnv(
   process.env.SLACK_BLOOM_DELETED_USERS_WEBHOOK_URL,
   'SLACK_BLOOM_DELETED_USERS_WEBHOOK_URL',
 );
-export const slackReportingWebhookUrl = getEnv(
-  process.env.SLACK_REPORTING_WEBHOOK_URL,
-  'SLACK_REPORTING_WEBHOOK_URL',
+// Bot-token + channel for threaded reporting digests. Required for the
+// reporting flow (single-message webhooks cannot post thread replies) — no
+// webhook fallback; missing config causes the run to fail loudly so the gap
+// is visible in logs rather than silently degrading to a truncated message.
+export const slackReportingBotToken = getEnv(
+  process.env.SLACK_REPORTING_BOT_TOKEN,
+  'SLACK_REPORTING_BOT_TOKEN',
+);
+export const slackReportingChannelId = getEnv(
+  process.env.SLACK_REPORTING_CHANNEL_ID,
+  'SLACK_REPORTING_CHANNEL_ID',
 );
 
 // Optional with a default — read process.env directly rather than via
@@ -217,6 +260,6 @@ export const mailchimpServerPrefix = getEnv(
   'MAILCHIMP_SERVER_PREFIX',
 );
 
-export const crispWebsiteId = getEnv(process.env.CRISP_WEBSITE_ID, 'CRISP_WEBSITE_ID');
-export const crispIdentifier = getEnv(process.env.CRISP_IDENTIFIER, 'CRISP_IDENTIFIER');
-export const crispKey = getEnv(process.env.CRISP_KEY, 'CRISP_KEY');
+export const mailchimpWebhookSecret = process.env.MAILCHIMP_WEBHOOK_SECRET || '';
+
+export const frontSupportEmail = process.env.FRONT_SUPPORT_EMAIL || 'support@bloom.chayn.co';

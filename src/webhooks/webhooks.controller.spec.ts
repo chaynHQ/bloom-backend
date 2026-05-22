@@ -2,8 +2,15 @@ import { createMock } from '@golevelup/ts-jest';
 import { HttpException, HttpStatus } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { FrontChatWebhookService } from 'src/front-chat/front-chat-webhook.service';
-import { mockSessionEntity, mockSimplybookBodyBase, mockStoryWebhookDto, mockTherapySessionEntity } from 'test/utils/mockData';
+import {
+  mockSessionEntity,
+  mockSimplybookBodyBase,
+  mockSimplybookWebhookDto,
+  mockStoryWebhookDto,
+  mockTherapySessionEntity,
+} from 'test/utils/mockData';
 import { mockWebhooksServiceMethods } from 'test/utils/mockedServices';
+import { SimplybookNotificationType } from './dto/simplybook-webhook.dto';
 import { WebhooksController } from './webhooks.controller';
 import { WebhooksService } from './webhooks.service';
 
@@ -42,6 +49,32 @@ describe('AppController', () => {
       ).rejects.toThrow('Therapy session not found');
     });
 
+    describe('handleSimplybookWebhook', () => {
+      it('should return therapy session when service succeeds', async () => {
+        await expect(
+          webhooksController.handleSimplybookWebhook(mockSimplybookWebhookDto),
+        ).resolves.toBe(mockTherapySessionEntity);
+      });
+
+      it('should return undefined for notify type', async () => {
+        jest.spyOn(mockWebhooksService, 'handleSimplybookWebhook').mockResolvedValueOnce(undefined);
+        await expect(
+          webhooksController.handleSimplybookWebhook({
+            ...mockSimplybookWebhookDto,
+            notification_type: SimplybookNotificationType.NOTIFY,
+          }),
+        ).resolves.toBeUndefined();
+      });
+
+      it('should propagate errors from service', async () => {
+        jest
+          .spyOn(mockWebhooksService, 'handleSimplybookWebhook')
+          .mockRejectedValueOnce(new HttpException('Booking not found', HttpStatus.BAD_REQUEST));
+        await expect(
+          webhooksController.handleSimplybookWebhook(mockSimplybookWebhookDto),
+        ).rejects.toThrow('Booking not found');
+      });
+    });
     describe('handleStoryUpdated', () => {
       it('delegates to webhooksService.handleStoryblokWebhook with rawBody and signature', async () => {
         jest
@@ -75,14 +108,14 @@ describe('AppController', () => {
 
         await webhooksController.handleFrontChatWebhook(req, data, headers);
 
-        expect(mockFrontChatWebhookService.handleFrontWebhook).toHaveBeenCalledWith(
-          req.rawBody,
+        expect(mockFrontChatWebhookService.handleFrontWebhook).toHaveBeenCalledWith({
+          rawBody: req.rawBody,
           data,
           headers,
-          'https',
-          'example.com',
-          '/webhooks/front-chat',
-        );
+          protocol: 'https',
+          host: 'example.com',
+          originalUrl: '/webhooks/front-chat',
+        });
       });
     });
   });

@@ -5,6 +5,9 @@ export function getCorsOrigin(): true | (string | RegExp)[] {
 
   const frontendAppUrl = process.env.FRONTEND_APP_URL;
   if (!frontendAppUrl) {
+    if (process.env.NODE_ENV === 'test') {
+      return true;
+    }
     throw new Error('FRONTEND_APP_URL environment variable must be set');
   }
 

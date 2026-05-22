@@ -18,29 +18,22 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiTags } from '@nestjs/swagger';
 import { Response } from 'express';
 import { memoryStorage } from 'multer';
+import { ChatUserService } from 'src/chat-user/chat-user.service';
 import { FirebaseAuthGuard } from 'src/firebase/firebase-auth.guard';
 import { ServiceUserProfilesService } from 'src/service-user-profiles/service-user-profiles.service';
+import {
+  FRONT_CHAT_ATTACHMENT_ALLOWED_MIME_TYPES,
+  FRONT_CHAT_ATTACHMENT_MAX_FILE_SIZE,
+} from 'src/utils/constants';
+import { normalizeFrontAttachmentUrl } from './front-chat.helpers';
 import { ChatHistoryMessage, FrontChatService } from './front-chat.service';
-
-const ALLOWED_MIME_TYPES = new Set([
-  'image/jpeg',
-  'image/png',
-  'image/gif',
-  'image/webp',
-  'audio/webm',
-  'audio/mp4',
-  'audio/mpeg',
-  'audio/ogg',
-  'application/pdf',
-]);
-
-const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25 MB
 
 @ApiTags('Front Chat')
 @Controller('/v1/front-chat')
 export class FrontChatController {
   constructor(
     private readonly frontChatService: FrontChatService,
+    private readonly chatUserService: ChatUserService,
     private readonly serviceUserProfilesService: ServiceUserProfilesService,
   ) {}
 
@@ -58,9 +51,9 @@ export class FrontChatController {
   @UseInterceptors(
     FileInterceptor('file', {
       storage: memoryStorage(),
-      limits: { fileSize: MAX_FILE_SIZE, files: 1 },
+      limits: { fileSize: FRONT_CHAT_ATTACHMENT_MAX_FILE_SIZE, files: 1 },
       fileFilter: (_req, file, cb) => {
-        if (ALLOWED_MIME_TYPES.has(file.mimetype)) {
+        if (FRONT_CHAT_ATTACHMENT_ALLOWED_MIME_TYPES.has(file.mimetype)) {
           cb(null, true);
         } else {
           cb(new BadRequestException(`File type "${file.mimetype}" is not allowed`), false);
@@ -70,33 +63,19 @@ export class FrontChatController {
   )
   async uploadAttachment(@Request() req, @UploadedFile() file: Express.Multer.File): Promise<void> {
     if (!file) throw new BadRequestException('No file provided');
-    const existingChatUser = await this.frontChatService.getChatUser(req.userEntity.id);
+    const existingChatUser = await this.chatUserService.getChatUser(req.userEntity.id);
     if (!existingChatUser?.frontContactId) {
       await this.serviceUserProfilesService.getOrCreateFrontContact(req.userEntity);
     }
     const chatUser = await this.frontChatService.sendChannelAttachment(req.userEntity, file);
-
-    if (chatUser) {
-      this.serviceUserProfilesService
-        .updateServiceUserProfilesChatActivity(chatUser, req.userEntity.email)
-        .catch(() => {});
-    }
+    this.syncChatActivity(chatUser, req.userEntity.email);
   }
 
   @Get('attachment-proxy')
   @ApiBearerAuth('access-token')
   @UseGuards(FirebaseAuthGuard)
   async proxyAttachment(@Query('url') url: string, @Res() res: Response): Promise<void> {
-    let parsed: URL;
-    try {
-      parsed = new URL(url ?? '');
-    } catch {
-      throw new BadRequestException('Invalid attachment URL');
-    }
-    if (
-      parsed.protocol !== 'https:' ||
-      (parsed.hostname !== 'api2.frontapp.com' && !parsed.hostname.endsWith('.frontapp.com'))
-    ) {
+    if (!normalizeFrontAttachmentUrl(url ?? '')) {
       throw new BadRequestException('Invalid attachment URL');
     }
     let buffer: Buffer;
@@ -125,11 +104,15 @@ export class FrontChatController {
   @ApiBearerAuth('access-token')
   @UseGuards(FirebaseAuthGuard)
   async markAsRead(@Request() req): Promise<void> {
-    const chatUser = await this.frontChatService.markAsRead(req.userEntity.id);
-    if (chatUser) {
-      this.serviceUserProfilesService
-        .updateServiceUserProfilesChatActivity(chatUser, req.userEntity.email)
-        .catch(() => {});
-    }
+    const chatUser = await this.chatUserService.markAsRead(req.userEntity.id);
+    this.syncChatActivity(chatUser, req.userEntity.email);
+  }
+
+  // Fire-and-forget — chat activity sync is best-effort and must not block the user.
+  private syncChatActivity(chatUser: Awaited<ReturnType<ChatUserService['markAsRead']>>, email: string) {
+    if (!chatUser) return;
+    this.serviceUserProfilesService
+      .updateServiceUserProfilesChatActivity(chatUser, email)
+      .catch(() => {});
   }
 }

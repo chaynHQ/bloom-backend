@@ -35,19 +35,24 @@ FIREBASE_MEASUREMENT_ID=
 # REQUIRED VARIABLES FOR TESTING
 #---------------------------------------------------------------
 # MOCK VALUES (can replace with real values or new mocks in same format)
-SIMPLYBOOK_CREDENTIALS='{"login":"testlogin","password":"testpassword","company":"testcompany"}'
+SIMPLYBOOK_CREDENTIALS='{"login":"testlogin","password":"api_user_key_customapikey","company":"testcompany"}'
 SIMPLYBOOK_COMPANY_NAME=testcompany
+SIMPLYBOOK_WEBHOOK_SECRET=generate-your-own-secret
+SIMPLYBOOK_TOTP_SECRET= # Required when 2FA is enabled on the Simplybook admin account
 
 # OPTIONAL VARIABLES
 #---------------------------------------------------------------
 ROLLBAR_ENV=development # Rollbar logging
 ROLLBAR_TOKEN= # Rollbar logging
-ZAPIER_TOKEN= # Zapier automation
+ZAPIER_TOKEN= # Zapier automation (legacy - see SIMPLYBOOK_WEBHOOK_SECRET)
 SLACK_WEBHOOK_URL= # Slack messaging bots
-CRISP_IDENTIFIER= # (required for migration) Plugin identifier from Crisp developer settings
-CRISP_KEY= # (required for migration) Plugin key from Crisp developer settings
-CRISP_WEBSITE_ID= # (required for migration) Crisp website ID
-FRONT_SUPPORT_EMAIL= # (optional) Sender email for imported outbound Crisp messages; defaults to support@bloom.chayn.co
+FRONT_CHAT_API_TOKEN
+FRONT_CHANNEL_ID
+FRONT_CONTACT_LIST_ID
+FRONT_CHAT_WEBHOOK_TOKEN
+FRONT_CHANNEL_SIGNING_SECRET
+FRONT_APP_UID
+FRONT_SUPPORT_EMAIL= # (optional) Front sender address used to distinguish agent replies in chat history; defaults to support@bloom.chayn.co
 MAILCHIMP_API_KEY= # Email messaging
 RESPOND_IO_CREATE_CONTACT_WEBHOOK= # RESPOND.IO
 RESPOND_IO_DELETE_CONTACT_WEBHOOK= # RESPOND.IO
@@ -64,3 +69,21 @@ The frontend and backend each have _required_ and _optional_ environment variabl
 Note: Variables provided by Chayn are public, not linked to production, and subject to change at any time. Check for updates if you are experiencing problems. The absence of some optional environment variables may result in test failures. If you require an optional environment variable and cannot acquire it yourself (some must be connected to Chayn in some way), please reach out to the team in GitHub’s issue discussions.
 
 **Please notify us if creating new environment variables in your PR so we can add it to Render before release deployment.**
+
+## Simplybook Variables
+
+`SIMPLYBOOK_CREDENTIALS` must be a JSON string with the following shape:
+
+```json
+{ "login": "<api_user_key_or_login>", "password": "<password>", "company": "<company_login>" }
+```
+
+For production, use a Simplybook **API User Key** (`api_user_key_...`) as the `login` value — this bypasses IP verification restrictions on the admin API.
+
+`SIMPLYBOOK_WEBHOOK_SECRET` is the shared secret used to authenticate incoming webhooks from Simplybook at `POST /api/webhooks/simplybook-admin`. Configure the same value as the `?token=` query parameter in the Simplybook webhook callback URL:
+
+```
+https://<your-domain>/api/webhooks/simplybook-admin?token=<SIMPLYBOOK_WEBHOOK_SECRET>
+```
+
+`SIMPLYBOOK_TOTP_SECRET` is required when 2FA is enabled on the Simplybook admin account. It is the base32 TOTP secret shown during 2FA setup (the same secret you scan into an authenticator app). Leave unset if 2FA is not enabled.

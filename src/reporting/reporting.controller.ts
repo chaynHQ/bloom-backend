@@ -1,15 +1,16 @@
-import {
-  Controller,
-  HttpException,
-  HttpStatus,
-  Post,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, HttpException, HttpStatus, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { SuperAdminAuthGuard } from 'src/partner-admin/super-admin-auth.guard';
 import { ReportingService } from './reporting.service';
 import { ReportPayload, ReportPeriod } from './reporting.types';
+
+const VALID_PERIODS: ReadonlyArray<ReportPeriod> = [
+  'daily',
+  'weekly',
+  'monthly',
+  'quarterly',
+  'yearly',
+];
 
 @ApiTags('Reporting')
 @ApiBearerAuth()
@@ -25,16 +26,14 @@ export class ReportingController {
   })
   @ApiQuery({ name: 'period', enum: ['daily', 'weekly', 'monthly', 'quarterly', 'yearly'] })
   async run(@Query('period') period: ReportPeriod): Promise<ReportPayload> {
-    const valid: ReportPeriod[] = ['daily', 'weekly', 'monthly', 'quarterly', 'yearly'];
-    if (!valid.includes(period)) {
+    if (!VALID_PERIODS.includes(period)) {
       throw new HttpException(
-        `period must be one of: ${valid.join(', ')}`,
+        `period must be one of: ${VALID_PERIODS.join(', ')}`,
         HttpStatus.BAD_REQUEST,
       );
     }
 
     return this.reportingService.run(period, {
-      force: true,
       bypassIdempotency: true,
       trigger: 'manual',
     });

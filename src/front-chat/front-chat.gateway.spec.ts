@@ -9,6 +9,8 @@ describe('FrontChatGateway', () => {
   let frontChatService: {
     sendChannelTextMessage: jest.Mock;
     getConversationHistory: jest.Mock;
+  };
+  let chatUserService: {
     getChatUser: jest.Mock;
   };
   let serviceUserProfilesService: {
@@ -34,6 +36,8 @@ describe('FrontChatGateway', () => {
     frontChatService = {
       sendChannelTextMessage: jest.fn(),
       getConversationHistory: jest.fn().mockResolvedValue({ messages: [], conversationFound: false }),
+    };
+    chatUserService = {
       getChatUser: jest.fn().mockResolvedValue(null),
     };
     serviceUserProfilesService = {
@@ -48,6 +52,7 @@ describe('FrontChatGateway', () => {
       authService as any,
       userService as any,
       frontChatService as any,
+      chatUserService as any,
       serviceUserProfilesService as any,
     );
     gateway.server = server as any;
@@ -153,7 +158,7 @@ describe('FrontChatGateway', () => {
 
       const result = await gateway.handleSendMessage(socket as any, { text: 'hi' });
 
-      expect(frontChatService.sendChannelTextMessage).toHaveBeenCalledWith(user, 'hi');
+      expect(frontChatService.sendChannelTextMessage).toHaveBeenCalledWith(user, 'hi', null);
       expect(result).toEqual({ ok: true });
     });
 
@@ -164,13 +169,14 @@ describe('FrontChatGateway', () => {
       const socket = await connectAs(user);
       serviceUserProfilesService.getOrCreateFrontContact.mockClear();
 
-      frontChatService.getChatUser.mockResolvedValueOnce({ frontContactId: 'crd_existing' });
+      const existingChatUser = { frontContactId: 'crd_existing' };
+      chatUserService.getChatUser.mockResolvedValueOnce(existingChatUser);
       frontChatService.sendChannelTextMessage.mockResolvedValue(undefined);
 
       await gateway.handleSendMessage(socket as any, { text: 'hi' });
 
       expect(serviceUserProfilesService.getOrCreateFrontContact).not.toHaveBeenCalled();
-      expect(frontChatService.sendChannelTextMessage).toHaveBeenCalledWith(user, 'hi');
+      expect(frontChatService.sendChannelTextMessage).toHaveBeenCalledWith(user, 'hi', existingChatUser);
     });
 
     it('wraps service failures in a WsException', async () => {
@@ -195,6 +201,24 @@ describe('FrontChatGateway', () => {
         'Rate limit exceeded',
       );
       expect(frontChatService.sendChannelTextMessage).toHaveBeenCalledTimes(20);
+    });
+  });
+
+  describe('token expiry', () => {
+    it('rejects send_message and disconnects when the cached token has expired', async () => {
+      authService.parseAuth.mockResolvedValue({
+        uid: 'fb-uid',
+        exp: Math.floor(Date.now() / 1000) - 1, // already expired
+      });
+      userService.getUserByFirebaseId.mockResolvedValue({ userEntity: buildUser() });
+      const socket = buildSocket('tok-1');
+      await gateway.handleConnection(socket as any);
+
+      await expect(
+        gateway.handleSendMessage(socket as any, { text: 'hi' }),
+      ).rejects.toThrow('Token expired');
+      expect(socket.disconnect).toHaveBeenCalledWith(true);
+      expect(frontChatService.sendChannelTextMessage).not.toHaveBeenCalled();
     });
   });
 

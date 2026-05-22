@@ -11,6 +11,7 @@ import {
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { AuthService } from 'src/auth/auth.service';
+import { ChatUserService } from 'src/chat-user/chat-user.service';
 import { UserEntity } from 'src/entities/user.entity';
 import { IFirebaseUser } from 'src/firebase/firebase-user.interface';
 import { Logger } from 'src/logger/logger';
@@ -27,6 +28,13 @@ const userRoom = (email: string) => `user:${email.toLowerCase()}`;
 const SEND_MESSAGE_WINDOW_MS = 10_000;
 const SEND_MESSAGE_LIMIT_PER_WINDOW = 20;
 
+interface FrontChatSession {
+  user: UserEntity;
+  // Unix seconds — Firebase ID token's `exp` claim. Undefined disables expiry checks
+  // (used by tests that mock parseAuth without the claim).
+  tokenExp?: number;
+}
+
 @WebSocketGateway({
   namespace: '/front-chat',
   cors: { origin: getCorsOrigin(), credentials: true },
@@ -35,7 +43,7 @@ export class FrontChatGateway implements OnGatewayConnection, OnGatewayDisconnec
   @WebSocketServer() server: Server;
   private readonly logger = new Logger('FrontChatGateway');
 
-  private readonly sessions = new Map<string, UserEntity>();
+  private readonly sessions = new Map<string, FrontChatSession>();
   private readonly sendTimestamps = new Map<string, number[]>();
   private readonly pendingFrontContactCreations = new Map<string, Promise<void>>();
 
@@ -43,6 +51,7 @@ export class FrontChatGateway implements OnGatewayConnection, OnGatewayDisconnec
     private readonly authService: AuthService,
     private readonly userService: UserService,
     private readonly frontChatService: FrontChatService,
+    private readonly chatUserService: ChatUserService,
     private readonly serviceUserProfilesService: ServiceUserProfilesService,
   ) {}
 
@@ -79,11 +88,14 @@ export class FrontChatGateway implements OnGatewayConnection, OnGatewayDisconnec
       return;
     }
 
-    let user: UserEntity;
+    let session: FrontChatSession;
     try {
       const decoded = await this.authService.parseAuth(`Bearer ${token}`);
       const result = await this.userService.getUserByFirebaseId(decoded as IFirebaseUser);
-      user = result.userEntity;
+      session = {
+        user: result.userEntity,
+        tokenExp: typeof decoded.exp === 'number' ? decoded.exp : undefined,
+      };
     } catch (error) {
       this.logger.warn(
         `FrontChat handshake rejected — socket ${client.id} — ${error?.message || 'unknown error'}`,
@@ -92,11 +104,13 @@ export class FrontChatGateway implements OnGatewayConnection, OnGatewayDisconnec
       return;
     }
 
-    this.sessions.set(client.id, user);
+    const user = session.user;
+    this.sessions.set(client.id, session);
     await client.join(userRoom(user.email));
 
     try {
-      const { messages, conversationFound } = await this.frontChatService.getConversationHistory(user);
+      const { messages, conversationFound } =
+        await this.frontChatService.getConversationHistory(user);
 
       if (!conversationFound) {
         this.awaitFrontContactReady(user);
@@ -123,8 +137,7 @@ export class FrontChatGateway implements OnGatewayConnection, OnGatewayDisconnec
     @MessageBody(new ValidationPipe({ whitelist: true, transform: true }))
     payload: SendMessageDto,
   ): Promise<{ ok: true }> {
-    const user = this.sessions.get(client.id);
-    if (!user) throw new WsException('Unauthorized');
+    const user = this.requireFreshSession(client);
 
     if (this.isRateLimited(client.id)) {
       this.logger.warn(`send_message rate-limited for user ${user.id}`);
@@ -132,11 +145,15 @@ export class FrontChatGateway implements OnGatewayConnection, OnGatewayDisconnec
     }
 
     try {
-      const existingChatUser = await this.frontChatService.getChatUser(user.id);
+      const existingChatUser = await this.chatUserService.getChatUser(user.id);
       if (!existingChatUser?.frontContactId) {
         await this.awaitFrontContactReady(user);
       }
-      const chatUser = await this.frontChatService.sendChannelTextMessage(user, payload.text);
+      const chatUser = await this.frontChatService.sendChannelTextMessage(
+        user,
+        payload.text,
+        existingChatUser,
+      );
 
       if (chatUser) {
         this.serviceUserProfilesService
@@ -151,6 +168,18 @@ export class FrontChatGateway implements OnGatewayConnection, OnGatewayDisconnec
       );
       throw new WsException('Failed to send message');
     }
+  }
+
+  // Disconnect on expiry so Socket.IO's auto-reconnect re-runs auth() with a fresh token.
+  private requireFreshSession(client: Socket): UserEntity {
+    const session = this.sessions.get(client.id);
+    if (!session) throw new WsException('Unauthorized');
+    if (session.tokenExp !== undefined && session.tokenExp * 1000 <= Date.now()) {
+      this.logger.warn(`Token expired mid-session for user ${session.user.id}`);
+      client.disconnect(true);
+      throw new WsException('Token expired');
+    }
+    return session.user;
   }
 
   private isRateLimited(socketId: string): boolean {
