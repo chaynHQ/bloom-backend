@@ -38,7 +38,7 @@ export class PartnerAccessService {
     partnerAdminId: string | null,
     userId?: string,
   ): Promise<PartnerAccessEntity> {
-    const accessCode = await this.generateAccessCode(6);
+    const accessCode = await this.generateAccessCode(6, partnerAdminId !== null);
     const partnerAccess = this.partnerAccessRepository.create({
       ...createPartnerAccessDto,
       ...(userId && { userId }),
