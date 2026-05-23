@@ -37,8 +37,9 @@ export class PartnerAccessService {
     partnerId: string,
     partnerAdminId: string | null,
     userId?: string,
+    generateCode?: boolean,
   ): Promise<PartnerAccessEntity> {
-    const accessCode = await this.generateAccessCode(6, partnerAdminId !== null);
+    const accessCode = generateCode ? await this.generateAccessCode(6) : null;
     const partnerAccess = this.partnerAccessRepository.create({
       ...createPartnerAccessDto,
       ...(userId && { userId }),
@@ -49,14 +50,14 @@ export class PartnerAccessService {
     return await this.partnerAccessRepository.save(partnerAccess);
   }
 
-  private async generateAccessCode(length: number, generateCode?: boolean): Promise<string> {
+  private async generateAccessCode(length: number): Promise<string> {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUFWXYZ1234567890';
     const accessCode = _.sampleSize(chars, length || 6).join('');
 
     const existingPartnerAccess = await this.partnerAccessRepository.findOneBy({ accessCode });
 
     if (existingPartnerAccess) {
-      return generateCode ? this.generateAccessCode(6) : null;
+      return this.generateAccessCode(6);
     }
     return accessCode;
   }
