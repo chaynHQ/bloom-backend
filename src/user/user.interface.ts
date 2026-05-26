@@ -5,12 +5,10 @@ export interface IUser {
   createdAt: Date | string;
   updatedAt: Date | string;
   deletedAt: Date | string;
-  firebaseUid?: string;
   name: string;
   email: string;
   isActive: boolean;
   lastActiveAt: Date | string;
-  crispTokenId: string;
   isSuperAdmin: boolean;
   signUpLanguage: string;
   emailRemindersFrequency: EMAIL_REMINDERS_FREQUENCY;

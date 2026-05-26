@@ -56,7 +56,7 @@ export class PartnerAccessService {
     const existingPartnerAccess = await this.partnerAccessRepository.findOneBy({ accessCode });
 
     if (existingPartnerAccess) {
-      await this.generateAccessCode(6);
+      return this.generateAccessCode(6);
     }
     return accessCode;
   }
@@ -183,7 +183,7 @@ export class PartnerAccessService {
       );
     } catch (error) {
       this.logger.error(
-        `Error: Unable to update crisp profile: ${error?.message || 'unknown error'}`,
+        `Error: Unable to update service user profiles: ${error?.message || 'unknown error'}`,
       );
     }
 

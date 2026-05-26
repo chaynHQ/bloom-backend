@@ -1,8 +1,8 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { SlackMessageClient } from 'src/api/slack/slack-api';
+import { ChatUserModule } from 'src/chat-user/chat-user.module';
 import { CoursePartnerService } from 'src/course-partner/course-partner.service';
-import { CrispService } from 'src/crisp/crisp.service';
 import { CoursePartnerEntity } from 'src/entities/course-partner.entity';
 import { CourseEntity } from 'src/entities/course.entity';
 import { EventLogEntity } from 'src/entities/event-log.entity';
@@ -14,6 +14,7 @@ import { SessionEntity } from 'src/entities/session.entity';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
 import { UserEntity } from 'src/entities/user.entity';
 import { EventLoggerService } from 'src/event-logger/event-logger.service';
+import { FrontChatModule } from 'src/front-chat/front-chat.module';
 import { PartnerService } from 'src/partner/partner.service';
 import { ResourceService } from 'src/resource/resource.service';
 import { ServiceUserProfilesService } from 'src/service-user-profiles/service-user-profiles.service';
@@ -34,6 +35,8 @@ import { WebhooksService } from './webhooks.service';
       EventLogEntity,
       ResourceEntity,
     ]),
+    ChatUserModule,
+    FrontChatModule,
   ],
   providers: [
     WebhooksService,
@@ -41,7 +44,6 @@ import { WebhooksService } from './webhooks.service';
     PartnerService,
     ServiceUserProfilesService,
     SlackMessageClient,
-    CrispService,
     EventLoggerService,
     ResourceService,
   ],

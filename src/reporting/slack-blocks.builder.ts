@@ -1,23 +1,21 @@
+import { DateTime } from 'luxon';
 import { SLACK_BLOCK_SAFETY_MARGIN } from './reporting.constants';
-import { EVENT_GROUPS, EventGroup, EventTopic } from './reporting.events';
-import { FUNNELS } from './reporting.funnels';
+import { EVENT_GROUPS, EventLine, EventTopic } from './reporting.events';
 import {
   Anomaly,
   BaselineStat,
   DB_METRIC_LABELS,
-  DB_TOTALS_LABELS,
   DbBreakdowns,
   DbMetrics,
   DbNamedCount,
-  DbTotals,
   GA4_OVERVIEW_LABELS,
-  Ga4Breakdown,
   Ga4EventBreakdown,
   Ga4EventTotal,
   Ga4Metrics,
   Ga4OverviewMetrics,
+  PERIOD_TUNING,
+  PERIODS_WITH_ERRORS_THREAD,
   PERIODS_WITH_FULL_DETAIL,
-  PERIODS_WITH_TOTALS,
   PERIODS_WITH_UNCAPPED_BREAKDOWNS,
   ReportBaseline,
   ReportPayload,
@@ -31,6 +29,21 @@ const CHILDREN_CAP_PER_GROUP = 8;
 /** Slack max fields per `section` block. */
 const FIELDS_PER_SECTION = 10;
 
+/** Max tag/named-count rows packed into one condensed line. */
+const CONDENSED_NAMED_LIMIT = 8;
+
+/** DB cells shown in the daily headline — trimmed from the weekly+ set so
+ *  the daily snapshot stays scannable on a low-traffic site. Acquisition,
+ *  retention, the three engagement surfaces, and chat. */
+const DAILY_HEADLINE_KEYS: ReadonlyArray<keyof DbMetrics> = [
+  'newUsers',
+  'activeUsers',
+  'coursesStarted',
+  'resourcesStarted',
+  'therapySessionsCompleted',
+  'messagesSent',
+];
+
 const RESOURCE_CATEGORY_LABELS: Record<string, string> = {
   short_video: 'Short videos',
   single_video: 'Single videos',
@@ -41,9 +54,14 @@ type Block = Record<string, unknown>;
 
 interface GridCell {
   label: string;
-  value: number;
+  /** `null` is rendered as `N/A`. Distinct from `0` (a real observation). */
+  value: number | null;
   baseline?: BaselineStat;
   decimals?: number;
+  /** Optional sub-row appended below the value/composite. Used by
+   *  `analyticsEventsBlocks` to render `↳ <param>: A (n) · B (n) · C (n)`
+   *  GA4 custom-dim breakdowns under their parent event line. */
+  subline?: string;
 }
 
 interface RenderContext {
@@ -51,59 +69,81 @@ interface RenderContext {
   withDetail: boolean;
   uncapped: boolean;
   baseline?: ReportBaseline;
+  /** Per-period delta-suppression floor (see PERIOD_TUNING). Threaded through
+   *  the cell formatter so daily can render small but meaningful movements
+   *  that weekly+'s higher floor would suppress. */
+  deltaBaselineFloor: number;
 }
 
-export function buildReportBlocks(payload: ReportPayload): Block[] {
+/** A thread reply for a single topic. `key` is for logging/correlation;
+ *  `blocks` is what goes into Slack. */
+export interface ThreadReply {
+  key: EventTopic;
+  blocks: Block[];
+}
+
+/** Parent message + per-topic thread replies. Parent stays focused on
+ *  headline + anomalies; replies carry topic detail. */
+export interface ReportThread {
+  parent: Block[];
+  replies: ThreadReply[];
+}
+
+export function buildReportThread(payload: ReportPayload): ReportThread {
   const ctx: RenderContext = {
     period: payload.period,
     withDetail: PERIODS_WITH_FULL_DETAIL.includes(payload.period),
     uncapped: PERIODS_WITH_UNCAPPED_BREAKDOWNS.includes(payload.period),
     baseline: payload.baseline,
+    deltaBaselineFloor: PERIOD_TUNING[payload.period].deltaBaselineFloor,
   };
 
-  const blocks: Block[] = [];
-  blocks.push(headerBlock(payload));
-  blocks.push(contextBlock(payload));
+  const parent: Block[] = [];
+  // Daily uses a lighter mrkdwn title (no `header` block) so it visually
+  // reads as a "snapshot" in the channel — distinct from the heavier weekly+
+  // digests. Saves one block and one section divider.
+  if (payload.period === 'daily') {
+    parent.push(dailyTitleBlock(payload));
+  } else {
+    parent.push(headerBlock(payload));
+  }
+  parent.push(contextBlock(payload));
 
   const headline = headlineSection(payload, ctx);
   if (headline.length > 0) {
-    blocks.push(dividerBlock());
-    blocks.push(...headline);
+    parent.push(dividerBlock());
+    parent.push(...headline);
   }
 
   const gaBanner = gaUnavailableBanner(payload);
-  if (gaBanner) blocks.push(gaBanner);
+  if (gaBanner) parent.push(gaBanner);
 
   const anomalies = payload.anomalies ?? [];
   if (anomalies.length > 0) {
-    blocks.push(dividerBlock());
-    blocks.push(...anomaliesSection(anomalies, ctx.baseline));
+    parent.push(dividerBlock());
+    parent.push(...anomaliesSection(anomalies, ctx.baseline));
   }
 
-  // Daily: inject key GA activity after anomalies — supplements the DB headline
-  // without expanding into full per-topic detail sections.
-  if (ctx.period === 'daily') {
-    const dailyGa = dailyGaSection(payload);
-    if (dailyGa.length > 0) {
-      blocks.push(dividerBlock());
-      blocks.push(...dailyGa);
-    }
-  }
-
+  const replies: ThreadReply[] = [];
   for (const topic of TOPIC_ORDER) {
     const out = renderTopic(topic, payload, ctx);
-    if (out.length > 0) {
-      blocks.push(dividerBlock());
-      blocks.push(...out);
-    }
+    if (out.length === 0) continue;
+    // Trailing blank line creates visual breathing room between this reply
+    // and the next thread message in the Slack UI.
+    out.push(mrkdwnSection(' '));
+    replies.push({ key: topic, blocks: capReplyBlocks(out) });
   }
 
-  // State-of-Bloom closing capstone — renders below per-topic sections so the
-  // top of the message is "what changed this period" and the bottom is
-  // "where we stand overall". Quarterly + yearly only.
-  if (payload.dbTotals && PERIODS_WITH_TOTALS.includes(payload.period)) {
+  return { parent, replies };
+}
+
+/** Backwards-compatible single-message renderer (flattens thread). */
+export function buildReportBlocks(payload: ReportPayload): Block[] {
+  const { parent, replies } = buildReportThread(payload);
+  const blocks: Block[] = [...parent];
+  for (const reply of replies) {
     blocks.push(dividerBlock());
-    blocks.push(...totalsSection(payload.dbTotals));
+    blocks.push(...reply.blocks);
   }
 
   if (blocks.length > SLACK_BLOCK_SAFETY_MARGIN) {
@@ -119,48 +159,56 @@ export function buildReportBlocks(payload: ReportPayload): Block[] {
   return blocks;
 }
 
-// ---------- topic dispatch ----------
+function capReplyBlocks(blocks: Block[]): Block[] {
+  if (blocks.length <= SLACK_BLOCK_SAFETY_MARGIN) return blocks;
+  const trimmed = blocks.slice(0, SLACK_BLOCK_SAFETY_MARGIN - 1);
+  trimmed.push(
+    mrkdwnSection(`_Section truncated — ${blocks.length - trimmed.length} block(s) omitted._`),
+  );
+  return trimmed;
+}
 
 const TOPIC_ORDER: EventTopic[] = [
   'users',
   'courses',
   'resources',
   'therapy',
-  'messaging',
   'communications',
-  'app',
-  'navigation',
-  'promo',
   'admin',
+  'navigation',
   'errors',
+  'app',
 ];
 
 const TOPIC_HEADINGS: Record<EventTopic, { emoji: string; title: string }> = {
-  users: { emoji: ':bust_in_silhouette:', title: 'Users & accounts' },
-  courses: { emoji: ':books:', title: 'Courses & sessions' },
+  users: { emoji: ':busts_in_silhouette:', title: 'Users & accounts' },
+  courses: { emoji: ':open_book:', title: 'Courses & sessions' },
   resources: { emoji: ':headphones:', title: 'Resources' },
-  therapy: { emoji: ':speech_balloon:', title: 'Therapy' },
-  messaging: { emoji: ':left_speech_bubble:', title: 'Messaging' },
-  communications: { emoji: ':inbox_tray:', title: 'Communications' },
-  app: { emoji: ':iphone:', title: 'App & traffic' },
+  therapy: { emoji: ':cherry_blossom:', title: 'Therapy' },
+  communications: { emoji: ':envelope_with_arrow:', title: 'Communications' },
   navigation: { emoji: ':compass:', title: 'Navigation & engagement' },
-  promo: { emoji: ':loudspeaker:', title: 'Promo & banners' },
   admin: { emoji: ':gear:', title: 'Admin activity' },
-  errors: { emoji: ':rotating_light:', title: 'Errors' },
+  errors: { emoji: ':warning:', title: 'Errors' },
+  app: { emoji: ':chart_with_upwards_trend:', title: 'Site analytics' },
 };
 
-function renderTopic(
-  topic: EventTopic,
-  payload: ReportPayload,
-  ctx: RenderContext,
-): Block[] {
-  // Daily is headline + errors only.
-  if (ctx.period === 'daily' && topic !== 'errors') return [];
+function renderTopic(topic: EventTopic, payload: ReportPayload, ctx: RenderContext): Block[] {
+  // Daily drops all per-topic thread replies — the snapshot lives entirely
+  // in the parent message (headline + anomalies). Errors are surfaced via
+  // the outage watchlist + GA-event anomaly scoring, so a dedicated Errors
+  // reply no longer adds signal.
+  if (ctx.period === 'daily') return [];
+
+  // Errors thread only on the periods in PERIODS_WITH_ERRORS_THREAD (weekly).
+  // Long-period summaries (monthly+) skip it — by then individual error
+  // counts are stale and dilute the trend view.
+  if (topic === 'errors' && !PERIODS_WITH_ERRORS_THREAD.includes(ctx.period)) {
+    return [];
+  }
 
   const body = renderTopicBody(topic, payload, ctx);
   if (body.length === 0) {
-    // Non-daily: "No errors" placeholder. Daily: drop entirely.
-    if (topic === 'errors' && ctx.period !== 'daily') {
+    if (topic === 'errors') {
       return [topicHeader('errors'), mrkdwnSection('_No errors in this period._')];
     }
     return [];
@@ -168,11 +216,7 @@ function renderTopic(
   return [topicHeader(topic), ...body];
 }
 
-function renderTopicBody(
-  topic: EventTopic,
-  payload: ReportPayload,
-  ctx: RenderContext,
-): Block[] {
+function renderTopicBody(topic: EventTopic, payload: ReportPayload, ctx: RenderContext): Block[] {
   switch (topic) {
     case 'users':
       return usersTopic(payload, ctx);
@@ -182,16 +226,12 @@ function renderTopicBody(
       return resourcesTopic(payload, ctx);
     case 'therapy':
       return therapyTopic(payload, ctx);
-    case 'messaging':
-      return messagingTopic(payload, ctx);
     case 'communications':
       return communicationsTopic(payload, ctx);
     case 'app':
       return appTopic(payload, ctx);
     case 'navigation':
       return navigationTopic(payload, ctx);
-    case 'promo':
-      return promoTopic(payload, ctx);
     case 'admin':
       return adminTopic(payload, ctx);
     case 'errors':
@@ -199,252 +239,306 @@ function renderTopicBody(
   }
 }
 
-// ---------- topic: users ----------
+/** Topic bodies share a three-section shape: Database totals → DB breakdowns →
+ *  Analytics events. Each section is a uniformly-formatted 2-col grid. */
 
 function usersTopic(payload: ReportPayload, ctx: RenderContext): Block[] {
   const out: Block[] = [];
 
-  const dbGrid = dbCells(payload, ctx, [
-    'newUsers',
-    'deletedUsers',
-    'partnerAccessGrants',
-    'partnerAccessActivations',
-    'activationRate',
-    'partnerActivationRate',
-  ]);
-  if (dbGrid.length > 0) out.push(...kpiGrid(dbGrid));
-
-  // GA4 overview — analytics supplement; title distinguishes it from DB KPIs above.
-  const gaCells = ga4OverviewCells(payload, ctx);
-  if (gaCells.length > 0) {
-    out.push(...kpiGrid(gaCells, { title: '_Analytics: traffic overview_' }));
-  }
+  out.push(
+    ...dbTotalsGrid(payload, ctx, [
+      'newUsers',
+      'newPartnerUsers',
+      'deletedUsers',
+      'activeUsers',
+      'partnerAccessGrants',
+      'partnerAccessActivations',
+    ]),
+  );
 
   if (!ctx.withDetail) return out;
 
-  appendNarrative(out, [
-    collectBreakdownLines(payload.dbBreakdowns, ctx, [
-      { label: 'New users by partner (DB)', rows: payload.dbBreakdowns?.newUsersByPartner },
-      { label: 'New users by signup language (DB)', rows: payload.dbBreakdowns?.newUsersByLanguage },
-      { label: 'Partner-access grants by partner (DB)', rows: payload.dbBreakdowns?.partnerAccessGrantsByPartner },
-      { label: 'Partner-access activations by partner (DB)', rows: payload.dbBreakdowns?.partnerAccessActivationsByPartner },
+  out.push(
+    ...namedBreakdownsBlocks(ctx, [
+      { label: 'New users by partner', rows: payload.dbBreakdowns?.newUsersByPartner },
+      { label: 'New users by signup language', rows: payload.dbBreakdowns?.newUsersByLanguage },
+      {
+        label: 'Partner-access grants by partner',
+        rows: payload.dbBreakdowns?.partnerAccessGrantsByPartner,
+      },
+      {
+        label: 'Partner-access activations by partner',
+        rows: payload.dbBreakdowns?.partnerAccessActivationsByPartner,
+      },
     ]),
-    funnelLinesFor(payload.ga4, ['Signup flow', 'Partner code flow', 'Login funnel']),
-    renderTopicEventGroups('users', payload.ga4, ctx),
-  ]);
+    ...analyticsEventsBlocks('users', payload.ga4, ctx),
+  );
 
   return out;
 }
-
-// ---------- topic: courses ----------
 
 function coursesTopic(payload: ReportPayload, ctx: RenderContext): Block[] {
   const out: Block[] = [];
 
-  const dbGrid = dbCells(payload, ctx, [
-    'coursesStarted',
-    'coursesCompleted',
-    'sessionsStarted',
-    'sessionsCompleted',
-    'sessionFeedbackSubmitted',
-  ]);
-  if (dbGrid.length > 0) out.push(...kpiGrid(dbGrid));
+  out.push(
+    ...dbTotalsGrid(payload, ctx, [
+      'coursesStarted',
+      'coursesCompleted',
+      'sessionsStarted',
+      'sessionsCompleted',
+      'sessionFeedbackSubmitted',
+    ]),
+  );
 
   if (!ctx.withDetail) return out;
 
-  appendNarrative(out, [
-    renderCourseBreakdowns(payload.dbBreakdowns, ctx.uncapped),
-    collectBreakdownLines(payload.dbBreakdowns, ctx, [
-      { label: 'Session feedback by tag (DB)', rows: payload.dbBreakdowns?.sessionFeedbackByTag },
-    ]),
-    funnelLinesFor(payload.ga4, ['Course flow', 'Session flow']),
-    renderTopicEventGroups('courses', payload.ga4, ctx),
-  ]);
+  out.push(
+    ...courseBreakdownBlocks(payload.dbBreakdowns, ctx),
+    ...condensedTagBlocks('Session feedback by tag', payload.dbBreakdowns?.sessionFeedbackByTag),
+    ...analyticsEventsBlocks('courses', payload.ga4, ctx),
+  );
 
   return out;
 }
-
-// ---------- topic: resources (mirrors courses topic structure) ----------
 
 function resourcesTopic(payload: ReportPayload, ctx: RenderContext): Block[] {
   const out: Block[] = [];
 
-  const dbGrid = dbCells(payload, ctx, [
-    'resourcesStarted',
-    'resourcesCompleted',
-    'resourceFeedbackSubmitted',
-  ]);
-  if (dbGrid.length > 0) out.push(...kpiGrid(dbGrid));
+  out.push(
+    ...dbTotalsGrid(payload, ctx, [
+      'resourcesStarted',
+      'resourcesCompleted',
+      'resourceFeedbackSubmitted',
+    ]),
+  );
 
   if (!ctx.withDetail) return out;
 
-  appendNarrative(out, [
-    renderResourceBreakdowns(payload.dbBreakdowns, ctx.uncapped),
-    collectBreakdownLines(payload.dbBreakdowns, ctx, [
-      { label: 'Resource feedback by tag (DB)', rows: payload.dbBreakdowns?.resourceFeedbackByTag },
-    ]),
-    funnelLinesFor(payload.ga4, [
-      'Resource short video flow',
-      'Resource single video flow',
-      'Resource conversation flow',
-    ]),
-    renderTopicEventGroups('resources', payload.ga4, ctx),
-  ]);
+  out.push(
+    ...resourceBreakdownBlocks(payload.dbBreakdowns, ctx),
+    ...condensedTagBlocks('Resource feedback by tag', payload.dbBreakdowns?.resourceFeedbackByTag),
+    ...analyticsEventsBlocks('resources', payload.ga4, ctx),
+  );
 
   return out;
 }
-
-// ---------- topic: therapy ----------
 
 function therapyTopic(payload: ReportPayload, ctx: RenderContext): Block[] {
   const out: Block[] = [];
 
-  const dbGrid = dbCells(payload, ctx, [
-    'therapyBookingsBooked',
-    'therapyBookingsCancelled',
-    'therapyBookingsScheduledForPeriod',
-  ]);
-  if (dbGrid.length > 0) out.push(...kpiGrid(dbGrid));
+  out.push(
+    ...dbTotalsGrid(payload, ctx, [
+      'therapyBookingsBooked',
+      'therapySessionsCompleted',
+      'therapyBookingsCancelled',
+    ]),
+  );
 
   if (!ctx.withDetail) return out;
 
-  appendNarrative(out, [
-    collectBreakdownLines(payload.dbBreakdowns, ctx, [
-      { label: 'Therapy by therapist (DB)', rows: payload.dbBreakdowns?.therapyByTherapist },
-      { label: 'Therapy by partner (DB)', rows: payload.dbBreakdowns?.therapyByPartner },
+  out.push(
+    ...namedBreakdownsBlocks(ctx, [
+      { label: 'Therapy by therapist', rows: payload.dbBreakdowns?.therapyByTherapist },
+      { label: 'Therapy by partner', rows: payload.dbBreakdowns?.therapyByPartner },
     ]),
-    funnelLinesFor(payload.ga4, ['Therapy flow', 'Therapy cancellation flow']),
-    renderTopicEventGroups('therapy', payload.ga4, ctx),
-  ]);
+    ...analyticsEventsBlocks('therapy', payload.ga4, ctx),
+  );
 
   return out;
 }
-
-// ---------- topic: messaging ----------
-
-function messagingTopic(payload: ReportPayload, ctx: RenderContext): Block[] {
-  // No DB grid — chat send/compose isn't persisted by Crisp.
-  if (!ctx.withDetail) return [];
-  return renderTopicEventGroups('messaging', payload.ga4, ctx);
-}
-
-// ---------- topic: communications ----------
 
 function communicationsTopic(payload: ReportPayload, ctx: RenderContext): Block[] {
   const out: Block[] = [];
 
-  const dbGrid = dbCells(payload, ctx, [
-    'whatsappSubscribed',
-    'whatsappUnsubscribed',
-  ]);
-  if (dbGrid.length > 0) out.push(...kpiGrid(dbGrid));
+  // DB-authoritative chat counts (event_log) lead — GA chat events follow as
+  // supplementary engagement signal under analytics events.
+  out.push(
+    ...dbTotalsGrid(payload, ctx, [
+      'messagesSent',
+      'messagesReceived',
+      'whatsappSubscribed',
+      'whatsappUnsubscribed',
+    ]),
+  );
 
   if (!ctx.withDetail) return out;
 
-  appendNarrative(out, [
-    funnelLinesFor(payload.ga4, ['WhatsApp subscribe flow']),
-    renderTopicEventGroups('communications', payload.ga4, ctx),
-  ]);
+  out.push(...analyticsEventsBlocks('communications', payload.ga4, ctx));
 
   return out;
 }
-
-// ---------- topic: app ----------
 
 function appTopic(payload: ReportPayload, ctx: RenderContext): Block[] {
   if (!ctx.withDetail) return [];
   const out: Block[] = [];
 
-  // Top pages / sources / device / country render here as traffic-shape signals.
-  appendNarrative(out, [
-    funnelLinesFor(payload.ga4, ['PWA install flow']),
-    renderTopicEventGroups('app', payload.ga4, ctx),
-    renderGlobalBreakdownsInline(payload.ga4),
-  ]);
+  // GA traffic shape (active users, new users, sessions, pageviews). DB-side
+  // user cohort metrics live under the Users topic.
+  const gaCells = ga4OverviewCells(payload, ctx);
+  if (gaCells.length > 0) {
+    out.push(...kpiGrid(gaCells, { title: '*Analytics traffic*' }));
+  }
+
+  out.push(
+    ...analyticsEventsBlocks('app', payload.ga4, ctx),
+    ...globalBreakdownsBlocks(payload.ga4),
+  );
 
   return out;
 }
 
-// ---------- topic: navigation ----------
-
 function navigationTopic(payload: ReportPayload, ctx: RenderContext): Block[] {
   if (!ctx.withDetail) return [];
-  return renderTopicEventGroups('navigation', payload.ga4, ctx);
+  return analyticsEventsBlocks('navigation', payload.ga4, ctx);
 }
-
-// ---------- topic: promo ----------
-
-function promoTopic(payload: ReportPayload, ctx: RenderContext): Block[] {
-  if (!ctx.withDetail) return [];
-  return renderTopicEventGroups('promo', payload.ga4, ctx);
-}
-
-// ---------- topic: admin ----------
 
 function adminTopic(payload: ReportPayload, ctx: RenderContext): Block[] {
   if (!ctx.withDetail) return [];
-  return renderTopicEventGroups('admin', payload.ga4, ctx);
+  return analyticsEventsBlocks('admin', payload.ga4, ctx);
 }
-
-// ---------- topic: errors ----------
 
 function errorsTopic(payload: ReportPayload, ctx: RenderContext): Block[] {
-  // Empty-body case is handled by renderTopic with a placeholder.
-  return renderTopicEventGroups('errors', payload.ga4, ctx);
+  return analyticsEventsBlocks('errors', payload.ga4, ctx);
 }
 
-/** Merge narrative parts (breakdowns + funnels as strings, event-group grids as
- *  Block[]) into the output. Consecutive strings are joined into one mrkdwn
- *  block; Block[] arrays are appended directly. */
-function appendNarrative(out: Block[], parts: Array<string | Block[] | null>): void {
-  const textBuf: string[] = [];
+/** DB period counts grid. Untitled — DB totals lead every topic body, so
+ *  position alone communicates the data source. */
+function dbTotalsGrid(
+  payload: ReportPayload,
+  ctx: RenderContext,
+  keys: ReadonlyArray<keyof DbMetrics>,
+): Block[] {
+  const cells = dbCells(payload, ctx, keys);
+  if (cells.length === 0) return [];
+  return kpiGrid(cells);
+}
 
-  const flushText = () => {
-    if (textBuf.length > 0) {
-      out.push(mrkdwnSection(textBuf.join('\n\n')));
-      textBuf.length = 0;
-    }
-  };
+/** Per-topic Analytics events grid. Flattens every EventGroup.lines for the
+ *  topic into one 2-col grid (single cell per EventLine). Drops zero-only
+ *  lines so a clean period yields a slim section. Single-event lines pass a
+ *  baseline through to the standard cell renderer; multi-event composite
+ *  lines fold the line-total delta into their composite string. */
+function analyticsEventsBlocks(topic: EventTopic, ga4: Ga4Metrics, ctx: RenderContext): Block[] {
+  if ('unavailable' in ga4.events) return [];
+  const counts = indexEventsByName(ga4.events);
+  const eventBaselines = ctx.baseline?.ga4Events ?? {};
+  const breakdownIdx = indexEventBreakdowns(ga4.eventBreakdowns);
+  const groups = EVENT_GROUPS.filter((g) => g.topic === topic);
+  const cells: GridCell[] = [];
 
-  for (const part of parts) {
-    if (!part || (Array.isArray(part) && part.length === 0)) continue;
-    if (typeof part === 'string') {
-      textBuf.push(part);
-    } else {
-      flushText();
-      out.push(...part);
+  for (const group of groups) {
+    for (const line of group.lines) {
+      const lineCounts = line.items.map((item) => ({
+        label: item.label,
+        event: item.event,
+        count: counts.get(item.event) ?? 0,
+      }));
+      const nonZero = lineCounts.filter((i) => i.count > 0);
+      if (nonZero.length === 0) continue;
+
+      const baseline = sumLineBaseline(
+        line.items.map((i) => i.event),
+        eventBaselines,
+      );
+      const subline = buildEventBreakdownSubline(line, breakdownIdx);
+
+      if (nonZero.length === 1 && line.items.length === 1) {
+        cells.push({ label: line.label, value: nonZero[0].count, baseline, subline });
+      } else {
+        const composite = nonZero
+          .map((i) => `${i.label} (${i.count.toLocaleString()})`)
+          .join(' · ');
+        const lineCurrent = nonZero.reduce((s, i) => s + i.count, 0);
+        const delta = formatDelta(lineCurrent, baseline, 0, ctx.deltaBaselineFloor);
+        const arrowValue = delta ? `${composite}  ·  ${delta}` : composite;
+        cells.push({
+          label: line.label,
+          value: 0,
+          _arrowValue: arrowValue,
+          subline,
+        } as GridCell & { _arrowValue: string });
+      }
     }
   }
-  flushText();
+
+  if (cells.length === 0) return [];
+  return gridWithHeader('*Analytics events*', cells);
 }
 
-// ---------- header / context / divider ----------
+/** Look up the GA4 custom-dim breakdown for an event line and format it as a
+ *  compact `↳ <paramLabel>: A (n) · B (n) · C (n)` sub-row. Top 3 only —
+ *  more makes the grid cell tall enough to break the two-column layout.
+ *  Returns undefined when the line has no breakdown config or GA returned
+ *  zero rows. */
+function buildEventBreakdownSubline(
+  line: EventLine,
+  idx: Map<string, Ga4EventBreakdown>,
+): string | undefined {
+  if (!line.breakdownParam || !line.paramLabel) return undefined;
+  const bd = idx.get(`${line.label}::${line.breakdownParam}`);
+  if (!bd || bd.rows.length === 0) return undefined;
+  const top = bd.rows
+    .slice(0, 3)
+    .map((r) => `${truncate(r.value || '(unknown)', 20)} (${r.eventCount.toLocaleString()})`)
+    .join(' · ');
+  return `↳ ${line.paramLabel}: ${top}`;
+}
+
+function indexEventBreakdowns(breakdowns: Ga4EventBreakdown[]): Map<string, Ga4EventBreakdown> {
+  const m = new Map<string, Ga4EventBreakdown>();
+  for (const b of breakdowns) m.set(`${b.lineLabel}::${b.paramApiName}`, b);
+  return m;
+}
+
+/** Sum per-event baselines into a single line-level baseline. By linearity
+ *  of expectation, sum(means) = mean(sums), so the line delta against the
+ *  summed baseline matches the conceptual "this line vs. its historical
+ *  total". Events without a baseline contribute nothing. Returns undefined
+ *  if no contributing event had a baseline. */
+function sumLineBaseline(
+  events: string[],
+  byEvent: Record<string, BaselineStat>,
+): BaselineStat | undefined {
+  let mean = 0;
+  let sampleSize = 0;
+  let any = false;
+  for (const event of events) {
+    const b = byEvent[event];
+    if (!b) continue;
+    mean += b.mean;
+    sampleSize = Math.max(sampleSize, b.sampleSize);
+    any = true;
+  }
+  if (!any) return undefined;
+  // stdDev isn't used by formatDelta (only by anomaly scoring, which operates
+  // on per-event baselines directly). Set to a non-zero sentinel so any
+  // future flat-baseline guards don't misfire on summed lines.
+  return { mean, stdDev: 1, sampleSize };
+}
 
 function headerBlock(payload: ReportPayload): Block {
   const { period, window } = payload;
-  const suffix =
-    period === 'daily' ? `(${window.timezone})` : `(${formatDateRange(window)})`;
+  const suffix = period === 'daily' ? `(${window.timezone})` : `(${formatDateRange(window)})`;
   const title = `Bloom ${period} digest — ${window.label} ${suffix}`;
   return { type: 'header', text: { type: 'plain_text', text: title } };
 }
 
 function contextBlock(payload: ReportPayload): Block {
   const { trigger, runId, baseline } = payload;
+  const baselineDesc = baseline
+    ? baseline.sampleSize === 1
+      ? 'baseline: vs prior period'
+      : `baseline: last ${baseline.sampleSize} periods`
+    : null;
   const pieces = [
     `trigger: *${trigger}*`,
     `tz: ${payload.window.timezone}`,
-    baseline ? `baseline: last ${baseline.sampleSize} periods` : null,
+    baselineDesc,
     runId ? `run: ${runId}` : null,
   ].filter(Boolean);
   return {
     type: 'context',
-    elements: [
-      { type: 'mrkdwn', text: pieces.join(' · ') },
-      {
-        type: 'mrkdwn',
-        text: '_DB = source of truth · Analytics events supplement where the DB has no equivalent_',
-      },
-    ],
+    elements: [{ type: 'mrkdwn', text: pieces.join(' · ') }],
   };
 }
 
@@ -461,7 +555,16 @@ function topicHeader(topic: EventTopic): Block {
   return mrkdwnSection(`*${emoji} ${title}*`);
 }
 
-// ---------- GA unavailable banner ----------
+/** Daily-only lighter title block. Keeps the date + tz inline so the context
+ *  block underneath can drop the timezone repeat. Uses a section mrkdwn block
+ *  instead of `header` so the visual weight is closer to a status line than
+ *  a digest title — daily then reads as a "snapshot" against the heavier
+ *  weekly+ digests in the same Slack channel. */
+function dailyTitleBlock(payload: ReportPayload): Block {
+  return mrkdwnSection(
+    `*Bloom daily snapshot* — ${payload.window.label} (${payload.window.timezone})`,
+  );
+}
 
 function gaUnavailableBanner(payload: ReportPayload): Block | null {
   const overviewOut = 'unavailable' in payload.ga4.overview;
@@ -478,122 +581,105 @@ function gaUnavailableBanner(payload: ReportPayload): Block | null {
     elements: [
       {
         type: 'mrkdwn',
-        text: `:warning: _Analytics events unavailable this period — ${reason}. DB counts below are unaffected._`,
+        text: `:warning: _Analytics events unavailable this period — ${reason}. Database totals are unaffected._`,
       },
     ],
   };
 }
 
-// ---------- headline (top-of-report scoreboard) ----------
-
 function headlineSection(payload: ReportPayload, ctx: RenderContext): Block[] {
-  const cells: GridCell[] = [];
-  const dbAvailable = !('unavailable' in payload.db);
+  const db = payload.db;
+  const dbCell = (key: keyof DbMetrics): GridCell => ({
+    label: DB_METRIC_LABELS[key],
+    value: db[key],
+    baseline: ctx.baseline?.db[key],
+  });
 
-  if (dbAvailable) {
-    const db = payload.db;
-    const dbCell = (key: keyof DbMetrics): GridCell => ({
-      label: DB_METRIC_LABELS[key],
-      value: db[key],
-      baseline: ctx.baseline?.db[key],
-    });
-    // DB metrics fill the grid first — most reliable data.
-    cells.push(dbCell('newUsers'));
-    cells.push(dbCell('coursesStarted'));
-    cells.push(dbCell('coursesCompleted'));
-    cells.push(dbCell('sessionsStarted'));
-    cells.push(dbCell('sessionsCompleted'));
-    cells.push(dbCell('resourcesStarted'));
-    cells.push(dbCell('resourcesCompleted'));
-    cells.push(dbCell('therapyBookingsBooked'));
-    cells.push(dbCell('therapyBookingsScheduledForPeriod'));
-    // GA active users appended last — supplements the DB count, not a replacement.
-    if (!('unavailable' in payload.ga4.overview)) {
-      cells.push({
-        label: GA4_OVERVIEW_LABELS.activeUsers,
-        value: payload.ga4.overview.activeUsers,
-        baseline: ctx.baseline?.ga4Overview.activeUsers,
-      });
-    }
-  } else if (!('unavailable' in payload.ga4.overview)) {
-    // DB unavailable — fall back to GA overview only.
-    const ov = payload.ga4.overview;
-    cells.push(
-      ...(Object.keys(GA4_OVERVIEW_LABELS) as Array<keyof Ga4OverviewMetrics>).map(
-        (key): GridCell => ({
-          label: GA4_OVERVIEW_LABELS[key],
-          value: ov[key],
-          baseline: ctx.baseline?.ga4Overview[key],
-          decimals: key === 'averageSessionDuration' ? 1 : 0,
-        }),
-      ),
-    );
-  }
+  // Daily trims to a 6-cell scoreboard so the snapshot stays short on a
+  // low-traffic site. Weekly+ keeps the wider acquisition / retention /
+  // engagement / chat surface — its denser format is the whole point of the
+  // longer-cadence digest. Both bounded by Slack's 10 fields-per-section cap.
+  const keys: ReadonlyArray<keyof DbMetrics> =
+    ctx.period === 'daily'
+      ? DAILY_HEADLINE_KEYS
+      : [
+          'newUsers',
+          'newPartnerUsers',
+          'deletedUsers',
+          'activeUsers',
+          'coursesStarted',
+          'sessionsStarted',
+          'resourcesStarted',
+          'therapySessionsCompleted',
+          'messagesSent',
+          'whatsappSubscribed',
+        ];
+  const cells = keys.map(dbCell);
 
-  if (cells.length === 0) return [];
-
-  const heading = dbAvailable
-    ? '*:sparkles: Headline* _(top-line across the period)_'
-    : '*:bar_chart: Analytics snapshot* _(DB metrics unavailable — analytics only)_';
-
-  return [mrkdwnSection(heading), ...kpiGrid(cells)];
+  return [...kpiGrid(cells, { deltaBaselineFloor: ctx.deltaBaselineFloor })];
 }
 
-// ---------- anomalies ----------
-
-function anomaliesSection(
-  anomalies: Anomaly[],
-  baseline: ReportBaseline | undefined,
-): Block[] {
-  const lines = anomalies.map((a) => {
+function anomaliesSection(anomalies: Anomaly[], baseline: ReportBaseline | undefined): Block[] {
+  // Synthetic baselines (sampleSize === 1) say "prior" instead of "avg" so
+  // the wording matches the cell-level deltas everywhere else.
+  const refWord = baseline?.sampleSize === 1 ? 'prior' : 'avg';
+  const cells: GridCell[] = anomalies.map((a) => {
+    const source = a.source === 'db' ? 'DB' : 'GA';
+    // Outage-watchlist sentinel: ReportingService emits sigma === 0 for
+    // "today=0 but normally non-zero" anomalies. Render as a plain-English
+    // outage hint rather than a percent delta — `↓ 100% vs avg N` would be
+    // technically correct but lose the "tracking down?" intent.
+    if (a.sigma === 0 && a.current === 0) {
+      const expected = formatNumber(a.mean);
+      return {
+        label: `${a.label} (${source})`,
+        value: a.current,
+        _arrowValue: `0  ·  expected ~${expected} — tracking down?`,
+      } as GridCell & { _arrowValue: string };
+    }
     const arrow = a.sigma > 0 ? '↑' : '↓';
-    const qualitative = a.sigma > 0 ? 'unusually high' : 'unusually low';
-    const avg = formatNumber(a.mean);
-    const sourceLabel = a.source === 'db' ? 'DB' : 'GA';
-    // mean === 0 → percent is undefined; fall back to z-score.
+    const ref = formatNumber(a.mean);
     const delta =
       a.mean === 0
-        ? `${arrow} vs avg 0 (z=${a.sigma.toFixed(1)})`
-        : `${arrow} ${Math.abs(Math.round(((a.current - a.mean) / a.mean) * 100))}% vs avg ${avg}`;
-    return `• *${a.label}* (${sourceLabel}) — ${a.current.toLocaleString()} (${delta}, ${qualitative})`;
+        ? `${arrow} vs ${refWord} 0 (z=${a.sigma.toFixed(1)})`
+        : `${arrow} ${Math.abs(Math.round(((a.current - a.mean) / a.mean) * 100))}% vs ${refWord} ${ref}`;
+    return {
+      label: `${a.label} (${source})`,
+      value: a.current,
+      _arrowValue: `${a.current.toLocaleString()}  ·  ${delta}`,
+    } as GridCell & { _arrowValue: string };
   });
   const header = baseline
-    ? `*:rotating_light: Worth looking at* _(vs last ${baseline.sampleSize}-period baseline)_`
-    : '*:rotating_light: Worth looking at*';
-  return [mrkdwnSection(`${header}\n${lines.join('\n')}`)];
+    ? baseline.sampleSize === 1
+      ? '*:mag: Worth looking at* _(vs prior period)_'
+      : `*:mag: Worth looking at* _(vs last ${baseline.sampleSize}-period baseline)_`
+    : '*:mag: Worth looking at*';
+  return gridWithHeader(header, cells);
 }
-
-// ---------- Bloom totals ----------
-
-function totalsSection(totals: DbTotals): Block[] {
-  // Cumulative counters, not period rates — no baseline applies.
-  const cells: GridCell[] = (Object.keys(DB_TOTALS_LABELS) as Array<keyof DbTotals>).map(
-    (key) => ({ label: DB_TOTALS_LABELS[key], value: totals[key] }),
-  );
-  return [
-    mrkdwnSection('*:cherry_blossom: Bloom totals* _(state of Bloom — cumulative)_'),
-    ...kpiGrid(cells, { suppressDelta: true }),
-  ];
-}
-
-// ---------- KPI grid renderer ----------
 
 interface KpiGridOptions {
-  /** Drop the third `delta` line — used for cumulative-snapshot grids. */
   suppressDelta?: boolean;
   /** Optional mrkdwn text rendered above the first row (text + fields in one block). */
   title?: string;
+  /** Per-period delta floor; below this baseline mean, the `↑/↓ X%` text is
+   *  suppressed. Defaults to the strict weekly+ floor when omitted. */
+  deltaBaselineFloor?: number;
 }
+
+/** Weekly+ default — kept here as a fallback so existing callers that don't
+ *  thread a per-period floor through KpiGridOptions still get sensible
+ *  noise suppression. Daily passes its own (looser) floor explicitly. */
+const DEFAULT_DELTA_BASELINE_FLOOR = 5;
 
 function kpiGrid(cells: GridCell[], opts: KpiGridOptions = {}): Block[] {
   const blocks: Block[] = [];
+  const floor = opts.deltaBaselineFloor ?? DEFAULT_DELTA_BASELINE_FLOOR;
   for (let i = 0; i < cells.length; i += FIELDS_PER_SECTION) {
     const slice = cells.slice(i, i + FIELDS_PER_SECTION);
     const fields = slice.map((cell) => ({
       type: 'mrkdwn',
-      text: formatGridCell(cell, opts.suppressDelta === true),
+      text: formatGridCell(cell, opts.suppressDelta === true, floor),
     }));
-    // First chunk: attach title as section text if provided (saves an extra block).
     if (i === 0 && opts.title) {
       blocks.push({ type: 'section', text: { type: 'mrkdwn', text: opts.title }, fields });
     } else {
@@ -603,37 +689,45 @@ function kpiGrid(cells: GridCell[], opts: KpiGridOptions = {}): Block[] {
   return blocks;
 }
 
-function formatGridCell(cell: GridCell, suppressDelta: boolean): string {
+function formatGridCell(cell: GridCell, suppressDelta: boolean, floor: number): string {
+  if (cell.value === null) return withSubline(`*${cell.label}*\nN/A`, cell.subline);
   const value = formatNumber(cell.value, cell.decimals ?? 0);
-  if (suppressDelta) return `*${cell.label}*\n${value}`;
-  const delta = formatDelta(cell.value, cell.baseline);
-  // Skip the third line entirely when no baseline exists — keeps cells at 2
-  // rows and avoids `_no baseline_` noise on early runs and on periods that
-  // don't yet have 3+ priors.
-  return delta ? `*${cell.label}*\n${value}\n${delta}` : `*${cell.label}*\n${value}`;
+  if (suppressDelta) return withSubline(`*${cell.label}*\n${value}`, cell.subline);
+  const delta = formatDelta(cell.value, cell.baseline, cell.decimals ?? 0, floor);
+  const head = delta ? `*${cell.label}*\n${value}  ·  ${delta}` : `*${cell.label}*\n${value}`;
+  return withSubline(head, cell.subline);
 }
 
-/** Returns the delta line or `null` if there's no baseline to compare against. */
-function formatDelta(current: number, baseline: BaselineStat | undefined): string | null {
+function withSubline(text: string, subline: string | undefined): string {
+  return subline ? `${text}\n${subline}` : text;
+}
+
+function formatDelta(
+  current: number,
+  baseline: BaselineStat | undefined,
+  decimals: number,
+  floor: number,
+): string | null {
   if (!baseline) return null;
-  const avg = formatNumber(baseline.mean, baseline.mean % 1 === 0 ? 0 : 1);
-  if (baseline.stdDev === 0 || baseline.mean === 0) {
-    return `avg ${avg}`;
-  }
+  // Below the small-counts floor: %-swings are dominated by noise. Drop the
+  // delta entirely rather than show a misleading number.
+  if (baseline.mean < floor) return null;
+  // Render the baseline mean at the same precision as the cell value so the
+  // two numbers on the same line never disagree about how many decimals
+  // matter for this metric.
+  const ref = formatNumber(baseline.mean, decimals);
+  const refWord = baseline.sampleSize === 1 ? 'prior' : 'avg';
   const pct = Math.round(((current - baseline.mean) / baseline.mean) * 100);
-  if (pct === 0) return `avg ${avg}`;
+  if (pct === 0) return `${refWord} ${ref}`;
   const arrow = pct > 0 ? '↑' : '↓';
-  return `${arrow} ${Math.abs(pct)}% vs avg ${avg}`;
+  return `${arrow} ${Math.abs(pct)}% vs ${refWord} ${ref}`;
 }
-
-// ---------- DB cell helpers ----------
 
 function dbCells(
   payload: ReportPayload,
   ctx: RenderContext,
   keys: ReadonlyArray<keyof DbMetrics>,
 ): GridCell[] {
-  if ('unavailable' in payload.db) return [];
   const db = payload.db;
   return keys
     .map(
@@ -662,299 +756,164 @@ function ga4OverviewCells(payload: ReportPayload, ctx: RenderContext): GridCell[
 }
 
 /** A cell is "flatline zero" when current is 0 AND every baselined prior was
- *  also 0 — the metric has never had activity. Hiding removes permanent noise
- *  without suppressing a genuine zero against a non-zero baseline.
- *  Missing baseline → show the cell (can't tell flatline from new metric). */
+ *  also 0 — never had activity. Hides permanent noise without suppressing a
+ *  genuine zero against a non-zero baseline. */
 function isFlatlineZero(cell: GridCell): boolean {
   if (cell.value !== 0) return false;
   const b = cell.baseline;
   return b !== undefined && b.mean === 0 && b.stdDev === 0;
 }
 
-// ---------- breakdowns: course + resource (existing nested format) ----------
+function courseBreakdownBlocks(b: DbBreakdowns | undefined, ctx: RenderContext): Block[] {
+  if (!b || b.courses.length === 0) return [];
+  const cap = ctx.uncapped ? Infinity : CHILDREN_CAP_PER_GROUP;
 
-function renderCourseBreakdowns(
-  b: DbBreakdowns | undefined,
-  uncapped: boolean,
-): string | null {
-  if (!b || b.courses.length === 0) return null;
-  const cap = uncapped ? Infinity : CHILDREN_CAP_PER_GROUP;
-  const lines: string[] = ['*Courses & sessions (DB)*'];
-  for (const course of b.courses) {
-    lines.push(`• ${renderCourseHeader(course)}`);
-    if (course.sessions.length > 0) {
-      lines.push(`    ↳ ${renderStartedCompletedInline(course.sessions, cap)}`);
+  const courseRows = b.courses
+    .filter((c) => c.coursesStarted > 0 || c.coursesCompleted > 0)
+    .map((c) => ({
+      name: stripSubtitle(c.name),
+      started: c.coursesStarted,
+      completed: c.coursesCompleted,
+    }));
+
+  const sessionRows: Array<{ name: string; started: number; completed: number }> = [];
+  for (const c of b.courses) {
+    const courseName = stripSubtitle(c.name);
+    for (const s of c.sessions) {
+      if (s.started === 0 && s.completed === 0) continue;
+      sessionRows.push({
+        name: `${courseName}: ${stripSubtitle(s.name)}`,
+        started: s.started,
+        completed: s.completed,
+      });
     }
   }
-  return lines.join('\n');
+  sessionRows.sort(
+    (a, b) => b.completed - a.completed || b.started - a.started || a.name.localeCompare(b.name),
+  );
+
+  const out: Block[] = [];
+  if (courseRows.length > 0) {
+    out.push(...startedCompletedGrid('*Courses*', courseRows, cap));
+  }
+  if (sessionRows.length > 0) {
+    out.push(...startedCompletedGrid('*Sessions*', sessionRows, cap));
+  }
+  return out;
 }
 
-function renderResourceBreakdowns(
-  b: DbBreakdowns | undefined,
-  uncapped: boolean,
-): string | null {
-  if (!b || b.resources.length === 0) return null;
-  const cap = uncapped ? Infinity : CHILDREN_CAP_PER_GROUP;
-  const lines: string[] = ['*Resources (DB)*'];
+function resourceBreakdownBlocks(b: DbBreakdowns | undefined, ctx: RenderContext): Block[] {
+  if (!b || b.resources.length === 0) return [];
+  const cap = ctx.uncapped ? Infinity : CHILDREN_CAP_PER_GROUP;
+
+  const rows: Array<{ name: string; started: number; completed: number }> = [];
   for (const cat of b.resources) {
-    const label = RESOURCE_CATEGORY_LABELS[cat.category] ?? cat.category;
-    const suffix =
-      cat.resourcesStarted > 0 || cat.resourcesCompleted > 0
-        ? ` — ${cat.resourcesStarted.toLocaleString()} started · ${cat.resourcesCompleted.toLocaleString()} completed`
-        : '';
-    lines.push(`• *${label}*${suffix}`);
-    if (cat.resources.length > 0) {
-      lines.push(`    ↳ ${renderStartedCompletedInline(cat.resources, cap)}`);
+    const catLabel = RESOURCE_CATEGORY_LABELS[cat.category] ?? cat.category;
+    for (const r of cat.resources) {
+      if (r.started === 0 && r.completed === 0) continue;
+      rows.push({
+        name: `${catLabel}: ${stripSubtitle(r.name)}`,
+        started: r.started,
+        completed: r.completed,
+      });
     }
   }
-  return lines.join('\n');
+  rows.sort(
+    (a, b) => b.completed - a.completed || b.started - a.started || a.name.localeCompare(b.name),
+  );
+
+  if (rows.length === 0) return [];
+  return startedCompletedGrid('*Resources*', rows, cap);
 }
 
-function renderCourseHeader(course: DbBreakdowns['courses'][number]): string {
-  // Explicit "N started · N completed" labels — self-describing regardless of
-  // magnitude (completions can exceed starts when prior-period starts land
-  // this period, which reads as a reversed funnel under arrow notation).
-  const pieces: string[] = [];
-  if (course.coursesStarted > 0 || course.coursesCompleted > 0) {
-    pieces.push(
-      `courses: ${course.coursesStarted.toLocaleString()} started · ${course.coursesCompleted.toLocaleString()} completed`,
-    );
-  }
-  if (course.sessionsStarted > 0 || course.sessionsCompleted > 0) {
-    pieces.push(
-      `sessions: ${course.sessionsStarted.toLocaleString()} started · ${course.sessionsCompleted.toLocaleString()} completed`,
-    );
-  }
-  const suffix = pieces.length > 0 ? ` — ${pieces.join(' · ')}` : '';
-  return `*${truncate(course.name || '(unnamed)', 48)}*${suffix}`;
-}
-
-function renderStartedCompletedInline(
-  children: Array<{ name: string; started: number; completed: number }>,
+function startedCompletedGrid(
+  title: string,
+  rows: ReadonlyArray<{ name: string; started: number; completed: number }>,
   cap: number,
-): string {
-  const shown = Number.isFinite(cap) ? children.slice(0, cap) : children;
-  const formatted = shown
-    .map(
-      (c) =>
-        `${truncate(c.name || '(unnamed)', 32)} (${c.started.toLocaleString()} started · ${c.completed.toLocaleString()} completed)`,
-    )
-    .join(' · ');
-  const remaining = children.length - shown.length;
-  return remaining > 0 ? `${formatted} · +${remaining} more` : formatted;
+): Block[] {
+  const shown = Number.isFinite(cap) ? rows.slice(0, cap) : rows;
+  const cells: Array<GridCell & { _arrowValue?: string }> = shown.map((r) => ({
+    // Full names — truncating these to 36 chars was hiding the `: SessionName`
+    // half of session labels under long course titles, making the Sessions
+    // grid visually indistinguishable from the Courses grid above it.
+    label: r.name,
+    value: r.started,
+    _arrowValue: `${r.started.toLocaleString()} started · ${r.completed.toLocaleString()} completed`,
+  }));
+  const remaining = rows.length - shown.length;
+  if (remaining > 0) {
+    cells.push({ label: `+${remaining} more`, value: 0, _arrowValue: '…' });
+  }
+  return gridWithHeader(title, cells);
 }
 
-// ---------- breakdowns: generic { name, count } rows ----------
+function formatBreakdownCellArrow(cell: GridCell): string | null {
+  const arrow = (cell as { _arrowValue?: string })._arrowValue;
+  if (!arrow) return null;
+  return withSubline(`*${cell.label}*\n${arrow}`, cell.subline);
+}
+
+function gridWithHeader(headerText: string, cells: GridCell[]): Block[] {
+  if (cells.length === 0) {
+    return [mrkdwnSection(headerText)];
+  }
+  const blocks: Block[] = [];
+  for (let i = 0; i < cells.length; i += FIELDS_PER_SECTION) {
+    const slice = cells.slice(i, i + FIELDS_PER_SECTION);
+    const fields = slice.map((cell) => ({
+      type: 'mrkdwn',
+      // Suppress-delta path — floor is unused but the formatter takes one.
+      text:
+        formatBreakdownCellArrow(cell) ?? formatGridCell(cell, true, DEFAULT_DELTA_BASELINE_FLOOR),
+    }));
+    blocks.push(
+      i === 0
+        ? { type: 'section', text: { type: 'mrkdwn', text: headerText }, fields }
+        : { type: 'section', fields },
+    );
+  }
+  return blocks;
+}
 
 interface BreakdownSpec {
   label: string;
   rows: DbNamedCount[] | undefined;
 }
 
-/** Joins multiple `*Breakdowns*`-style lines into a single section block.
- *  Returns null if every row list is empty/undefined. */
-function collectBreakdownLines(
-  _breakdowns: DbBreakdowns | undefined,
-  ctx: RenderContext,
-  specs: BreakdownSpec[],
-): string | null {
+/** Render each spec as a single condensed line: `*Label* name (n) · name (n) · …`.
+ *  The named-count rows here (partner, language, therapist) all have short
+ *  values, so a one-line `tag (n)` chain is denser AND more readable than
+ *  the previous one-cell-per-row grid. Matches the format used by
+ *  `condensedTagBlocks` so the Users & accounts / Therapy sections feel
+ *  consistent with the analytics-events composite lines elsewhere. */
+function namedBreakdownsBlocks(ctx: RenderContext, specs: BreakdownSpec[]): Block[] {
   const cap = ctx.uncapped ? Infinity : CHILDREN_CAP_PER_GROUP;
-  const lines: string[] = ['*Breakdowns*'];
-  let anyRows = false;
+  const out: Block[] = [];
   for (const spec of specs) {
     if (!spec.rows || spec.rows.length === 0) continue;
-    anyRows = true;
-    lines.push(`• ${spec.label}: ${renderNamedCountInline(spec.rows, cap)}`);
-  }
-  return anyRows ? lines.join('\n') : null;
-}
-
-function renderNamedCountInline(rows: DbNamedCount[], cap: number): string {
-  const shown = Number.isFinite(cap) ? rows.slice(0, cap) : rows;
-  const formatted = shown
-    .map((r) => `${truncate(r.name || '(unknown)', 32)} (${r.count.toLocaleString()})`)
-    .join(' · ');
-  const remaining = rows.length - shown.length;
-  return remaining > 0 ? `${formatted} · +${remaining} more` : formatted;
-}
-
-// ---------- funnels (per-topic) ----------
-
-function funnelLinesFor(
-  ga4: Ga4Metrics,
-  funnelLabels: string[],
-  heading = '*Flows (Analytics events)*',
-): string | null {
-  if ('unavailable' in ga4.events) return null;
-  const counts = indexEventsByName(ga4.events);
-  const lines: string[] = [];
-  for (const label of funnelLabels) {
-    const funnel = FUNNELS.find((f) => f.label === label);
-    if (!funnel) continue;
-    const first = counts.get(funnel.steps[0].event) ?? 0;
-    if (first === 0) continue;
-
-    const parts = funnel.steps.map((step, i) => {
-      const count = counts.get(step.event) ?? 0;
-      if (i === 0) return `${step.label} ${count.toLocaleString()}`;
-      const pct = Math.round((count / first) * 100);
-      return `${step.label} ${count.toLocaleString()} (${pct}%)`;
-    });
-    lines.push(`• *${funnel.label}* — ${parts.join(' → ')}`);
-  }
-  if (lines.length === 0) return null;
-  return `${heading}\n${lines.join('\n')}`;
-}
-
-// ---------- per-topic GA event detail (grid format) ----------
-
-/** Renders an EventGroup as a section block with `text` (group title) + `fields`
- *  (one field per EventLine). Keeps each group to 1–2 blocks vs ~N line blocks.
- *
- *  Non-error groups are suppressed when every event in the group fired zero
- *  times — this stops all-zero grids from bloating block count on quiet periods.
- *  errorsOnly groups already skip individual zero lines, so the group renders
- *  only when an error actually occurred. */
-function renderGroupAsGrid(
-  group: EventGroup,
-  counts: Map<string, number>,
-  lineBreakdowns: Map<string, Ga4EventBreakdown>,
-): Block[] {
-  const hideZeros = group.errorsOnly === true;
-
-  // Non-error groups: suppress the whole grid when all events are zero.
-  if (!hideZeros) {
-    const hasActivity = group.lines.some((line) =>
-      line.items.some((item) => (counts.get(item.event) ?? 0) > 0),
-    );
-    if (!hasActivity) return [];
-  }
-
-  const fields: Record<string, unknown>[] = [];
-  for (const line of group.lines) {
-    const withCounts = line.items.map((item) => ({
-      label: item.label,
-      count: counts.get(item.event) ?? 0,
-    }));
-    const items = hideZeros ? withCounts.filter((i) => i.count > 0) : withCounts;
-    if (items.length === 0) continue;
-
-    // Value: single count or "item (n) · item (n)" for multi-item lines.
-    let value =
-      line.items.length === 1
-        ? items[0].count.toLocaleString()
-        : items.map((i) => `${i.label} (${i.count.toLocaleString()})`).join(' · ');
-
-    // Inline breakdown sub-row when available (truncated to keep cells compact).
-    if (line.breakdownParam) {
-      const bd = lineBreakdowns.get(`${line.label}::${line.breakdownParam}`);
-      if (bd && bd.rows.length > 0) {
-        const bdText = bd.rows
-          .slice(0, 3)
-          .map((r) => `${truncate(r.value || '(unknown)', 20)} (${r.eventCount.toLocaleString()})`)
-          .join(', ');
-        value += `\n↳ ${bd.paramLabel}: ${bdText}`;
-      }
-    }
-
-    fields.push({ type: 'mrkdwn', text: `*${line.label}*\n${value}` });
-  }
-
-  if (fields.length === 0) return [];
-
-  // Split into section blocks of ≤ FIELDS_PER_SECTION; first block carries the
-  // group title as section `text` so it reads like a KPI grid header — no
-  // extra block needed.
-  const blocks: Block[] = [];
-  for (let i = 0; i < fields.length; i += FIELDS_PER_SECTION) {
-    const slice = fields.slice(i, i + FIELDS_PER_SECTION);
-    blocks.push(
-      i === 0
-        ? { type: 'section', text: { type: 'mrkdwn', text: `_${group.title}_` }, fields: slice }
-        : { type: 'section', fields: slice },
-    );
-  }
-  return blocks;
-}
-
-/** Returns grid blocks for all event groups belonging to `topic`.
- *  Returns [] when GA events are unavailable or the topic has no active groups. */
-function renderTopicEventGroups(
-  topic: EventTopic,
-  ga4: Ga4Metrics,
-  ctx: RenderContext,
-): Block[] {
-  if ('unavailable' in ga4.events) return [];
-  const counts = indexEventsByName(ga4.events);
-  const lineBreakdowns = ctx.withDetail
-    ? indexEventBreakdowns(ga4.eventBreakdowns)
-    : new Map<string, Ga4EventBreakdown>();
-
-  const groups = EVENT_GROUPS.filter((g) => g.topic === topic);
-  const out: Block[] = [];
-  for (const group of groups) {
-    out.push(...renderGroupAsGrid(group, counts, lineBreakdowns));
+    const shown = Number.isFinite(cap) ? spec.rows.slice(0, cap) : spec.rows;
+    const composite = shown
+      .map((r) => `${r.name || '(unknown)'} (${r.count.toLocaleString()})`)
+      .join(' · ');
+    const remaining = spec.rows.length - shown.length;
+    const tail = remaining > 0 ? `  _+${remaining} more_` : '';
+    out.push(mrkdwnSection(`*${spec.label}*\n${composite}${tail}`));
   }
   return out;
 }
 
-// ---------- daily GA key-activity section ----------
-
-/** Focused daily supplement: GA active users + key conversion event counts.
- *  Only renders for `daily` period; no funnel percentages (flat counts are
- *  clearer for a single-day window). Uses a distinct heading so the
- *  `*Flows (Analytics events)*` guard in tests remains valid. */
-function dailyGaSection(payload: ReportPayload): Block[] {
-  const gaEventsOut = 'unavailable' in payload.ga4.events;
-  const gaOverviewOut = 'unavailable' in payload.ga4.overview;
-  if (gaEventsOut && gaOverviewOut) return [];
-
-  const lines: string[] = [];
-
-  if (!gaOverviewOut) {
-    const ov = payload.ga4.overview as Ga4OverviewMetrics;
-    const pieces: string[] = [];
-    if (ov.activeUsers > 0) pieces.push(`Active users *${ov.activeUsers.toLocaleString()}*`);
-    if (ov.sessions > 0) pieces.push(`Sessions *${ov.sessions.toLocaleString()}*`);
-    if (pieces.length > 0) lines.push(pieces.join(' · '));
-  }
-
-  if (!gaEventsOut) {
-    const counts = indexEventsByName(payload.ga4.events as Ga4EventTotal[]);
-
-    const reg = counts.get('REGISTER_SUCCESS') ?? 0;
-    const login = counts.get('LOGIN_SUCCESS') ?? 0;
-    if (reg > 0 || login > 0) {
-      const pieces: string[] = [];
-      if (reg > 0) pieces.push(`Registrations *${reg.toLocaleString()}*`);
-      if (login > 0) pieces.push(`Logins *${login.toLocaleString()}*`);
-      lines.push(`• ${pieces.join(' · ')}`);
-    }
-
-    const sessStart = counts.get('SESSION_STARTED_SUCCESS') ?? 0;
-    const sessComp = counts.get('SESSION_COMPLETE_SUCCESS') ?? 0;
-    if (sessStart > 0 || sessComp > 0) {
-      const pieces: string[] = [];
-      if (sessStart > 0) pieces.push(`Started *${sessStart.toLocaleString()}*`);
-      if (sessComp > 0) pieces.push(`Completed *${sessComp.toLocaleString()}*`);
-      lines.push(`• Sessions — ${pieces.join(' · ')}`);
-    }
-
-    const redeemed = counts.get('VALIDATE_ACCESS_CODE_SUCCESS') ?? 0;
-    if (redeemed > 0) lines.push(`• Partner codes redeemed *${redeemed.toLocaleString()}*`);
-
-    const therapyBooked = counts.get('THERAPY_BOOKING_OPENED') ?? 0;
-    if (therapyBooked > 0) lines.push(`• Therapy bookings opened *${therapyBooked.toLocaleString()}*`);
-
-    const resourceComp =
-      (counts.get('RESOURCE_SHORT_VIDEO_COMPLETE_SUCCESS') ?? 0) +
-      (counts.get('RESOURCE_SINGLE_VIDEO_COMPLETE_SUCCESS') ?? 0) +
-      (counts.get('RESOURCE_CONVERSATION_COMPLETE_SUCCESS') ?? 0);
-    if (resourceComp > 0) lines.push(`• Resources completed *${resourceComp.toLocaleString()}*`);
-  }
-
-  if (lines.length === 0) return [];
-  return [mrkdwnSection(`*:bar_chart: Key activity (Analytics events)*\n${lines.join('\n')}`)];
+/** Tag breakdowns render as a single condensed line — `tag (n) · tag (n) · …`
+ *  on one section block. Keeps high-cardinality lists compact instead of
+ *  inflating to one cell per tag. */
+function condensedTagBlocks(label: string, rows: DbNamedCount[] | undefined): Block[] {
+  if (!rows || rows.length === 0) return [];
+  const shown = rows.slice(0, CONDENSED_NAMED_LIMIT);
+  const composite = shown
+    .map((r) => `${truncate(r.name || '(unknown)', 24)} (${r.count.toLocaleString()})`)
+    .join(' · ');
+  const remaining = rows.length - shown.length;
+  const tail = remaining > 0 ? `  _+${remaining} more_` : '';
+  return [mrkdwnSection(`*${label}*\n${composite}${tail}`)];
 }
 
 function indexEventsByName(events: Ga4EventTotal[]): Map<string, number> {
@@ -963,40 +922,44 @@ function indexEventsByName(events: Ga4EventTotal[]): Map<string, number> {
   return m;
 }
 
-function indexEventBreakdowns(
-  breakdowns: Ga4EventBreakdown[],
-): Map<string, Ga4EventBreakdown> {
-  const m = new Map<string, Ga4EventBreakdown>();
-  for (const b of breakdowns) m.set(`${b.lineLabel}::${b.paramApiName}`, b);
-  return m;
-}
-
-// ---------- global GA4 breakdowns (App topic, inline string) ----------
-
-function renderGlobalBreakdownsInline(ga4: Ga4Metrics): string | null {
+function globalBreakdownsBlocks(ga4: Ga4Metrics): Block[] {
   const populated = ga4.breakdowns.filter((b) => b.rows.length > 0);
-  if (populated.length === 0) return null;
-  return ['*Top traffic breakdowns (Analytics events)*', ...populated.map(renderBreakdown)].join('\n');
+  if (populated.length === 0) return [];
+  const cells: GridCell[] = populated.map((b) => {
+    const composite = b.rows
+      .slice(0, 5)
+      .map((r) => `${truncate(r.value || '(unknown)', 28)} (${r.eventCount.toLocaleString()})`)
+      .join(' · ');
+    return {
+      label: b.displayName,
+      value: 0,
+      _arrowValue: composite,
+    } as GridCell & { _arrowValue: string };
+  });
+  return gridWithHeader('*Top traffic*', cells);
 }
-
-function renderBreakdown(b: Ga4Breakdown): string {
-  const lines = b.rows.map(
-    (r) =>
-      `• ${truncate(r.value, 40)} — ${r.eventCount.toLocaleString()} (${r.totalUsers.toLocaleString()} users)`,
-  );
-  return `_${b.displayName}_\n${lines.join('\n')}`;
-}
-
-// ---------- utilities ----------
 
 function truncate(s: string, max: number): string {
   return s.length <= max ? s : `${s.slice(0, max - 1)}…`;
 }
 
+/** Storyblok titles often carry a `Title: longer subtitle` suffix that bloats
+ *  the breakdown grid without adding signal at the report level. Keep only
+ *  the part before the first colon; fall back to `(unnamed)` for empty/
+ *  null inputs so the cell still has a label. */
+function stripSubtitle(name: string | null | undefined): string {
+  const raw = (name ?? '').trim();
+  if (!raw) return '(unnamed)';
+  const head = raw.split(':', 1)[0].trim();
+  return head || '(unnamed)';
+}
+
 function formatDateRange(window: ReportWindow): string {
-  const from = window.from.toISOString().slice(0, 10);
-  const to = window.to.toISOString().slice(0, 10);
-  return `${from} → ${to}`;
+  // Format in the window's timezone — `window.from` is the UTC instant of
+  // local-midnight, which under BST is the prior UTC day. Using toISOString
+  // here would render the start date one day early.
+  const fmt = (d: Date) => DateTime.fromJSDate(d, { zone: window.timezone }).toFormat('yyyy-LL-dd');
+  return `${fmt(window.from)} → ${fmt(window.to)}`;
 }
 
 function formatNumber(n: number, decimals = 0): string {
