@@ -9,6 +9,8 @@ describe('FrontChatGateway', () => {
   let frontChatService: {
     sendChannelTextMessage: jest.Mock;
     getConversationHistory: jest.Mock;
+  };
+  let chatUserService: {
     getChatUser: jest.Mock;
   };
   let serviceUserProfilesService: {
@@ -34,6 +36,8 @@ describe('FrontChatGateway', () => {
     frontChatService = {
       sendChannelTextMessage: jest.fn(),
       getConversationHistory: jest.fn().mockResolvedValue({ messages: [], conversationFound: false }),
+    };
+    chatUserService = {
       getChatUser: jest.fn().mockResolvedValue(null),
     };
     serviceUserProfilesService = {
@@ -48,6 +52,7 @@ describe('FrontChatGateway', () => {
       authService as any,
       userService as any,
       frontChatService as any,
+      chatUserService as any,
       serviceUserProfilesService as any,
     );
     gateway.server = server as any;
@@ -165,7 +170,7 @@ describe('FrontChatGateway', () => {
       serviceUserProfilesService.getOrCreateFrontContact.mockClear();
 
       const existingChatUser = { frontContactId: 'crd_existing' };
-      frontChatService.getChatUser.mockResolvedValueOnce(existingChatUser);
+      chatUserService.getChatUser.mockResolvedValueOnce(existingChatUser);
       frontChatService.sendChannelTextMessage.mockResolvedValue(undefined);
 
       await gateway.handleSendMessage(socket as any, { text: 'hi' });

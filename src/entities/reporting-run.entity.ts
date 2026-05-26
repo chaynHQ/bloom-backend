@@ -31,6 +31,12 @@ export class ReportingRunEntity extends BaseBloomEntity {
   @Column({ type: 'jsonb', nullable: true })
   slackResponse: unknown;
 
+  /** Slack `ts` of the parent message — used to thread per-topic replies
+   *  under the digest, and as an audit pointer back to the actual posted
+   *  message. Null when posting failed before a `ts` was returned. */
+  @Column({ type: 'varchar', length: 32, nullable: true })
+  slackTs: string | null;
+
   // Typed columns for DB metrics — cheap ints, stable schema, fast trend
   // queries (e.g. `SELECT periodStart, newUsers FROM reporting_run`) and
   // direct baseline lookups without JSONB path expressions.
@@ -38,7 +44,13 @@ export class ReportingRunEntity extends BaseBloomEntity {
   newUsers: number | null;
 
   @Column({ type: 'integer', nullable: true })
+  newPartnerUsers: number | null;
+
+  @Column({ type: 'integer', nullable: true })
   deletedUsers: number | null;
+
+  @Column({ type: 'integer', nullable: true })
+  activeUsers: number | null;
 
   @Column({ type: 'integer', nullable: true })
   coursesStarted: number | null;
@@ -65,7 +77,7 @@ export class ReportingRunEntity extends BaseBloomEntity {
   therapyBookingsCancelled: number | null;
 
   @Column({ type: 'integer', nullable: true })
-  therapyBookingsScheduledForPeriod: number | null;
+  therapySessionsCompleted: number | null;
 
   @Column({ type: 'integer', nullable: true })
   partnerAccessGrants: number | null;
@@ -85,13 +97,11 @@ export class ReportingRunEntity extends BaseBloomEntity {
   @Column({ type: 'integer', nullable: true })
   resourceFeedbackSubmitted: number | null;
 
-  /** Integer percent 0–100. See DbMetrics.activationRate. */
   @Column({ type: 'integer', nullable: true })
-  activationRate: number | null;
+  messagesSent: number | null;
 
-  /** Integer percent 0–100. See DbMetrics.partnerActivationRate. */
   @Column({ type: 'integer', nullable: true })
-  partnerActivationRate: number | null;
+  messagesReceived: number | null;
 
   // JSONB snapshots — sufficient (with the typed cols) to re-render the
   // Slack message without re-querying source data.
@@ -99,10 +109,6 @@ export class ReportingRunEntity extends BaseBloomEntity {
   /** DB-sourced topic breakdowns (courses/resources/partner/lang/feedback/therapist). */
   @Column({ type: 'jsonb', nullable: true })
   dbBreakdowns: unknown;
-
-  /** State-of-Bloom snapshot. Quarterly + yearly only. */
-  @Column({ type: 'jsonb', nullable: true })
-  dbTotals: unknown;
 
   @Column({ type: 'jsonb', nullable: true })
   ga4Overview: unknown;

@@ -1,5 +1,6 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { createHmac, timingSafeEqual } from 'crypto';
+import { ChatUserService } from 'src/chat-user/chat-user.service';
 import { EventLoggerService } from 'src/event-logger/event-logger.service';
 import { Logger } from 'src/logger/logger';
 import { ServiceUserProfilesService } from 'src/service-user-profiles/service-user-profiles.service';
@@ -38,6 +39,7 @@ export class FrontChatWebhookService {
 
   constructor(
     private readonly frontChatService: FrontChatService,
+    private readonly chatUserService: ChatUserService,
     private readonly frontChatGateway: FrontChatGateway,
     private readonly serviceUserProfilesService: ServiceUserProfilesService,
     private readonly eventLoggerService: EventLoggerService,
@@ -55,7 +57,7 @@ export class FrontChatWebhookService {
   }
 
   private async syncChatUserFromInbound(email: string, conversationId: string): Promise<void> {
-    const existing = await this.frontChatService.getChatUserByEmail(email);
+    const existing = await this.chatUserService.getChatUserByEmail(email);
 
     // Backfill custom fields on the first inbound — covers Channel-API auto-created
     // contacts. The sync writes frontContactId via addToFrontContactList, so subsequent
@@ -65,7 +67,7 @@ export class FrontChatWebhookService {
     }
 
     if (existing?.frontConversationId) return;
-    const updated = await this.frontChatService.updateChatUserByEmail(email, {
+    const updated = await this.chatUserService.updateChatUserByEmail(email, {
       frontConversationId: conversationId,
     });
     if (updated) await this.frontChatService.syncConversationLanguage(updated.userId);
@@ -95,7 +97,7 @@ export class FrontChatWebhookService {
       );
     } catch (error) {
       this.logger.warn(
-        `Front webhook: failed to log ${eventName} for ${email}: ${error?.message || 'unknown error'}`,
+        `Front webhook: failed to log ${eventName} (conversation ${webhookData.conversation?.id ?? 'unknown'}): ${error?.message || 'unknown error'}`,
       );
     }
   }
@@ -116,7 +118,7 @@ export class FrontChatWebhookService {
     const messageBody = payload.text ?? payload.body ?? '';
     const externalId = payload.id || `front-${Date.now()}`;
     const chatUser = recipientEmail
-      ? await this.frontChatService.getChatUserByEmail(recipientEmail)
+      ? await this.chatUserService.getChatUserByEmail(recipientEmail)
       : null;
     const externalConversationId =
       (data as FrontChannelOutboundPayload).metadata?.external_conversation_ids?.[0] ??
@@ -137,9 +139,11 @@ export class FrontChatWebhookService {
           attachments: attachments.map(toAgentReplyAttachment),
         }),
       });
-      this.logger.log(`Front Channel: forwarded agent reply to ${recipientEmail}`);
+      this.logger.log(
+        `Front Channel: forwarded agent reply${chatUser ? ` to user ${chatUser.userId}` : ''}`,
+      );
 
-      this.frontChatService
+      this.chatUserService
         .updateChatUserByEmail(recipientEmail, { lastMessageReceivedAt: new Date() })
         .then((updated) => {
           if (updated) {
@@ -151,12 +155,12 @@ export class FrontChatWebhookService {
         })
         .catch((err) => {
           this.logger.error(
-            `Front Channel: failed to set lastMessageReceivedAt for ${recipientEmail}: ${(err as Error)?.message || 'unknown error'}`,
+            `Front Channel: failed to set lastMessageReceivedAt${chatUser ? ` for user ${chatUser.userId}` : ''}: ${(err as Error)?.message || 'unknown error'}`,
           );
         });
     } else {
       this.logger.warn(
-        `Front Channel: missing recipient or body (recipient=${recipientEmail}, hasBody=${!!messageBody})`,
+        `Front Channel: missing recipient or body (hasRecipient=${!!recipientEmail}, hasBody=${!!messageBody})`,
       );
     }
 

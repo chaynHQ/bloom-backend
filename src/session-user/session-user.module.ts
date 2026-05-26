@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { SlackMessageClient } from 'src/api/slack/slack-api';
 import { ZapierWebhookClient } from 'src/api/zapier/zapier-webhook-client';
-import { ChatUserEntity } from 'src/entities/chat-user.entity';
+import { ChatUserModule } from 'src/chat-user/chat-user.module';
 import { CourseUserEntity } from 'src/entities/course-user.entity';
 import { CourseEntity } from 'src/entities/course.entity';
 import { EventLogEntity } from 'src/entities/event-log.entity';
@@ -35,7 +35,6 @@ import { SessionUserService } from './session-user.service';
     TypeOrmModule.forFeature([
       SessionUserEntity,
       CourseUserEntity,
-      ChatUserEntity,
       UserEntity,
       PartnerEntity,
       SessionEntity,
@@ -47,6 +46,7 @@ import { SessionUserService } from './session-user.service';
       SubscriptionEntity,
       EventLogEntity,
     ]),
+    ChatUserModule,
   ],
   controllers: [SessionUserController],
   providers: [
