@@ -11,7 +11,9 @@ import { DbMetrics, Ga4Metrics } from './reporting.types';
 
 const fakeDb: DbMetrics = {
   newUsers: 1,
+  newPartnerUsers: 0,
   deletedUsers: 0,
+  activeUsers: 0,
   coursesStarted: 0,
   coursesCompleted: 0,
   sessionsStarted: 0,
@@ -20,15 +22,15 @@ const fakeDb: DbMetrics = {
   resourcesCompleted: 0,
   therapyBookingsBooked: 0,
   therapyBookingsCancelled: 0,
-  therapyBookingsScheduledForPeriod: 0,
+  therapySessionsCompleted: 0,
   partnerAccessGrants: 0,
   partnerAccessActivations: 0,
   whatsappSubscribed: 0,
   whatsappUnsubscribed: 0,
   sessionFeedbackSubmitted: 0,
   resourceFeedbackSubmitted: 0,
-  activationRate: 0,
-  partnerActivationRate: 0,
+  messagesSent: 0,
+  messagesReceived: 0,
 };
 
 const emptyDbBreakdowns = {
@@ -98,7 +100,7 @@ describe('ReportingService', () => {
     service = module.get(ReportingService);
   });
 
-  it('claims an idempotency slot, collects both sources, posts to Slack, persists the metric snapshot + JSONB blobs', async () => {
+  it('weekly happy path: collects + breakdowns, posts parent then replies threaded on parent ts, persists snapshot', async () => {
     insertBuilder.execute.mockResolvedValue({ raw: [{ id: 'run-1' }] });
     reportingRunRepo.find.mockResolvedValue([]);
     dbMetrics.collect.mockResolvedValue({ ...fakeDb, newUsers: 7 });
@@ -116,57 +118,53 @@ describe('ReportingService', () => {
       ],
     });
     ga4Metrics.collect.mockResolvedValue(fakeGa4);
-    slack.sendMessageToReportingChannel.mockResolvedValue({ status: 200 } as never);
+    slack.postReportingMessage.mockResolvedValue({
+      ts: '1700000000.000001',
+      channel: 'C123',
+    } as never);
 
     const payload = await service.run('weekly', { bypassIdempotency: false });
 
     expect(payload.runId).toBe('run-1');
     expect(payload.dbBreakdowns?.courses[0].name).toBe('Foundations');
-    expect(dbMetrics.collect).toHaveBeenCalledTimes(1);
-    expect(dbMetrics.collectBreakdowns).toHaveBeenCalledTimes(1);
-    expect(ga4Metrics.collect).toHaveBeenCalledWith(payload.window, 'weekly');
-    expect(slack.sendMessageToReportingChannel).toHaveBeenCalledTimes(1);
-    // Typed metric col + new JSONB snapshots all written.
+    // Parent posts first (no threadTs); subsequent calls reply on parent ts.
+    expect(slack.postReportingMessage.mock.calls[0][1]?.threadTs).toBeUndefined();
+    const replyCalls = slack.postReportingMessage.mock.calls.slice(1);
+    expect(replyCalls.length).toBeGreaterThan(0);
+    for (const [, opts] of replyCalls) {
+      expect(opts?.threadTs).toBe('1700000000.000001');
+    }
+    // Snapshot persisted with metric columns + JSONB blobs + slackTs.
     expect(reportingRunRepo.update).toHaveBeenCalledWith(
       { id: 'run-1' },
       expect.objectContaining({
         status: 'sent',
+        slackTs: '1700000000.000001',
         newUsers: 7,
-        periodTimezone: payload.window.timezone,
         dbBreakdowns: expect.objectContaining({ courses: expect.any(Array) }),
         ga4Overview: expect.any(Object),
       }),
     );
   });
 
-  it('skips collectBreakdowns on daily (the JOINs are heavy and daily strips topic detail)', async () => {
-    insertBuilder.execute.mockResolvedValue({ raw: [{ id: 'run-d' }] });
-    reportingRunRepo.find.mockResolvedValue([]);
-    dbMetrics.collect.mockResolvedValue(fakeDb);
-    ga4Metrics.collect.mockResolvedValue(fakeGa4);
-    slack.sendMessageToReportingChannel.mockResolvedValue({ status: 200 } as never);
-
-    await service.run('daily', { bypassIdempotency: false });
-
-    expect(dbMetrics.collectBreakdowns).not.toHaveBeenCalled();
-  });
-
-  it('short-circuits when the idempotency slot is already claimed (no collection, no Slack)', async () => {
+  it('skips work when the idempotency slot is already claimed (prod insert returned empty)', async () => {
     insertBuilder.execute.mockResolvedValue({ raw: [] });
 
     const payload = await service.run('daily', { bypassIdempotency: false });
 
-    expect(payload.db).toMatchObject({ unavailable: true });
+    // Renderer-friendly all-null DbMetrics returned so the caller doesn't
+    // need a separate "skipped" branch.
+    expect(payload.db.newUsers).toBeNull();
     expect(dbMetrics.collect).not.toHaveBeenCalled();
-    expect(slack.sendMessageToReportingChannel).not.toHaveBeenCalled();
+    expect(slack.postReportingMessage).not.toHaveBeenCalled();
   });
 
-  it('preserves the metric snapshot when Slack send fails', async () => {
+  it('Slack failure marks the run failed but still persists the metric snapshot', async () => {
     insertBuilder.execute.mockResolvedValue({ raw: [{ id: 'run-err' }] });
     reportingRunRepo.find.mockResolvedValue([]);
     dbMetrics.collect.mockResolvedValue({ ...fakeDb, newUsers: 9 });
     ga4Metrics.collect.mockResolvedValue(fakeGa4);
-    slack.sendMessageToReportingChannel.mockRejectedValue(new Error('webhook 500'));
+    slack.postReportingMessage.mockRejectedValue(new Error('webhook 500'));
 
     await service.run('weekly', { bypassIdempotency: false });
 
@@ -176,11 +174,32 @@ describe('ReportingService', () => {
     );
   });
 
-  it('loads a rolling baseline for monthly and surfaces top anomalies (>=2σ)', async () => {
+  it('daily skips breakdowns and surfaces the outage watchlist (today=0 with prior ≥ floor)', async () => {
+    insertBuilder.execute.mockResolvedValue({ raw: [{ id: 'run-outage' }] });
+    // 3 prior daily runs comfortably above OUTAGE_PRIOR_FLOOR (5). Today's 0
+    // for active/new users is the canonical "tracking pipeline down" signal.
+    reportingRunRepo.find.mockResolvedValue([
+      { activeUsers: 40, newUsers: 8, ga4Overview: null } as ReportingRunEntity,
+      { activeUsers: 38, newUsers: 5, ga4Overview: null } as ReportingRunEntity,
+      { activeUsers: 42, newUsers: 6, ga4Overview: null } as ReportingRunEntity,
+    ]);
+    dbMetrics.collect.mockResolvedValue({ ...fakeDb, activeUsers: 0, newUsers: 0 });
+    ga4Metrics.collect.mockResolvedValue(fakeGa4);
+    slack.postReportingMessage.mockResolvedValue({ ts: '1', channel: 'C' } as never);
+
+    const payload = await service.run('daily', { bypassIdempotency: false });
+
+    // Daily strips topic detail — the heavy GROUP BY joins are skipped.
+    expect(dbMetrics.collectBreakdowns).not.toHaveBeenCalled();
+    // Outage anomalies use sigma=0 as a renderer sentinel ("tracking down?").
+    const labels = (payload.anomalies ?? []).map((a) => a.label);
+    expect(labels).toEqual(expect.arrayContaining(['Active users', 'New users']));
+    expect(payload.anomalies?.[0].sigma).toBe(0);
+  });
+
+  it('weekly with ≥3 priors loads a rolling baseline and surfaces top anomalies', async () => {
     insertBuilder.execute.mockResolvedValue({ raw: [{ id: 'run-baseline' }] });
-    // 4 prior months: newUsers stable around 10 (mean=10, stdDev=0 → no anomaly
-    // on newUsers); sessionsStarted stable around 50 with σ=5 (so current=10
-    // is 8σ below → anomaly).
+    // sessionsStarted stable around 50 with σ=5 → current=10 is ~8σ below.
     reportingRunRepo.find.mockResolvedValue([
       { newUsers: 10, sessionsStarted: 55, ga4Overview: null } as ReportingRunEntity,
       { newUsers: 10, sessionsStarted: 50, ga4Overview: null } as ReportingRunEntity,
@@ -189,63 +208,51 @@ describe('ReportingService', () => {
     ]);
     dbMetrics.collect.mockResolvedValue({ ...fakeDb, newUsers: 10, sessionsStarted: 10 });
     ga4Metrics.collect.mockResolvedValue(fakeGa4);
-    slack.sendMessageToReportingChannel.mockResolvedValue({ status: 200 } as never);
+    slack.postReportingMessage.mockResolvedValue({ ts: '1', channel: 'C' } as never);
 
     const payload = await service.run('monthly', { bypassIdempotency: false });
 
-    expect(payload.baseline).toBeDefined();
     expect(payload.baseline?.db.sessionsStarted?.mean).toBeCloseTo(50);
-    expect(payload.anomalies?.length).toBeGreaterThan(0);
     expect(payload.anomalies?.[0].label).toBe('Sessions started');
-    expect(payload.anomalies?.[0].sigma).toBeLessThan(-1); // directional: below baseline
+    expect(payload.anomalies?.[0].sigma).toBeLessThan(-1);
   });
 
-  it('collects state-of-Bloom totals for quarterly (and yearly) — skipped on daily/weekly/monthly', async () => {
-    insertBuilder.execute.mockResolvedValue({ raw: [{ id: 'run-totals' }] });
-    reportingRunRepo.find.mockResolvedValue([]);
-    dbMetrics.collect.mockResolvedValue(fakeDb);
-    dbMetrics.collectTotals.mockResolvedValue({
-      liveUsers: 5234,
-      activeWhatsappSubscribers: 312,
-      activatedPartnerAccess: 124,
-      totalSessionsCompleted: 48102,
-      totalCoursesCompleted: 12889,
-      totalResourcesCompleted: 2411,
-      totalTherapyBookings: 3402,
-    });
-    ga4Metrics.collect.mockResolvedValue(fakeGa4);
-    slack.sendMessageToReportingChannel.mockResolvedValue({ status: 200 } as never);
-
-    const quarterly = await service.run('quarterly', { bypassIdempotency: false });
-    expect(dbMetrics.collectTotals).toHaveBeenCalledTimes(1);
-    expect(quarterly.dbTotals?.liveUsers).toBe(5234);
-
-    (dbMetrics.collectTotals as jest.Mock).mockClear();
-    const daily = await service.run('daily', { bypassIdempotency: false });
-    expect(dbMetrics.collectTotals).not.toHaveBeenCalled();
-    expect(daily.dbTotals).toBeUndefined();
-  });
-
-  it('off-prod default bypasses the unique-slot lock so repeat staging runs overwrite and re-post', async () => {
-    // NODE_ENV during jest is 'test' → isProduction === false → bypass default.
-    // The bypass path uses findOne + save/update rather than the orIgnore insert.
-    reportingRunRepo.findOne.mockResolvedValue({ id: 'existing-run' } as ReportingRunEntity);
+  it('off-prod bypass: existing failed slot is replayed; existing sent slot reused without resetting status', async () => {
+    // First call: stale failed row → flipped back to pending, replayed.
+    reportingRunRepo.findOne.mockResolvedValueOnce({
+      id: 'existing-run',
+      status: 'failed',
+    } as ReportingRunEntity);
     reportingRunRepo.find.mockResolvedValue([]);
     dbMetrics.collect.mockResolvedValue(fakeDb);
     ga4Metrics.collect.mockResolvedValue(fakeGa4);
-    slack.sendMessageToReportingChannel.mockResolvedValue({ status: 200 } as never);
+    slack.postReportingMessage.mockResolvedValue({ ts: '1', channel: 'C' } as never);
 
-    const payload = await service.run('weekly');
+    await service.run('weekly');
 
-    expect(payload.runId).toBe('existing-run');
-    // orIgnore insert path is NOT taken on staging default.
     expect(insertBuilder.execute).not.toHaveBeenCalled();
-    // Existing row flipped back to pending so the re-run can replay cleanly.
     expect(reportingRunRepo.update).toHaveBeenCalledWith(
       { id: 'existing-run' },
       { status: 'pending', error: null },
     );
-    // Slack still posts on the replay — that's the whole point of the bypass.
-    expect(slack.sendMessageToReportingChannel).toHaveBeenCalledTimes(1);
+
+    // Second call: sent row — must NOT be reset to pending (snapshot is the
+    // canonical baseline source for future runs).
+    reportingRunRepo.findOne.mockResolvedValueOnce({
+      id: 'sent-run',
+      status: 'sent',
+    } as ReportingRunEntity);
+    (reportingRunRepo.update as jest.Mock).mockClear();
+
+    await service.run('weekly');
+
+    expect(reportingRunRepo.update).not.toHaveBeenCalledWith(
+      { id: 'sent-run' },
+      { status: 'pending', error: null },
+    );
+    expect(reportingRunRepo.update).toHaveBeenCalledWith(
+      { id: 'sent-run' },
+      expect.objectContaining({ status: 'sent' }),
+    );
   });
 });

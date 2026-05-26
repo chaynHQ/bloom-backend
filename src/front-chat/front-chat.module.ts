@@ -3,7 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { SlackMessageClient } from 'src/api/slack/slack-api';
 import { ZapierWebhookClient } from 'src/api/zapier/zapier-webhook-client';
 import { AuthModule } from 'src/auth/auth.module';
-import { ChatUserEntity } from 'src/entities/chat-user.entity';
+import { ChatUserModule } from 'src/chat-user/chat-user.module';
 import { EventLogEntity } from 'src/entities/event-log.entity';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { PartnerEntity } from 'src/entities/partner.entity';
@@ -29,7 +29,6 @@ import { FrontChatWebhookService } from './front-chat-webhook.service';
   imports: [
     TypeOrmModule.forFeature([
       UserEntity,
-      ChatUserEntity,
       EventLogEntity,
       PartnerAccessEntity,
       PartnerEntity,
@@ -38,6 +37,7 @@ import { FrontChatWebhookService } from './front-chat-webhook.service';
       TherapySessionEntity,
     ]),
     AuthModule,
+    ChatUserModule,
     FirebaseModule,
   ],
   providers: [
