@@ -14,6 +14,7 @@ import {
   MAILCHIMP_CUSTOM_EVENTS,
   MAILCHIMP_MERGE_FIELD_TYPES,
 } from 'src/api/mailchimp/mailchimp-api.interfaces';
+import { ChatUserService } from 'src/chat-user/chat-user.service';
 import { ChatUserEntity } from 'src/entities/chat-user.entity';
 import { CourseUserEntity } from 'src/entities/course-user.entity';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
@@ -42,6 +43,7 @@ export class ServiceUserProfilesService {
   constructor(
     @InjectRepository(UserEntity) private userRepository: Repository<UserEntity>,
     private frontChatService: FrontChatService,
+    private chatUserService: ChatUserService,
   ) {}
 
   async createServiceUserProfiles(
@@ -111,7 +113,7 @@ export class ServiceUserProfilesService {
       exists = await this.frontChatService.contactExists(email);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'unknown error';
-      logger.error(`getOrCreateFrontContact existence check failed for ${email}: ${message}`);
+      logger.error(`getOrCreateFrontContact existence check failed for user ${user.id}: ${message}`);
       return;
     }
 
@@ -133,10 +135,10 @@ export class ServiceUserProfilesService {
           customFields: this.buildFrontCustomFields(hydratedUser),
           userId: hydratedUser.id,
         });
-        logger.log(`Backfilled Front contact for ${email}`);
+        logger.log(`Backfilled Front contact for user ${hydratedUser.id}`);
       } catch (error) {
         const message = error instanceof Error ? error.message : 'unknown error';
-        logger.error(`getOrCreateFrontContact create failed for ${email}: ${message}`);
+        logger.error(`getOrCreateFrontContact create failed for user ${hydratedUser.id}: ${message}`);
       }
     } else {
       // Contact already exists — ensure the channel handle is present so Channel API
@@ -238,7 +240,7 @@ export class ServiceUserProfilesService {
           logger.error(`Mailchimp 404 recovery (${context}): user not found in DB`);
           return;
         }
-        const chatUser = await this.frontChatService.getChatUser(user.id);
+        const chatUser = await this.chatUserService.getChatUser(user.id);
         const profileData = this.createCompleteMailchimpUserProfile(user, chatUser);
         profileData.merge_fields = {
           ...profileData.merge_fields,
@@ -258,6 +260,8 @@ export class ServiceUserProfilesService {
   // Send a Mailchimp custom event with 404 recovery — for archived/missing members,
   // pipes through syncMailchimpProfile's existing recovery (PATCHes user data → 404 →
   // recreates full profile) then retries the event so the email still fires.
+  // Throws on terminal failure so callers (e.g. FrontChatScheduler) can record FAILED
+  // and retry on the next cron tick.
   async sendMailchimpUserEventWithRecovery(
     email: string,
     event: MAILCHIMP_CUSTOM_EVENTS,
@@ -265,18 +269,20 @@ export class ServiceUserProfilesService {
     if (isCypressTestEmail(email)) return;
     try {
       await sendMailchimpUserEvent(email, event);
+      return;
     } catch (error) {
       const status = (error as { status?: number })?.status;
       if (!this.isMailchimpNotFound(error)) {
         const message = error instanceof Error ? error.message : 'unknown error';
         logger.error(`Send Mailchimp event ${event} failed (status=${status}) - ${message}`);
-        return;
+        throw error instanceof Error ? error : new Error(message);
       }
       try {
         const user = await this.userRepository.findOneBy({ email: ILike(email) });
         if (!user) {
-          logger.error(`Mailchimp event ${event} recovery: user not found in DB`);
-          return;
+          const message = `Mailchimp event ${event} recovery: user not found in DB`;
+          logger.error(message);
+          throw new Error(message, { cause: error });
         }
         await this.syncMailchimpProfile(
           this.serializeUserData(user).mailchimpSchema,
@@ -290,6 +296,7 @@ export class ServiceUserProfilesService {
         logger.error(
           `Send Mailchimp event ${event} retry failed (status=${retryStatus}) - ${message}`,
         );
+        throw retryError instanceof Error ? retryError : new Error(message);
       }
     }
   }
@@ -411,7 +418,11 @@ export class ServiceUserProfilesService {
 
     // Chat activity timestamps are Mailchimp-only by design.
     const data = this.serializeChatActivityData(chatUser);
-    await this.syncMailchimpProfile(data.mailchimpSchema, email, `chat activity for ${email}`);
+    await this.syncMailchimpProfile(
+      data.mailchimpSchema,
+      email,
+      `chat activity for user ${chatUser.userId}`,
+    );
   }
 
   serializeChatActivityData(chatUser: ChatUserEntity) {

@@ -46,6 +46,12 @@ ROLLBAR_ENV=development # Rollbar logging
 ROLLBAR_TOKEN= # Rollbar logging
 ZAPIER_TOKEN= # Zapier automation (legacy - see SIMPLYBOOK_WEBHOOK_SECRET)
 SLACK_WEBHOOK_URL= # Slack messaging bots
+FRONT_CHAT_API_TOKEN
+FRONT_CHANNEL_ID
+FRONT_CONTACT_LIST_ID
+FRONT_CHAT_WEBHOOK_TOKEN
+FRONT_CHANNEL_SIGNING_SECRET
+FRONT_APP_UID
 FRONT_SUPPORT_EMAIL= # (optional) Front sender address used to distinguish agent replies in chat history; defaults to support@bloom.chayn.co
 MAILCHIMP_API_KEY= # Email messaging
 RESPOND_IO_CREATE_CONTACT_WEBHOOK= # RESPOND.IO

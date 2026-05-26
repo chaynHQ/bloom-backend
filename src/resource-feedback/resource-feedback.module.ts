@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { SlackMessageClient } from 'src/api/slack/slack-api';
 import { ZapierWebhookClient } from 'src/api/zapier/zapier-webhook-client';
-import { ChatUserEntity } from 'src/entities/chat-user.entity';
+import { ChatUserModule } from 'src/chat-user/chat-user.module';
 import { EventLogEntity } from 'src/entities/event-log.entity';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { PartnerEntity } from 'src/entities/partner.entity';
@@ -27,7 +27,6 @@ import { ResourceFeedbackService } from './resource-feedback.service';
 @Module({
   imports: [
     TypeOrmModule.forFeature([
-      ChatUserEntity,
       ResourceFeedbackEntity,
       ResourceEntity,
       PartnerAccessEntity,
@@ -38,6 +37,7 @@ import { ResourceFeedbackService } from './resource-feedback.service';
       SubscriptionEntity,
       EventLogEntity,
     ]),
+    ChatUserModule,
   ],
   controllers: [ResourceFeedbackController],
   providers: [

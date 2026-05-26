@@ -6,6 +6,7 @@ import {
   createMailchimpProfile,
   updateMailchimpProfile,
 } from 'src/api/mailchimp/mailchimp-api';
+import { ChatUserService } from 'src/chat-user/chat-user.service';
 import { UserEntity } from 'src/entities/user.entity';
 import { FrontChatService } from 'src/front-chat/front-chat.service';
 import { ServiceUserProfilesService } from 'src/service-user-profiles/service-user-profiles.service';
@@ -26,9 +27,11 @@ import {
 
 jest.mock('src/api/mailchimp/mailchimp-api');
 const mockFrontChatServiceMethods = {
-  getOrCreateChatUser: jest.fn().mockResolvedValue({}),
   addChannelHandle: jest.fn().mockResolvedValue(undefined),
   syncConversationLanguage: jest.fn().mockResolvedValue(undefined),
+};
+const mockChatUserServiceMethods = {
+  getOrCreateChatUser: jest.fn().mockResolvedValue({}),
   // Default to null so deep-mock doesn't return a truthy mock chatUser that adds chat
   // activity fields to every profile expectation; tests opt in by overriding this mock.
   getChatUser: jest.fn().mockResolvedValue(null),
@@ -38,6 +41,7 @@ describe('Service user profiles', () => {
   let service: ServiceUserProfilesService;
   const mockedUserRepository = createMock<Repository<UserEntity>>(mockUserRepositoryMethods);
   const mockFrontChatService = createMock<FrontChatService>(mockFrontChatServiceMethods);
+  const mockChatUserService = createMock<ChatUserService>(mockChatUserServiceMethods);
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -50,6 +54,7 @@ describe('Service user profiles', () => {
           useValue: mockedUserRepository,
         },
         { provide: FrontChatService, useValue: mockFrontChatService },
+        { provide: ChatUserService, useValue: mockChatUserService },
       ],
     }).compile();
 
