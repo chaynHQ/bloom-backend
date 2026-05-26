@@ -50,6 +50,9 @@ export const mockWebhooksServiceMethods: PartialFuncReturn<WebhooksService> = {
   updatePartnerAccessTherapy: async () => {
     return mockTherapySessionEntity;
   },
+  handleSimplybookWebhook: async () => {
+    return mockTherapySessionEntity;
+  },
 };
 
 export const mockClsService = {
@@ -212,6 +215,9 @@ export const mockUserRepositoryMethodsFactory = {
   },
   find: async () => {
     return [mockUserEntity];
+  },
+  findOne: async () => {
+    return { ...mockUserEntity, partnerAccess: [], courseUser: [] };
   },
   findOneBy: ({ email: client_email }) => {
     return { ...mockUserEntity, ...(client_email ? { email: client_email } : {}) };

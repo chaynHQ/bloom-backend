@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { ClsModule } from 'nestjs-cls';
@@ -10,8 +11,7 @@ import { AuthModule } from './auth/auth.module';
 import { CoursePartnerModule } from './course-partner/course-partner.module';
 import { CourseUserModule } from './course-user/course-user.module';
 import { CourseModule } from './course/course.module';
-import { CrispListenerModule } from './crisp-listener/crisp-listener.module';
-import { CrispModule } from './crisp/crisp.module';
+import { FrontChatModule } from './front-chat/front-chat.module';
 import { EventLoggerModule } from './event-logger/event-logger.module';
 import { FeatureModule } from './feature/feature.module';
 import { HealthModule } from './health/health.module';
@@ -20,6 +20,7 @@ import { PartnerAccessModule } from './partner-access/partner-access.module';
 import { PartnerAdminModule } from './partner-admin/partner-admin.module';
 import { PartnerFeatureModule } from './partner-feature/partner-feature.module';
 import { PartnerModule } from './partner/partner.module';
+import { ReportingModule } from './reporting/reporting.module';
 import { ResourceFeedbackModule } from './resource-feedback/resource-feedback.module';
 import { ResourceUserModule } from './resource-user/resource-user.module';
 import { ResourceModule } from './resource/resource.module';
@@ -34,6 +35,7 @@ import { WebhooksModule } from './webhooks/webhooks.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    ScheduleModule.forRoot(),
     ThrottlerModule.forRoot([
       {
         ttl: 60000, // 60 seconds
@@ -70,12 +72,12 @@ import { WebhooksModule } from './webhooks/webhooks.module';
     PartnerFeatureModule,
     EventLoggerModule,
     HealthModule,
-    CrispModule,
-    CrispListenerModule,
+    FrontChatModule,
     ResourceModule,
     ResourceUserModule,
     ResourceFeedbackModule,
     TherapySessionModule,
+    ReportingModule,
   ],
   providers: [
     {

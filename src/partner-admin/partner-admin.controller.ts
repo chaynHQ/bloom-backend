@@ -1,5 +1,6 @@
 import { Body, Controller, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { PartnerAdminEntity } from '../entities/partner-admin.entity';
 import { ControllerDecorator } from '../utils/controller.decorator';
 import { CreatePartnerAdminUserDto } from './dtos/create-partner-admin-user.dto';
@@ -36,6 +37,9 @@ export class PartnerAdminController {
   })
   @UseGuards(SuperAdminAuthGuard)
   @Post('create-user')
+  // 5 requests/min per IP. Note: admins behind a shared corporate proxy or VPN share one outbound IP,
+  // so bulk admin setup could hit this limit. Raise if that becomes an issue in practice.
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @ApiBody({ type: CreatePartnerAdminUserDto })
   async createPartnerAdminUser(
     @Body() createPartnerAdminUserDto: CreatePartnerAdminUserDto,

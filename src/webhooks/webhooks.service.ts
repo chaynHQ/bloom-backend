@@ -1,34 +1,43 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
-import { Logger } from 'src/logger/logger';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ISbStoryData } from '@storyblok/js';
+import { createHmac, timingSafeEqual } from 'crypto';
 import apiCall from 'src/api/apiCalls';
+import { getBookingDetails } from 'src/api/simplybook/simplybook-api';
 import { SlackMessageClient } from 'src/api/slack/slack-api';
+import { ChatUserService } from 'src/chat-user/chat-user.service';
 import { CourseEntity } from 'src/entities/course.entity';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { ResourceEntity } from 'src/entities/resource.entity';
 import { SessionEntity } from 'src/entities/session.entity';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
 import { UserEntity } from 'src/entities/user.entity';
-import { ZapierSimplybookBodyDto } from 'src/partner-access/dtos/zapier-body.dto';
+import { UNREAD_NOTIFICATION_STATUS } from 'src/front-chat/front-chat.interface';
+import { Logger } from 'src/logger/logger';
+import { SimplybookBodyDto } from 'src/partner-access/dtos/simplybook-body.dto';
 import { ServiceUserProfilesService } from 'src/service-user-profiles/service-user-profiles.service';
 import { IUser } from 'src/user/user.interface';
-import { serializeZapierSimplyBookDtoToTherapySessionEntity } from 'src/utils/serialize';
+import { serializeSimplybookDtoToTherapySessionEntity } from 'src/utils/serialize';
 import { ILike, MoreThan, Repository } from 'typeorm';
 import { CoursePartnerService } from '../course-partner/course-partner.service';
 import {
   isProduction,
+  mailchimpWebhookSecret,
   RESOURCE_CATEGORIES,
   SIMPLYBOOK_ACTION_ENUM,
+  simplybookCompanyName,
   STORYBLOK_PAGE_COMPONENTS,
   STORYBLOK_STORY_STATUS_ENUM,
   storyblokToken,
+  storyblokWebhookSecret,
 } from '../utils/constants';
+import { MailchimpWebhookDto } from './dto/mailchimp-webhook.dto';
+import { SimplybookNotificationType, SimplybookWebhookDto } from './dto/simplybook-webhook.dto';
 import { StoryWebhookDto } from './dto/story.dto';
 
 @Injectable()
 export class WebhooksService {
-  private readonly logger = new Logger('WebhookService');
+  private readonly logger = new Logger('WebhooksService');
 
   constructor(
     @InjectRepository(PartnerAccessEntity)
@@ -42,10 +51,11 @@ export class WebhooksService {
     private therapySessionRepository: Repository<TherapySessionEntity>,
     private serviceUserProfilesService: ServiceUserProfilesService,
     private slackMessageClient: SlackMessageClient,
+    private readonly chatUserService: ChatUserService,
   ) {}
 
   async updatePartnerAccessTherapy(
-    simplyBookDto: ZapierSimplybookBodyDto,
+    simplyBookDto: SimplybookBodyDto,
   ): Promise<TherapySessionEntity> {
     const { action, booking_code, user_id, client_email } = simplyBookDto;
 
@@ -87,18 +97,44 @@ export class WebhooksService {
     // Updating an existing therapy session
     existingTherapySession.action = action;
 
-    // If the booking is cancelled, increment the therapy sessions remaining on related partner access
-    if (action === SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING) {
+    // Reconcile bookingId. The lookup uses clientEmail + bookingCode, so a mismatched
+    // bookingId means we matched the wrong record (or Simplybook reused a code) — bail
+    // out rather than silently overwrite and risk corrupting accounting. Simplybook will
+    // retry the webhook, so we Slack-alert to surface it for manual investigation rather
+    // than letting 409s pile up silently.
+    if (simplyBookDto.booking_id !== undefined) {
+      if (existingTherapySession.bookingId == null) {
+        existingTherapySession.bookingId = simplyBookDto.booking_id;
+      } else if (existingTherapySession.bookingId !== simplyBookDto.booking_id) {
+        const error = `UpdatePartnerAccessTherapy - bookingId mismatch for booking_code ${booking_code}: existing ${existingTherapySession.bookingId}, incoming ${simplyBookDto.booking_id}`;
+        this.logger.error(error);
+        await this.slackMessageClient.sendMessageToTherapySlackChannel(
+          `Simplybook webhook bookingId mismatch 🚨 booking_code ${booking_code}: local record has bookingId ${existingTherapySession.bookingId}, webhook claims ${simplyBookDto.booking_id}. Manual investigation required.`,
+        );
+        throw new HttpException(error, HttpStatus.CONFLICT);
+      }
+    }
+
+    // If the booking is cancelled, credit the session back to the partner access counters.
+    // Guard against duplicate webhook deliveries: only credit back once (existing cancelledAt
+    // means we've already processed a cancel for this record).
+    // Atomic UPDATE statements (increment/decrement) avoid lost-update races if two cancel
+    // webhooks for different bookings on the same partnerAccess arrive concurrently.
+    if (
+      action === SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING &&
+      !existingTherapySession.cancelledAt
+    ) {
       try {
-        const partnerAccess = await this.partnerAccessRepository.findOneBy({
-          id: existingTherapySession.partnerAccessId,
-        });
-
-        partnerAccess.therapySessionsRemaining += 1;
-        partnerAccess.therapySessionsRedeemed -= 1;
-
-        await this.partnerAccessRepository.save(partnerAccess);
-
+        await this.partnerAccessRepository.increment(
+          { id: existingTherapySession.partnerAccessId },
+          'therapySessionsRemaining',
+          1,
+        );
+        await this.partnerAccessRepository.decrement(
+          { id: existingTherapySession.partnerAccessId },
+          'therapySessionsRedeemed',
+          1,
+        );
         existingTherapySession.cancelledAt = new Date();
       } catch (err) {
         const error = `UpdatePartnerAccessTherapy - error updating partner access for ${action} - userId ${user.id} - ${err?.message || 'unknown error'}`;
@@ -138,6 +174,73 @@ export class WebhooksService {
       this.logger.error(error);
       throw new HttpException(error, HttpStatus.INTERNAL_SERVER_ERROR);
     }
+  }
+
+  async handleSimplybookWebhook(
+    webhookDto: SimplybookWebhookDto,
+  ): Promise<TherapySessionEntity | void> {
+    if (webhookDto.company !== simplybookCompanyName) {
+      const error = `Simplybook webhook received for unexpected company ${webhookDto.company}`;
+      this.logger.error(error);
+      throw new HttpException(error, HttpStatus.UNAUTHORIZED);
+    }
+
+    // Replay protection: reject webhooks outside a 5-minute window. Defends against an
+    // attacker who has captured a webhook URL with token replaying old payloads to
+    // re-trigger booking processing.
+    const replayWindowMs = 5 * 60 * 1000;
+    if (webhookDto.webhook_timestamp !== undefined) {
+      const ageMs = Date.now() - webhookDto.webhook_timestamp * 1000;
+      if (ageMs > replayWindowMs || ageMs < -replayWindowMs) {
+        const error = `Simplybook webhook rejected: timestamp ${webhookDto.webhook_timestamp} outside ${replayWindowMs}ms replay window (age ${ageMs}ms)`;
+        this.logger.warn(error);
+        throw new HttpException(error, HttpStatus.UNAUTHORIZED);
+      }
+    } else {
+      this.logger.warn(
+        `Simplybook webhook for booking ${webhookDto.booking_id} arrived without webhook_timestamp — replay window not enforced`,
+      );
+    }
+
+    if (webhookDto.notification_type === SimplybookNotificationType.NOTIFY) {
+      this.logger.log(
+        `Simplybook reminder webhook received for booking ${webhookDto.booking_id} - ignoring`,
+      );
+      return;
+    }
+
+    const notificationTypeToAction: Record<
+      Exclude<SimplybookNotificationType, SimplybookNotificationType.NOTIFY>,
+      SIMPLYBOOK_ACTION_ENUM
+    > = {
+      [SimplybookNotificationType.CREATE]: SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING,
+      [SimplybookNotificationType.CANCEL]: SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING,
+      [SimplybookNotificationType.CHANGE]: SIMPLYBOOK_ACTION_ENUM.UPDATED_BOOKING,
+    };
+
+    const action = notificationTypeToAction[webhookDto.notification_type];
+    const bookingDetails = await getBookingDetails(webhookDto.booking_id);
+
+    // user_id is sourced from a Simplybook intake field. It is currently unset in production
+    // because the field is "not visible" in admin, so Simplybook drops it from submissions.
+    // updatePartnerAccessTherapy falls back to client_email lookup when userId is undefined.
+    const userId =
+      bookingDetails.additional_fields.find((f) => f.field_name === 'user_id')?.value || undefined;
+
+    const internalDto: SimplybookBodyDto = {
+      action,
+      booking_id: webhookDto.booking_id,
+      booking_code: bookingDetails.code,
+      client_email: bookingDetails.client.email,
+      service_name: bookingDetails.service.name,
+      service_provider_name: bookingDetails.provider.name,
+      service_provider_email: bookingDetails.provider.email,
+      start_date_time: bookingDetails.start_datetime,
+      end_date_time: bookingDetails.end_datetime,
+      user_id: userId,
+    };
+
+    return this.updatePartnerAccessTherapy(internalDto);
   }
 
   private async getSimplyBookTherapyUser(userId: string, client_email: string): Promise<IUser> {
@@ -193,7 +296,7 @@ export class WebhooksService {
     }
   }
 
-  private async newPartnerAccessTherapy(user: IUser, simplyBookDto: ZapierSimplybookBodyDto) {
+  private async newPartnerAccessTherapy(user: IUser, simplyBookDto: SimplybookBodyDto) {
     const partnerAccesses = await this.partnerAccessRepository.find({
       where: {
         userId: user.id,
@@ -231,16 +334,25 @@ export class WebhooksService {
       throw new HttpException(error, HttpStatus.FORBIDDEN);
     }
 
-    partnerAccess.therapySessionsRemaining -= 1;
-    partnerAccess.therapySessionsRedeemed += 1;
-
     try {
-      const serializedTherapySession = serializeZapierSimplyBookDtoToTherapySessionEntity(
+      // Atomic counter updates avoid lost-update races if two NEW_BOOKING webhooks
+      // for the same partnerAccess arrive concurrently.
+      await this.partnerAccessRepository.decrement(
+        { id: partnerAccess.id },
+        'therapySessionsRemaining',
+        1,
+      );
+      await this.partnerAccessRepository.increment(
+        { id: partnerAccess.id },
+        'therapySessionsRedeemed',
+        1,
+      );
+
+      const serializedTherapySession = serializeSimplybookDtoToTherapySessionEntity(
         simplyBookDto,
         partnerAccess,
       );
 
-      await this.partnerAccessRepository.save(partnerAccess);
       const therapySession = await this.therapySessionRepository.save(serializedTherapySession);
 
       const updatedPartnerAccesses = await this.partnerAccessRepository.find({
@@ -391,8 +503,32 @@ export class WebhooksService {
     }
   }
 
-  // Handle Storyblok story status change (published, unpublished, moved, deleted)
-  // Triggered by a webhook, this function handles updating our database records to sync with storyblok story data
+  async handleStoryblokWebhook(
+    rawBody: Buffer | undefined,
+    signature: string | undefined,
+    data: StoryWebhookDto,
+  ) {
+    if (!signature) {
+      const error = 'Storyblok webhook error - no signature provided';
+      this.logger.error(error);
+      throw new HttpException(error, HttpStatus.UNAUTHORIZED);
+    }
+    if (!rawBody) {
+      const error = 'Storyblok webhook error - raw body unavailable';
+      this.logger.error(error);
+      throw new HttpException(error, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+    const bodyHmac = createHmac('sha1', storyblokWebhookSecret).update(rawBody).digest('hex');
+    const expectedBuf = Buffer.from(bodyHmac);
+    const providedBuf = Buffer.from(signature);
+    if (expectedBuf.length !== providedBuf.length || !timingSafeEqual(expectedBuf, providedBuf)) {
+      const error = 'Storyblok webhook error - signature mismatch';
+      this.logger.error(error);
+      throw new HttpException(error, HttpStatus.UNAUTHORIZED);
+    }
+    return this.handleStoryUpdated(data);
+  }
+
   async handleStoryUpdated(data: StoryWebhookDto) {
     const status = data.action;
     const story_slug = data.full_slug;
@@ -445,5 +581,52 @@ export class WebhooksService {
 
     // Create or update the resource/course/session record in our database
     return this.updateOrCreateStoryData(story, status);
+  }
+
+  async handleMailchimpWebhook(dto: MailchimpWebhookDto, secret: string): Promise<void> {
+    if (!mailchimpWebhookSecret || secret !== mailchimpWebhookSecret) {
+      this.logger.error('Mailchimp webhook error - invalid secret');
+      throw new HttpException('Mailchimp webhook error - invalid secret', HttpStatus.UNAUTHORIZED);
+    }
+
+    const { type, data } = dto;
+    const email = data?.email;
+
+    if (!email) {
+      this.logger.warn(`Mailchimp webhook: no email in payload for event type "${type}"`);
+      return;
+    }
+
+    // Hard bounces and cleaned addresses indicate permanent delivery failure.
+    // Soft bounces are transient — Mailchimp retries internally so we leave those alone.
+    const isHardBounce = type === 'bounce' && data.action === 'hard';
+    const isCleaned = type === 'cleaned';
+
+    if (!isHardBounce && !isCleaned) return;
+
+    const reason = data.reason ?? data.action ?? type;
+    this.logger.log(
+      `Mailchimp webhook: ${type} (reason=${reason}) — recording delivery outcome`,
+    );
+
+    try {
+      if (isHardBounce) {
+        await this.chatUserService.markUnreadNotificationDeliveryFailure(
+          email,
+          UNREAD_NOTIFICATION_STATUS.BOUNCED,
+          `mailchimp_bounce: ${reason}`,
+        );
+      } else {
+        await this.chatUserService.markUnreadNotificationDeliveryFailure(
+          email,
+          UNREAD_NOTIFICATION_STATUS.CLEANED,
+          `mailchimp_cleaned: ${reason}`,
+        );
+      }
+    } catch (err) {
+      this.logger.error(
+        `Mailchimp webhook: failed to record ${type}: ${(err as Error)?.message || 'unknown error'}`,
+      );
+    }
   }
 }

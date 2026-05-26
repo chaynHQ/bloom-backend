@@ -16,6 +16,51 @@ export class PartnerEntity extends BaseBloomEntity {
   @Column({ type: Boolean, default: true })
   isActive: boolean;
 
+  @Column({ nullable: true })
+  logo: string | null;
+
+  @Column({ nullable: true })
+  logoAlt: string | null;
+
+  @Column({ nullable: true })
+  partnershipLogo: string | null;
+
+  @Column({ nullable: true })
+  partnershipLogoAlt: string | null;
+
+  @Column({ nullable: true })
+  bloomGirlIllustration: string | null;
+
+  @Column({ nullable: true })
+  bloomGirlIllustrationAlt: string | null;
+
+  @Column({ nullable: true })
+  website: string | null;
+
+  @Column({ nullable: true })
+  footerLine1: string | null;
+
+  @Column({ nullable: true })
+  footerLine2: string | null;
+
+  @Column({ nullable: true })
+  facebookUrl: string | null;
+
+  @Column({ nullable: true })
+  twitterUrl: string | null;
+
+  @Column({ nullable: true })
+  instagramUrl: string | null;
+
+  @Column({ nullable: true })
+  youtubeUrl: string | null;
+
+  @Column({ nullable: true })
+  tiktokUrl: string | null;
+
+  @Column({ nullable: true })
+  githubUrl: string | null;
+
   @OneToMany(() => PartnerAdminEntity, (partnerAdminEntity) => partnerAdminEntity.partner, {
     cascade: true,
   })

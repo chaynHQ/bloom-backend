@@ -2,7 +2,7 @@ import { ConfigService } from '@nestjs/config';
 import { config } from 'dotenv';
 import * as PostgressConnectionStringParser from 'pg-connection-string';
 import { DataSource, DataSourceOptions } from 'typeorm';
-import { databaseUrl } from './utils/constants';
+import { ChatUserEntity } from './entities/chat-user.entity';
 import { CoursePartnerEntity } from './entities/course-partner.entity';
 import { CourseUserEntity } from './entities/course-user.entity';
 import { CourseEntity } from './entities/course.entity';
@@ -12,6 +12,7 @@ import { PartnerAccessEntity } from './entities/partner-access.entity';
 import { PartnerAdminEntity } from './entities/partner-admin.entity';
 import { PartnerFeatureEntity } from './entities/partner-feature.entity';
 import { PartnerEntity } from './entities/partner.entity';
+import { ReportingRunEntity } from './entities/reporting-run.entity';
 import { ResourceFeedbackEntity } from './entities/resource-feedback.entity';
 import { ResourceUserEntity } from './entities/resource-user.entity';
 import { ResourceEntity } from './entities/resource.entity';
@@ -59,6 +60,14 @@ import { BloomBackend1743510885507 } from './migrations/1743510885507-bloom-back
 import { BloomBackend1744450013565 } from './migrations/1744450013565-bloom-backend';
 import { BloomBackend1748540025892 } from './migrations/1748540025892-bloom-backend';
 import { BloomBackend1756987770157 } from './migrations/1756987770157-bloom-backend';
+import { BloomBackend1757000000000 } from './migrations/1757000000000-bloom-backend';
+import { BloomBackend1773245874548 } from './migrations/1773245874548-bloom-backend';
+import { BloomBackend1776686083659 } from './migrations/1776686083659-bloom-backend';
+import { BloomBackend1777046400000 } from './migrations/1777046400000-bloom-backend';
+import { BloomBackend1777593600000 } from './migrations/1777593600000-bloom-backend';
+import { BloomBackend1779235200000 } from './migrations/1779235200000-bloom-backend';
+import { BloomBackend1779840000000 } from './migrations/1779840000000-bloom-backend';
+import { databaseUrl } from './utils/constants';
 
 config();
 const configService = new ConfigService();
@@ -66,9 +75,7 @@ const configService = new ConfigService();
 const isProduction = configService.get('NODE_ENV') === 'production';
 const isStaging = configService.get('NODE_ENV') === 'staging';
 
-const { host, port, user, password, database } = PostgressConnectionStringParser.parse(
-  databaseUrl,
-);
+const { host, port, user, password, database } = PostgressConnectionStringParser.parse(databaseUrl);
 
 export const dataSourceOptions = {
   type: 'postgres',
@@ -79,9 +86,10 @@ export const dataSourceOptions = {
   database,
   synchronize: false, // updates the database automatically without running migrations - turn on with caution
   migrationsRun: true, // ensures migrations are run on the db at startup - turn off with caution
-  logging: !isProduction,
+  logging: false,
   entities: [
     UserEntity,
+    ChatUserEntity,
     PartnerEntity,
     PartnerAdminEntity,
     PartnerAccessEntity,
@@ -100,6 +108,7 @@ export const dataSourceOptions = {
     ResourceUserEntity,
     ResourceEntity,
     ResourceFeedbackEntity,
+    ReportingRunEntity,
   ],
   migrations: [
     bloomBackend1637704119795,
@@ -139,6 +148,13 @@ export const dataSourceOptions = {
     BloomBackend1744450013565,
     BloomBackend1748540025892,
     BloomBackend1756987770157,
+    BloomBackend1757000000000,
+    BloomBackend1773245874548,
+    BloomBackend1776686083659,
+    BloomBackend1777046400000,
+    BloomBackend1777593600000,
+    BloomBackend1779235200000,
+    BloomBackend1779840000000,
   ],
   subscribers: [],
   ssl: isProduction || isStaging,

@@ -141,9 +141,53 @@ export const firebaseMeasurementId = getEnv(
 
 export const zapierToken = getEnv(process.env.ZAPIER_TOKEN, 'ZAPIER_TOKEN');
 
-export const crispPluginId = getEnv(process.env.CRISP_PLUGIN_ID, 'CRISP_PLUGIN_ID');
-export const crispPluginKey = getEnv(process.env.CRISP_PLUGIN_KEY, 'CRISP_PLUGIN_KEY');
-export const crispWebsiteId = getEnv(process.env.CRISP_WEBSITE_ID, 'CRISP_WEBSITE_ID');
+export const frontChatApiToken = getEnv(process.env.FRONT_CHAT_API_TOKEN, 'FRONT_CHAT_API_TOKEN');
+export const frontChannelId = getEnv(process.env.FRONT_CHANNEL_ID, 'FRONT_CHANNEL_ID');
+export const frontContactListId = getEnv(
+  process.env.FRONT_CONTACT_LIST_ID,
+  'FRONT_CONTACT_LIST_ID',
+);
+export const frontChatWebhookToken = getEnv(
+  process.env.FRONT_CHAT_WEBHOOK_TOKEN,
+  'FRONT_CHAT_WEBHOOK_TOKEN',
+);
+export const frontChannelSigningSecret =
+  getEnv(process.env.FRONT_CHANNEL_SIGNING_SECRET, 'FRONT_CHANNEL_SIGNING_SECRET') || '';
+export const frontAppUid = getEnv(process.env.FRONT_APP_UID, 'FRONT_APP_UID');
+
+export const FRONT_API_BASE_URL = 'https://api2.frontapp.com';
+// Retry delays (ms) applied only to message-send paths so a transient Front 429/5xx
+// doesn't surface as a lost user message. Keep small — the user is waiting on the ack.
+export const FRONT_SEND_RETRY_DELAYS_MS = [200, 800];
+
+export const FRONT_CHAT_ATTACHMENT_ALLOWED_MIME_TYPES = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/gif',
+  'image/webp',
+  'audio/webm',
+  'audio/mp4',
+  'audio/mpeg',
+  'audio/ogg',
+  'application/pdf',
+]);
+export const FRONT_CHAT_ATTACHMENT_MAX_FILE_SIZE = 25 * 1024 * 1024; // 25 MB
+
+export const simplybookWebhookSecret = getEnv(
+  process.env.SIMPLYBOOK_WEBHOOK_SECRET,
+  'SIMPLYBOOK_WEBHOOK_SECRET',
+);
+// Fail fast in production rather than silently rejecting every Simplybook webhook
+// with a 401. SIMPLYBOOK_TOTP_SECRET is intentionally not required at startup because
+// it's only needed when 2FA is enabled on the Simplybook account.
+if (isProduction && !simplybookWebhookSecret) {
+  throw new Error('SIMPLYBOOK_WEBHOOK_SECRET is required in production');
+}
+
+export const simplybookTotpSecret = getEnv(
+  process.env.SIMPLYBOOK_TOTP_SECRET,
+  'SIMPLYBOOK_TOTP_SECRET',
+);
 
 export const slackWebhookUrl = getEnv(process.env.SLACK_WEBHOOK_URL, 'SLACK_WEBHOOK_URL');
 export const slackBloomUsersWebhookUrl = getEnv(
@@ -153,6 +197,29 @@ export const slackBloomUsersWebhookUrl = getEnv(
 export const slackDeletedUsersWebhookUrl = getEnv(
   process.env.SLACK_BLOOM_DELETED_USERS_WEBHOOK_URL,
   'SLACK_BLOOM_DELETED_USERS_WEBHOOK_URL',
+);
+// Bot-token + channel for threaded reporting digests. Required for the
+// reporting flow (single-message webhooks cannot post thread replies) — no
+// webhook fallback; missing config causes the run to fail loudly so the gap
+// is visible in logs rather than silently degrading to a truncated message.
+export const slackReportingBotToken = getEnv(
+  process.env.SLACK_REPORTING_BOT_TOKEN,
+  'SLACK_REPORTING_BOT_TOKEN',
+);
+export const slackReportingChannelId = getEnv(
+  process.env.SLACK_REPORTING_CHANNEL_ID,
+  'SLACK_REPORTING_CHANNEL_ID',
+);
+
+// Optional with a default — read process.env directly rather than via
+// getEnv() which would log a misleading "Missing required variable" warning
+// on every boot when the var isn't set (it isn't required).
+export const reportingTimezone = process.env.REPORTING_TIMEZONE || 'Europe/London';
+
+export const ga4PropertyId = getEnv(process.env.GA4_PROPERTY_ID, 'GA4_PROPERTY_ID');
+export const ga4ServiceAccountKeyJson = getEnv(
+  process.env.GA4_SERVICE_ACCOUNT_KEY_JSON,
+  'GA4_SERVICE_ACCOUNT_KEY_JSON',
 );
 
 export const storyblokToken = getEnv(process.env.STORYBLOK_PUBLIC_TOKEN, 'STORYBLOK_PUBLIC_TOKEN');
@@ -192,3 +259,7 @@ export const mailchimpServerPrefix = getEnv(
   process.env.MAILCHIMP_SERVER_PREFIX,
   'MAILCHIMP_SERVER_PREFIX',
 );
+
+export const mailchimpWebhookSecret = process.env.MAILCHIMP_WEBHOOK_SECRET || '';
+
+export const frontSupportEmail = process.env.FRONT_SUPPORT_EMAIL || 'support@bloom.chayn.co';

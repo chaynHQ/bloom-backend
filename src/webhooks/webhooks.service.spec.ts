@@ -2,12 +2,11 @@ import { createMock } from '@golevelup/ts-jest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import apiCall from 'src/api/apiCalls';
+import * as simplybookApi from 'src/api/simplybook/simplybook-api';
 import { SlackMessageClient } from 'src/api/slack/slack-api';
 import { CoursePartnerService } from 'src/course-partner/course-partner.service';
-import { CrispService } from 'src/crisp/crisp.service';
 import { CoursePartnerEntity } from 'src/entities/course-partner.entity';
 import { CourseEntity } from 'src/entities/course.entity';
-import { EventLogEntity } from 'src/entities/event-log.entity';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
 import { PartnerAdminEntity } from 'src/entities/partner-admin.entity';
 import { PartnerEntity } from 'src/entities/partner.entity';
@@ -15,7 +14,7 @@ import { ResourceEntity } from 'src/entities/resource.entity';
 import { SessionEntity } from 'src/entities/session.entity';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
 import { UserEntity } from 'src/entities/user.entity';
-import { EventLoggerService } from 'src/event-logger/event-logger.service';
+import { ChatUserService } from 'src/chat-user/chat-user.service';
 import { PartnerService } from 'src/partner/partner.service';
 import { ServiceUserProfilesService } from 'src/service-user-profiles/service-user-profiles.service';
 import {
@@ -33,6 +32,8 @@ import {
   mockSession,
   mockSessionStoryblokResult,
   mockSimplybookBodyBase,
+  mockSimplybookBookingDetails,
+  mockSimplybookWebhookDto,
   mockTherapySessionEntity,
   mockUserEntity,
 } from 'test/utils/mockData';
@@ -40,7 +41,6 @@ import {
   mockCoursePartnerRepositoryMethods,
   mockCoursePartnerServiceMethods,
   mockCourseRepositoryMethods,
-  mockEventLoggerRepositoryMethods,
   mockPartnerAccessRepositoryMethods,
   mockPartnerAdminRepositoryMethods,
   mockPartnerRepositoryMethods,
@@ -51,22 +51,32 @@ import {
   mockUserRepositoryMethods,
 } from 'test/utils/mockedServices';
 import { ILike, Repository } from 'typeorm';
+import { SimplybookNotificationType } from './dto/simplybook-webhook.dto';
 import { WebhooksService } from './webhooks.service';
 
 jest.mock('src/api/apiCalls');
 
+jest.mock('src/utils/constants', () => {
+  const actual = jest.requireActual('src/utils/constants');
+  return {
+    ...actual,
+    storyblokToken: 'test-storyblok-token',
+    simplybookCompanyName: 'chayn',
+  };
+});
+
 jest.mock('src/api/simplybook/simplybook-api', () => {
   return {
-    getBookingsForDate: async () => [
-      {
-        bookingCode: 'bookingCodeA',
-        clientEmail: 'ellie@chayn.co',
-        date: new Date(2022, 9, 10),
-      },
-    ],
-    getAuthToken: async () => {
-      return 'token';
-    },
+    getBookingDetails: jest.fn(async () => ({
+      id: 123,
+      code: 'abc',
+      start_datetime: '2022-09-12T07:30:00+0000',
+      end_datetime: '2022-09-12T08:30:00+0000',
+      service: { name: 'bloom therapy' },
+      provider: { name: 'Therapist name', email: 'therapist@test.com' },
+      client: { email: 'testuser@test.com' },
+      additional_fields: [{ id: 1, field_name: 'user_id', value: 'userId2' }],
+    })),
   };
 });
 
@@ -100,11 +110,6 @@ describe('WebhooksService', () => {
     mockPartnerAdminRepositoryMethods,
   );
   const mockedServiceUserProfilesService = createMock<ServiceUserProfilesService>();
-  const mockCrispService = createMock<CrispService>();
-  const mockEventLoggerService = createMock<EventLoggerService>();
-  const mockEventLogRepository = createMock<Repository<EventLogEntity>>(
-    mockEventLoggerRepositoryMethods,
-  );
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -162,13 +167,11 @@ describe('WebhooksService', () => {
           provide: SlackMessageClient,
           useValue: mockedSlackMessageClient,
         },
-        PartnerService,
         {
-          provide: getRepositoryToken(EventLogEntity),
-          useValue: mockEventLogRepository,
+          provide: ChatUserService,
+          useValue: createMock<ChatUserService>(),
         },
-        { provide: CrispService, useValue: mockCrispService },
-        { provide: EventLoggerService, useValue: mockEventLoggerService },
+        PartnerService,
       ],
     }).compile();
 
@@ -711,34 +714,40 @@ describe('WebhooksService', () => {
       ).resolves.toHaveProperty('action', SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING);
     });
 
-    it('should add therapyRemaining to original partner access when action is cancel', async () => {
-      const partnerAccessSaveSpy = jest.spyOn(mockedPartnerAccessRepository, 'save');
+    it('should credit therapyRemaining back to original partner access when action is cancel', async () => {
+      const incrementSpy = jest.spyOn(mockedPartnerAccessRepository, 'increment');
+      const decrementSpy = jest.spyOn(mockedPartnerAccessRepository, 'decrement');
       await expect(
         service.updatePartnerAccessTherapy({
           ...mockSimplybookBodyBase,
           ...{ action: SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING },
         }),
       ).resolves.toHaveProperty('action', SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING);
-      expect(partnerAccessSaveSpy).toHaveBeenCalledWith({
-        ...mockPartnerAccessEntity,
-        therapySessionsRemaining: mockPartnerAccessEntity.therapySessionsRemaining + 1,
-        therapySessionsRedeemed: mockPartnerAccessEntity.therapySessionsRedeemed - 1,
-      });
+      expect(incrementSpy).toHaveBeenCalledWith(
+        { id: mockTherapySessionEntity.partnerAccessId },
+        'therapySessionsRemaining',
+        1,
+      );
+      expect(decrementSpy).toHaveBeenCalledWith(
+        { id: mockTherapySessionEntity.partnerAccessId },
+        'therapySessionsRedeemed',
+        1,
+      );
     });
 
-    it('should set a booking as cancelled when action is cancel and there are no therapy sessions remaining TODO', async () => {
-      const partnerAccessFindSpy = jest
-        .spyOn(mockedPartnerAccessRepository, 'findOneBy')
-        .mockImplementationOnce(async () => {
-          return { ...mockPartnerAccessEntity, therapySessionsRemaining: 0 };
-        });
+    it('should still credit back when partner access has zero remaining (cancel path uses atomic increment)', async () => {
+      const incrementSpy = jest.spyOn(mockedPartnerAccessRepository, 'increment');
       await expect(
         service.updatePartnerAccessTherapy({
           ...mockSimplybookBodyBase,
           ...{ action: SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING },
         }),
       ).resolves.toHaveProperty('action', SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING);
-      expect(partnerAccessFindSpy).toHaveBeenCalled();
+      expect(incrementSpy).toHaveBeenCalledWith(
+        { id: mockTherapySessionEntity.partnerAccessId },
+        'therapySessionsRemaining',
+        1,
+      );
     });
 
     it('should throw if no partnerAccess exists when user tries to create a booking', async () => {
@@ -760,25 +769,37 @@ describe('WebhooksService', () => {
         ];
       });
 
-      const partnerAccessSaveSpy = jest.spyOn(mockedPartnerAccessRepository, 'save');
+      const decrementSpy = jest.spyOn(mockedPartnerAccessRepository, 'decrement');
+      const incrementSpy = jest.spyOn(mockedPartnerAccessRepository, 'increment');
       await expect(
         service.updatePartnerAccessTherapy({
           ...mockSimplybookBodyBase,
           ...{ action: SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING },
         }),
       ).resolves.toHaveProperty('action', SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING);
-      expect(partnerAccessSaveSpy).toHaveBeenCalledWith(mockPartnerAccessEntity);
+      expect(decrementSpy).toHaveBeenCalledWith(
+        { id: mockPartnerAccessEntity.id },
+        'therapySessionsRemaining',
+        1,
+      );
+      expect(incrementSpy).toHaveBeenCalledWith(
+        { id: mockPartnerAccessEntity.id },
+        'therapySessionsRedeemed',
+        1,
+      );
     });
 
-    it('should not update partner access when user updates booking', async () => {
-      const partnerAccessSaveSpy = jest.spyOn(mockedPartnerAccessRepository, 'save');
+    it('should not increment/decrement partner access counters when user updates booking', async () => {
+      const incrementSpy = jest.spyOn(mockedPartnerAccessRepository, 'increment');
+      const decrementSpy = jest.spyOn(mockedPartnerAccessRepository, 'decrement');
       await expect(
         service.updatePartnerAccessTherapy({
           ...mockSimplybookBodyBase,
           ...{ action: SIMPLYBOOK_ACTION_ENUM.UPDATED_BOOKING },
         }),
       ).resolves.toHaveProperty('action', SIMPLYBOOK_ACTION_ENUM.UPDATED_BOOKING);
-      expect(partnerAccessSaveSpy).not.toHaveBeenCalled();
+      expect(incrementSpy).not.toHaveBeenCalled();
+      expect(decrementSpy).not.toHaveBeenCalled();
     });
     it('should error if user creates booking when no therapy sessions remaining ', async () => {
       jest.spyOn(mockedPartnerAccessRepository, 'find').mockImplementationOnce(async () => {
@@ -832,6 +853,84 @@ describe('WebhooksService', () => {
         }),
       ).resolves.toHaveProperty('action', SIMPLYBOOK_ACTION_ENUM.UPDATED_BOOKING);
       expect(therapySessionFindOneSpy).toHaveBeenCalled();
+    });
+  });
+
+  describe('handleSimplybookWebhook', () => {
+    let getBookingDetailsSpy: jest.SpyInstance;
+    let updateTherapySpy: jest.SpyInstance;
+
+    beforeEach(() => {
+      getBookingDetailsSpy = jest.spyOn(simplybookApi, 'getBookingDetails');
+      updateTherapySpy = jest
+        .spyOn(service, 'updatePartnerAccessTherapy')
+        .mockResolvedValue(mockTherapySessionEntity);
+    });
+
+    it('should return undefined and not call Simplybook API for notify type', async () => {
+      const result = await service.handleSimplybookWebhook({
+        ...mockSimplybookWebhookDto,
+        notification_type: SimplybookNotificationType.NOTIFY,
+      });
+      expect(result).toBeUndefined();
+      expect(getBookingDetailsSpy).not.toHaveBeenCalled();
+    });
+
+    it('should fetch booking details and map create to NEW_BOOKING', async () => {
+      await service.handleSimplybookWebhook({
+        ...mockSimplybookWebhookDto,
+        notification_type: SimplybookNotificationType.CREATE,
+      });
+      expect(getBookingDetailsSpy).toHaveBeenCalledWith(mockSimplybookWebhookDto.booking_id);
+      expect(updateTherapySpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING,
+          booking_code: 'abc',
+          client_email: 'testuser@test.com',
+          user_id: 'userId2',
+        }),
+      );
+    });
+
+    it('should map cancel to CANCELLED_BOOKING', async () => {
+      await service.handleSimplybookWebhook({
+        ...mockSimplybookWebhookDto,
+        notification_type: SimplybookNotificationType.CANCEL,
+      });
+      expect(updateTherapySpy).toHaveBeenCalledWith(
+        expect.objectContaining({ action: SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING }),
+      );
+    });
+
+    it('should map change to UPDATED_BOOKING', async () => {
+      await service.handleSimplybookWebhook({
+        ...mockSimplybookWebhookDto,
+        notification_type: SimplybookNotificationType.CHANGE,
+      });
+      expect(updateTherapySpy).toHaveBeenCalledWith(
+        expect.objectContaining({ action: SIMPLYBOOK_ACTION_ENUM.UPDATED_BOOKING }),
+      );
+    });
+
+    it('should pass undefined user_id when not present in additional_fields', async () => {
+      getBookingDetailsSpy.mockResolvedValueOnce({
+        ...mockSimplybookBookingDetails,
+        additional_fields: [],
+      });
+      await service.handleSimplybookWebhook(mockSimplybookWebhookDto);
+      expect(updateTherapySpy).toHaveBeenCalledWith(
+        expect.objectContaining({ user_id: undefined }),
+      );
+    });
+
+    it('should reject when company does not match', async () => {
+      await expect(
+        service.handleSimplybookWebhook({
+          ...mockSimplybookWebhookDto,
+          company: 'someone-else',
+        }),
+      ).rejects.toThrow(/unexpected company/);
+      expect(getBookingDetailsSpy).not.toHaveBeenCalled();
     });
   });
 });
