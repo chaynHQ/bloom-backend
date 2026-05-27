@@ -44,8 +44,7 @@ SIMPLYBOOK_TOTP_SECRET= # Required when 2FA is enabled on the Simplybook admin a
 #---------------------------------------------------------------
 ROLLBAR_ENV=development # Rollbar logging
 ROLLBAR_TOKEN= # Rollbar logging
-ZAPIER_TOKEN= # Zapier automation (legacy - see SIMPLYBOOK_WEBHOOK_SECRET)
-SLACK_WEBHOOK_URL= # Slack messaging bots
+SLACK_THERAPY_WEBHOOK_URL= # Slack webhook for #bloom-therapy channel (booking events + error alerts)
 FRONT_CHAT_API_TOKEN
 FRONT_CHANNEL_ID
 FRONT_CONTACT_LIST_ID
