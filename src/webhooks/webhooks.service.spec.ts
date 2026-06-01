@@ -854,6 +854,141 @@ describe('WebhooksService', () => {
       ).resolves.toHaveProperty('action', SIMPLYBOOK_ACTION_ENUM.UPDATED_BOOKING);
       expect(therapySessionFindOneSpy).toHaveBeenCalled();
     });
+
+    it('should throw CONFLICT and alert Slack when incoming booking_id does not match the existing record', async () => {
+      const slackSpy = jest.spyOn(mockedSlackMessageClient, 'sendMessageToTherapySlackChannel');
+      const incrementSpy = jest.spyOn(mockedPartnerAccessRepository, 'increment');
+      const decrementSpy = jest.spyOn(mockedPartnerAccessRepository, 'decrement');
+
+      await expect(
+        service.updatePartnerAccessTherapy({
+          ...mockSimplybookBodyBase,
+          action: SIMPLYBOOK_ACTION_ENUM.UPDATED_BOOKING,
+          booking_id: 99999,
+        }),
+      ).rejects.toMatchObject({
+        status: 409,
+        message: expect.stringContaining('bookingId mismatch'),
+      });
+
+      expect(slackSpy).toHaveBeenCalledWith(expect.stringContaining('bookingId mismatch'));
+      // No counter mutation should have happened on the mismatch path.
+      expect(incrementSpy).not.toHaveBeenCalled();
+      expect(decrementSpy).not.toHaveBeenCalled();
+    });
+
+    it('should NOT credit back on a duplicate cancel when cancelledAt is already set', async () => {
+      jest.spyOn(mockedTherapySessionRepository, 'findOneBy').mockImplementationOnce(async () => {
+        return { ...mockTherapySessionEntity, cancelledAt: new Date() };
+      });
+      const incrementSpy = jest.spyOn(mockedPartnerAccessRepository, 'increment');
+      const decrementSpy = jest.spyOn(mockedPartnerAccessRepository, 'decrement');
+
+      await expect(
+        service.updatePartnerAccessTherapy({
+          ...mockSimplybookBodyBase,
+          action: SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING,
+        }),
+      ).resolves.toHaveProperty('action', SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING);
+
+      expect(incrementSpy).not.toHaveBeenCalled();
+      expect(decrementSpy).not.toHaveBeenCalled();
+    });
+
+    it('should send a Slack message with masked email and user id on UPDATED_BOOKING', async () => {
+      const slackSpy = jest.spyOn(mockedSlackMessageClient, 'sendMessageToTherapySlackChannel');
+
+      await service.updatePartnerAccessTherapy({
+        ...mockSimplybookBodyBase,
+        action: SIMPLYBOOK_ACTION_ENUM.UPDATED_BOOKING,
+      });
+
+      expect(slackSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Therapy booking updated'),
+      );
+      const message = slackSpy.mock.calls.at(-1)[0] as string;
+      // mockUserEntity.email = 'user@email.com' → masked = 'u**r@email.com'
+      expect(message).toContain('u**r@email.com');
+      // The user repo mock spreads the lookup arg over the entity, so the resolved
+      // user.id matches the id we passed in (user_id from the webhook payload).
+      expect(message).toContain(`(id: ${mockSimplybookBodyBase.user_id})`);
+    });
+
+    it('should send a Slack message with the cancelled header on CANCELLED_BOOKING', async () => {
+      const slackSpy = jest.spyOn(mockedSlackMessageClient, 'sendMessageToTherapySlackChannel');
+
+      await service.updatePartnerAccessTherapy({
+        ...mockSimplybookBodyBase,
+        action: SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING,
+      });
+
+      // Last call is the notifier (any earlier Slack calls are operational alerts).
+      const message = slackSpy.mock.calls.at(-1)[0] as string;
+      expect(message).toContain('Therapy booking cancelled');
+    });
+
+    it('should send a Slack message with the new-booking header on NEW_BOOKING', async () => {
+      const slackSpy = jest.spyOn(mockedSlackMessageClient, 'sendMessageToTherapySlackChannel');
+      jest.spyOn(mockedPartnerAccessRepository, 'find').mockImplementationOnce(async () => {
+        return [
+          { ...mockPartnerAccessEntity, therapySessionsRemaining: 6, therapySessionsRedeemed: 0 },
+        ];
+      });
+
+      await service.updatePartnerAccessTherapy({
+        ...mockSimplybookBodyBase,
+        action: SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING,
+      });
+
+      const message = slackSpy.mock.calls.at(-1)[0] as string;
+      expect(message).toContain('New therapy booking');
+    });
+
+    it('should include "Rescheduled from" line on UPDATED_BOOKING', async () => {
+      const slackSpy = jest.spyOn(mockedSlackMessageClient, 'sendMessageToTherapySlackChannel');
+
+      await service.updatePartnerAccessTherapy({
+        ...mockSimplybookBodyBase,
+        action: SIMPLYBOOK_ACTION_ENUM.UPDATED_BOOKING,
+      });
+
+      const message = slackSpy.mock.calls.at(-1)[0] as string;
+      expect(message).toContain('Rescheduled from:');
+    });
+
+    it('should still resolve when the Slack notifier call throws', async () => {
+      jest
+        .spyOn(mockedSlackMessageClient, 'sendMessageToTherapySlackChannel')
+        .mockRejectedValueOnce(new Error('slack 500'));
+
+      await expect(
+        service.updatePartnerAccessTherapy({
+          ...mockSimplybookBodyBase,
+          action: SIMPLYBOOK_ACTION_ENUM.UPDATED_BOOKING,
+        }),
+      ).resolves.toHaveProperty('action', SIMPLYBOOK_ACTION_ENUM.UPDATED_BOOKING);
+    });
+
+    it('should still resolve and still send a Slack message when the notifier partner-access lookup fails', async () => {
+      const slackSpy = jest.spyOn(mockedSlackMessageClient, 'sendMessageToTherapySlackChannel');
+      // First find call (line ~151) succeeds, second (notifier aggregation) throws.
+      jest
+        .spyOn(mockedPartnerAccessRepository, 'find')
+        .mockResolvedValueOnce([{ ...mockPartnerAccessEntity }] as PartnerAccessEntity[])
+        .mockRejectedValueOnce(new Error('db connection lost'));
+
+      await expect(
+        service.updatePartnerAccessTherapy({
+          ...mockSimplybookBodyBase,
+          action: SIMPLYBOOK_ACTION_ENUM.UPDATED_BOOKING,
+        }),
+      ).resolves.toHaveProperty('action', SIMPLYBOOK_ACTION_ENUM.UPDATED_BOOKING);
+
+      // Notifier still sends a message — just without the aggregated counter lines.
+      const message = slackSpy.mock.calls.at(-1)[0] as string;
+      expect(message).toContain('Therapy booking updated');
+      expect(message).not.toContain('Sessions remaining');
+    });
   });
 
   describe('handleSimplybookWebhook', () => {
@@ -931,6 +1066,32 @@ describe('WebhooksService', () => {
         }),
       ).rejects.toThrow(/unexpected company/);
       expect(getBookingDetailsSpy).not.toHaveBeenCalled();
+    });
+
+    it('should reject with UNAUTHORIZED when webhook_timestamp is outside the replay window', async () => {
+      // 10 minutes ago — well outside the 5-minute window
+      const staleTimestampSeconds = Math.floor(Date.now() / 1000) - 10 * 60;
+
+      await expect(
+        service.handleSimplybookWebhook({
+          ...mockSimplybookWebhookDto,
+          webhook_timestamp: staleTimestampSeconds,
+        }),
+      ).rejects.toMatchObject({
+        status: 401,
+        message: expect.stringContaining('replay window'),
+      });
+      expect(getBookingDetailsSpy).not.toHaveBeenCalled();
+    });
+
+    it('should accept when webhook_timestamp is inside the replay window', async () => {
+      const freshTimestampSeconds = Math.floor(Date.now() / 1000);
+
+      await service.handleSimplybookWebhook({
+        ...mockSimplybookWebhookDto,
+        webhook_timestamp: freshTimestampSeconds,
+      });
+      expect(getBookingDetailsSpy).toHaveBeenCalled();
     });
   });
 });

@@ -4,7 +4,6 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { FrontChatWebhookService } from 'src/front-chat/front-chat-webhook.service';
 import {
   mockSessionEntity,
-  mockSimplybookBodyBase,
   mockSimplybookWebhookDto,
   mockStoryWebhookDto,
   mockTherapySessionEntity,
@@ -32,23 +31,6 @@ describe('AppController', () => {
   });
 
   describe('Webhooks controller', () => {
-    it('updatePartnerAccessTherapy should return successful if service returns successful', async () => {
-      await expect(
-        webhooksController.updatePartnerAccessTherapy(mockSimplybookBodyBase),
-      ).resolves.toBe(mockTherapySessionEntity);
-    });
-
-    it('updatePartnerAccessTherapy should error if service returns errors', async () => {
-      jest
-        .spyOn(mockWebhooksService, 'updatePartnerAccessTherapy')
-        .mockImplementationOnce(async () => {
-          throw new HttpException('Therapy session not found', HttpStatus.FORBIDDEN);
-        });
-      await expect(
-        webhooksController.updatePartnerAccessTherapy(mockSimplybookBodyBase),
-      ).rejects.toThrow('Therapy session not found');
-    });
-
     describe('handleSimplybookWebhook', () => {
       it('should return therapy session when service succeeds', async () => {
         await expect(

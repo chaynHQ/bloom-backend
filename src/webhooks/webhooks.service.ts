@@ -17,6 +17,7 @@ import { Logger } from 'src/logger/logger';
 import { SimplybookBodyDto } from 'src/partner-access/dtos/simplybook-body.dto';
 import { ServiceUserProfilesService } from 'src/service-user-profiles/service-user-profiles.service';
 import { IUser } from 'src/user/user.interface';
+import { partiallyMaskEmail } from 'src/utils/pii-redaction';
 import { serializeSimplybookDtoToTherapySessionEntity } from 'src/utils/serialize';
 import { ILike, MoreThan, Repository } from 'typeorm';
 import { CoursePartnerService } from '../course-partner/course-partner.service';
@@ -70,7 +71,7 @@ export class WebhooksService {
     });
 
     if (action !== SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING && !existingTherapySession) {
-      const error = `UpdatePartnerAccessTherapy - existing therapy session not found for booking code ${booking_code}`;
+      const error = `UpdatePartnerAccessTherapy - existing therapy session not found for ${action} action, booking_code ${booking_code}`;
       this.logger.error(error);
       throw new HttpException(error, HttpStatus.BAD_REQUEST);
     }
@@ -165,6 +166,8 @@ export class WebhooksService {
 
       this.serviceUserProfilesService.updateServiceUserProfilesTherapy(partnerAccesses, user.email);
 
+      await this.notifyTherapyChannelOfBooking(action, therapySession, user.email, user.id);
+
       this.logger.log(
         `Update therapy session webhook function COMPLETED for ${action} - booking_code ${booking_code} - userId ${user_id}`,
       );
@@ -241,6 +244,85 @@ export class WebhooksService {
     };
 
     return this.updatePartnerAccessTherapy(internalDto);
+  }
+
+  // Sends an informational Slack message for booking lifecycle events (new/update/cancel).
+  // User email is partially masked so the channel contains no full PII while staying
+  // recognisable to teammates who know the user.
+  private async notifyTherapyChannelOfBooking(
+    action: SIMPLYBOOK_ACTION_ENUM,
+    therapySession: TherapySessionEntity,
+    userEmail: string,
+    userId: string,
+  ): Promise<void> {
+    const maskedEmail = partiallyMaskEmail(userEmail);
+    const timezone = therapySession.clientTimezone || 'unknown timezone';
+    const when = therapySession.startDateTime
+      ? new Date(therapySession.startDateTime).toISOString()
+      : 'unknown time';
+
+    const header =
+      action === SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING
+        ? 'New therapy booking'
+        : action === SIMPLYBOOK_ACTION_ENUM.CANCELLED_BOOKING
+          ? 'Therapy booking cancelled'
+          : 'Therapy booking updated';
+
+    const lines = [
+      `*${header}*`,
+      `• Booking code: ${therapySession.bookingCode}`,
+      `• User: ${maskedEmail} (id: ${userId})`,
+      `• Service: ${therapySession.serviceName}`,
+      `• Provider: ${therapySession.serviceProviderName}`,
+      `• When: ${when} (${timezone})`,
+    ];
+    if (
+      action === SIMPLYBOOK_ACTION_ENUM.UPDATED_BOOKING &&
+      therapySession.rescheduledFrom
+    ) {
+      lines.push(`• Rescheduled from: ${new Date(therapySession.rescheduledFrom).toISOString()}`);
+    }
+
+    // Aggregate counter state across all the user's active partner accesses (matching
+    // what the Bloom UI displays — the user may have multiple access codes), plus list
+    // their partner names for context.
+    try {
+      const userPartnerAccesses = await this.partnerAccessRepository.find({
+        where: { userId, active: true },
+        relations: { partner: true },
+      });
+
+      const totalRemaining = userPartnerAccesses.reduce(
+        (sum, pa) => sum + (pa.therapySessionsRemaining ?? 0),
+        0,
+      );
+      const totalRedeemed = userPartnerAccesses.reduce(
+        (sum, pa) => sum + (pa.therapySessionsRedeemed ?? 0),
+        0,
+      );
+      lines.push(`• Sessions remaining (total across access codes): ${totalRemaining}`);
+      lines.push(`• Sessions redeemed (total across access codes): ${totalRedeemed}`);
+
+      const partnerNames = userPartnerAccesses
+        .map((pa) => pa.partner?.name)
+        .filter((name): name is string => !!name);
+      if (partnerNames.length > 0) {
+        lines.push(`• Partners: ${[...new Set(partnerNames)].join(', ')}`);
+      }
+    } catch {
+      // Don't fail the notification just because we couldn't look up the partner access data.
+      // The rest of the message is still useful on its own.
+    }
+
+    try {
+      await this.slackMessageClient.sendMessageToTherapySlackChannel(lines.join('\n'));
+    } catch (err) {
+      // Don't fail the webhook if Slack is unavailable — log and continue.
+      const message = err instanceof Error ? err.message : 'unknown error';
+      this.logger.error(
+        `notifyTherapyChannelOfBooking failed for booking_code ${therapySession.bookingCode}: ${message}`,
+      );
+    }
   }
 
   private async getSimplyBookTherapyUser(userId: string, client_email: string): Promise<IUser> {
@@ -369,6 +451,14 @@ export class WebhooksService {
         updatedPartnerAccesses,
         user.email,
       );
+
+      await this.notifyTherapyChannelOfBooking(
+        SIMPLYBOOK_ACTION_ENUM.NEW_BOOKING,
+        therapySession,
+        user.email,
+        user.id,
+      );
+
       return therapySession;
     } catch (err) {
       const error = `newPartnerAccessTherapy - error saving new therapy session and partner access - userId ${user.id} - ${err?.message || 'unknown error'}`;
