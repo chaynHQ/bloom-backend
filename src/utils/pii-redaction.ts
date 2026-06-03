@@ -16,6 +16,25 @@ export function maskEmail(email: string): string {
   return `${email[0]}***@${email.slice(atIndex + 1)}`;
 }
 
+/**
+ * Partially mask an email so teammates who know the user can still recognise it,
+ * but the raw local part isn't exposed. Keeps the first and last char of the local
+ * part and the full domain; length-preserving so different users produce different
+ * outputs (e.g. `eleanor@chayn.co` → `e*****r@chayn.co`, `eve@chayn.co` → `e*e@chayn.co`).
+ *
+ * Used for non-error Slack notifications where some recognisability is useful but
+ * full PII is not. For general log scrubbing use `maskEmail` (heavier redaction).
+ */
+export function partiallyMaskEmail(email: string): string {
+  const atIndex = email.indexOf('@');
+  if (atIndex < 1) return '[REDACTED_EMAIL]';
+  const local = email.slice(0, atIndex);
+  const domain = email.slice(atIndex + 1);
+  if (local.length === 1) return `*@${domain}`;
+  if (local.length === 2) return `**@${domain}`;
+  return `${local[0]}${'*'.repeat(local.length - 2)}${local[local.length - 1]}@${domain}`;
+}
+
 export function maskPhone(phone: string): string {
   const digits = phone.replace(/\D/g, '');
   if (digits.length < 4) return '[REDACTED_PHONE]';

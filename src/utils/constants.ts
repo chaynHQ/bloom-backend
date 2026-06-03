@@ -139,8 +139,6 @@ export const firebaseMeasurementId = getEnv(
   'FIREBASE_MEASUREMENT_ID',
 );
 
-export const zapierToken = getEnv(process.env.ZAPIER_TOKEN, 'ZAPIER_TOKEN');
-
 export const frontChatApiToken = getEnv(process.env.FRONT_CHAT_API_TOKEN, 'FRONT_CHAT_API_TOKEN');
 export const frontChannelId = getEnv(process.env.FRONT_CHANNEL_ID, 'FRONT_CHANNEL_ID');
 export const frontContactListId = getEnv(
@@ -189,7 +187,10 @@ export const simplybookTotpSecret = getEnv(
   'SIMPLYBOOK_TOTP_SECRET',
 );
 
-export const slackWebhookUrl = getEnv(process.env.SLACK_WEBHOOK_URL, 'SLACK_WEBHOOK_URL');
+export const slackTherapyWebhookUrl = getEnv(
+  process.env.SLACK_THERAPY_WEBHOOK_URL,
+  'SLACK_THERAPY_WEBHOOK_URL',
+);
 export const slackBloomUsersWebhookUrl = getEnv(
   process.env.SLACK_BLOOM_USERS_WEBHOOK_URL,
   'SLACK_BLOOM_USERS_WEBHOOK_URL',
