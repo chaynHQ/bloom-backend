@@ -1,13 +1,13 @@
 import { Injectable } from '@nestjs/common';
-import { Logger } from 'src/logger/logger';
 import { AxiosResponse } from 'axios';
+import { Logger } from 'src/logger/logger';
 import {
   isProduction,
   slackBloomUsersWebhookUrl,
   slackDeletedUsersWebhookUrl,
   slackReportingBotToken,
   slackReportingChannelId,
-  slackWebhookUrl,
+  slackTherapyWebhookUrl,
 } from 'src/utils/constants';
 import apiCall from '../apiCalls';
 
@@ -29,7 +29,7 @@ export class SlackMessageClient {
 
     try {
       const response = await apiCall({
-        url: slackWebhookUrl,
+        url: slackTherapyWebhookUrl,
         type: 'post',
         data: {
           text: text,
@@ -38,7 +38,9 @@ export class SlackMessageClient {
       this.logger.log('Message sent to slack Therapy Channel');
       return response;
     } catch (err) {
-      this.logger.error(`Unable to sendMessageToTherapySlackChannel: ${err?.message || 'unknown error'}`);
+      this.logger.error(
+        `Unable to sendMessageToTherapySlackChannel: ${err?.message || 'unknown error'}`,
+      );
       return err;
     }
   }
@@ -57,7 +59,9 @@ export class SlackMessageClient {
       this.logger.log('Message sent to slack Bloom User Channel');
       return response;
     } catch (err) {
-      this.logger.error(`Unable to sendMessageToBloomUserSlackChannel: ${err?.message || 'unknown error'}`);
+      this.logger.error(
+        `Unable to sendMessageToBloomUserSlackChannel: ${err?.message || 'unknown error'}`,
+      );
       return err;
     }
   }
@@ -78,7 +82,9 @@ export class SlackMessageClient {
       this.logger.log('Message sent to slack Deleted Users Channel');
       return response;
     } catch (err) {
-      this.logger.error(`Unable to sendMessageToDeletedUsersSlackChannel: ${err?.message || 'unknown error'}`);
+      this.logger.error(
+        `Unable to sendMessageToDeletedUsersSlackChannel: ${err?.message || 'unknown error'}`,
+      );
       return err;
     }
   }
