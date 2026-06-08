@@ -4,8 +4,6 @@ import { Throttle } from '@nestjs/throttler';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
 import { FrontChatWebhookService } from 'src/front-chat/front-chat-webhook.service';
 import { ControllerDecorator } from 'src/utils/controller.decorator';
-import { SimplybookBodyDto } from '../partner-access/dtos/simplybook-body.dto';
-import { ZapierAuthGuard } from '../partner-access/zapier-auth.guard';
 import { FrontChatWebhookDto } from './dto/front-chat-webhook.dto';
 import { MailchimpWebhookDto } from './dto/mailchimp-webhook.dto';
 import { SimplybookWebhookDto } from './dto/simplybook-webhook.dto';
@@ -21,15 +19,6 @@ export class WebhooksController {
     private readonly webhooksService: WebhooksService,
     private readonly frontChatWebhookService: FrontChatWebhookService,
   ) {}
-
-  @UseGuards(ZapierAuthGuard)
-  @Post('simplybook')
-  @ApiBody({ type: SimplybookBodyDto })
-  async updatePartnerAccessTherapy(
-    @Body() simplybookBodyDto: SimplybookBodyDto,
-  ): Promise<TherapySessionEntity> {
-    return this.webhooksService.updatePartnerAccessTherapy(simplybookBodyDto);
-  }
 
   // Tight rate limit: real Simplybook traffic is a handful of events/minute at peak.
   // 30/min leaves headroom for burst deliveries (e.g. backfills) while deterring brute-force
