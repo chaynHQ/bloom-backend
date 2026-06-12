@@ -1611,10 +1611,10 @@
     webpack "5.106.2"
     webpack-node-externals "3.0.0"
 
-"@nestjs/common@^11.1.24":
-  version "11.1.24"
-  resolved "https://registry.yarnpkg.com/@nestjs/common/-/common-11.1.24.tgz#0665208a5e7658ddf2182dd248bdc04bb27277da"
-  integrity sha512-9zHxaDDM+oXW9As6UsP5yYB+UqczBmpeSCIFWdPEtEukMnZhxODG1BBjaUcdBB8Sc1uzojSJSJlp3yFp853t1g==
+"@nestjs/common@^11.1.26":
+  version "11.1.26"
+  resolved "https://registry.yarnpkg.com/@nestjs/common/-/common-11.1.26.tgz#de8b8bb3e6c8376d0059a4d691c8ce93e268f42d"
+  integrity sha512-0VARQyzuGbprvjO+slWq9Jtj1P0jYCSKAUSv9LWFNWD39ZbDzXXM1pMs35kReVXwchra0urMfTQxw4uAOfdSzA==
   dependencies:
     uid "2.0.2"
     file-type "21.3.4"
@@ -1631,13 +1631,12 @@
     dotenv-expand "12.0.3"
     lodash "4.18.1"
 
-"@nestjs/core@^11.1.24":
-  version "11.1.24"
-  resolved "https://registry.yarnpkg.com/@nestjs/core/-/core-11.1.24.tgz#054180df61ab539dbfb1f949ab945fb390f8a747"
-  integrity sha512-K4bzT+lEdd0Hhcsw3jtk56QAW6s6skK3ViN7hIROSN0kUf4ROwWEAKopJID6yhPQxB45kDtP2wEcjzE8171J3g==
+"@nestjs/core@^11.1.26":
+  version "11.1.26"
+  resolved "https://registry.yarnpkg.com/@nestjs/core/-/core-11.1.26.tgz#db28b97c7cdba4b06b262e78b73516b5ad5a4033"
+  integrity sha512-K45zUwYpowEsVqm8qNIzsMcl4LJev0MK9zVhDnmym7YRTJ2/caslqVeKYhPRd5+Fh81IkvWUVu6vEo46uZ5mgQ==
   dependencies:
     uid "2.0.2"
-    "@nuxt/opencollective" "0.4.1"
     fast-safe-stringify "2.1.1"
     iterare "1.2.1"
     path-to-regexp "8.4.2"
@@ -1648,10 +1647,10 @@
   resolved "https://registry.yarnpkg.com/@nestjs/mapped-types/-/mapped-types-2.1.1.tgz#9530ac3250ab433ba6ef831e9dd5d483f5fc8144"
   integrity sha512-SCCoMEJ6jdeI5h/N+KCVF1+pmg/hmEkNA5nHTS8Gvww7T/LCl4o1gFLinw2iQ60w7slFkszHcGLKGdazVI4F8A==
 
-"@nestjs/platform-express@^11.1.24":
-  version "11.1.24"
-  resolved "https://registry.yarnpkg.com/@nestjs/platform-express/-/platform-express-11.1.24.tgz#808f81699e059dedad2c7af0ada31751f85976ac"
-  integrity sha512-CeMKbRBm05aOBiWhIHWO2xDeHbxynBF9ySQv3gRjObz2N5+uJnYriAYkHvVqvC4JIydmMPmT5VdICFNlNz3qyA==
+"@nestjs/platform-express@^11.1.26":
+  version "11.1.26"
+  resolved "https://registry.yarnpkg.com/@nestjs/platform-express/-/platform-express-11.1.26.tgz#25be7cad69cc3a2d55eb3e6ed0230b1ef85fb98f"
+  integrity sha512-MJ5Kwe52Ag4nlIuLK2ekB6TVYu1a22uvDzc0Aq0wIzcLySIz4YK0fMcrDOKGdbGQWpfZtNu1PM3jhlf4hvf6Og==
   dependencies:
     cors "2.8.6"
     express "5.2.1"
@@ -1659,10 +1658,10 @@
     path-to-regexp "8.4.2"
     tslib "2.8.1"
 
-"@nestjs/platform-socket.io@^11.1.24":
-  version "11.1.24"
-  resolved "https://registry.yarnpkg.com/@nestjs/platform-socket.io/-/platform-socket.io-11.1.24.tgz#a376b700d0824ada09c61b5d7889af31e1be29ba"
-  integrity sha512-ImdR9G8W5Y2Hhcptdci+tNaG6JV/dzDguFTgtXOL5ie/gD9O9ARw8Cd9RzF2+oteyzQ+1sPK/+wgVOPOyYGVCA==
+"@nestjs/platform-socket.io@^11.1.26":
+  version "11.1.26"
+  resolved "https://registry.yarnpkg.com/@nestjs/platform-socket.io/-/platform-socket.io-11.1.26.tgz#3206467ef0d0dc1e1a4c928c6baf9bf6bc2822e6"
+  integrity sha512-uuBZI+65OcG0K+lTv8CCuvaQi5/tb2EBhbObnVeSjb7oIxiynwULhdJiynbFfotUKv4PebDPDIhByePCjOnfAQ==
   dependencies:
     socket.io "4.8.3"
     tslib "2.8.1"
@@ -1722,10 +1721,10 @@
   resolved "https://registry.yarnpkg.com/@nestjs/typeorm/-/typeorm-11.0.1.tgz#32e4b5c2bd35331e2fa414f87b9a15652c83469c"
   integrity sha512-8rw/nKT0S+L+MkzgE9F2/mox7mAgsPlwfzmW9gsESN1lmQtIrVEfiiBwC2O8+guS1jBfQehJIdcdUj2OAp4VUQ==
 
-"@nestjs/websockets@^11.1.24":
-  version "11.1.24"
-  resolved "https://registry.yarnpkg.com/@nestjs/websockets/-/websockets-11.1.24.tgz#6e2ef863d59b7ae65ee892be31919ae6bb86f276"
-  integrity sha512-37Z/QYzZ4nPHcGyGGjhjoKVOcpSPMhmRQj5DS1l0RKlRYgq8S0cmgaZ6kQ8PI3259PdchLx41oQibXh22iEUiA==
+"@nestjs/websockets@^11.1.26":
+  version "11.1.26"
+  resolved "https://registry.yarnpkg.com/@nestjs/websockets/-/websockets-11.1.26.tgz#cbb7cc133b8edc1d45e3788546f6a678e4900636"
+  integrity sha512-7ZZrVsaYVptAVL5J6eYIg3UMwlVwE1Yh/OpS6ieVv7DtFHKNNufHdktfysRavsHWCdIYNg6+ty0SGI7doJUwog==
   dependencies:
     iterare "1.2.1"
     object-hash "3.0.0"
@@ -1777,13 +1776,6 @@
   version "2.1.0"
   resolved "https://registry.yarnpkg.com/@nodable/entities/-/entities-2.1.0.tgz#f543e5c6446720d4cf9e498a83019dd159973bc2"
   integrity sha512-nyT7T3nbMyBI/lvr6L5TyWbFJAI9FTgVRakNoBqCD+PmID8DzFrrNdLLtHMwMszOtqZa8PAOV24ZqDnQrhQINA==
-
-"@nuxt/opencollective@0.4.1":
-  version "0.4.1"
-  resolved "https://registry.yarnpkg.com/@nuxt/opencollective/-/opencollective-0.4.1.tgz#57bc41d2b03b2fba20b935c15950ac0f4bd2cea2"
-  integrity sha512-GXD3wy50qYbxCJ652bDrDzgMr3NFEkIS374+IgFQKkCvk9yiYcLvX2XDYr7UyQxf4wK0e+yqDYRubZ0DtOxnmQ==
-  dependencies:
-    consola "^3.2.3"
 
 "@opentelemetry/api-logs@0.201.1":
   version "0.201.1"
@@ -2093,18 +2085,18 @@
   resolved "https://registry.yarnpkg.com/@sqltools/formatter/-/formatter-1.2.5.tgz#3abc203c79b8c3e90fd6c156a0c62d5403520e12"
   integrity sha512-Uy0+khmZqUrUGm5dmMqVlnvufZRSK0FbYzVgp0UMstm+F5+W2/jnEEQyc9vo1ZR/E5ZI/B1WjjoTqBqwJL6Krw==
 
-"@storyblok/js@^5.1.9":
-  version "5.1.9"
-  resolved "https://registry.yarnpkg.com/@storyblok/js/-/js-5.1.9.tgz#fe6ba0631e60fc0633d88681c55bd8270f8c3619"
-  integrity sha512-rHpNZBlB3HJbJtTN3rz1RtObV6/MIxYwi3dQpdZlTsNFs3MfyVF8L5n3mz52DMbIV5G00a0yyMi1jYLsUWxrAw==
+"@storyblok/js@^5.1.10":
+  version "5.1.10"
+  resolved "https://registry.yarnpkg.com/@storyblok/js/-/js-5.1.10.tgz#2eca394d4d4863b47867f41e5980734e6a9ead27"
+  integrity sha512-cpiOSizLol8fPiiCLyNfy2Z18mzJDT2YD/WmmEEg+HdqBSx84r+GjdtfOfUo9KGe76tXv676amh6RW/bi9PBSw==
   dependencies:
-    "@storyblok/richtext" "4.3.4"
-    storyblok-js-client "7.6.0"
+    "@storyblok/richtext" "4.3.5"
+    storyblok-js-client "7.6.1"
 
-"@storyblok/richtext@4.3.4":
-  version "4.3.4"
-  resolved "https://registry.yarnpkg.com/@storyblok/richtext/-/richtext-4.3.4.tgz#86577acfff96d02c7b7063d2e25628d5d8d4c24b"
-  integrity sha512-/8aMnfcvY0wclPzeltSc5s9IGxBOkGD/ehF2WCCyGapkXj77to1OCwXklEcblk/dFFx+9jhsYl1ORY/2Fnll9A==
+"@storyblok/richtext@4.3.5":
+  version "4.3.5"
+  resolved "https://registry.yarnpkg.com/@storyblok/richtext/-/richtext-4.3.5.tgz#5799cb49f6670499ce56d53b73881c38d76af59e"
+  integrity sha512-CSJUf+r6mjv4X6xvn2k9NWNfFoQ+FlWoubcp3Lmg5pIcK8CnJHICSgEBfiIqTzx4dgsAPF06OXaMEWyTTy9kMw==
   dependencies:
     "@tiptap/core" "^3.22.3"
     "@tiptap/extension-blockquote" "^3.22.3"
@@ -2137,7 +2129,7 @@
     emojibase "^17.0.0"
     happy-dom "^20.8.8"
     markdown-it "^14.1.0"
-    storyblok-js-client "7.6.0"
+    storyblok-js-client "7.6.1"
 
 "@tiptap/core@^3.22.3":
   version "3.22.5"
@@ -3663,11 +3655,6 @@ concat-stream@^2.0.0:
     readable-stream "^3.0.2"
     typedarray "^0.0.6"
 
-consola@^3.2.3:
-  version "3.4.2"
-  resolved "https://registry.yarnpkg.com/consola/-/consola-3.4.2.tgz#5af110145397bb67afdab77013fdc34cae590ea7"
-  integrity sha512-5IKcdX0nnYavi6G7TtOhwkYzyjfJlatbjMjuLSfE2kYT5pMDOilZ4OvMhi637CcDICTmz3wARPoyhqyX1Y+XvA==
-
 content-disposition@^1.0.0:
   version "1.1.0"
   resolved "https://registry.yarnpkg.com/content-disposition/-/content-disposition-1.1.0.tgz#f3db789c752d45564cc7e9e1e0b31790d4a38e17"
@@ -4732,10 +4719,10 @@ glob@^7.1.4:
     once "^1.3.0"
     path-is-absolute "^1.0.0"
 
-google-auth-library@^10.6.1, google-auth-library@^10.6.2:
-  version "10.6.2"
-  resolved "https://registry.yarnpkg.com/google-auth-library/-/google-auth-library-10.6.2.tgz#44557c536aec626b7cda48a85b5d026e2c9b74c4"
-  integrity sha512-e27Z6EThmVNNvtYASwQxose/G57rkRuaRbQyxM2bvYLLX/GqWZ5chWq2EBoUchJbCc57eC9ArzO5wMsEmWftCw==
+google-auth-library@^10.6.1, google-auth-library@^10.7.0:
+  version "10.7.0"
+  resolved "https://registry.yarnpkg.com/google-auth-library/-/google-auth-library-10.7.0.tgz#affbe0be940e426ddd5d7dc3624c9f543216a402"
+  integrity sha512-QpTAbNJ36TliZLx3TTtahR8HG0hN9RllL1e3FymOvQSIKK8JmgV58H924ub2wa2DsS3ANjjP1Aw1N+Ramc8hqQ==
   dependencies:
     base64-js "^1.3.0"
     ecdsa-sig-formatter "^1.0.11"
@@ -7308,10 +7295,10 @@ statuses@^2.0.1, statuses@^2.0.2, statuses@~2.0.2:
   resolved "https://registry.yarnpkg.com/statuses/-/statuses-2.0.2.tgz#8f75eecef765b5e1cfcdc080da59409ed424e382"
   integrity sha512-DvEy55V3DB7uknRo+4iOGT5fP1slR8wQohVdknigZPMpMstaKJQWhwiYBACJE3Ul2pTnATihhBYnRhZQHGBiRw==
 
-storyblok-js-client@7.6.0:
-  version "7.6.0"
-  resolved "https://registry.yarnpkg.com/storyblok-js-client/-/storyblok-js-client-7.6.0.tgz#8213e49122ccbcd029b5f4e35cbc27d27afeee7b"
-  integrity sha512-crf8erfOQOwkmjBISYTwWPfQafmOj4qM1NO387sK+yf/NejwHM9z7gLLKqY/sOQXFnH/R39p8HLOX0qO/0BtnA==
+storyblok-js-client@7.6.1:
+  version "7.6.1"
+  resolved "https://registry.yarnpkg.com/storyblok-js-client/-/storyblok-js-client-7.6.1.tgz#6a7b3da70c891fab12014b9c51b391a4616abaf0"
+  integrity sha512-vwViT+Rehe6o0INeNL4KbdO00j/QCqrD/Dubvl9JLZtufmptJyT7DzXC9HQg//9JfyAYmfaizf4CH5Rrrgvtwg==
 
 stream-events@^1.0.5:
   version "1.0.5"
