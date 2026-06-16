@@ -19,7 +19,8 @@ import { ServiceUserProfilesService } from 'src/service-user-profiles/service-us
 import { UserService } from 'src/user/user.service';
 import { getCorsOrigin } from 'src/utils/cors';
 import { SendMessageDto } from './dto/send-message.dto';
-import { AgentReplyPayload } from './front-chat.interface';
+import { chatClientContextToCustomFields, sanitizeChatClientContext } from './front-chat.helpers';
+import { AgentReplyPayload, FrontChatContactCustomFields } from './front-chat.interface';
 import { FrontChatService } from './front-chat.service';
 
 const userRoom = (email: string) => `user:${email.toLowerCase()}`;
@@ -55,12 +56,15 @@ export class FrontChatGateway implements OnGatewayConnection, OnGatewayDisconnec
     private readonly serviceUserProfilesService: ServiceUserProfilesService,
   ) {}
 
-  private awaitFrontContactReady(user: UserEntity): Promise<void> {
+  private awaitFrontContactReady(
+    user: UserEntity,
+    extraCustomFields?: FrontChatContactCustomFields,
+  ): Promise<void> {
     const key = user.email.toLowerCase();
     let pending = this.pendingFrontContactCreations.get(key);
     if (!pending) {
       pending = this.serviceUserProfilesService
-        .getOrCreateFrontContact(user)
+        .getOrCreateFrontContact(user, extraCustomFields)
         .then(() => {
           this.pendingFrontContactCreations.delete(key);
         })
@@ -108,12 +112,29 @@ export class FrontChatGateway implements OnGatewayConnection, OnGatewayDisconnec
     this.sessions.set(client.id, session);
     await client.join(userRoom(user.email));
 
+    // Coarse, low-PII client context (locale/timezone/device) sent in the handshake. Not stored —
+    // sent straight to Front alongside the other contact fields. Untrusted input, so validated.
+    const clientContext = sanitizeChatClientContext(client.handshake.auth?.clientContext);
+    const contextFields = clientContext
+      ? chatClientContextToCustomFields(clientContext)
+      : undefined;
+
     try {
       const { messages, conversationFound } =
         await this.frontChatService.getConversationHistory(user);
 
-      if (!conversationFound) {
-        this.awaitFrontContactReady(user);
+      if (conversationFound) {
+        // Contact already exists — PATCH the context in with the full field set (Front replaces
+        // all custom fields on PATCH, so it can't be sent on its own).
+        if (contextFields) {
+          this.serviceUserProfilesService
+            .syncFrontContactCustomFields(user.email, contextFields)
+            .catch(() => {});
+        }
+      } else {
+        // May need creating — route through the deduped path so concurrent opens don't create
+        // twice. Any context is folded into the new contact's fields.
+        this.awaitFrontContactReady(user, contextFields);
       }
 
       if (messages.length > 0) {
