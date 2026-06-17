@@ -32,6 +32,13 @@ export interface FrontChatContactCustomFields {
   last_active_at?: string;
   email_reminders_frequency?: EMAIL_REMINDERS_FREQUENCY;
   language?: string;
+  // Coarse client context (no IP/GPS/raw User-Agent). browser_language is the browser's
+  // preferred language (navigator.language) — distinct from `language` (the account locale).
+  browser_language?: string;
+  timezone?: string;
+  device_type?: string;
+  os?: string;
+  browser?: string;
   marketing_permission?: boolean;
   service_emails_permission?: boolean;
   partners?: string;

@@ -16,6 +16,80 @@ export function getContactAlias(email: string): string {
   return `alt:email:${encodeURIComponent(email)}`;
 }
 
+// ── Coarse client context (locale / device) ─────────────────────────────────
+// Captured client-side when chat opens and mirrored to the Front contact. Kept
+// intentionally low-PII: no IP, no GPS, no raw User-Agent — only coarse, allow-listed
+// classifications. Everything here is untrusted client input, so it is strictly validated.
+
+export interface ChatClientContext {
+  browserLanguage?: string;
+  timezone?: string;
+  deviceType?: string;
+  os?: string;
+  browser?: string;
+}
+
+// Allow-lists guard against junk/fingerprinting data. Values must match what the frontend
+// (lib/utils/clientContext.ts) emits; anything else is dropped.
+const ALLOWED_DEVICE_TYPES = new Set(['mobile', 'tablet', 'desktop']);
+const ALLOWED_OS = new Set(['iOS', 'Android', 'Windows', 'macOS', 'Linux', 'Chrome OS']);
+const ALLOWED_BROWSERS = new Set([
+  'Chrome',
+  'Safari',
+  'Firefox',
+  'Edge',
+  'Samsung Internet',
+  'Opera',
+]);
+
+// IANA zone names (e.g. Europe/Berlin, UTC) — letters/digits plus _ + - /.
+const TIMEZONE_PATTERN = /^[A-Za-z][A-Za-z0-9_+\-/]{0,63}$/;
+// BCP-47-ish language tags (e.g. en, en-GB, zh-Hant-HK).
+const LANGUAGE_PATTERN = /^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$/;
+
+function pickString(value: unknown, maxLength: number): string | undefined {
+  return typeof value === 'string' && value.length > 0 && value.length <= maxLength
+    ? value
+    : undefined;
+}
+
+// Returns a sanitized context, or null if nothing usable survived validation.
+export function sanitizeChatClientContext(raw: unknown): ChatClientContext | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const input = raw as Record<string, unknown>;
+
+  const browserLanguageRaw = pickString(input.browserLanguage, 35);
+  const timezoneRaw = pickString(input.timezone, 64);
+  const deviceTypeRaw = pickString(input.deviceType, 16);
+  const osRaw = pickString(input.os, 16);
+  const browserRaw = pickString(input.browser, 24);
+
+  const context: ChatClientContext = {};
+  if (browserLanguageRaw && LANGUAGE_PATTERN.test(browserLanguageRaw)) {
+    context.browserLanguage = browserLanguageRaw;
+  }
+  if (timezoneRaw && TIMEZONE_PATTERN.test(timezoneRaw)) context.timezone = timezoneRaw;
+  if (deviceTypeRaw && ALLOWED_DEVICE_TYPES.has(deviceTypeRaw)) context.deviceType = deviceTypeRaw;
+  if (osRaw && ALLOWED_OS.has(osRaw)) context.os = osRaw;
+  if (browserRaw && ALLOWED_BROWSERS.has(browserRaw)) context.browser = browserRaw;
+
+  return Object.keys(context).length > 0 ? context : null;
+}
+
+// Maps sanitized client context to Front custom-field keys (snake_case).
+export function chatClientContextToCustomFields(
+  context: ChatClientContext | null | undefined,
+): FrontChatContactCustomFields {
+  if (!context) return {};
+  const fields: FrontChatContactCustomFields = {};
+  if (context.browserLanguage) fields.browser_language = context.browserLanguage;
+  if (context.timezone) fields.timezone = context.timezone;
+  if (context.deviceType) fields.device_type = context.deviceType;
+  if (context.os) fields.os = context.os;
+  if (context.browser) fields.browser = context.browser;
+  return fields;
+}
+
 export function serializeCustomFields(
   fields: FrontChatContactCustomFields,
 ): Record<string, string | number | boolean> {
