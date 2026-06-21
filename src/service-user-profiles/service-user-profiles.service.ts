@@ -104,7 +104,13 @@ export class ServiceUserProfilesService {
     logger.log('Create user: updated service user profiles');
   }
 
-  async getOrCreateFrontContact(user: UserEntity): Promise<void> {
+  // extraCustomFields carries transient, non-persisted context (e.g. coarse locale/device
+  // captured on chat open) that isn't reconstructable from the DB. It is merged into the
+  // DB-derived field set so a newly created contact includes it.
+  async getOrCreateFrontContact(
+    user: UserEntity,
+    extraCustomFields?: FrontChatContactCustomFields,
+  ): Promise<void> {
     const { email } = user;
     if (isCypressTestEmail(email)) return;
 
@@ -132,7 +138,7 @@ export class ServiceUserProfilesService {
         await this.frontChatService.createContact({
           email,
           name: hydratedUser.name,
-          customFields: this.buildFrontCustomFields(hydratedUser),
+          customFields: { ...this.buildFrontCustomFields(hydratedUser), ...extraCustomFields },
           userId: hydratedUser.id,
         });
         logger.log(`Backfilled Front contact for user ${hydratedUser.id}`);
@@ -166,8 +172,12 @@ export class ServiceUserProfilesService {
   }
 
   // Front's custom_fields PATCH replaces all fields, so partial updates would wipe data —
-  // this always sends the complete set.
-  async syncFrontContactCustomFields(email: string): Promise<void> {
+  // this always sends the complete set. extraCustomFields appends transient, non-persisted
+  // context (coarse locale/device captured on chat open) that can't be rebuilt from the DB.
+  async syncFrontContactCustomFields(
+    email: string,
+    extraCustomFields?: FrontChatContactCustomFields,
+  ): Promise<void> {
     try {
       // Case-insensitive: signup doesn't normalise the email column.
       const user = await this.userRepository.findOne({
@@ -180,12 +190,12 @@ export class ServiceUserProfilesService {
       if (!user) return;
       try {
         await this.frontChatService.updateContactCustomFields(
-          this.buildFrontCustomFields(user),
+          { ...this.buildFrontCustomFields(user), ...extraCustomFields },
           email,
         );
       } catch (err) {
         if (this.isFrontContactNotFound(err)) {
-          await this.getOrCreateFrontContact(user);
+          await this.getOrCreateFrontContact(user, extraCustomFields);
         } else {
           throw err;
         }
