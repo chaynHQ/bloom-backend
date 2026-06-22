@@ -37,6 +37,8 @@ export class PartnerAccessController {
       createPartnerAccessDto,
       req['partnerId'],
       req['partnerAdminId'],
+      undefined,
+      true,
     );
     return formatPartnerAccessObject(access);
   }
