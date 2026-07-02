@@ -11,7 +11,7 @@ export class ChatUserEntity extends BaseBloomEntity {
   @Column()
   userId: string;
 
-  @OneToOne(() => UserEntity)
+  @OneToOne(() => UserEntity, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'userId' })
   user: UserEntity;
 
@@ -36,7 +36,6 @@ export class ChatUserEntity extends BaseBloomEntity {
   @Column({
     type: 'enum',
     enum: UNREAD_NOTIFICATION_STATUS,
-    enumName: 'chat_user_unreadnotificationstatus_enum',
     nullable: true,
   })
   unreadNotificationStatus: UNREAD_NOTIFICATION_STATUS | null;
