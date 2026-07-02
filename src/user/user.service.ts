@@ -16,15 +16,20 @@ import { TherapySessionService } from 'src/therapy-session/therapy-session.servi
 import { SIGNUP_TYPE } from 'src/utils/constants';
 import { FIREBASE_ERRORS } from 'src/utils/errors';
 import { FIREBASE_EVENTS, USER_SERVICE_EVENTS } from 'src/utils/logs';
-import { ILike, IsNull, Not, Repository } from 'typeorm';
+import { FindOptionsRelations, ILike, IsNull, Not, Repository } from 'typeorm';
 import { AuthService } from '../auth/auth.service';
 import { basePartnerAccess, PartnerAccessService } from '../partner-access/partner-access.service';
 import { formatUserObject } from '../utils/serialize';
-import { generateRandomString } from '../utils/utils';
+import { generateRandomString, isProtectedReservedTestEmail } from '../utils/utils';
 import { AdminUpdateUserDto } from './dtos/admin-update-user.dto';
 import { CreateUserDto } from './dtos/create-user.dto';
 import { GetUserDto } from './dtos/get-user.dto';
 import { UpdateUserDto } from './dtos/update-user.dto';
+
+export const CYPRESS_TEST_USER_EMAIL_FILTERS = [
+  { email: ILike('%cypress%@chayn.co') },
+  { email: ILike('test-%@chayn.co') },
+];
 
 @Injectable()
 export class UserService {
@@ -341,17 +346,25 @@ export class UserService {
     return deletedUsers;
   }
 
+  // Count of test accounts a bulk delete would remove — lets superadmins preview
+  // the impact before triggering the (irreversible) hard delete.
+  public async countCypressTestUsers(): Promise<number> {
+    const users = await this.userRepository.find({ where: CYPRESS_TEST_USER_EMAIL_FILTERS });
+    // Exclude reserved accounts so the preview reflects what a delete would actually remove
+    return users.filter((user) => !isProtectedReservedTestEmail(user.email)).length;
+  }
+
   public async deleteCypressTestUsers(clean = false): Promise<UserEntity[]> {
     let deletedUsers: UserEntity[];
     try {
       const users = await this.userRepository.find({
-        where: [
-          { email: ILike('%cypresstestemail+%@chayn.co') },
-          { email: ILike('test-%@chayn.co') },
-        ],
+        where: CYPRESS_TEST_USER_EMAIL_FILTERS,
       });
 
-      deletedUsers = await this.batchDeleteUsers(users);
+      // Skip reserved test accounts on non-production environments (see isProtectedReservedTestEmail)
+      const usersToDelete = users.filter((user) => !isProtectedReservedTestEmail(user.email));
+
+      deletedUsers = await this.batchDeleteUsers(usersToDelete);
     } catch (error) {
       // If this fails we don't want to break cypress tests but we want to be alerted
       this.logger.error(
@@ -392,8 +405,27 @@ export class UserService {
     limit: number,
   ): Promise<GetUserDto[] | undefined> {
     try {
+      const relationsOptions = relations.reduce<FindOptionsRelations<UserEntity>>(
+        (acc, relation) => {
+          const path = relation.split('.');
+          let node: Record<string, unknown> = acc;
+          path.forEach((segment, index) => {
+            if (index === path.length - 1) {
+              node[segment] = true;
+            } else {
+              if (typeof node[segment] !== 'object' || node[segment] === null) {
+                node[segment] = {};
+              }
+              node = node[segment] as Record<string, unknown>;
+            }
+          });
+          return acc;
+        },
+        {},
+      );
+
       const users = await this.userRepository.find({
-        relations,
+        relations: relationsOptions,
         where: {
           ...(filters.email && { email: ILike(`%${filters.email}%`) }),
           ...(filters.partnerAccess && {

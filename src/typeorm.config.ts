@@ -69,6 +69,7 @@ import { BloomBackend1779235200000 } from './migrations/1779235200000-bloom-back
 import { BloomBackend1779520895360 } from './migrations/1779520895360-bloom-backend';
 import { BloomBackend1779522937933 } from './migrations/1779522937933-bloom-backend';
 import { BloomBackend1779840000000 } from './migrations/1779840000000-bloom-backend';
+import { BloomBackend1782989961947 } from './migrations/1782989961947-bloom-backend';
 import { databaseUrl } from './utils/constants';
 
 config();
@@ -89,6 +90,9 @@ export const dataSourceOptions = {
   synchronize: false, // updates the database automatically without running migrations - turn on with caution
   migrationsRun: true, // ensures migrations are run on the db at startup - turn off with caution
   logging: false,
+  invalidWhereValuesBehavior: {
+    undefined: 'ignore',
+  },
   entities: [
     UserEntity,
     ChatUserEntity,
@@ -159,6 +163,7 @@ export const dataSourceOptions = {
     BloomBackend1779520895360,
     BloomBackend1779522937933,
     BloomBackend1779840000000,
+    BloomBackend1782989961947,
   ],
   subscribers: [],
   ssl: isProduction || isStaging,

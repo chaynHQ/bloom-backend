@@ -84,7 +84,7 @@ export class PartnerFeatureService {
     }
     const partnerFeature = await this.partnerFeatureRepository.findOne({
       where: { partnerId: partner.id, featureId: feature.id },
-      relations: ['feature'],
+      relations: { feature: true },
     });
     return partnerFeature;
   }

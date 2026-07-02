@@ -160,16 +160,14 @@ export class DbMetricsService {
       ),
       // Authoritative chat message counts from event_log — distinct from the
       // GA4 CHAT_MESSAGE_SENT event which is lossy under ad-blockers / consent.
-      // `date` is the emit time from Front (webhook `emitted_at`), so it's the
-      // accurate timestamp for windowing — `createdAt` is when we wrote the row.
       tally('messagesSent', () =>
         this.eventLogRepository.count({
-          where: { event: EVENT_NAME.CHAT_MESSAGE_SENT, date: range },
+          where: { event: EVENT_NAME.CHAT_MESSAGE_SENT, createdAt: range },
         }),
       ),
       tally('messagesReceived', () =>
         this.eventLogRepository.count({
-          where: { event: EVENT_NAME.CHAT_MESSAGE_RECEIVED, date: range },
+          where: { event: EVENT_NAME.CHAT_MESSAGE_RECEIVED, createdAt: range },
         }),
       ),
     ]);
