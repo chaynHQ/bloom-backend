@@ -1,7 +1,7 @@
 import mailchimp from '@mailchimp/mailchimp_marketing';
 import { createHash } from 'crypto';
 import { mailchimpApiKey, mailchimpAudienceId, mailchimpServerPrefix } from 'src/utils/constants';
-import { isCypressTestEmail } from 'src/utils/utils';
+import { isCypressTestEmail, isProtectedReservedTestEmail } from 'src/utils/utils';
 import { Logger } from '../../logger/logger';
 import {
   ListMember,
@@ -263,6 +263,11 @@ export const deleteCypressMailchimpProfiles = async () => {
   logger.log(`Deleting ${cypressProfiles.members.length} mailchimp profiles`);
 
   for (const profile of cypressProfiles.members) {
+    // Skip reserved test accounts on non-production environments (see isProtectedReservedTestEmail)
+    if (isProtectedReservedTestEmail(profile.email_address)) {
+      logger.log('Skipping Mailchimp deletion for reserved Cypress test email');
+      continue;
+    }
     try {
       await deleteMailchimpProfile(profile.email_address);
     } catch (error) {

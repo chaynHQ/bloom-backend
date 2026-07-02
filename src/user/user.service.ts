@@ -20,7 +20,7 @@ import { FindOptionsRelations, ILike, IsNull, Not, Repository } from 'typeorm';
 import { AuthService } from '../auth/auth.service';
 import { basePartnerAccess, PartnerAccessService } from '../partner-access/partner-access.service';
 import { formatUserObject } from '../utils/serialize';
-import { generateRandomString } from '../utils/utils';
+import { generateRandomString, isProtectedReservedTestEmail } from '../utils/utils';
 import { AdminUpdateUserDto } from './dtos/admin-update-user.dto';
 import { CreateUserDto } from './dtos/create-user.dto';
 import { GetUserDto } from './dtos/get-user.dto';
@@ -349,7 +349,9 @@ export class UserService {
   // Count of test accounts a bulk delete would remove — lets superadmins preview
   // the impact before triggering the (irreversible) hard delete.
   public async countCypressTestUsers(): Promise<number> {
-    return this.userRepository.count({ where: CYPRESS_TEST_USER_EMAIL_FILTERS });
+    const users = await this.userRepository.find({ where: CYPRESS_TEST_USER_EMAIL_FILTERS });
+    // Exclude reserved accounts so the preview reflects what a delete would actually remove
+    return users.filter((user) => !isProtectedReservedTestEmail(user.email)).length;
   }
 
   public async deleteCypressTestUsers(clean = false): Promise<UserEntity[]> {
@@ -359,7 +361,10 @@ export class UserService {
         where: CYPRESS_TEST_USER_EMAIL_FILTERS,
       });
 
-      deletedUsers = await this.batchDeleteUsers(users);
+      // Skip reserved test accounts on non-production environments (see isProtectedReservedTestEmail)
+      const usersToDelete = users.filter((user) => !isProtectedReservedTestEmail(user.email));
+
+      deletedUsers = await this.batchDeleteUsers(usersToDelete);
     } catch (error) {
       // If this fails we don't want to break cypress tests but we want to be alerted
       this.logger.error(
