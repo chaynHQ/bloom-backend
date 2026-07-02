@@ -160,7 +160,10 @@ export class AuthService {
         .listUsers(1000)
         .then((listUsersResult) => {
           listUsersResult.users.forEach((userRecord) => {
-            if (userRecord.email.includes('cypresstestemail')) {
+            // Match every Cypress test account variant (cypresstestemail+, cypresstestuser+, ...)
+            // scoped to @chayn.co so we never touch a real account.
+            const email = userRecord.email?.toLowerCase() ?? '';
+            if (email.includes('cypress') && email.endsWith('@chayn.co')) {
               allUsers.push(userRecord.uid);
             }
           });

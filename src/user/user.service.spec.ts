@@ -2,7 +2,11 @@ import { createMock, DeepMocked } from '@golevelup/ts-jest';
 import { HttpException, HttpStatus } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { createMailchimpProfile, updateMailchimpProfile } from 'src/api/mailchimp/mailchimp-api';
+import {
+  createMailchimpProfile,
+  deleteMailchimpProfile,
+  updateMailchimpProfile,
+} from 'src/api/mailchimp/mailchimp-api';
 import { ChatUserService } from 'src/chat-user/chat-user.service';
 import { FrontChatService } from 'src/front-chat/front-chat.service';
 import { EventLogEntity } from 'src/entities/event-log.entity';
@@ -38,7 +42,7 @@ import { PartnerAccessService } from '../partner-access/partner-access.service';
 import { AdminUpdateUserDto } from './dtos/admin-update-user.dto';
 import { CreateUserDto } from './dtos/create-user.dto';
 import { UpdateUserDto } from './dtos/update-user.dto';
-import { UserService } from './user.service';
+import { CYPRESS_TEST_USER_EMAIL_FILTERS, UserService } from './user.service';
 
 const createUserDto: CreateUserDto = {
   email: 'user@email.com',
@@ -547,6 +551,60 @@ describe('UserService', () => {
       expect(mockTherapySessionServiceSpy).toHaveBeenCalledTimes(1);
       expect(mockSubscriptionUserServiceSpy).toHaveBeenCalledTimes(1);
       expect(mockAuthServiceSpy).toHaveBeenCalledWith(mockUserEntity.firebaseUid);
+    });
+  });
+
+  describe('countCypressTestUsers', () => {
+    it('counts users matching the shared Cypress test-email filters', async () => {
+      const repoCountSpy = jest.fn().mockResolvedValue(7);
+      repo.count = repoCountSpy as never;
+
+      const count = await service.countCypressTestUsers();
+
+      expect(count).toBe(7);
+      expect(repoCountSpy).toHaveBeenCalledWith({ where: CYPRESS_TEST_USER_EMAIL_FILTERS });
+    });
+  });
+
+  describe('deleteCypressTestUsers', () => {
+    it('hard deletes every matching test user across the db and third-party services', async () => {
+      const testUsers = [
+        { ...mockUserEntity, id: 'id-1', email: 'cypresstestemail+1@chayn.co' },
+        { ...mockUserEntity, id: 'id-2', email: 'cypresstestuser+2@chayn.co' },
+      ];
+      const repoFindSpy = jest.spyOn(repo, 'find').mockResolvedValue(testUsers as never);
+      const repoDeleteSpy = jest.fn().mockResolvedValue({ affected: 1 });
+      repo.delete = repoDeleteSpy as never;
+
+      const frontSpy = jest.spyOn(mockFrontChatService, 'deleteContact');
+      const firebaseSpy = jest.spyOn(mockAuthService, 'deleteFirebaseUser');
+
+      const deleted = await service.deleteCypressTestUsers();
+
+      // uses the shared broadened filter, not just cypresstestemail+
+      expect(repoFindSpy).toHaveBeenCalledWith({ where: CYPRESS_TEST_USER_EMAIL_FILTERS });
+      // hard delete of the db row (cascades to related tables), one call per user
+      expect(repoDeleteSpy).toHaveBeenCalledWith('id-1');
+      expect(repoDeleteSpy).toHaveBeenCalledWith('id-2');
+      // third-party contact cleanup per user
+      expect(frontSpy).toHaveBeenCalledWith('cypresstestemail+1@chayn.co');
+      expect(frontSpy).toHaveBeenCalledWith('cypresstestuser+2@chayn.co');
+      expect(createMailchimpProfile).not.toBe(undefined);
+      expect(deleteMailchimpProfile).toHaveBeenCalledWith('cypresstestuser+2@chayn.co');
+      expect(firebaseSpy).toHaveBeenCalledWith(mockUserEntity.firebaseUid);
+      expect(deleted).toHaveLength(2);
+    });
+
+    it('runs the orphaned-account clean up only when clean=true', async () => {
+      jest.spyOn(repo, 'find').mockResolvedValue([] as never);
+      repo.delete = jest.fn().mockResolvedValue({ affected: 0 }) as never;
+      const firebaseCleanSpy = jest.spyOn(mockAuthService, 'deleteCypressFirebaseUsers');
+
+      await service.deleteCypressTestUsers();
+      expect(firebaseCleanSpy).not.toHaveBeenCalled();
+
+      await service.deleteCypressTestUsers(true);
+      expect(firebaseCleanSpy).toHaveBeenCalled();
     });
   });
 
