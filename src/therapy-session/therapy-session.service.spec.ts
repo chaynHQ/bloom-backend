@@ -17,7 +17,7 @@ import {
   mockSlackMessageClientMethods,
   mockTherapySessionRepositoryMethods,
 } from 'test/utils/mockedServices';
-import { Repository } from 'typeorm/repository/Repository';
+import { Repository } from 'typeorm';
 import { TherapySessionService } from './therapy-session.service';
 
 jest.mock('axios');

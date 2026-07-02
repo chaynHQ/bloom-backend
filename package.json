@@ -41,7 +41,7 @@
     "@nestjs/throttler": "^6.5.0",
     "@nestjs/typeorm": "^11.0.3",
     "@nestjs/websockets": "^11.1.27",
-    "@storyblok/js": "^5.1.10",
+    "@storyblok/js": "^6.0.1",
     "axios": "^1.18.1",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
@@ -49,14 +49,14 @@
     "dompurify": "^3.4.11",
     "dotenv": "^17.4.2",
     "firebase": "^12.15.0",
-    "firebase-admin": "^13.10.0",
+    "firebase-admin": "^14.1.0",
     "google-auth-library": "^10.9.0",
     "jsdom": "^29.1.1",
     "lodash": "^4.18.1",
     "luxon": "^3.7.2",
     "nestjs-cls": "^6.2.1",
-    "newrelic": "^13.20.0",
-    "otplib": "^12.0.1",
+    "newrelic": "^14.1.2",
+    "otplib": "^13.4.1",
     "pg": "^8.22.0",
     "pg-connection-string": "^2.7.0",
     "reflect-metadata": "^0.2.1",
@@ -64,7 +64,7 @@
     "rollbar": "^3.1.0",
     "rxjs": "^7.8.1",
     "socket.io": "^4.8.3",
-    "typeorm": "^0.3.29",
+    "typeorm": "^1.0.0",
     "uuid": "^14.0.1",
     "validator": "^13.15.35"
   },
@@ -81,7 +81,7 @@
     "@types/jsdom": "^28.0.3",
     "@types/lodash": "^4.17.24",
     "@types/multer": "^2.1.0",
-    "@types/node": "^25.9.2",
+    "@types/node": "^26.1.0",
     "@types/validator": "^13.15.10",
     "eslint": "^10.6.0",
     "eslint-config-prettier": "^10.1.8",
@@ -90,7 +90,7 @@
     "ts-jest": "^29.4.11",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
-    "typescript": "^5.9.2",
+    "typescript": "^6.0.3",
     "typescript-eslint": "^8.62.1"
   },
   "engines": {
@@ -99,7 +99,12 @@
   },
   "resolutions": {
     "uuid": "^14.0.1",
-    "protobufjs": "^7.6.4"
+    "protobufjs": "^7.6.4",
+    "ws": "^8.21.0",
+    "multer": "^2.2.0",
+    "form-data": "^2.5.6",
+    "axios/form-data": "^4.0.6",
+    "newrelic/@grpc/grpc-js": "^1.14.4"
   },
   "jest": {
     "moduleFileExtensions": [
@@ -127,7 +132,7 @@
       "coverage"
     ],
     "transformIgnorePatterns": [
-      "/node_modules/(?!uuid/)"
+      "/node_modules/(?!(uuid|jose|otplib|@otplib|@scure|@noble)/)"
     ]
   }
 }

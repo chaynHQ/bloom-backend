@@ -16,7 +16,7 @@ import { TherapySessionService } from 'src/therapy-session/therapy-session.servi
 import { SIGNUP_TYPE } from 'src/utils/constants';
 import { FIREBASE_ERRORS } from 'src/utils/errors';
 import { FIREBASE_EVENTS, USER_SERVICE_EVENTS } from 'src/utils/logs';
-import { ILike, IsNull, Not, Repository } from 'typeorm';
+import { FindOptionsRelations, ILike, IsNull, Not, Repository } from 'typeorm';
 import { AuthService } from '../auth/auth.service';
 import { basePartnerAccess, PartnerAccessService } from '../partner-access/partner-access.service';
 import { formatUserObject } from '../utils/serialize';
@@ -392,8 +392,30 @@ export class UserService {
     limit: number,
   ): Promise<GetUserDto[] | undefined> {
     try {
+      // TypeORM v1 requires the object form of `relations` (FindOptionsRelations)
+      // rather than the string-array form. Convert dot-separated relation paths
+      // (e.g. "partnerAccess.partner") into a nested object of `true` leaves.
+      const relationsOptions = relations.reduce<FindOptionsRelations<UserEntity>>(
+        (acc, relation) => {
+          const path = relation.split('.');
+          let node: Record<string, unknown> = acc;
+          path.forEach((segment, index) => {
+            if (index === path.length - 1) {
+              node[segment] = true;
+            } else {
+              if (typeof node[segment] !== 'object' || node[segment] === null) {
+                node[segment] = {};
+              }
+              node = node[segment] as Record<string, unknown>;
+            }
+          });
+          return acc;
+        },
+        {},
+      );
+
       const users = await this.userRepository.find({
-        relations,
+        relations: relationsOptions,
         where: {
           ...(filters.email && { email: ILike(`%${filters.email}%`) }),
           ...(filters.partnerAccess && {

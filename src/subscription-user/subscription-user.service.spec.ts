@@ -14,7 +14,7 @@ import {
   mockSubscriptionUserRepositoryMethods,
   mockZapierWebhookClientMethods,
 } from 'test/utils/mockedServices';
-import { Repository } from 'typeorm/repository/Repository';
+import { Repository } from 'typeorm';
 import { SubscriptionUserService } from './subscription-user.service';
 
 describe('SubscriptionUserService', () => {
@@ -92,7 +92,7 @@ describe('SubscriptionUserService', () => {
       expect(result).toEqual([]);
       expect(mockedSubscriptionUserRepository.find).toHaveBeenCalledWith({
         where: { userId: mockUserEntity.id },
-        relations: ['subscription'],
+        relations: { subscription: true },
       });
     });
   });

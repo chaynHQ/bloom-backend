@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Request } from 'express';
-import { DecodedIdToken } from 'firebase-admin/lib/auth/token-verifier';
+import { DecodedIdToken } from 'firebase-admin/auth';
 import { UserEntity } from 'src/entities/user.entity';
 import { AUTH_GUARD_ERRORS, FIREBASE_ERRORS } from 'src/utils/errors';
 import { Repository } from 'typeorm';

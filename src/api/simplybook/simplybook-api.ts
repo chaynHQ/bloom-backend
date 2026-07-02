@@ -13,7 +13,7 @@
  * let us drop the 2FA flow, the token mutex, and the SIMPLYBOOK_TOTP_SECRET env var.
  */
 import axios from 'axios';
-import { authenticator } from 'otplib';
+import { createGuardrails, generateSync } from 'otplib';
 import { Logger } from 'src/logger/logger';
 import {
   isProduction,
@@ -78,7 +78,14 @@ const performAuth = async (): Promise<string> => {
     if (secondsRemaining <= 3) {
       await new Promise((resolve) => setTimeout(resolve, (secondsRemaining + 1) * 1000));
     }
-    const code = authenticator.generate(normalisedSecret);
+    // otplib v13: generateSync with TOTP defaults (sha1, 6 digits, 30s period) is
+    // Google Authenticator compatible, matching the previous `authenticator.generate`.
+    // v13 also adds a default 16-byte minimum-secret guardrail that v12 did not enforce;
+    // relax it so shorter secrets (e.g. a 16-char/10-byte base32 secret) keep working.
+    const code = generateSync({
+      secret: normalisedSecret,
+      guardrails: createGuardrails({ MIN_SECRET_BYTES: 1 }),
+    });
     const twoFaResponse = await axios.post(
       `${SIMPLYBOOK_API_BASE_URL}/auth/2fa`,
       {

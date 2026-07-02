@@ -1,6 +1,6 @@
 import { ISbResult } from '@storyblok/js';
 import { add } from 'date-fns';
-import { UserRecord } from 'firebase-admin/lib/auth/user-record';
+import { UserRecord } from 'firebase-admin/auth';
 import { CoursePartnerEntity } from 'src/entities/course-partner.entity';
 import { CourseUserEntity } from 'src/entities/course-user.entity';
 import { CourseEntity } from 'src/entities/course.entity';

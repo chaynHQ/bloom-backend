@@ -87,6 +87,12 @@ export const dataSourceOptions = {
   synchronize: false, // updates the database automatically without running migrations - turn on with caution
   migrationsRun: true, // ensures migrations are run on the db at startup - turn off with caution
   logging: false,
+  // TypeORM v1 changed the default to throw when a `where` value is `undefined`.
+  // Pre-v1, undefined where properties were silently skipped; preserve that behavior
+  // so optional/conditional filters keep working. `null` keeps the safer v1 default (throw).
+  invalidWhereValuesBehavior: {
+    undefined: 'ignore',
+  },
   entities: [
     UserEntity,
     ChatUserEntity,
