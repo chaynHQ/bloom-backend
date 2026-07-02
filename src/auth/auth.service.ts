@@ -8,6 +8,7 @@ import {
 import { DecodedIdToken } from 'firebase-admin/auth';
 import { Logger } from 'src/logger/logger';
 import { FIREBASE_ERRORS } from 'src/utils/errors';
+import { isProtectedReservedTestEmail } from 'src/utils/utils';
 import { FIREBASE } from '../firebase/firebase-factory';
 import { FirebaseServices } from '../firebase/firebase.types';
 import { UserAuthDto } from './dto/user-auth.dto';
@@ -163,7 +164,11 @@ export class AuthService {
             // Match every Cypress test account variant (cypresstestemail+, cypresstestuser+, ...)
             // scoped to @chayn.co so we never touch a real account.
             const email = userRecord.email?.toLowerCase() ?? '';
-            if (email.includes('cypress') && email.endsWith('@chayn.co')) {
+            if (
+              email.includes('cypress') &&
+              email.endsWith('@chayn.co') &&
+              !isProtectedReservedTestEmail(email)
+            ) {
               allUsers.push(userRecord.uid);
             }
           });

@@ -18,6 +18,7 @@ import { SubscriptionUserService } from 'src/subscription-user/subscription-user
 import { TherapySessionService } from 'src/therapy-session/therapy-session.service';
 import { EMAIL_REMINDERS_FREQUENCY, PartnerAccessCodeStatusEnum } from 'src/utils/constants';
 import { formatUserObject } from 'src/utils/serialize';
+import * as utils from 'src/utils/utils';
 import {
   mockIFirebaseUser,
   mockPartnerAccessEntity,
@@ -555,18 +556,44 @@ describe('UserService', () => {
   });
 
   describe('countCypressTestUsers', () => {
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
     it('counts users matching the shared Cypress test-email filters', async () => {
-      const repoCountSpy = jest.fn().mockResolvedValue(7);
-      repo.count = repoCountSpy as never;
+      const testUsers = [
+        { ...mockUserEntity, id: 'id-1', email: 'cypresstestemail+1@chayn.co' },
+        { ...mockUserEntity, id: 'id-2', email: 'cypresstestuser+2@chayn.co' },
+      ];
+      const repoFindSpy = jest.spyOn(repo, 'find').mockResolvedValue(testUsers as never);
 
       const count = await service.countCypressTestUsers();
 
-      expect(count).toBe(7);
-      expect(repoCountSpy).toHaveBeenCalledWith({ where: CYPRESS_TEST_USER_EMAIL_FILTERS });
+      expect(count).toBe(2);
+      expect(repoFindSpy).toHaveBeenCalledWith({ where: CYPRESS_TEST_USER_EMAIL_FILTERS });
+    });
+
+    it('excludes reserved test accounts from the count', async () => {
+      const testUsers = [
+        { ...mockUserEntity, id: 'id-1', email: 'cypresstestemail+1@chayn.co' },
+        { ...mockUserEntity, id: 'id-2', email: 'reserved@chayn.co' },
+      ];
+      jest.spyOn(repo, 'find').mockResolvedValue(testUsers as never);
+      jest
+        .spyOn(utils, 'isProtectedReservedTestEmail')
+        .mockImplementation((email) => email === 'reserved@chayn.co');
+
+      const count = await service.countCypressTestUsers();
+
+      expect(count).toBe(1);
     });
   });
 
   describe('deleteCypressTestUsers', () => {
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
     it('hard deletes every matching test user across the db and third-party services', async () => {
       const testUsers = [
         { ...mockUserEntity, id: 'id-1', email: 'cypresstestemail+1@chayn.co' },
@@ -593,6 +620,25 @@ describe('UserService', () => {
       expect(deleteMailchimpProfile).toHaveBeenCalledWith('cypresstestuser+2@chayn.co');
       expect(firebaseSpy).toHaveBeenCalledWith(mockUserEntity.firebaseUid);
       expect(deleted).toHaveLength(2);
+    });
+
+    it('skips reserved test accounts and never deletes them', async () => {
+      const testUsers = [
+        { ...mockUserEntity, id: 'id-1', email: 'cypresstestemail+1@chayn.co' },
+        { ...mockUserEntity, id: 'id-2', email: 'reserved@chayn.co' },
+      ];
+      jest.spyOn(repo, 'find').mockResolvedValue(testUsers as never);
+      const repoDeleteSpy = jest.fn().mockResolvedValue({ affected: 1 });
+      repo.delete = repoDeleteSpy as never;
+      jest
+        .spyOn(utils, 'isProtectedReservedTestEmail')
+        .mockImplementation((email) => email === 'reserved@chayn.co');
+
+      const deleted = await service.deleteCypressTestUsers();
+
+      expect(repoDeleteSpy).toHaveBeenCalledWith('id-1');
+      expect(repoDeleteSpy).not.toHaveBeenCalledWith('id-2');
+      expect(deleted).toHaveLength(1);
     });
 
     it('runs the orphaned-account clean up only when clean=true', async () => {
