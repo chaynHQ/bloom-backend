@@ -26,6 +26,11 @@ import { CreateUserDto } from './dtos/create-user.dto';
 import { GetUserDto } from './dtos/get-user.dto';
 import { UpdateUserDto } from './dtos/update-user.dto';
 
+export const CYPRESS_TEST_USER_EMAIL_FILTERS = [
+  { email: ILike('%cypress%@chayn.co') },
+  { email: ILike('test-%@chayn.co') },
+];
+
 @Injectable()
 export class UserService {
   private readonly logger = new Logger('UserService');
@@ -341,14 +346,17 @@ export class UserService {
     return deletedUsers;
   }
 
+  // Count of test accounts a bulk delete would remove — lets superadmins preview
+  // the impact before triggering the (irreversible) hard delete.
+  public async countCypressTestUsers(): Promise<number> {
+    return this.userRepository.count({ where: CYPRESS_TEST_USER_EMAIL_FILTERS });
+  }
+
   public async deleteCypressTestUsers(clean = false): Promise<UserEntity[]> {
     let deletedUsers: UserEntity[];
     try {
       const users = await this.userRepository.find({
-        where: [
-          { email: ILike('%cypresstestemail+%@chayn.co') },
-          { email: ILike('test-%@chayn.co') },
-        ],
+        where: CYPRESS_TEST_USER_EMAIL_FILTERS,
       });
 
       deletedUsers = await this.batchDeleteUsers(users);
