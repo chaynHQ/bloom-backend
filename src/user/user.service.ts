@@ -392,9 +392,6 @@ export class UserService {
     limit: number,
   ): Promise<GetUserDto[] | undefined> {
     try {
-      // TypeORM v1 requires the object form of `relations` (FindOptionsRelations)
-      // rather than the string-array form. Convert dot-separated relation paths
-      // (e.g. "partnerAccess.partner") into a nested object of `true` leaves.
       const relationsOptions = relations.reduce<FindOptionsRelations<UserEntity>>(
         (acc, relation) => {
           const path = relation.split('.');
