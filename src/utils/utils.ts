@@ -1,4 +1,5 @@
 import { webcrypto } from 'crypto';
+import { cypressReservedTestEmails, isProduction } from './constants';
 const crypto = webcrypto as unknown as Crypto;
 
 export const generateRandomString = (length: number) => {
@@ -26,4 +27,12 @@ export const getAcronym = (text: string) => {
 
 export const isCypressTestEmail = (email: string): boolean => {
   return email.includes('cypresstestemail');
+};
+
+// Reserved Cypress test accounts are protected from the bulk test-user deletion on
+// non-production environments only. On production they are not protected, so a
+// superadmin cleanup there will still remove them.
+export const isProtectedReservedTestEmail = (email: string): boolean => {
+  if (isProduction || !email) return false;
+  return cypressReservedTestEmails.includes(email.trim().toLowerCase());
 };

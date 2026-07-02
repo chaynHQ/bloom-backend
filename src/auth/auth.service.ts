@@ -5,9 +5,10 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
-import { DecodedIdToken } from 'firebase-admin/lib/auth/token-verifier';
+import { DecodedIdToken } from 'firebase-admin/auth';
 import { Logger } from 'src/logger/logger';
 import { FIREBASE_ERRORS } from 'src/utils/errors';
+import { isProtectedReservedTestEmail } from 'src/utils/utils';
 import { FIREBASE } from '../firebase/firebase-factory';
 import { FirebaseServices } from '../firebase/firebase.types';
 import { UserAuthDto } from './dto/user-auth.dto';
@@ -48,7 +49,7 @@ export class AuthService {
   }
 
   private async parseAndValidateToken(token: string): Promise<DecodedIdToken> {
-    const decodedToken = await this.firebase.admin.auth().verifyIdToken(token);
+    const decodedToken = await this.firebase.admin.verifyIdToken(token);
 
     return decodedToken;
   }
@@ -70,7 +71,7 @@ export class AuthService {
     }
 
     try {
-      const firebaseUser = await this.firebase.admin.auth().createUser({
+      const firebaseUser = await this.firebase.admin.createUser({
         email,
         password,
       });
@@ -102,7 +103,7 @@ export class AuthService {
 
   public async updateFirebaseUserEmail(firebaseUid: string, newEmail: string) {
     try {
-      const firebaseUser = await this.firebase.admin.auth().updateUser(firebaseUid, {
+      const firebaseUser = await this.firebase.admin.updateUser(firebaseUid, {
         email: newEmail,
       });
       return firebaseUser;
@@ -139,13 +140,13 @@ export class AuthService {
   }
 
   public async getFirebaseUser(email: string) {
-    const firebaseUser = await this.firebase.admin.auth().getUserByEmail(email);
+    const firebaseUser = await this.firebase.admin.getUserByEmail(email);
     return firebaseUser;
   }
 
   public async deleteFirebaseUser(firebaseUid: string) {
     try {
-      await this.firebase.admin.auth().deleteUser(firebaseUid);
+      await this.firebase.admin.deleteUser(firebaseUid);
       return 'ok';
     } catch (error) {
       throw new HttpException(error.message, HttpStatus.BAD_REQUEST);
@@ -157,16 +158,21 @@ export class AuthService {
 
     try {
       this.firebase.admin
-        .auth()
         .listUsers(1000)
         .then((listUsersResult) => {
           listUsersResult.users.forEach((userRecord) => {
-            if (userRecord.email.includes('cypresstestemail')) {
+            // Match every Cypress test account variant (cypresstestemail+, cypresstestuser+, ...)
+            // scoped to @chayn.co so we never touch a real account.
+            const email = userRecord.email?.toLowerCase() ?? '';
+            if (
+              email.includes('cypress') &&
+              email.endsWith('@chayn.co') &&
+              !isProtectedReservedTestEmail(email)
+            ) {
               allUsers.push(userRecord.uid);
             }
           });
           this.firebase.admin
-            .auth()
             .deleteUsers(allUsers)
             .then((deleteUsersResult) => {
               if (deleteUsersResult.successCount > 0) {

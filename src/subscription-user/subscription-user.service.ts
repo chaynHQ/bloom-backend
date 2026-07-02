@@ -149,7 +149,7 @@ export class SubscriptionUserService {
     try {
       const userSubscriptions = await this.subscriptionUserRepository.find({
         where: { userId: userId },
-        relations: ['subscription'],
+        relations: { subscription: true },
       });
 
       this.logger.log(`User ${userId} has ${userSubscriptions.length} subscriptions`);

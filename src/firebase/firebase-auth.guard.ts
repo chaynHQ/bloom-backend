@@ -13,7 +13,7 @@ import { AuthService } from '../auth/auth.service';
 import { UserService } from '../user/user.service';
 import { IFirebaseUser } from './firebase-user.interface';
 import { ClsService } from 'nestjs-cls';
-import { DecodedIdToken } from 'firebase-admin/lib/auth/token-verifier';
+import { DecodedIdToken } from 'firebase-admin/auth';
 import * as crypto from 'crypto';
 
 @Injectable()

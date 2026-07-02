@@ -67,8 +67,22 @@ export class UserController {
     return await this.userService.deleteUser(req['userEntity']);
   }
 
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    description: 'Returns the number of Cypress/automated-test accounts a bulk delete would remove',
+  })
+  @Get('/cypress/count')
+  @UseGuards(SuperAdminAuthGuard)
+  async countCypressUsers(): Promise<{ count: number }> {
+    return { count: await this.userService.countCypressTestUsers() };
+  }
+
   // This route must go before the Delete user route below as we want nestjs to check against this one first
   @ApiBearerAuth('access-token')
+  @ApiOperation({
+    description:
+      'Hard deletes all Cypress/automated-test accounts (DB rows cascade, plus Firebase, Front and Mailchimp). For superadmin cleanup of test data leaked into an environment.',
+  })
   @Delete('/cypress')
   @UseGuards(SuperAdminAuthGuard)
   async deleteCypressUsers(): Promise<UserEntity[]> {
