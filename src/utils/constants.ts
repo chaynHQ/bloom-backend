@@ -264,3 +264,12 @@ export const mailchimpServerPrefix = getEnv(
 export const mailchimpWebhookSecret = process.env.MAILCHIMP_WEBHOOK_SECRET || '';
 
 export const frontSupportEmail = process.env.FRONT_SUPPORT_EMAIL || 'support@bloom.chayn.co';
+
+// Reserved Cypress test accounts that must survive the bulk test-user deletion on
+// non-production environments (they're needed for automated tests on staging). On
+// production they are not protected and can be deleted. Comma-separated and kept in
+// an env var so the specific addresses stay out of source control.
+export const cypressReservedTestEmails = (process.env.CYPRESS_RESERVED_TEST_EMAILS || '')
+  .split(',')
+  .map((email) => email.trim().toLowerCase())
+  .filter(Boolean);
