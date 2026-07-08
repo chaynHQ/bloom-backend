@@ -1,4 +1,4 @@
-import { RESOURCE_CATEGORIES, STORYBLOK_STORY_STATUS_ENUM } from 'src/utils/constants';
+import { RESOURCE_CATEGORIES, STORYBLOK_STORY_STATUS_ENUM, THEMES } from 'src/utils/constants';
 
 export interface IResource {
   id?: string;
@@ -9,5 +9,6 @@ export interface IResource {
   status?: STORYBLOK_STORY_STATUS_ENUM;
   storyblokUuid?: string;
   category?: RESOURCE_CATEGORIES;
+  themes?: THEMES[];
   completedAt?: Date | string;
 }

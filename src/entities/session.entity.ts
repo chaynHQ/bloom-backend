@@ -1,5 +1,5 @@
 import { Column, Entity, JoinTable, ManyToOne, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
-import { STORYBLOK_STORY_STATUS_ENUM } from '../utils/constants';
+import { STORYBLOK_STORY_STATUS_ENUM, THEMES } from '../utils/constants';
 import { BaseBloomEntity } from './base.entity';
 import { CourseEntity } from './course.entity';
 import { SessionFeedbackEntity } from './session-feedback.entity';
@@ -20,6 +20,14 @@ export class SessionEntity extends BaseBloomEntity {
     nullable: true,
   })
   status: STORYBLOK_STORY_STATUS_ENUM;
+
+  @Column({
+    type: 'enum',
+    enum: THEMES,
+    array: true,
+    nullable: true,
+  })
+  themes: THEMES[];
 
   @Column({
     unique: true,
