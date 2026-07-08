@@ -88,6 +88,76 @@ describe('PartnerService', () => {
       expect(response).toMatchObject({ ...mockPartnerEntity, isActive: false });
     });
 
+    it('when supplied with a single non-active field should update only that field and not cascade to admins or access', async () => {
+      jest.spyOn(mockPartnerRepository, 'save').mockImplementationOnce(() => {
+        return Promise.resolve({ ...mockPartnerEntity, website: 'https://example.com' });
+      });
+
+      const response = await service.updatePartnerActiveStatus(mockPartnerEntity.id, {
+        website: 'https://example.com',
+      });
+
+      expect(mockPartnerRepository.save).toHaveBeenCalledWith({
+        ...mockPartnerEntity,
+        website: 'https://example.com',
+      });
+      expect(mockPartnerAdminRepository.createQueryBuilder).not.toHaveBeenCalled();
+      expect(mockPartnerAccessRepository.createQueryBuilder).not.toHaveBeenCalled();
+      expect(response).toMatchObject({ ...mockPartnerEntity, website: 'https://example.com' });
+    });
+
+    it('when supplied with multiple fields including active should update all fields and cascade to admins and access', async () => {
+      jest.spyOn(mockPartnerRepository, 'save').mockImplementationOnce(() => {
+        return Promise.resolve({ ...mockPartnerEntity, logo: 'logo.png', website: 'https://example.com', isActive: false });
+      });
+
+      jest.spyOn(mockPartnerAccessRepository, 'createQueryBuilder').mockImplementationOnce(
+        createQueryBuilderMock({
+          execute: jest.fn().mockResolvedValue({}),
+        }) as never,
+      );
+
+      jest.spyOn(mockPartnerAdminRepository, 'createQueryBuilder').mockImplementationOnce(
+        createQueryBuilderMock({
+          execute: jest.fn().mockResolvedValue({}),
+        }) as never,
+      );
+
+      const response = await service.updatePartnerActiveStatus(mockPartnerEntity.id, {
+        logo: 'logo.png',
+        website: 'https://example.com',
+        active: false,
+      });
+
+      expect(mockPartnerRepository.save).toHaveBeenCalledWith({
+        ...mockPartnerEntity,
+        logo: 'logo.png',
+        website: 'https://example.com',
+        isActive: false,
+      });
+      expect(mockPartnerAdminRepository.createQueryBuilder).toHaveBeenCalled();
+      expect(mockPartnerAccessRepository.createQueryBuilder).toHaveBeenCalled();
+      expect(response).toMatchObject({ ...mockPartnerEntity, logo: 'logo.png', website: 'https://example.com', isActive: false });
+    });
+
+    it('when supplied with partial fields should preserve existing values for unprovided fields', async () => {
+      jest.spyOn(mockPartnerRepository, 'save').mockImplementationOnce(() => {
+        return Promise.resolve({ ...mockPartnerEntity, logo: 'new-logo.png' });
+      });
+
+      const response = await service.updatePartnerActiveStatus(mockPartnerEntity.id, {
+        logo: 'new-logo.png',
+      });
+
+      expect(mockPartnerRepository.save).toHaveBeenCalledWith({
+        ...mockPartnerEntity,
+        logo: 'new-logo.png',
+      });
+      expect(response).toMatchObject({ isActive: mockPartnerEntity.isActive, logo: 'new-logo.png' });
+      expect(mockPartnerAdminRepository.createQueryBuilder).not.toHaveBeenCalled();
+      expect(mockPartnerAccessRepository.createQueryBuilder).not.toHaveBeenCalled();
+    });
+
     it('when supplied with incorrect partner id should throw', async () => {
       jest.spyOn(mockPartnerRepository, 'findOneBy').mockImplementationOnce(() => {
         return Promise.resolve(null);
