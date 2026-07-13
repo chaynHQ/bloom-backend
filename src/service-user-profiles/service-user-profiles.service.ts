@@ -256,6 +256,9 @@ export class ServiceUserProfilesService {
           ...profileData.merge_fields,
           ...(partialUpdate.merge_fields ?? {}),
         };
+        // The update's status wins over the one derived from the user record, so a deleted user
+        // isn't recreated as subscribed.
+        if (partialUpdate.status) profileData.status = partialUpdate.status;
         await createMailchimpProfile(profileData);
       } catch (recoverError) {
         const recoverStatus = (recoverError as { status?: number })?.status;
@@ -418,6 +421,42 @@ export class ServiceUserProfilesService {
     await this.syncFrontContactCustomFields(email);
 
     await this.syncMailchimpProfile(courseData.mailchimpSchema, email, 'course');
+  }
+
+  // Deleting an account anonymises the DB row (name and email are randomised) but keeps the id,
+  // so the id is all that still links the Front and Mailchimp contacts — which keep the original
+  // email — back to our records. Must run BEFORE the row is anonymised: both are keyed by email.
+  async updateServiceUserProfilesUserDeleted(user: UserEntity) {
+    const { email } = user;
+
+    if (isCypressTestEmail(email)) {
+      logger.log('Skipping service user profile deletion update for Cypress test email');
+      return;
+    }
+
+    const deletedAt = new Date().toISOString();
+    // Mailchimp date merge fields reject ISO datetimes. Sliced from the ISO string so the day is
+    // taken in UTC and can't shift under the server's timezone.
+    const [year, month, day] = deletedAt.slice(0, 10).split('-');
+    const deletedOn = `${month}/${day}/${year}`;
+
+    const userData = this.serializeUserData(user);
+
+    // Sync all custom fields to Front with the complete set (partial PATCH would wipe other fields).
+    await this.syncFrontContactCustomFields(email, { deleted_at: deletedAt });
+
+    // Unsubscribed so a deleted user stops receiving campaigns.
+    await this.syncMailchimpProfile(
+      {
+        ...userData.mailchimpSchema,
+        status: 'unsubscribed',
+        merge_fields: { ...userData.mailchimpSchema.merge_fields, DELETED: deletedOn },
+      },
+      email,
+      'user deleted',
+    );
+
+    logger.log('Updated service user profiles user deleted');
   }
 
   async updateServiceUserProfilesChatActivity(
@@ -583,6 +622,7 @@ export class ServiceUserProfilesService {
 
   serializeUserData(user: UserEntity) {
     const {
+      id,
       name,
       signUpLanguage,
       contactPermission,
@@ -593,6 +633,7 @@ export class ServiceUserProfilesService {
     const lastActiveAtString = lastActiveAt?.toISOString();
 
     const frontChatSchema: FrontChatContactCustomFields = {
+      user_id: id,
       marketing_permission: contactPermission,
       service_emails_permission: serviceEmailsPermission,
       email_reminders_frequency: emailRemindersFrequency,
@@ -613,6 +654,7 @@ export class ServiceUserProfilesService {
       ],
       language: signUpLanguage || LANGUAGE_DEFAULT,
       merge_fields: {
+        USERID: id,
         NAME: name,
         LACTIVED: lastActiveAtString,
         REMINDFREQ: emailRemindersFrequency,
