@@ -31,6 +31,7 @@ import {
   STORYBLOK_STORY_STATUS_ENUM,
   storyblokToken,
   storyblokWebhookSecret,
+  THEMES,
 } from '../utils/constants';
 import { MailchimpWebhookDto } from './dto/mailchimp-webhook.dto';
 import { SimplybookNotificationType, SimplybookWebhookDto } from './dto/simplybook-webhook.dto';
@@ -477,6 +478,7 @@ export class WebhooksService {
       name: storyData.content.name,
       slug: storyData.full_slug,
       status: status,
+      themes: (storyData.content.themes as THEMES[]) ?? null,
     }; // fields to update on existing and new stories
 
     const newStoryData = {

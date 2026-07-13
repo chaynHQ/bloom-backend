@@ -1,4 +1,4 @@
-import { STORYBLOK_STORY_STATUS_ENUM } from '../utils/constants';
+import { STORYBLOK_STORY_STATUS_ENUM, THEMES } from '../utils/constants';
 
 export interface ICoursesWithSessions {
   id: string;
@@ -7,6 +7,7 @@ export interface ICoursesWithSessions {
   status: STORYBLOK_STORY_STATUS_ENUM;
   storyblokUuid: string;
   completed: boolean;
+  themes?: THEMES[];
   sessions?: {
     id: string;
     name: string;
@@ -14,5 +15,6 @@ export interface ICoursesWithSessions {
     storyblokUuid: string;
     status: STORYBLOK_STORY_STATUS_ENUM;
     completed: boolean;
+    themes?: THEMES[];
   }[];
 }

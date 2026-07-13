@@ -21,6 +21,7 @@ import {
   RESOURCE_CATEGORIES,
   SIMPLYBOOK_ACTION_ENUM,
   STORYBLOK_STORY_STATUS_ENUM,
+  THEMES,
 } from 'src/utils/constants';
 import {
   mockCourse,
@@ -310,6 +311,7 @@ describe('WebhooksService', () => {
         slug: mockSession.slug,
         name: mockSession.name,
         courseId: mockSession.courseId,
+        themes: [THEMES.SETTING_BOUNDARIES],
       };
 
       const session = (await service.handleStoryUpdated(body)) as SessionEntity;
@@ -362,6 +364,7 @@ describe('WebhooksService', () => {
         slug: mockSession.slug,
         name: mockSession.name,
         courseId: mockSession.courseId,
+        themes: [THEMES.SETTING_BOUNDARIES],
       };
 
       const session = (await service.handleStoryUpdated(body)) as SessionEntity;
@@ -394,6 +397,7 @@ describe('WebhooksService', () => {
         status: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
         slug: mockCourseStoryblokResult.data.story.full_slug,
         name: mockCourseStoryblokResult.data.story.content.name,
+        themes: [THEMES.SETTING_BOUNDARIES],
       };
 
       const course = (await service.handleStoryUpdated(body)) as CourseEntity;
@@ -469,6 +473,7 @@ describe('WebhooksService', () => {
         slug: mockResourceStoryblokResult.data.story.full_slug,
         name: mockResourceStoryblokResult.data.story.name,
         category: RESOURCE_CATEGORIES.SHORT_VIDEO,
+        themes: [THEMES.RECOGNISING_HARM],
       };
 
       const resource = (await service.handleStoryUpdated(body)) as ResourceEntity;

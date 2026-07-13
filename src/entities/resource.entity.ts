@@ -1,5 +1,5 @@
 import { Column, Entity, JoinTable, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
-import { RESOURCE_CATEGORIES, STORYBLOK_STORY_STATUS_ENUM } from '../utils/constants';
+import { RESOURCE_CATEGORIES, STORYBLOK_STORY_STATUS_ENUM, THEMES } from '../utils/constants';
 import { BaseBloomEntity } from './base.entity';
 import { ResourceFeedbackEntity } from './resource-feedback.entity';
 import { ResourceUserEntity } from './resource-user.entity';
@@ -19,6 +19,14 @@ export class ResourceEntity extends BaseBloomEntity {
     nullable: true,
   })
   status: STORYBLOK_STORY_STATUS_ENUM;
+
+  @Column({
+    type: 'enum',
+    enum: THEMES,
+    array: true,
+    nullable: true,
+  })
+  themes: THEMES[];
 
   @Column({
     nullable: false,

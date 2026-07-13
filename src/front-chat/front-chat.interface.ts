@@ -28,8 +28,10 @@ export const FRONT_WEBHOOK_EVENT_TO_EVENT_NAME: Partial<Record<string, EVENT_NAM
 };
 
 export interface FrontChatContactCustomFields {
+  user_id?: string;
   signed_up_at?: string;
   last_active_at?: string;
+  deleted_at?: string;
   email_reminders_frequency?: EMAIL_REMINDERS_FREQUENCY;
   language?: string;
   // Coarse client context (no IP/GPS/raw User-Agent). browser_language is the browser's

@@ -128,6 +128,8 @@ describe('PartnerAccessService', () => {
         partnerAccessDto,
         partnerId,
         partnerAdminId,
+        undefined,
+        true,
       );
       expect(newPartnerAccess).toStrictEqual(expectedPartnerAccess);
       expect(newPartnerAccess.accessCode).toHaveLength(6);
@@ -143,9 +145,37 @@ describe('PartnerAccessService', () => {
 
       const partnerAccessDto = { ...mockPartnerAccessEntityBase, ...createPartnerAccessDto };
 
-      await service.createPartnerAccess(partnerAccessDto, partnerId, partnerAdminId);
+      await service.createPartnerAccess(
+        partnerAccessDto,
+        partnerId,
+        partnerAdminId,
+        undefined,
+        true,
+      );
       expect(repoFindOneBySpy).toHaveBeenCalledTimes(2);
       repoFindOneBySpy.mockRestore();
+    });
+    it('when generateCode is not set, should create partner access without an access code', async () => {
+      const partnerAccessDto = { ...mockPartnerAccessEntityBase, ...createPartnerAccessDto };
+      const expectedPartnerAccess = {
+        ...partnerAccessDto,
+        partnerAdminId: null,
+        partnerId,
+        accessCode: null,
+      };
+
+      const repoFindOneBySpy = jest.spyOn(repo, 'findOneBy');
+      const partnerAccessRepositorySpy = jest
+        .spyOn(mockPartnerAccessRepository, 'save')
+        .mockResolvedValueOnce(expectedPartnerAccess);
+
+      const result = await service.createPartnerAccess(partnerAccessDto, partnerId, null);
+
+      expect(result.accessCode).toBeNull();
+      // Should not attempt to find/check for a duplicate code
+      expect(repoFindOneBySpy).not.toHaveBeenCalled();
+      repoFindOneBySpy.mockRestore();
+      partnerAccessRepositorySpy.mockRestore();
     });
   });
 
