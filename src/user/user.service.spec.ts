@@ -71,6 +71,7 @@ jest.mock('src/api/mailchimp/mailchimp-api');
 
 describe('UserService', () => {
   let service: UserService;
+  let serviceUserProfilesService: ServiceUserProfilesService;
   let repo: Repository<UserEntity>;
   let mockAuthService: DeepMocked<AuthService>;
   let mockPartnerAccessService: DeepMocked<PartnerAccessService>;
@@ -129,6 +130,7 @@ describe('UserService', () => {
     }).compile();
 
     service = module.get<UserService>(UserService);
+    serviceUserProfilesService = module.get<ServiceUserProfilesService>(ServiceUserProfilesService);
     const logger = (service as any).logger as Logger;
     (logger as any).cls = mockClsService;
     repo = module.get<Repository<UserEntity>>(getRepositoryToken(UserEntity));
@@ -440,6 +442,48 @@ describe('UserService', () => {
       expect(mockTherapySessionServiceSpy).toHaveBeenCalled();
       expect(mockSubscriptionUserServiceSpy).toHaveBeenCalledWith(mockUserEntity.id);
       expect(mockAuthServiceSpy).toHaveBeenCalledWith(mockUserEntity.firebaseUid);
+    });
+
+    it('should mark the front and mailchimp profiles as deleted, keyed by the real email', async () => {
+      const repoSpySave = jest.spyOn(repo, 'save');
+
+      const user = await service.deleteUser(mockUserEntity);
+
+      // Sent with the pre-anonymisation email — the key both contacts are stored under.
+      expect(mockFrontChatService.updateContactCustomFields).toHaveBeenCalledWith(
+        expect.objectContaining({
+          user_id: mockUserEntity.id,
+          deleted_at: expect.any(String),
+        }),
+        mockUserEntity.email,
+      );
+      expect(updateMailchimpProfile).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: 'unsubscribed',
+          merge_fields: expect.objectContaining({
+            USERID: mockUserEntity.id,
+            DELETED: expect.stringMatching(/^\d{2}\/\d{2}\/\d{4}$/),
+          }),
+        }),
+        mockUserEntity.email,
+      );
+
+      // The id survives anonymisation, so it remains the only link back to these profiles.
+      expect(user.id).toBe(mockUserEntity.id);
+      expect(user.email).not.toBe(mockUserEntity.email);
+      expect(repoSpySave).toHaveBeenCalled();
+    });
+
+    it('when updating service user profiles fails, it should still delete the user', async () => {
+      const repoSpySave = jest.spyOn(repo, 'save');
+      jest
+        .spyOn(serviceUserProfilesService, 'updateServiceUserProfilesUserDeleted')
+        .mockRejectedValueOnce(new Error('Front Chat API call failed'));
+
+      const user = await service.deleteUser(mockUserEntity);
+
+      expect(user.email).not.toBe(mockUserEntity.email);
+      expect(repoSpySave).toHaveBeenCalledTimes(1);
     });
 
     it('when user id supplied, but firebaseRequestFails, it should not throw', async () => {

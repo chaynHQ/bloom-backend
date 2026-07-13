@@ -178,6 +178,16 @@ export class UserService {
       );
     }
 
+    // Must run before the row is anonymised below — the contacts are keyed by the real email.
+    // Deletion must not fail if this does.
+    try {
+      await this.serviceUserProfilesService.updateServiceUserProfilesUserDeleted(user);
+    } catch (err) {
+      this.logger.error(
+        `deleteUser - unable to update service user profiles for user ${user.id}: ${err?.message || 'unknown error'}`,
+      );
+    }
+
     try {
       // If they have subscriptions,redact the number
       await this.subscriptionUserService.softDeleteSubscriptionsForUser(user.id);
