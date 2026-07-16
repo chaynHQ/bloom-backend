@@ -14,12 +14,10 @@ import {
   FrontChatWebhookDto,
   FrontWebhookMessageAuthor,
 } from 'src/webhooks/dto/front-chat-webhook.dto';
+import { EVENT_NAME } from 'src/event-logger/event-logger.interface';
 import { FrontChatGateway } from './front-chat.gateway';
 import { classifyAttachments, toAgentReplyAttachment } from './front-chat.helpers';
-import {
-  FRONT_WEBHOOK_EVENT_TO_EVENT_NAME,
-  FRONT_WEBHOOK_EVENT_TYPE,
-} from './front-chat.interface';
+import { FRONT_WEBHOOK_EVENT_TYPE } from './front-chat.interface';
 import { buildThreadRef, FrontChatService } from './front-chat.service';
 
 const CHANNEL_API_TIMESTAMP_TOLERANCE_MS = 5 * 60 * 1000;
@@ -87,19 +85,8 @@ export class FrontChatWebhookService {
       this.syncChatUserFromInbound(email, webhookData.conversation.id).catch(() => {});
     }
 
-    const eventName = FRONT_WEBHOOK_EVENT_TO_EVENT_NAME[webhookData.type];
-    if (!eventName) return;
-
-    try {
-      await this.eventLoggerService.createEventLog(
-        { event: eventName, date: new Date(webhookData.emitted_at * 1000) },
-        email,
-      );
-    } catch (error) {
-      this.logger.warn(
-        `Front webhook: failed to log ${eventName} (conversation ${webhookData.conversation?.id ?? 'unknown'}): ${error?.message || 'unknown error'}`,
-      );
-    }
+    // Message events are logged in-process (send funnel + handleFrontChannelOutbound),
+    // not here — this Events-API path isn't a configured Front integration and never fires.
   }
 
   // Handles outbound messages Front sends to a Custom Channel when an agent replies
@@ -142,6 +129,19 @@ export class FrontChatWebhookService {
       this.logger.log(
         `Front Channel: forwarded agent reply${chatUser ? ` to user ${chatUser.userId}` : ''}`,
       );
+
+      // CHAT_MESSAGE_RECEIVED for reporting. Fire-and-forget so a logging failure
+      // can't break the 200 Front requires.
+      this.eventLoggerService
+        .createEventLog(
+          { userId: chatUser?.userId, event: EVENT_NAME.CHAT_MESSAGE_RECEIVED, date: new Date() },
+          chatUser ? undefined : recipientEmail,
+        )
+        .catch((err) =>
+          this.logger.error(
+            `Failed to log CHAT_MESSAGE_RECEIVED${chatUser ? ` for user ${chatUser.userId}` : ''}: ${(err as Error)?.message || 'unknown error'}`,
+          ),
+        );
 
       this.chatUserService
         .updateChatUserByEmail(recipientEmail, { lastMessageReceivedAt: new Date() })

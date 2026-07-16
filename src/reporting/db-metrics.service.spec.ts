@@ -12,6 +12,7 @@ import { SubscriptionUserEntity } from 'src/entities/subscription-user.entity';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
 import { UserEntity } from 'src/entities/user.entity';
 import { IsNull, Repository } from 'typeorm';
+import { EVENT_NAME } from 'src/event-logger/event-logger.interface';
 import { DbMetricsService } from './db-metrics.service';
 import { ReportWindow } from './reporting.types';
 
@@ -120,6 +121,19 @@ describe('DbMetricsService', () => {
     );
     // Whatsapp filter scoped to the right subscription name.
     expect(subsQb.where).toHaveBeenCalledWith('s.name = :name', { name: 'whatsapp' });
+
+    // Chat message counts MUST window on `date` (Front's emit time), not
+    // `createdAt` (row-insert time) — the two diverge for backfilled/migrated
+    // and delayed-webhook rows, which silently zeroed these metrics before.
+    expect(repos.eventLog.count).toHaveBeenCalledWith({
+      where: { event: EVENT_NAME.CHAT_MESSAGE_SENT, date: expect.anything() },
+    });
+    expect(repos.eventLog.count).toHaveBeenCalledWith({
+      where: { event: EVENT_NAME.CHAT_MESSAGE_RECEIVED, date: expect.anything() },
+    });
+    expect(repos.eventLog.count).not.toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ createdAt: expect.anything() }) }),
+    );
   });
 
   it('collectBreakdowns: courses nest sessions under course name; resources nest items under category', async () => {
