@@ -3,6 +3,8 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { ChatUserService } from 'src/chat-user/chat-user.service';
 import { ChatUserEntity } from 'src/entities/chat-user.entity';
 import { UserEntity } from 'src/entities/user.entity';
+import { EVENT_NAME } from 'src/event-logger/event-logger.interface';
+import { EventLoggerService } from 'src/event-logger/event-logger.service';
 import { fetchFrontAttachment, FrontChatService } from './front-chat.service';
 
 const mockFetch = jest.fn();
@@ -49,9 +51,11 @@ describe('FrontChatService', () => {
   const mockUserRepository = {
     findOneBy: jest.fn(),
   };
+  const eventLoggerService = { createEventLog: jest.fn().mockResolvedValue(undefined) };
 
   beforeEach(async () => {
     jest.resetAllMocks();
+    eventLoggerService.createEventLog.mockResolvedValue(undefined);
 
     chatUserService = {
       getOrCreateChatUser: jest.fn().mockImplementation(async (userId) => buildChatUser({ userId })),
@@ -68,6 +72,7 @@ describe('FrontChatService', () => {
       providers: [
         FrontChatService,
         { provide: ChatUserService, useValue: chatUserService },
+        { provide: EventLoggerService, useValue: eventLoggerService },
         { provide: getRepositoryToken(UserEntity), useValue: mockUserRepository },
       ],
     }).compile();
@@ -726,6 +731,20 @@ describe('FrontChatService', () => {
         'hi',
       );
       expect(mockFetch).not.toHaveBeenCalled();
+      expect(eventLoggerService.createEventLog).not.toHaveBeenCalled();
+    });
+
+    it('logs a CHAT_MESSAGE_SENT event for the user', async () => {
+      mockFetch.mockResolvedValue({ ok: true, status: 202, json: async () => ({}) });
+
+      await service.sendChannelTextMessage(user, 'hi');
+      await new Promise((r) => setImmediate(r));
+
+      expect(eventLoggerService.createEventLog).toHaveBeenCalledWith({
+        userId: user.id,
+        event: EVENT_NAME.CHAT_MESSAGE_SENT,
+        date: expect.any(Date),
+      });
     });
 
     it('throws when Front returns non-2xx', async () => {
@@ -795,6 +814,20 @@ describe('FrontChatService', () => {
     it('skips for Cypress test emails', async () => {
       await service.sendChannelAttachment({ id: 'u', email: 'cypresstestemail+1@chayn.co' }, file);
       expect(mockFetch).not.toHaveBeenCalled();
+      expect(eventLoggerService.createEventLog).not.toHaveBeenCalled();
+    });
+
+    it('logs a CHAT_MESSAGE_SENT event for the user', async () => {
+      mockFetch.mockResolvedValue({ ok: true, status: 202, json: async () => ({}) });
+
+      await service.sendChannelAttachment(user, file);
+      await new Promise((r) => setImmediate(r));
+
+      expect(eventLoggerService.createEventLog).toHaveBeenCalledWith({
+        userId: user.id,
+        event: EVENT_NAME.CHAT_MESSAGE_SENT,
+        date: expect.any(Date),
+      });
     });
 
     it('throws when Front returns non-2xx', async () => {

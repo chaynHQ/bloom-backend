@@ -3,6 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { ChatUserService } from 'src/chat-user/chat-user.service';
 import { ChatUserEntity } from 'src/entities/chat-user.entity';
 import { UserEntity } from 'src/entities/user.entity';
+import { EVENT_NAME } from 'src/event-logger/event-logger.interface';
+import { EventLoggerService } from 'src/event-logger/event-logger.service';
 import { Logger } from 'src/logger/logger';
 import {
   FRONT_API_BASE_URL,
@@ -165,6 +167,7 @@ export class FrontChatService {
 
   constructor(
     private readonly chatUserService: ChatUserService,
+    private readonly eventLoggerService: EventLoggerService,
     @InjectRepository(UserEntity)
     private readonly userRepository: Repository<UserEntity>,
   ) {}
@@ -261,6 +264,16 @@ export class FrontChatService {
   ): Promise<ChatUserEntity> {
     const chatUser = existingChatUser ?? (await this.chatUserService.getOrCreateChatUser(userId));
     const saved = await this.chatUserService.setLastMessageSentAt(chatUser, new Date());
+
+    // CHAT_MESSAGE_SENT for reporting — logged in the shared send funnel, not via a
+    // Front webhook. Fire-and-forget so a logging failure can't fail the send.
+    this.eventLoggerService
+      .createEventLog({ userId, event: EVENT_NAME.CHAT_MESSAGE_SENT, date: new Date() })
+      .catch((err) =>
+        logger.error(
+          `Failed to log CHAT_MESSAGE_SENT for user ${userId}: ${err?.message || 'unknown error'}`,
+        ),
+      );
 
     if (messageUid) {
       this.scheduleConversationIdResolution(userId, messageUid);
