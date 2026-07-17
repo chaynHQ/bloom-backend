@@ -1,11 +1,14 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import * as nsfwjs from 'nsfwjs';
 import { ChatUserService } from 'src/chat-user/chat-user.service';
 import { ChatUserEntity } from 'src/entities/chat-user.entity';
 import { UserEntity } from 'src/entities/user.entity';
 import { EVENT_NAME } from 'src/event-logger/event-logger.interface';
 import { EventLoggerService } from 'src/event-logger/event-logger.service';
+import { Logger } from 'src/logger/logger';
 import { fetchFrontAttachment, FrontChatService } from './front-chat.service';
+import { ImageScanningService } from './image-scanning.service';
 
 const mockFetch = jest.fn();
 global.fetch = mockFetch;
@@ -19,6 +22,15 @@ jest.mock('src/utils/constants', () => ({
   frontChannelId: 'cha_test',
   frontContactListId: 'grp_test',
   frontSupportEmail: 'test-support@bloom.chayn.co',
+}));
+
+//TFJS // Controllable fake model —  tests classify() returns.
+const mockClassify = jest.fn();
+jest.mock('nsfwjs', () => ({
+  load: jest.fn().mockResolvedValue({ classify: (...args) => mockClassify(...args) }),
+}));
+jest.mock('@tensorflow/tfjs-node', () => ({
+  node: { decodeImage: jest.fn(() => ({ dispose: jest.fn() })) },
 }));
 
 const buildChatUser = (overrides: Partial<ChatUserEntity> = {}): ChatUserEntity =>
@@ -58,19 +70,23 @@ describe('FrontChatService', () => {
     eventLoggerService.createEventLog.mockResolvedValue(undefined);
 
     chatUserService = {
-      getOrCreateChatUser: jest.fn().mockImplementation(async (userId) => buildChatUser({ userId })),
+      getOrCreateChatUser: jest
+        .fn()
+        .mockImplementation(async (userId) => buildChatUser({ userId })),
       getChatUser: jest.fn().mockResolvedValue(null),
       updateChatUserByEmail: jest.fn().mockResolvedValue(null),
       clearConversationId: jest.fn().mockResolvedValue(undefined),
-      setLastMessageSentAt: jest
-        .fn()
-        .mockImplementation(async (chatUser, sentAt) => ({ ...chatUser, lastMessageSentAt: sentAt })),
+      setLastMessageSentAt: jest.fn().mockImplementation(async (chatUser, sentAt) => ({
+        ...chatUser,
+        lastMessageSentAt: sentAt,
+      })),
     };
     mockUserRepository.findOneBy.mockResolvedValue(null);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         FrontChatService,
+        ImageScanningService,
         { provide: ChatUserService, useValue: chatUserService },
         { provide: EventLoggerService, useValue: eventLoggerService },
         { provide: getRepositoryToken(UserEntity), useValue: mockUserRepository },
@@ -202,7 +218,11 @@ describe('FrontChatService', () => {
     });
 
     it('throws when contact not found (404) rather than creating a partial contact', async () => {
-      mockFetch.mockResolvedValueOnce({ ok: false, status: 404, text: async () => '404 not found' });
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+        text: async () => '404 not found',
+      });
 
       await expect(
         service.updateContactCustomFields({ language: 'en' }, 'user@example.com'),
@@ -236,7 +256,11 @@ describe('FrontChatService', () => {
     });
 
     it('throws when contact not found (404) rather than creating a partial contact', async () => {
-      mockFetch.mockResolvedValueOnce({ ok: false, status: 404, text: async () => '404 not found' });
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+        text: async () => '404 not found',
+      });
 
       await expect(
         service.updateContactProfile({ name: 'New Name' }, 'user@example.com'),
@@ -350,14 +374,18 @@ describe('FrontChatService', () => {
     });
 
     it('returns empty array when ChatUser exists but frontConversationId is null and contact has no conversations', async () => {
-      chatUserService.getChatUser.mockResolvedValueOnce(buildChatUser({ frontConversationId: null }));
+      chatUserService.getChatUser.mockResolvedValueOnce(
+        buildChatUser({ frontConversationId: null }),
+      );
       mockEmptyContactLookup();
       const result = await service.getConversationHistory(user);
       expect(result).toEqual({ messages: [], conversationFound: false });
     });
 
     it('uses contact conversation lookup to find and cache frontConversationId when absent', async () => {
-      chatUserService.getChatUser.mockResolvedValueOnce(buildChatUser({ frontConversationId: null }));
+      chatUserService.getChatUser.mockResolvedValueOnce(
+        buildChatUser({ frontConversationId: null }),
+      );
       const inboxUrl = 'https://api2.frontapp.com/inboxes/inb_test';
       // First fetch: getInboxId → /channels/{id}
       mockFetch.mockResolvedValueOnce({
@@ -391,7 +419,9 @@ describe('FrontChatService', () => {
     });
 
     it('fetches messages using the stored frontConversationId', async () => {
-      chatUserService.getChatUser.mockResolvedValueOnce(buildChatUser({ frontConversationId: 'cnv_abc' }));
+      chatUserService.getChatUser.mockResolvedValueOnce(
+        buildChatUser({ frontConversationId: 'cnv_abc' }),
+      );
       mockFetch.mockResolvedValueOnce({
         ok: true,
         status: 200,
@@ -414,7 +444,9 @@ describe('FrontChatService', () => {
     });
 
     it('maps inbound messages as user and outbound as agent, sorted chronologically', async () => {
-      chatUserService.getChatUser.mockResolvedValueOnce(buildChatUser({ frontConversationId: 'cnv_abc' }));
+      chatUserService.getChatUser.mockResolvedValueOnce(
+        buildChatUser({ frontConversationId: 'cnv_abc' }),
+      );
       const now = Math.floor(Date.now() / 1000);
       mockFetch.mockResolvedValueOnce({
         ok: true,
@@ -447,7 +479,9 @@ describe('FrontChatService', () => {
     });
 
     it('paginates through all messages when _pagination.next is set', async () => {
-      chatUserService.getChatUser.mockResolvedValueOnce(buildChatUser({ frontConversationId: 'cnv_abc' }));
+      chatUserService.getChatUser.mockResolvedValueOnce(
+        buildChatUser({ frontConversationId: 'cnv_abc' }),
+      );
       const now = Math.floor(Date.now() / 1000);
       mockFetch
         .mockResolvedValueOnce({
@@ -476,7 +510,9 @@ describe('FrontChatService', () => {
     });
 
     it('clears stale frontConversationId on 404 and returns empty', async () => {
-      chatUserService.getChatUser.mockResolvedValueOnce(buildChatUser({ frontConversationId: 'cnv_stale' }));
+      chatUserService.getChatUser.mockResolvedValueOnce(
+        buildChatUser({ frontConversationId: 'cnv_stale' }),
+      );
       mockFetch.mockResolvedValueOnce({ ok: false, status: 404, text: async () => 'not found' });
 
       const result = await service.getConversationHistory(user);
@@ -486,7 +522,9 @@ describe('FrontChatService', () => {
     });
 
     it('maps image attachment messages with an attachments entry on the proxy path', async () => {
-      chatUserService.getChatUser.mockResolvedValueOnce(buildChatUser({ frontConversationId: 'cnv_abc' }));
+      chatUserService.getChatUser.mockResolvedValueOnce(
+        buildChatUser({ frontConversationId: 'cnv_abc' }),
+      );
       const now = Math.floor(Date.now() / 1000);
       const attachmentUrl = 'https://api2.frontapp.com/download/att_1/photo.jpg';
       mockFetch.mockResolvedValueOnce({
@@ -526,7 +564,9 @@ describe('FrontChatService', () => {
     });
 
     it('skips messages with no text and no image attachment', async () => {
-      chatUserService.getChatUser.mockResolvedValueOnce(buildChatUser({ frontConversationId: 'cnv_abc' }));
+      chatUserService.getChatUser.mockResolvedValueOnce(
+        buildChatUser({ frontConversationId: 'cnv_abc' }),
+      );
       const now = Math.floor(Date.now() / 1000);
       mockFetch.mockResolvedValueOnce({
         ok: true,
@@ -542,7 +582,9 @@ describe('FrontChatService', () => {
     });
 
     it('parses markdown image links from body as image attachments (Channel API imported messages)', async () => {
-      chatUserService.getChatUser.mockResolvedValueOnce(buildChatUser({ frontConversationId: 'cnv_abc' }));
+      chatUserService.getChatUser.mockResolvedValueOnce(
+        buildChatUser({ frontConversationId: 'cnv_abc' }),
+      );
       const now = Math.floor(Date.now() / 1000);
       const imageUrl = 'https://chayn.api.frontapp.com/messages/msg_1/download/fil_1';
       mockFetch.mockResolvedValueOnce({
@@ -578,7 +620,9 @@ describe('FrontChatService', () => {
     });
 
     it('marks imported operator messages as agent when author email matches support address', async () => {
-      chatUserService.getChatUser.mockResolvedValueOnce(buildChatUser({ frontConversationId: 'cnv_abc' }));
+      chatUserService.getChatUser.mockResolvedValueOnce(
+        buildChatUser({ frontConversationId: 'cnv_abc' }),
+      );
       const now = Math.floor(Date.now() / 1000);
       mockFetch.mockResolvedValueOnce({
         ok: true,
@@ -616,7 +660,9 @@ describe('FrontChatService', () => {
     const user = { id: 'user-1', email: 'user@example.com', name: 'Alex' };
 
     it('maps audio attachment messages with kind=voice and a proxy URL on attachments', async () => {
-      chatUserService.getChatUser.mockResolvedValueOnce(buildChatUser({ frontConversationId: 'cnv_abc' }));
+      chatUserService.getChatUser.mockResolvedValueOnce(
+        buildChatUser({ frontConversationId: 'cnv_abc' }),
+      );
       const now = Math.floor(Date.now() / 1000);
       const audioUrl = 'https://chayneb55.api.frontapp.com/messages/msg_1/download/fil_audio';
       mockFetch.mockResolvedValueOnce({
@@ -655,7 +701,9 @@ describe('FrontChatService', () => {
     });
 
     it('maps every attachment on a multi-attachment message, preserving order', async () => {
-      chatUserService.getChatUser.mockResolvedValueOnce(buildChatUser({ frontConversationId: 'cnv_abc' }));
+      chatUserService.getChatUser.mockResolvedValueOnce(
+        buildChatUser({ frontConversationId: 'cnv_abc' }),
+      );
       const now = Math.floor(Date.now() / 1000);
       const imageUrl = 'https://api2.frontapp.com/download/att_1/photo.png';
       const fileUrl = 'https://api2.frontapp.com/download/att_2/notes.txt';
@@ -840,6 +888,80 @@ describe('FrontChatService', () => {
         'Front attachment upload failed (413)',
       );
     });
+
+    //IMG scan ────────────────────────────────────────
+
+    it('blocks an explicit image and never forwards it', async () => {
+      //const nsfwjs = require('nsfwjs');
+      (nsfwjs.load as jest.Mock).mockResolvedValue({
+        classify: (...args: unknown[]) => mockClassify(...args),
+      });
+      await (service as any).imageScanningService.onModuleInit();
+      mockClassify.mockResolvedValue([{ className: 'Porn', probability: 0.9 }]);
+
+      await expect(service.sendChannelAttachment(user, file)).rejects.toThrow();
+
+      const uploadCall = mockFetch.mock.calls.find(([, init]) => init?.body instanceof FormData);
+      expect(uploadCall).toBeUndefined();
+    });
+
+    it('raises a Rollbar alert (logger.error) when blocking', async () => {
+      //  const nsfwjs = require('nsfwjs');
+      (nsfwjs.load as jest.Mock).mockResolvedValue({
+        classify: (...args: unknown[]) => mockClassify(...args),
+      });
+      await (service as any).imageScanningService.onModuleInit();
+      mockClassify.mockResolvedValue([{ className: 'Porn', probability: 0.9 }]);
+      const errorSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
+
+      await expect(service.sendChannelAttachment(user, file)).rejects.toThrow();
+
+      expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('Blocked explicit image'));
+      errorSpy.mockRestore();
+    });
+
+    /*     it(' a thread note when blocking', async () => {
+      await (service as any).imageScanningService.onModuleInit();
+      mockClassify.mockResolvedValue([{ className: 'Porn', probability: 0.9 }]);
+      const noteSpy = jest.spyOn(service, 'sendChannelTextMessage').mockResolvedValue(null);
+
+      await expect(service.sendChannelAttachment(user, file)).rejects.toThrow();
+
+      expect(noteSpy).toHaveBeenCalledWith(user, expect.stringContaining('blocked'));
+    }); */
+
+    it('forwards a safe image normally', async () => {
+      mockClassify.mockResolvedValue([{ className: 'Neutral', probability: 0.95 }]);
+      mockFetch.mockResolvedValue({ ok: true, status: 202, json: async () => ({}) });
+
+      await service.sendChannelAttachment(user, file);
+
+      const uploadCall = mockFetch.mock.calls.find(([, init]) => init?.body instanceof FormData);
+      expect(uploadCall).toBeDefined();
+    });
+
+    it('forwards an image scoring below the threshold', async () => {
+      mockClassify.mockResolvedValue([{ className: 'Sexy', probability: 0.4 }]);
+      mockFetch.mockResolvedValue({ ok: true, status: 202, json: async () => ({}) });
+
+      await service.sendChannelAttachment(user, file);
+
+      const uploadCall = mockFetch.mock.calls.find(([, init]) => init?.body instanceof FormData);
+      expect(uploadCall).toBeDefined();
+    });
+
+    it('does not scan non-image files', async () => {
+      mockFetch.mockResolvedValue({ ok: true, status: 202, json: async () => ({}) });
+      const pdf = {
+        ...file,
+        mimetype: 'application/pdf',
+        originalname: 'doc.pdf',
+      } as Express.Multer.File;
+
+      await service.sendChannelAttachment(user, pdf);
+
+      expect(mockClassify).not.toHaveBeenCalled();
+    });
   });
 });
 
@@ -898,7 +1020,9 @@ describe('fetchFrontAttachment', () => {
       headers: { get: (k: string) => (k === 'location' ? 'https://evil.com/file' : null) },
     });
 
-    await expect(fetchFrontAttachment(VALID_FRONT_URL)).rejects.toThrow('Disallowed redirect target');
+    await expect(fetchFrontAttachment(VALID_FRONT_URL)).rejects.toThrow(
+      'Disallowed redirect target',
+    );
     expect(mockFetch).toHaveBeenCalledTimes(1);
   });
 
