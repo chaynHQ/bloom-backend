@@ -892,7 +892,6 @@ describe('FrontChatService', () => {
     //IMG scan ────────────────────────────────────────
 
     it('blocks an explicit image and never forwards it', async () => {
-      //const nsfwjs = require('nsfwjs');
       (nsfwjs.load as jest.Mock).mockResolvedValue({
         classify: (...args: unknown[]) => mockClassify(...args),
       });
@@ -906,7 +905,6 @@ describe('FrontChatService', () => {
     });
 
     it('raises a Rollbar alert (logger.error) when blocking', async () => {
-      //  const nsfwjs = require('nsfwjs');
       (nsfwjs.load as jest.Mock).mockResolvedValue({
         classify: (...args: unknown[]) => mockClassify(...args),
       });

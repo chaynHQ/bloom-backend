@@ -163,7 +163,6 @@ function isFrontContactNotFound(error: unknown): boolean {
   return message.includes('not_found');
 }
 
-@Injectable()
 export class ImageBlockedError extends Error {
   constructor(reason: string) {
     super(reason);
@@ -171,6 +170,7 @@ export class ImageBlockedError extends Error {
   }
 }
 
+@Injectable()
 export class FrontChatService {
   private resolvedInboxId: string | undefined;
 
