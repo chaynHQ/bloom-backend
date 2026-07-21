@@ -6,6 +6,8 @@ import { UserEntity } from 'src/entities/user.entity';
 import { EVENT_NAME } from 'src/event-logger/event-logger.interface';
 import { EventLoggerService } from 'src/event-logger/event-logger.service';
 import { Logger } from 'src/logger/logger';
+import { ImageScanningService } from './image-scanning.service';
+
 import {
   FRONT_API_BASE_URL,
   FRONT_SEND_RETRY_DELAYS_MS,
@@ -161,6 +163,13 @@ function isFrontContactNotFound(error: unknown): boolean {
   return message.includes('not_found');
 }
 
+export class ImageBlockedError extends Error {
+  constructor(reason: string) {
+    super(reason);
+    this.name = 'ImageBlockedError';
+  }
+}
+
 @Injectable()
 export class FrontChatService {
   private resolvedInboxId: string | undefined;
@@ -168,6 +177,8 @@ export class FrontChatService {
   constructor(
     private readonly chatUserService: ChatUserService,
     private readonly eventLoggerService: EventLoggerService,
+    private readonly imageScanningService: ImageScanningService,
+
     @InjectRepository(UserEntity)
     private readonly userRepository: Repository<UserEntity>,
   ) {}
@@ -220,6 +231,23 @@ export class FrontChatService {
     if (isCypressTestEmail(user.email)) {
       logger.log('Skipping Front attachment send for Cypress test user');
       return null;
+    }
+
+    if (file.mimetype.startsWith('image/')) {
+      const { isSafe, reason } = await this.imageScanningService.scanImage(file.buffer);
+      if (!isSafe) {
+        // logger.error forwards to Rollbar (logger.warn does not) — this is our alert.
+
+        logger.error(`Blocked explicit image attachment from user ${user.id} (${reason})`); // PII is auto-redacted; never log the image itself, only id + classification.
+
+        // Tell the agent image was blocked
+        await this.sendChannelTextMessage(
+          user,
+          'This image has been blocked because it may contain something explicit or malicious. The user has been notified.',
+        ).catch(() => {});
+
+        throw new ImageBlockedError(reason ?? 'Image blocked');
+      }
     }
 
     const form = new FormData();
@@ -307,7 +335,9 @@ export class FrontChatService {
 
     const conversationId = conversationUrl.split('/').pop();
     if (conversationId) {
-      await this.chatUserService.getOrCreateChatUser(userId, { frontConversationId: conversationId });
+      await this.chatUserService.getOrCreateChatUser(userId, {
+        frontConversationId: conversationId,
+      });
       logger.log(`Resolved conversation ID ${conversationId} for user ${userId}`);
       await this.syncConversationLanguage(userId);
     }
@@ -413,7 +443,9 @@ export class FrontChatService {
         matching.sort((a, b) => (b.created_at ?? 0) - (a.created_at ?? 0))[0]?.id ?? null;
 
       if (conversationId) {
-        await this.chatUserService.getOrCreateChatUser(userId, { frontConversationId: conversationId });
+        await this.chatUserService.getOrCreateChatUser(userId, {
+          frontConversationId: conversationId,
+        });
         logger.log(`Resolved conversation ${conversationId} for user ${userId} via contact lookup`);
         await this.syncConversationLanguage(userId);
       }
@@ -596,7 +628,9 @@ export class FrontChatService {
 
     // Save frontContactId even if the list-add failed — the canonical ID is still valid.
     if (resolvedId) {
-      this.chatUserService.updateChatUserByEmail(email, { frontContactId: resolvedId }).catch(() => {});
+      this.chatUserService
+        .updateChatUserByEmail(email, { frontContactId: resolvedId })
+        .catch(() => {});
     }
   }
 

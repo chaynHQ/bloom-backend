@@ -10,10 +10,12 @@ import {
   Query,
   Request,
   Res,
+  UnprocessableEntityException,
   UploadedFile,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
+
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiTags } from '@nestjs/swagger';
 import { Response } from 'express';
@@ -26,7 +28,7 @@ import {
   FRONT_CHAT_ATTACHMENT_MAX_FILE_SIZE,
 } from 'src/utils/constants';
 import { normalizeFrontAttachmentUrl } from './front-chat.helpers';
-import { ChatHistoryMessage, FrontChatService } from './front-chat.service';
+import { ChatHistoryMessage, FrontChatService, ImageBlockedError } from './front-chat.service';
 
 @ApiTags('Front Chat')
 @Controller('/v1/front-chat')
@@ -67,8 +69,18 @@ export class FrontChatController {
     if (!existingChatUser?.frontContactId) {
       await this.serviceUserProfilesService.getOrCreateFrontContact(req.userEntity);
     }
-    const chatUser = await this.frontChatService.sendChannelAttachment(req.userEntity, file);
-    this.syncChatActivity(chatUser, req.userEntity.email);
+    try {
+      const chatUser = await this.frontChatService.sendChannelAttachment(req.userEntity, file);
+      this.syncChatActivity(chatUser, req.userEntity.email);
+    } catch (err) {
+      if (err instanceof ImageBlockedError) {
+        throw new UnprocessableEntityException(
+          "This image has been blocked because it didn't pass our safety standards. " +
+            'If you think this is a mistake, please write a message to explain why.',
+        );
+      }
+      throw err;
+    }
   }
 
   @Get('attachment-proxy')
@@ -109,7 +121,10 @@ export class FrontChatController {
   }
 
   // Fire-and-forget — chat activity sync is best-effort and must not block the user.
-  private syncChatActivity(chatUser: Awaited<ReturnType<ChatUserService['markAsRead']>>, email: string) {
+  private syncChatActivity(
+    chatUser: Awaited<ReturnType<ChatUserService['markAsRead']>>,
+    email: string,
+  ) {
     if (!chatUser) return;
     this.serviceUserProfilesService
       .updateServiceUserProfilesChatActivity(chatUser, email)
