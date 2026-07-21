@@ -99,7 +99,7 @@
   },
   "resolutions": {
     "uuid": "^14.0.1",
-    "protobufjs": "^7.6.4",
+    "protobufjs": "^7.6.5",
     "ws": "^8.21.0",
     "multer": "^2.2.0",
     "form-data": "^2.5.6",

@@ -1,4 +1,3 @@
-import { EVENT_NAME } from '../event-logger/event-logger.interface';
 import { EMAIL_REMINDERS_FREQUENCY } from '../utils/constants';
 
 // PENDING  — claim row before the Mailchimp call; prevents double-send on restart.
@@ -20,12 +19,6 @@ export enum FRONT_WEBHOOK_EVENT_TYPE {
   OUTBOUND = 'outbound', // Agent sent a message
   OUT_REPLY = 'out_reply', // Agent replied to a conversation
 }
-
-export const FRONT_WEBHOOK_EVENT_TO_EVENT_NAME: Partial<Record<string, EVENT_NAME>> = {
-  [FRONT_WEBHOOK_EVENT_TYPE.INBOUND]: EVENT_NAME.CHAT_MESSAGE_SENT,
-  [FRONT_WEBHOOK_EVENT_TYPE.OUTBOUND]: EVENT_NAME.CHAT_MESSAGE_RECEIVED,
-  [FRONT_WEBHOOK_EVENT_TYPE.OUT_REPLY]: EVENT_NAME.CHAT_MESSAGE_RECEIVED,
-};
 
 export interface FrontChatContactCustomFields {
   user_id?: string;
