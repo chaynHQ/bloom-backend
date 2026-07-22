@@ -71,7 +71,7 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@golevelup/ts-jest": "^3.0.0",
-    "@nestjs/cli": "^11.0.23",
+    "@nestjs/cli": "^11.0.24",
     "@nestjs/schematics": "^11.1.0",
     "@nestjs/testing": "^11.1.28",
     "@types/date-fns": "^2.6.0",
@@ -83,15 +83,15 @@
     "@types/multer": "^2.2.0",
     "@types/node": "^26.1.1",
     "@types/validator": "^13.15.10",
-    "eslint": "^10.6.0",
+    "eslint": "^10.7.0",
     "eslint-config-prettier": "^10.1.8",
     "jest": "^30.4.2",
-    "prettier": "^3.9.4",
-    "ts-jest": "^29.4.11",
+    "prettier": "^3.9.6",
+    "ts-jest": "^29.4.12",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.63.0"
+    "typescript-eslint": "^8.65.0"
   },
   "engines": {
     "node": ">=22.13.0",
