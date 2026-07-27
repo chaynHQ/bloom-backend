@@ -14,10 +14,10 @@ export class UserQueryDto {
       return '';
     }
   })
-  @ApiProperty({ 
-    type: String, 
-    required: false, 
-    description: 'JSON string for search criteria' 
+  @ApiProperty({
+    type: String,
+    required: false,
+    description: 'JSON string for search criteria',
   })
   searchCriteria?: string;
 }

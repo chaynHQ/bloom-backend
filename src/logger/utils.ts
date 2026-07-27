@@ -7,4 +7,3 @@ export type ErrorLog = {
   userId?: string;
   requestUserId?: string;
 };
-

@@ -91,7 +91,9 @@ describe('DbMetricsService', () => {
       repos.sessionFeedback,
       repos.resourceFeedback,
       repos.eventLog,
-    ].forEach((r) => ((r as Repository<unknown>).count as unknown as jest.Mock).mockResolvedValue(1));
+    ].forEach((r) =>
+      ((r as Repository<unknown>).count as unknown as jest.Mock).mockResolvedValue(1),
+    );
     ((repos.courseUser as Repository<unknown>).count as unknown as jest.Mock).mockRejectedValue(
       new Error('boom'),
     );
@@ -162,7 +164,9 @@ describe('DbMetricsService', () => {
       repos.resourceFeedback,
       repos.therapy,
     ].forEach((r) =>
-      ((r as Repository<unknown>).createQueryBuilder as unknown as jest.Mock).mockReturnValue(qbStub([])),
+      ((r as Repository<unknown>).createQueryBuilder as unknown as jest.Mock).mockReturnValue(
+        qbStub([]),
+      ),
     );
 
     const breakdowns = await service.collectBreakdowns(window);
