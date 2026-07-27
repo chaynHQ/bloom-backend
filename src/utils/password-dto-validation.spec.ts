@@ -4,7 +4,7 @@
 // The stub doubles as both factory and instance so it works whichever init branch the module
 // takes. This does not affect any password assertion below.
 jest.mock('dompurify', () => {
-  const sanitize = (input: unknown) => String(input).replace(/<[^>]*>/g, '');
+  const sanitize = (input: unknown) => String(input).replace(/[<>]/g, '');
   const factory: any = () => ({ sanitize });
   factory.sanitize = sanitize;
   return factory;
