@@ -1,4 +1,3 @@
-import { EVENT_NAME } from '../event-logger/event-logger.interface';
 import { EMAIL_REMINDERS_FREQUENCY } from '../utils/constants';
 
 // PENDING  — claim row before the Mailchimp call; prevents double-send on restart.
@@ -21,15 +20,14 @@ export enum FRONT_WEBHOOK_EVENT_TYPE {
   OUT_REPLY = 'out_reply', // Agent replied to a conversation
 }
 
-export const FRONT_WEBHOOK_EVENT_TO_EVENT_NAME: Partial<Record<string, EVENT_NAME>> = {
-  [FRONT_WEBHOOK_EVENT_TYPE.INBOUND]: EVENT_NAME.CHAT_MESSAGE_SENT,
-  [FRONT_WEBHOOK_EVENT_TYPE.OUTBOUND]: EVENT_NAME.CHAT_MESSAGE_RECEIVED,
-  [FRONT_WEBHOOK_EVENT_TYPE.OUT_REPLY]: EVENT_NAME.CHAT_MESSAGE_RECEIVED,
-};
-
+// Datetime fields (*_at) accept an ISO 8601 string or epoch seconds — serializeCustomFields
+// normalises both to the epoch seconds Front stores. Callers build ISO strings, since the same
+// values feed Mailchimp, which wants ISO.
 export interface FrontChatContactCustomFields {
-  signed_up_at?: string;
-  last_active_at?: string;
+  user_id?: string;
+  signed_up_at?: string | number;
+  last_active_at?: string | number;
+  deleted_at?: string | number;
   email_reminders_frequency?: EMAIL_REMINDERS_FREQUENCY;
   language?: string;
   // Coarse client context (no IP/GPS/raw User-Agent). browser_language is the browser's
@@ -46,9 +44,9 @@ export interface FrontChatContactCustomFields {
   feature_therapy?: boolean;
   therapy_sessions_remaining?: number;
   therapy_sessions_redeemed?: number;
-  therapy_session_first_at?: string;
-  therapy_session_next_at?: string;
-  therapy_session_last_at?: string;
+  therapy_session_first_at?: string | number;
+  therapy_session_next_at?: string | number;
+  therapy_session_last_at?: string | number;
   [key: string]: string | number | boolean | undefined;
 }
 

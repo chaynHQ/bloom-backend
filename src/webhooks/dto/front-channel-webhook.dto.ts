@@ -48,9 +48,6 @@ export const isChannelApiRequest = (body: unknown): body is FrontChannelOutbound
   if (!body || typeof body !== 'object') return false;
   const b = body as Record<string, unknown>;
   return (
-    typeof b['type'] === 'string' &&
-    'payload' in b &&
-    !('emitted_at' in b) &&
-    !('target' in b)
+    typeof b['type'] === 'string' && 'payload' in b && !('emitted_at' in b) && !('target' in b)
   );
 };

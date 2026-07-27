@@ -24,10 +24,7 @@ export class Ga4AuthService {
 
     const client = this.getAuthClient();
     const tokenResp = (await client.getAccessToken()) as
-      | string
-      | null
-      | undefined
-      | { token?: string };
+      string | null | undefined | { token?: string };
     const token = typeof tokenResp === 'string' ? tokenResp : (tokenResp?.token ?? undefined);
     if (!token) {
       throw new Error('Ga4Auth: GoogleAuth returned empty access token');
@@ -51,7 +48,9 @@ export class Ga4AuthService {
   }
 
   private parseCredentials(raw: string): { client_email: string; private_key: string } {
-    const candidate = raw.trim().startsWith('{') ? raw : Buffer.from(raw, 'base64').toString('utf8');
+    const candidate = raw.trim().startsWith('{')
+      ? raw
+      : Buffer.from(raw, 'base64').toString('utf8');
     try {
       return JSON.parse(candidate);
     } catch (err) {

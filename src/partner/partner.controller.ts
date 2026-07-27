@@ -21,9 +21,7 @@ export class PartnerController {
   @UseGuards(SuperAdminAuthGuard)
   @Post()
   @ApiBody({ type: CreatePartnerDto })
-  async createPartner(
-    @Body() createPartnerDto: CreatePartnerDto,
-  ): Promise<PartnerEntity> {
+  async createPartner(@Body() createPartnerDto: CreatePartnerDto): Promise<PartnerEntity> {
     return this.partnerService.createPartner(createPartnerDto);
   }
 
@@ -39,7 +37,9 @@ export class PartnerController {
   @ApiOperation({ description: 'Returns profile data for a partner (public endpoint)' })
   @ApiParam({ name: 'name', description: 'Gets partner by name' })
   async getPartner(@Param() params: PartnerParamDto): Promise<IPartner> {
-    const partnerResponse = await this.partnerService.getPartnerWithPartnerFeaturesByName(params.name);
+    const partnerResponse = await this.partnerService.getPartnerWithPartnerFeaturesByName(
+      params.name,
+    );
     return formatPartnerObject(partnerResponse);
   }
 
@@ -48,7 +48,10 @@ export class PartnerController {
   @Patch(':id')
   @ApiOperation({ description: 'Update a partner profile to make partner active or inactive' })
   @ApiBody({ type: UpdatePartnerDto })
-  async updatePartnerActiveStatus(@Param() params: PartnerIdParamDto, @Body() updatePartnerDto: UpdatePartnerDto) {
+  async updatePartnerActiveStatus(
+    @Param() params: PartnerIdParamDto,
+    @Body() updatePartnerDto: UpdatePartnerDto,
+  ) {
     return this.partnerService.updatePartnerActiveStatus(params.id, updatePartnerDto);
   }
 }

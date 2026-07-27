@@ -35,7 +35,9 @@ describe('FrontChatController', () => {
   beforeEach(() => {
     frontChatService = {
       sendChannelAttachment: jest.fn().mockResolvedValue(undefined),
-      getConversationHistory: jest.fn().mockResolvedValue({ messages: [], conversationFound: false }),
+      getConversationHistory: jest
+        .fn()
+        .mockResolvedValue({ messages: [], conversationFound: false }),
       fetchAttachment: jest
         .fn()
         .mockResolvedValue({ buffer: Buffer.from('img'), contentType: 'image/png' }),
@@ -75,7 +77,9 @@ describe('FrontChatController', () => {
 
   it('skips getOrCreateFrontContact when chatUser already has a frontContactId', async () => {
     const user = { id: 'u1', email: 'u@example.com' } as UserEntity;
-    chatUserService.getChatUser.mockResolvedValueOnce(buildChatUser({ frontContactId: 'crd_existing' }));
+    chatUserService.getChatUser.mockResolvedValueOnce(
+      buildChatUser({ frontContactId: 'crd_existing' }),
+    );
 
     await controller.uploadAttachment({ userEntity: user } as any, buildFile());
 
@@ -135,7 +139,10 @@ describe('FrontChatController', () => {
         { id: 'msg-1', direction: 'agent', text: 'Hello!', createdAt: 1000 },
         { id: 'msg-2', direction: 'user', text: 'Hi there', createdAt: 2000 },
       ];
-      frontChatService.getConversationHistory.mockResolvedValueOnce({ messages: history, conversationFound: true });
+      frontChatService.getConversationHistory.mockResolvedValueOnce({
+        messages: history,
+        conversationFound: true,
+      });
 
       const result = await controller.getMessages({ userEntity: user } as any);
 
@@ -188,7 +195,10 @@ describe('FrontChatController', () => {
       const res = buildRes();
 
       await expect(
-        controller.proxyAttachment('http://chayneb55.api.frontapp.com/messages/msg_abc/download/fil_xyz', res as any),
+        controller.proxyAttachment(
+          'http://chayneb55.api.frontapp.com/messages/msg_abc/download/fil_xyz',
+          res as any,
+        ),
       ).rejects.toBeInstanceOf(BadRequestException);
       expect(frontChatService.fetchAttachment).not.toHaveBeenCalled();
     });
@@ -216,7 +226,10 @@ describe('FrontChatController', () => {
       const res = buildRes();
 
       await expect(
-        controller.proxyAttachment('https://chayneb55.api.frontapp.com/messages/msg_abc/download/fil_missing', res as any),
+        controller.proxyAttachment(
+          'https://chayneb55.api.frontapp.com/messages/msg_abc/download/fil_missing',
+          res as any,
+        ),
       ).rejects.toBeInstanceOf(NotFoundException);
     });
   });

@@ -41,6 +41,17 @@ export enum STORYBLOK_STORY_STATUS_ENUM {
   MOVED = 'moved',
 }
 
+// The library theme a course/session/resource belongs to. Mirrors the `themes` datasource in
+// Storyblok (each story carries a `theme` value matching one of these).
+export enum THEMES {
+  RECOGNISING_HARM = 'recognising-harm',
+  WHY_HARM_HAPPENS = 'why-harm-happens',
+  BODY_AFTER_TRAUMA = 'body-after-trauma',
+  SETTING_BOUNDARIES = 'setting-boundaries',
+  HEALING_JOURNEY = 'healing-journey',
+  STAYING_SAFE = 'staying-safe',
+}
+
 export enum EMAIL_REMINDERS_FREQUENCY {
   TWO_WEEKS = 'TWO_WEEKS',
   ONE_MONTH = 'ONE_MONTH',

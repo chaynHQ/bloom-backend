@@ -110,7 +110,9 @@ export class DbMetricsService {
           where: { lastActiveAt: range, deletedAt: IsNull() },
         }),
       ),
-      tally('coursesStarted', () => this.courseUserRepository.count({ where: { createdAt: range } })),
+      tally('coursesStarted', () =>
+        this.courseUserRepository.count({ where: { createdAt: range } }),
+      ),
       tally('coursesCompleted', () =>
         this.courseUserRepository.count({ where: { completedAt: range } }),
       ),
@@ -146,12 +148,8 @@ export class DbMetricsService {
       tally('partnerAccessActivations', () =>
         this.partnerAccessRepository.count({ where: { activatedAt: range } }),
       ),
-      tally('whatsappSubscribed', () =>
-        this.countWhatsappByDate('su."createdAt"', from, to),
-      ),
-      tally('whatsappUnsubscribed', () =>
-        this.countWhatsappByDate('su."cancelledAt"', from, to),
-      ),
+      tally('whatsappSubscribed', () => this.countWhatsappByDate('su."createdAt"', from, to)),
+      tally('whatsappUnsubscribed', () => this.countWhatsappByDate('su."cancelledAt"', from, to)),
       tally('sessionFeedbackSubmitted', () =>
         this.sessionFeedbackRepository.count({ where: { createdAt: range } }),
       ),
@@ -160,14 +158,17 @@ export class DbMetricsService {
       ),
       // Authoritative chat message counts from event_log — distinct from the
       // GA4 CHAT_MESSAGE_SENT event which is lossy under ad-blockers / consent.
+      // `date` is the emit time from Front (webhook `emitted_at`), so it's the
+      // accurate timestamp for windowing — `createdAt` is when we wrote the row
+      // (which diverges for backfilled/migrated or delayed-webhook messages).
       tally('messagesSent', () =>
         this.eventLogRepository.count({
-          where: { event: EVENT_NAME.CHAT_MESSAGE_SENT, createdAt: range },
+          where: { event: EVENT_NAME.CHAT_MESSAGE_SENT, date: range },
         }),
       ),
       tally('messagesReceived', () =>
         this.eventLogRepository.count({
-          where: { event: EVENT_NAME.CHAT_MESSAGE_RECEIVED, createdAt: range },
+          where: { event: EVENT_NAME.CHAT_MESSAGE_RECEIVED, date: range },
         }),
       ),
     ]);
@@ -204,20 +205,14 @@ export class DbMetricsService {
     try {
       return await run();
     } catch (err) {
-      this.logger.error(
-        `DbMetrics: ${label} failed: ${err?.message || 'unknown error'}`,
-      );
+      this.logger.error(`DbMetrics: ${label} failed: ${err?.message || 'unknown error'}`);
       return null;
     }
   }
 
   /** Query-builder join (not a nested-where) because SubscriptionUserEntity
    *  doesn't eager-load the relation. */
-  private async countWhatsappByDate(
-    column: string,
-    from: Date,
-    to: Date,
-  ): Promise<number> {
+  private async countWhatsappByDate(column: string, from: Date, to: Date): Promise<number> {
     return this.subscriptionUserRepository
       .createQueryBuilder('su')
       .innerJoin('su.subscription', 's')
@@ -249,14 +244,8 @@ export class DbMetricsService {
         .innerJoin('s.course', 'c')
         .select('c.name', 'courseName')
         .addSelect('s.name', 'sessionName')
-        .addSelect(
-          'COUNT(*) FILTER (WHERE su."createdAt" BETWEEN :from AND :to)',
-          'started',
-        )
-        .addSelect(
-          'COUNT(*) FILTER (WHERE su."completedAt" BETWEEN :from AND :to)',
-          'completed',
-        )
+        .addSelect('COUNT(*) FILTER (WHERE su."createdAt" BETWEEN :from AND :to)', 'started')
+        .addSelect('COUNT(*) FILTER (WHERE su."completedAt" BETWEEN :from AND :to)', 'completed')
         .where('su."createdAt" BETWEEN :from AND :to')
         .orWhere('su."completedAt" BETWEEN :from AND :to')
         .setParameters({ from, to })
@@ -272,14 +261,8 @@ export class DbMetricsService {
         .createQueryBuilder('cu')
         .innerJoin('cu.course', 'c')
         .select('c.name', 'courseName')
-        .addSelect(
-          'COUNT(*) FILTER (WHERE cu."createdAt" BETWEEN :from AND :to)',
-          'started',
-        )
-        .addSelect(
-          'COUNT(*) FILTER (WHERE cu."completedAt" BETWEEN :from AND :to)',
-          'completed',
-        )
+        .addSelect('COUNT(*) FILTER (WHERE cu."createdAt" BETWEEN :from AND :to)', 'started')
+        .addSelect('COUNT(*) FILTER (WHERE cu."completedAt" BETWEEN :from AND :to)', 'completed')
         .where('cu."createdAt" BETWEEN :from AND :to')
         .orWhere('cu."completedAt" BETWEEN :from AND :to')
         .setParameters({ from, to })
@@ -290,14 +273,8 @@ export class DbMetricsService {
         .innerJoin('ru.resource', 'r')
         .select('r.category', 'category')
         .addSelect('r.name', 'resourceName')
-        .addSelect(
-          'COUNT(*) FILTER (WHERE ru."createdAt" BETWEEN :from AND :to)',
-          'started',
-        )
-        .addSelect(
-          'COUNT(*) FILTER (WHERE ru."completedAt" BETWEEN :from AND :to)',
-          'completed',
-        )
+        .addSelect('COUNT(*) FILTER (WHERE ru."createdAt" BETWEEN :from AND :to)', 'started')
+        .addSelect('COUNT(*) FILTER (WHERE ru."completedAt" BETWEEN :from AND :to)', 'completed')
         .where('ru."createdAt" BETWEEN :from AND :to')
         .orWhere('ru."completedAt" BETWEEN :from AND :to')
         .setParameters({ from, to })
@@ -354,9 +331,11 @@ export class DbMetricsService {
       }
     >();
     for (const row of sessionRows) {
-      const entry =
-        byCourse.get(row.courseName) ??
-        { coursesStarted: 0, coursesCompleted: 0, sessions: [] };
+      const entry = byCourse.get(row.courseName) ?? {
+        coursesStarted: 0,
+        coursesCompleted: 0,
+        sessions: [],
+      };
       entry.sessions.push({
         name: row.sessionName,
         started: Number(row.started),
@@ -365,9 +344,11 @@ export class DbMetricsService {
       byCourse.set(row.courseName, entry);
     }
     for (const row of courseRows) {
-      const entry =
-        byCourse.get(row.courseName) ??
-        { coursesStarted: 0, coursesCompleted: 0, sessions: [] };
+      const entry = byCourse.get(row.courseName) ?? {
+        coursesStarted: 0,
+        coursesCompleted: 0,
+        sessions: [],
+      };
       entry.coursesStarted = Number(row.started);
       entry.coursesCompleted = Number(row.completed);
       byCourse.set(row.courseName, entry);
@@ -378,9 +359,7 @@ export class DbMetricsService {
         const sessionsCompleted = data.sessions.reduce((s, r) => s + r.completed, 0);
         const sessions = [...data.sessions].sort(
           (a, b) =>
-            b.completed - a.completed ||
-            b.started - a.started ||
-            a.name.localeCompare(b.name),
+            b.completed - a.completed || b.started - a.started || a.name.localeCompare(b.name),
         );
         return {
           name,
@@ -426,9 +405,7 @@ export class DbMetricsService {
       .map(([category, resources]) => {
         const sorted = [...resources].sort(
           (a, b) =>
-            b.completed - a.completed ||
-            b.started - a.started ||
-            a.name.localeCompare(b.name),
+            b.completed - a.completed || b.started - a.started || a.name.localeCompare(b.name),
         );
         return {
           category,
@@ -542,5 +519,4 @@ export class DbMetricsService {
       .getRawMany<{ name: string; count: string }>();
     return rows.map((r) => ({ name: r.name, count: Number(r.count) }));
   }
-
 }

@@ -31,6 +31,7 @@ import {
   STORYBLOK_STORY_STATUS_ENUM,
   storyblokToken,
   storyblokWebhookSecret,
+  THEMES,
 } from '../utils/constants';
 import { MailchimpWebhookDto } from './dto/mailchimp-webhook.dto';
 import { SimplybookNotificationType, SimplybookWebhookDto } from './dto/simplybook-webhook.dto';
@@ -276,10 +277,7 @@ export class WebhooksService {
       `• Provider: ${therapySession.serviceProviderName}`,
       `• When: ${when} (${timezone})`,
     ];
-    if (
-      action === SIMPLYBOOK_ACTION_ENUM.UPDATED_BOOKING &&
-      therapySession.rescheduledFrom
-    ) {
+    if (action === SIMPLYBOOK_ACTION_ENUM.UPDATED_BOOKING && therapySession.rescheduledFrom) {
       lines.push(`• Rescheduled from: ${new Date(therapySession.rescheduledFrom).toISOString()}`);
     }
 
@@ -477,6 +475,7 @@ export class WebhooksService {
       name: storyData.content.name,
       slug: storyData.full_slug,
       status: status,
+      themes: (storyData.content.themes as THEMES[]) ?? null,
     }; // fields to update on existing and new stories
 
     const newStoryData = {
@@ -695,9 +694,7 @@ export class WebhooksService {
     if (!isHardBounce && !isCleaned) return;
 
     const reason = data.reason ?? data.action ?? type;
-    this.logger.log(
-      `Mailchimp webhook: ${type} (reason=${reason}) — recording delivery outcome`,
-    );
+    this.logger.log(`Mailchimp webhook: ${type} (reason=${reason}) — recording delivery outcome`);
 
     try {
       if (isHardBounce) {

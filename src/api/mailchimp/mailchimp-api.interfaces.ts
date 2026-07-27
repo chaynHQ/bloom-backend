@@ -19,8 +19,10 @@ export enum MAILCHIMP_CUSTOM_EVENTS {
 }
 
 export interface ListMemberCustomFields {
+  USERID?: string;
   NAME?: string;
   SIGNUPD?: string;
+  DELETED?: string;
   LACTIVED?: string;
   REMINDFREQ?: EMAIL_REMINDERS_FREQUENCY;
   PARTNERS?: string;

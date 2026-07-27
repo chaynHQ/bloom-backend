@@ -37,8 +37,9 @@ export class PartnerAccessService {
     partnerId: string,
     partnerAdminId: string | null,
     userId?: string,
+    generateCode?: boolean,
   ): Promise<PartnerAccessEntity> {
-    const accessCode = await this.generateAccessCode(6);
+    const accessCode = generateCode ? await this.generateAccessCode(6) : null;
     const partnerAccess = this.partnerAccessRepository.create({
       ...createPartnerAccessDto,
       ...(userId && { userId }),
@@ -203,13 +204,17 @@ export class PartnerAccessService {
             await this.partnerAccessRepository.delete(access.id); //permanently delete the access code
             return access;
           } catch (error) {
-            this.logger.error(`Unable to delete access code: ${access.id} - ${error?.message || 'unknown error'}`);
+            this.logger.error(
+              `Unable to delete access code: ${access.id} - ${error?.message || 'unknown error'}`,
+            );
           }
         }),
       );
     } catch (error) {
       // If this fails we don't want to break cypress tests but we want to be alerted
-      this.logger.error(`deleteCypressTestAccessCodes - Unable to delete access code: ${error?.message || 'unknown error'}`);
+      this.logger.error(
+        `deleteCypressTestAccessCodes - Unable to delete access code: ${error?.message || 'unknown error'}`,
+      );
     }
   }
 }

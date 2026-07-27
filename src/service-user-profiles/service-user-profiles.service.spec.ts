@@ -81,6 +81,7 @@ describe('Service user profiles', () => {
         name: mockUserEntity.name,
         userId: mockUserEntity.id,
         customFields: {
+          user_id: mockUserEntity.id,
           signed_up_at: createdAt,
           marketing_permission: mockUserEntity.contactPermission,
           service_emails_permission: mockUserEntity.serviceEmailsPermission,
@@ -109,6 +110,7 @@ describe('Service user profiles', () => {
           },
         ],
         merge_fields: {
+          USERID: mockUserEntity.id,
           SIGNUPD: createdAt,
           LACTIVED: lastActiveAt,
           NAME: mockUserEntity.name,
@@ -141,6 +143,7 @@ describe('Service user profiles', () => {
         name: mockUserEntity.name,
         userId: mockUserEntity.id,
         customFields: {
+          user_id: mockUserEntity.id,
           signed_up_at: createdAt,
           marketing_permission: mockUserEntity.contactPermission,
           service_emails_permission: mockUserEntity.serviceEmailsPermission,
@@ -170,6 +173,7 @@ describe('Service user profiles', () => {
           },
         ],
         merge_fields: {
+          USERID: mockUserEntity.id,
           SIGNUPD: mockUserEntity.createdAt.toISOString(),
           LACTIVED: lastActiveAt,
           NAME: mockUserEntity.name,
@@ -204,6 +208,7 @@ describe('Service user profiles', () => {
   describe('getOrCreateFrontContact', () => {
     // mockUserEntity has empty partnerAccess/courseUser, so therapy timestamps are omitted.
     const expectedCustomFields = {
+      user_id: mockUserEntity.id,
       signed_up_at: mockUserEntity.createdAt.toISOString(),
       marketing_permission: mockUserEntity.contactPermission,
       service_emails_permission: mockUserEntity.serviceEmailsPermission,
@@ -306,6 +311,7 @@ describe('Service user profiles', () => {
       expect(mockFrontChatService.updateContactCustomFields).toHaveBeenCalledTimes(1);
       expect(mockFrontChatService.updateContactCustomFields).toHaveBeenCalledWith(
         expect.objectContaining({
+          user_id: mockUserEntity.id,
           marketing_permission: mockUserEntity.contactPermission,
           service_emails_permission: mockUserEntity.serviceEmailsPermission,
           email_reminders_frequency: EMAIL_REMINDERS_FREQUENCY.TWO_MONTHS,
@@ -327,6 +333,7 @@ describe('Service user profiles', () => {
             },
           ],
           merge_fields: {
+            USERID: mockUserEntity.id,
             NAME: mockUserEntity.name,
             LACTIVED: lastActiveAt,
             REMINDFREQ: EMAIL_REMINDERS_FREQUENCY.TWO_MONTHS,
@@ -372,6 +379,7 @@ describe('Service user profiles', () => {
             },
           ],
           merge_fields: {
+            USERID: mockUser.id,
             NAME: mockUser.name,
             LACTIVED: lastActiveAt,
             REMINDFREQ: EMAIL_REMINDERS_FREQUENCY.TWO_MONTHS,
@@ -419,6 +427,31 @@ describe('Service user profiles', () => {
       expect(mockFrontChatService.updateContactCustomFields).toHaveBeenCalledTimes(1);
       expect(updateMailchimpProfile).toHaveBeenCalledWith(
         { ...serialisedMockUserData.mailchimpSchema, email_address: newEmail },
+        oldEmail,
+      );
+    });
+
+    it('should keep sending the same user id when the email changes', async () => {
+      const oldEmail = mockUserEntity.email;
+      const newEmail = 'newemail@test.com';
+
+      await service.updateServiceUserProfilesUser(
+        { ...mockUserEntity, email: newEmail },
+        true,
+        true,
+        false,
+        oldEmail,
+      );
+
+      expect(mockFrontChatService.updateContactCustomFields).toHaveBeenCalledWith(
+        expect.objectContaining({ user_id: mockUserEntity.id }),
+        newEmail,
+      );
+      expect(updateMailchimpProfile).toHaveBeenCalledWith(
+        expect.objectContaining({
+          email_address: newEmail,
+          merge_fields: expect.objectContaining({ USERID: mockUserEntity.id }),
+        }),
         oldEmail,
       );
     });
@@ -787,6 +820,93 @@ describe('Service user profiles', () => {
       await expect(
         service.updateServiceUserProfilesCourse(mockCourseUserEntity, mockUserEntity.email),
       ).resolves.not.toThrow();
+    });
+  });
+
+  describe('updateServiceUserProfilesUserDeleted', () => {
+    beforeEach(() => {
+      jest.spyOn(mockedUserRepository, 'findOne').mockResolvedValue({
+        ...mockUserEntity,
+        partnerAccess: [],
+        courseUser: [],
+      } as any);
+    });
+
+    it('should stamp the user id and deletion date on the Front Chat contact', async () => {
+      await service.updateServiceUserProfilesUserDeleted(mockUserEntity);
+
+      expect(mockFrontChatService.updateContactCustomFields).toHaveBeenCalledWith(
+        expect.objectContaining({
+          user_id: mockUserEntity.id,
+          deleted_at: expect.any(String),
+          // Front's PATCH replaces custom_fields wholesale, so the complete set is sent.
+          signed_up_at: mockUserEntity.createdAt.toISOString(),
+          language: mockUserEntity.signUpLanguage,
+        }),
+        mockUserEntity.email,
+      );
+
+      const [customFields] = jest.mocked(mockFrontChatService.updateContactCustomFields).mock
+        .calls[0];
+      expect(new Date(customFields.deleted_at as string).toString()).not.toBe('Invalid Date');
+    });
+
+    it('should stamp the user id and deletion date on the mailchimp profile and unsubscribe it', async () => {
+      await service.updateServiceUserProfilesUserDeleted(mockUserEntity);
+
+      // DELETED is a Mailchimp date merge field: MM/DD/YYYY, not an ISO datetime.
+      const [year, month, day] = new Date().toISOString().slice(0, 10).split('-');
+
+      expect(updateMailchimpProfile).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: 'unsubscribed',
+          merge_fields: expect.objectContaining({
+            USERID: mockUserEntity.id,
+            DELETED: `${month}/${day}/${year}`,
+          }),
+        }),
+        mockUserEntity.email,
+      );
+    });
+
+    it('should stay unsubscribed when mailchimp recreates a missing member', async () => {
+      const mockedUpdate = jest.mocked(updateMailchimpProfile);
+      mockedUpdate.mockRejectedValueOnce(
+        Object.assign(new Error('Mailchimp error'), { status: 404 }),
+      );
+
+      await service.updateServiceUserProfilesUserDeleted(mockUserEntity);
+
+      expect(createMailchimpProfile).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: 'unsubscribed',
+          merge_fields: expect.objectContaining({
+            USERID: mockUserEntity.id,
+            DELETED: expect.any(String),
+          }),
+        }),
+      );
+      mockedUpdate.mockReset();
+    });
+
+    it('should still update mailchimp when Front Chat fails', async () => {
+      jest
+        .mocked(mockFrontChatService.updateContactCustomFields)
+        .mockRejectedValue(new Error('Front Chat API call failed'));
+
+      await service.updateServiceUserProfilesUserDeleted(mockUserEntity);
+
+      expect(updateMailchimpProfile).toHaveBeenCalled();
+    });
+
+    it('skips for Cypress test emails', async () => {
+      await service.updateServiceUserProfilesUserDeleted({
+        ...mockUserEntity,
+        email: 'cypresstestemail+1@chayn.co',
+      } as any);
+
+      expect(mockFrontChatService.updateContactCustomFields).not.toHaveBeenCalled();
+      expect(updateMailchimpProfile).not.toHaveBeenCalled();
     });
   });
 

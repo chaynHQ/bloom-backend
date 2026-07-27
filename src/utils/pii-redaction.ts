@@ -43,7 +43,9 @@ export function maskPhone(phone: string): string {
 
 /** Scrub emails and phone numbers from a string. */
 export function redactPii(message: string): string {
-  return message.replace(EMAIL_PATTERN, (m) => maskEmail(m)).replace(PHONE_PATTERN, (m) => maskPhone(m));
+  return message
+    .replace(EMAIL_PATTERN, (m) => maskEmail(m))
+    .replace(PHONE_PATTERN, (m) => maskPhone(m));
 }
 
 /**

@@ -71,5 +71,4 @@ export class UserEntity extends BaseBloomEntity {
 
   @OneToMany(() => EventLogEntity, (eventLog) => eventLog.user, { cascade: true })
   eventLog: EventLogEntity[];
-
 }

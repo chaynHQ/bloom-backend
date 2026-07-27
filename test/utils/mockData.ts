@@ -26,6 +26,7 @@ import {
   RESOURCE_CATEGORIES,
   SIMPLYBOOK_ACTION_ENUM,
   STORYBLOK_STORY_STATUS_ENUM,
+  THEMES,
 } from 'src/utils/constants';
 import {
   SimplybookNotificationType,
@@ -49,6 +50,7 @@ export const mockSessionStoryblokResult = {
         activity: '',
         component: 'Session',
         coming_soon: true,
+        themes: [THEMES.SETTING_BOUNDARIES],
         description:
           'In this session we start to define what boundaries are, explore why boundaries are so important, and reflect on what boundary violations can mean.',
       },
@@ -76,6 +78,7 @@ export const mockCourseStoryblokResult = {
         weeks: [],
         component: 'Course',
         coming_soon: true,
+        themes: [THEMES.SETTING_BOUNDARIES],
         description:
           'Abuse can happen to anyone - and it’s never the survivor’s fault. In this course, we discuss abusive tactics, the cycle of coercive control, the science of trauma, and how abuse can affect our boundaries, relationships, and coping mechanisms. We empower ourselves to build positive self-esteem with tools such as journaling, somatic practice, and community.',
       },
@@ -100,6 +103,7 @@ export const mockResourceStoryblokResult = {
         _uid: '23456',
         name: 'Resource name 2',
         component: 'resource_short_video',
+        themes: [THEMES.RECOGNISING_HARM],
       },
       slug: 'resource-name',
       full_slug: 'resources/shorts/resource-name',
@@ -117,6 +121,7 @@ export const mockCourse: CourseEntity = {
   storyblokUuid: 'courseUuid1',
   slug: '/slug/slug',
   status: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
+  themes: [THEMES.SETTING_BOUNDARIES],
   name: 'course name',
   createdAt: new Date(100),
   updatedAt: new Date(100),
@@ -129,6 +134,7 @@ export const mockSession: SessionEntity = {
   storyblokUuid: 'sessionStoryblokUuid1',
   slug: 'courses/creating-boundaries/what-are-boundaries',
   status: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
+  themes: [THEMES.SETTING_BOUNDARIES],
   name: 'What are boundaries?',
   createdAt: new Date(100),
   updatedAt: new Date(100),
@@ -143,6 +149,7 @@ export const mockResource: ResourceEntity = {
   storyblokUuid: 'resourceUuid1',
   slug: 'resources/shorts/resource-name',
   status: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
+  themes: [THEMES.RECOGNISING_HARM],
   name: 'Resource name',
   category: RESOURCE_CATEGORIES.SHORT_VIDEO,
   createdAt: new Date(100),
@@ -155,6 +162,7 @@ export const mockResource2: ResourceEntity = {
   storyblokUuid: 'resourceUuid2',
   slug: 'resources/shorts/resource-name',
   status: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
+  themes: [THEMES.RECOGNISING_HARM],
   name: 'Resource name 2',
   category: RESOURCE_CATEGORIES.SHORT_VIDEO,
   createdAt: new Date(100),

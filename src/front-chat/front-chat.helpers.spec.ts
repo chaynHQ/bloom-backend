@@ -1,6 +1,7 @@
 import {
   chatClientContextToCustomFields,
   sanitizeChatClientContext,
+  serializeCustomFields,
 } from './front-chat.helpers';
 
 describe('sanitizeChatClientContext', () => {
@@ -71,5 +72,65 @@ describe('chatClientContextToCustomFields', () => {
 
   it('returns an empty object for null context', () => {
     expect(chatClientContextToCustomFields(null)).toEqual({});
+  });
+});
+
+describe('serializeCustomFields', () => {
+  it('converts datetime fields from ISO strings to epoch seconds', () => {
+    expect(
+      serializeCustomFields({
+        signed_up_at: '2024-03-01T10:30:00.000Z',
+        last_active_at: '2025-11-20T08:00:00.000Z',
+        deleted_at: '2026-01-15T23:59:59.000Z',
+        therapy_session_first_at: '2024-04-02T09:00:00.000Z',
+        therapy_session_next_at: '2026-08-01T12:00:00.000Z',
+        therapy_session_last_at: '2026-02-10T15:45:00.000Z',
+      }),
+    ).toEqual({
+      signed_up_at: 1709289000,
+      last_active_at: 1763625600,
+      deleted_at: 1768521599,
+      therapy_session_first_at: 1712048400,
+      therapy_session_next_at: 1785585600,
+      therapy_session_last_at: 1770738300,
+    });
+  });
+
+  it('leaves non-datetime fields untouched', () => {
+    expect(
+      serializeCustomFields({
+        user_id: 'abc-123',
+        language: 'en',
+        marketing_permission: true,
+        therapy_sessions_remaining: 3,
+      }),
+    ).toEqual({
+      user_id: 'abc-123',
+      language: 'en',
+      marketing_permission: true,
+      therapy_sessions_remaining: 3,
+    });
+  });
+
+  it('passes through datetime values already in epoch seconds', () => {
+    expect(serializeCustomFields({ signed_up_at: 1709289000 })).toEqual({
+      signed_up_at: 1709289000,
+    });
+  });
+
+  it('omits unparseable datetime values rather than sending 1970', () => {
+    expect(
+      serializeCustomFields({ signed_up_at: 'not-a-date', last_active_at: '' as string }),
+    ).toEqual({});
+  });
+
+  it('omits undefined and null values', () => {
+    expect(
+      serializeCustomFields({
+        user_id: 'abc-123',
+        signed_up_at: undefined,
+        language: null as unknown as string,
+      }),
+    ).toEqual({ user_id: 'abc-123' });
   });
 });

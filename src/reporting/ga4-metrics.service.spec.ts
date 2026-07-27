@@ -14,16 +14,32 @@ const dailyWindow: ReportWindow = {
 
 const overviewResp = (): Ga4RunReportResponse => ({
   rows: [
-    { metricValues: [{ value: '1234' }, { value: '210' }, { value: '1890' }, { value: '4212' }, { value: '123.4' }] },
+    {
+      metricValues: [
+        { value: '1234' },
+        { value: '210' },
+        { value: '1890' },
+        { value: '4212' },
+        { value: '123.4' },
+      ],
+    },
   ],
 });
 const eventsResp = (): Ga4RunReportResponse => ({
   rows: [
-    { dimensionValues: [{ value: 'LOGIN_SUCCESS' }], metricValues: [{ value: '42' }, { value: '38' }] },
+    {
+      dimensionValues: [{ value: 'LOGIN_SUCCESS' }],
+      metricValues: [{ value: '42' }, { value: '38' }],
+    },
   ],
 });
 const breakdownResp = (): Ga4RunReportResponse => ({
-  rows: [{ dimensionValues: [{ value: '/courses' }], metricValues: [{ value: '500' }, { value: '200' }] }],
+  rows: [
+    {
+      dimensionValues: [{ value: '/courses' }],
+      metricValues: [{ value: '500' }, { value: '200' }],
+    },
+  ],
 });
 
 describe('Ga4MetricsService', () => {
@@ -41,7 +57,9 @@ describe('Ga4MetricsService', () => {
       if (dimName === 'eventName') return eventsResp();
       return breakdownResp();
     });
-    dataClient.batchRunReports.mockImplementation(async (requests) => requests.map(() => breakdownResp()));
+    dataClient.batchRunReports.mockImplementation(async (requests) =>
+      requests.map(() => breakdownResp()),
+    );
 
     const metrics = await service.collect(dailyWindow, 'weekly');
     expect(metrics.overview).toMatchObject({ activeUsers: 1234 });
@@ -64,5 +82,4 @@ describe('Ga4MetricsService', () => {
     expect(metrics.eventBreakdowns).toEqual([]);
     expect(dataClient.batchRunReports).not.toHaveBeenCalled();
   });
-
 });
