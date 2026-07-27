@@ -56,12 +56,20 @@ export class AuthService {
 
   // Passwords that pass a length check but are trivially guessable.
   private static readonly COMMON_PASSWORDS = new Set([
-    '12345678', '123456789', '1234567890',
-    '11111111', '00000000',
-    'password', 'password1', 'password123',
-    'qwerty123', 'qwertyui',
-    'letmein1', 'welcome1',
-    'iloveyou', 'abc12345',
+    '12345678',
+    '123456789',
+    '1234567890',
+    '11111111',
+    '00000000',
+    'password',
+    'password1',
+    'password123',
+    'qwerty123',
+    'qwertyui',
+    'letmein1',
+    'welcome1',
+    'iloveyou',
+    'abc12345',
   ]);
 
   public async createFirebaseUser(email: string, password: string) {
@@ -81,9 +89,7 @@ export class AuthService {
       const errorCode = err.code;
 
       if (errorCode === 'auth/invalid-email') {
-        this.logger.warn(
-          'Create user: user tried to create email with invalid email format',
-        );
+        this.logger.warn('Create user: user tried to create email with invalid email format');
         throw new HttpException(FIREBASE_ERRORS.CREATE_USER_INVALID_EMAIL, HttpStatus.BAD_REQUEST);
       } else if (errorCode === 'auth/weak-password' || errorCode === 'auth/invalid-password') {
         this.logger.warn('Create user: user tried to create account with weak password');
@@ -95,7 +101,9 @@ export class AuthService {
         this.logger.warn('Create user: Firebase user already exists');
         throw new HttpException(FIREBASE_ERRORS.CREATE_USER_ALREADY_EXISTS, HttpStatus.BAD_REQUEST);
       } else {
-        this.logger.error(`Create user: Error creating firebase user: ${err.code || 'unknown error'}`);
+        this.logger.error(
+          `Create user: Error creating firebase user: ${err.code || 'unknown error'}`,
+        );
         throw new HttpException(FIREBASE_ERRORS.CREATE_USER_FIREBASE_ERROR, HttpStatus.BAD_REQUEST);
       }
     }
@@ -157,42 +165,38 @@ export class AuthService {
     const allUsers = [];
 
     try {
-      this.firebase.admin
-        .listUsers(1000)
-        .then((listUsersResult) => {
-          listUsersResult.users.forEach((userRecord) => {
-            // Match every Cypress test account variant (cypresstestemail+, cypresstestuser+, ...)
-            // scoped to @chayn.co so we never touch a real account.
-            const email = userRecord.email?.toLowerCase() ?? '';
-            if (
-              email.includes('cypress') &&
-              email.endsWith('@chayn.co') &&
-              !isProtectedReservedTestEmail(email)
-            ) {
-              allUsers.push(userRecord.uid);
-            }
-          });
-          this.firebase.admin
-            .deleteUsers(allUsers)
-            .then((deleteUsersResult) => {
-              if (deleteUsersResult.successCount > 0) {
-                this.logger.log(
-                  `Successfully deleted ${deleteUsersResult.successCount} cypress firebase users`,
-                );
-              }
-
-              if (deleteUsersResult.failureCount > 0) {
-                this.logger.error(
-                  `Failed to delete ${deleteUsersResult.failureCount} cypress firebase users`,
-                );
-              }
-              if (deleteUsersResult.errors.length > 0) {
-                this.logger.error(
-                  `Errors deleting cypress firebase users - ${deleteUsersResult.errors.map((e) => e.error?.message || 'unknown error').join(', ')}`,
-                );
-              }
-            });
+      this.firebase.admin.listUsers(1000).then((listUsersResult) => {
+        listUsersResult.users.forEach((userRecord) => {
+          // Match every Cypress test account variant (cypresstestemail+, cypresstestuser+, ...)
+          // scoped to @chayn.co so we never touch a real account.
+          const email = userRecord.email?.toLowerCase() ?? '';
+          if (
+            email.includes('cypress') &&
+            email.endsWith('@chayn.co') &&
+            !isProtectedReservedTestEmail(email)
+          ) {
+            allUsers.push(userRecord.uid);
+          }
         });
+        this.firebase.admin.deleteUsers(allUsers).then((deleteUsersResult) => {
+          if (deleteUsersResult.successCount > 0) {
+            this.logger.log(
+              `Successfully deleted ${deleteUsersResult.successCount} cypress firebase users`,
+            );
+          }
+
+          if (deleteUsersResult.failureCount > 0) {
+            this.logger.error(
+              `Failed to delete ${deleteUsersResult.failureCount} cypress firebase users`,
+            );
+          }
+          if (deleteUsersResult.errors.length > 0) {
+            this.logger.error(
+              `Errors deleting cypress firebase users - ${deleteUsersResult.errors.map((e) => e.error?.message || 'unknown error').join(', ')}`,
+            );
+          }
+        });
+      });
       return 'ok';
     } catch (error) {
       throw new HttpException(error.message, HttpStatus.BAD_REQUEST);

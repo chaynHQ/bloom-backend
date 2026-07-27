@@ -99,16 +99,13 @@ describe('password DTO validation (opaque secret handling)', () => {
   });
 
   describe('UserAuthDto (login)', () => {
-    it.each(previouslyRejectedPasswords)(
-      'accepts login password %j exactly',
-      async (password) => {
-        const { instance, errors } = await runDto(UserAuthDto, {
-          email: 'ada@example.com',
-          password,
-        });
-        expect(errorsForProperty(errors, 'password')).toHaveLength(0);
-        expect(instance.password).toBe(password);
-      },
-    );
+    it.each(previouslyRejectedPasswords)('accepts login password %j exactly', async (password) => {
+      const { instance, errors } = await runDto(UserAuthDto, {
+        email: 'ada@example.com',
+        password,
+      });
+      expect(errorsForProperty(errors, 'password')).toHaveLength(0);
+      expect(instance.password).toBe(password);
+    });
   });
 });
