@@ -58,13 +58,18 @@ describe('FrontChatService', () => {
     eventLoggerService.createEventLog.mockResolvedValue(undefined);
 
     chatUserService = {
-      getOrCreateChatUser: jest.fn().mockImplementation(async (userId) => buildChatUser({ userId })),
+      getOrCreateChatUser: jest
+        .fn()
+        .mockImplementation(async (userId) => buildChatUser({ userId })),
       getChatUser: jest.fn().mockResolvedValue(null),
       updateChatUserByEmail: jest.fn().mockResolvedValue(null),
       clearConversationId: jest.fn().mockResolvedValue(undefined),
       setLastMessageSentAt: jest
         .fn()
-        .mockImplementation(async (chatUser, sentAt) => ({ ...chatUser, lastMessageSentAt: sentAt })),
+        .mockImplementation(async (chatUser, sentAt) => ({
+          ...chatUser,
+          lastMessageSentAt: sentAt,
+        })),
     };
     mockUserRepository.findOneBy.mockResolvedValue(null);
 
@@ -202,7 +207,11 @@ describe('FrontChatService', () => {
     });
 
     it('throws when contact not found (404) rather than creating a partial contact', async () => {
-      mockFetch.mockResolvedValueOnce({ ok: false, status: 404, text: async () => '404 not found' });
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+        text: async () => '404 not found',
+      });
 
       await expect(
         service.updateContactCustomFields({ language: 'en' }, 'user@example.com'),
@@ -236,7 +245,11 @@ describe('FrontChatService', () => {
     });
 
     it('throws when contact not found (404) rather than creating a partial contact', async () => {
-      mockFetch.mockResolvedValueOnce({ ok: false, status: 404, text: async () => '404 not found' });
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+        text: async () => '404 not found',
+      });
 
       await expect(
         service.updateContactProfile({ name: 'New Name' }, 'user@example.com'),
@@ -350,14 +363,18 @@ describe('FrontChatService', () => {
     });
 
     it('returns empty array when ChatUser exists but frontConversationId is null and contact has no conversations', async () => {
-      chatUserService.getChatUser.mockResolvedValueOnce(buildChatUser({ frontConversationId: null }));
+      chatUserService.getChatUser.mockResolvedValueOnce(
+        buildChatUser({ frontConversationId: null }),
+      );
       mockEmptyContactLookup();
       const result = await service.getConversationHistory(user);
       expect(result).toEqual({ messages: [], conversationFound: false });
     });
 
     it('uses contact conversation lookup to find and cache frontConversationId when absent', async () => {
-      chatUserService.getChatUser.mockResolvedValueOnce(buildChatUser({ frontConversationId: null }));
+      chatUserService.getChatUser.mockResolvedValueOnce(
+        buildChatUser({ frontConversationId: null }),
+      );
       const inboxUrl = 'https://api2.frontapp.com/inboxes/inb_test';
       // First fetch: getInboxId → /channels/{id}
       mockFetch.mockResolvedValueOnce({
@@ -391,7 +408,9 @@ describe('FrontChatService', () => {
     });
 
     it('fetches messages using the stored frontConversationId', async () => {
-      chatUserService.getChatUser.mockResolvedValueOnce(buildChatUser({ frontConversationId: 'cnv_abc' }));
+      chatUserService.getChatUser.mockResolvedValueOnce(
+        buildChatUser({ frontConversationId: 'cnv_abc' }),
+      );
       mockFetch.mockResolvedValueOnce({
         ok: true,
         status: 200,
@@ -414,7 +433,9 @@ describe('FrontChatService', () => {
     });
 
     it('maps inbound messages as user and outbound as agent, sorted chronologically', async () => {
-      chatUserService.getChatUser.mockResolvedValueOnce(buildChatUser({ frontConversationId: 'cnv_abc' }));
+      chatUserService.getChatUser.mockResolvedValueOnce(
+        buildChatUser({ frontConversationId: 'cnv_abc' }),
+      );
       const now = Math.floor(Date.now() / 1000);
       mockFetch.mockResolvedValueOnce({
         ok: true,
@@ -447,7 +468,9 @@ describe('FrontChatService', () => {
     });
 
     it('paginates through all messages when _pagination.next is set', async () => {
-      chatUserService.getChatUser.mockResolvedValueOnce(buildChatUser({ frontConversationId: 'cnv_abc' }));
+      chatUserService.getChatUser.mockResolvedValueOnce(
+        buildChatUser({ frontConversationId: 'cnv_abc' }),
+      );
       const now = Math.floor(Date.now() / 1000);
       mockFetch
         .mockResolvedValueOnce({
@@ -476,7 +499,9 @@ describe('FrontChatService', () => {
     });
 
     it('clears stale frontConversationId on 404 and returns empty', async () => {
-      chatUserService.getChatUser.mockResolvedValueOnce(buildChatUser({ frontConversationId: 'cnv_stale' }));
+      chatUserService.getChatUser.mockResolvedValueOnce(
+        buildChatUser({ frontConversationId: 'cnv_stale' }),
+      );
       mockFetch.mockResolvedValueOnce({ ok: false, status: 404, text: async () => 'not found' });
 
       const result = await service.getConversationHistory(user);
@@ -486,7 +511,9 @@ describe('FrontChatService', () => {
     });
 
     it('maps image attachment messages with an attachments entry on the proxy path', async () => {
-      chatUserService.getChatUser.mockResolvedValueOnce(buildChatUser({ frontConversationId: 'cnv_abc' }));
+      chatUserService.getChatUser.mockResolvedValueOnce(
+        buildChatUser({ frontConversationId: 'cnv_abc' }),
+      );
       const now = Math.floor(Date.now() / 1000);
       const attachmentUrl = 'https://api2.frontapp.com/download/att_1/photo.jpg';
       mockFetch.mockResolvedValueOnce({
@@ -526,7 +553,9 @@ describe('FrontChatService', () => {
     });
 
     it('skips messages with no text and no image attachment', async () => {
-      chatUserService.getChatUser.mockResolvedValueOnce(buildChatUser({ frontConversationId: 'cnv_abc' }));
+      chatUserService.getChatUser.mockResolvedValueOnce(
+        buildChatUser({ frontConversationId: 'cnv_abc' }),
+      );
       const now = Math.floor(Date.now() / 1000);
       mockFetch.mockResolvedValueOnce({
         ok: true,
@@ -542,7 +571,9 @@ describe('FrontChatService', () => {
     });
 
     it('parses markdown image links from body as image attachments (Channel API imported messages)', async () => {
-      chatUserService.getChatUser.mockResolvedValueOnce(buildChatUser({ frontConversationId: 'cnv_abc' }));
+      chatUserService.getChatUser.mockResolvedValueOnce(
+        buildChatUser({ frontConversationId: 'cnv_abc' }),
+      );
       const now = Math.floor(Date.now() / 1000);
       const imageUrl = 'https://chayn.api.frontapp.com/messages/msg_1/download/fil_1';
       mockFetch.mockResolvedValueOnce({
@@ -578,7 +609,9 @@ describe('FrontChatService', () => {
     });
 
     it('marks imported operator messages as agent when author email matches support address', async () => {
-      chatUserService.getChatUser.mockResolvedValueOnce(buildChatUser({ frontConversationId: 'cnv_abc' }));
+      chatUserService.getChatUser.mockResolvedValueOnce(
+        buildChatUser({ frontConversationId: 'cnv_abc' }),
+      );
       const now = Math.floor(Date.now() / 1000);
       mockFetch.mockResolvedValueOnce({
         ok: true,
@@ -616,7 +649,9 @@ describe('FrontChatService', () => {
     const user = { id: 'user-1', email: 'user@example.com', name: 'Alex' };
 
     it('maps audio attachment messages with kind=voice and a proxy URL on attachments', async () => {
-      chatUserService.getChatUser.mockResolvedValueOnce(buildChatUser({ frontConversationId: 'cnv_abc' }));
+      chatUserService.getChatUser.mockResolvedValueOnce(
+        buildChatUser({ frontConversationId: 'cnv_abc' }),
+      );
       const now = Math.floor(Date.now() / 1000);
       const audioUrl = 'https://chayneb55.api.frontapp.com/messages/msg_1/download/fil_audio';
       mockFetch.mockResolvedValueOnce({
@@ -655,7 +690,9 @@ describe('FrontChatService', () => {
     });
 
     it('maps every attachment on a multi-attachment message, preserving order', async () => {
-      chatUserService.getChatUser.mockResolvedValueOnce(buildChatUser({ frontConversationId: 'cnv_abc' }));
+      chatUserService.getChatUser.mockResolvedValueOnce(
+        buildChatUser({ frontConversationId: 'cnv_abc' }),
+      );
       const now = Math.floor(Date.now() / 1000);
       const imageUrl = 'https://api2.frontapp.com/download/att_1/photo.png';
       const fileUrl = 'https://api2.frontapp.com/download/att_2/notes.txt';
@@ -898,7 +935,9 @@ describe('fetchFrontAttachment', () => {
       headers: { get: (k: string) => (k === 'location' ? 'https://evil.com/file' : null) },
     });
 
-    await expect(fetchFrontAttachment(VALID_FRONT_URL)).rejects.toThrow('Disallowed redirect target');
+    await expect(fetchFrontAttachment(VALID_FRONT_URL)).rejects.toThrow(
+      'Disallowed redirect target',
+    );
     expect(mockFetch).toHaveBeenCalledTimes(1);
   });
 

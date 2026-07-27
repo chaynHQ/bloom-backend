@@ -71,7 +71,6 @@ export class TherapySessionService {
 
       return updatedTherapySession;
     } catch (error) {
-
       this.logger.error(`Error cancelling therapy session: ${error?.message || 'unknown error'}`);
       throw new HttpException(
         `Error cancelling therapy session: ${error.message || 'unknown error'}`,

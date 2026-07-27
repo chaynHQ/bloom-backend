@@ -17,9 +17,7 @@ export class FeatureController {
   @ApiBearerAuth('access-token')
   @ApiOperation({ description: 'Creates feature' })
   @UseGuards(SuperAdminAuthGuard)
-  async createFeature(
-    @Body() createFeatureDto: CreateFeatureDto,
-  ): Promise<FeatureEntity> {
+  async createFeature(@Body() createFeatureDto: CreateFeatureDto): Promise<FeatureEntity> {
     return this.featureService.createFeature(createFeatureDto);
   }
 

@@ -908,9 +908,7 @@ describe('WebhooksService', () => {
         action: SIMPLYBOOK_ACTION_ENUM.UPDATED_BOOKING,
       });
 
-      expect(slackSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Therapy booking updated'),
-      );
+      expect(slackSpy).toHaveBeenCalledWith(expect.stringContaining('Therapy booking updated'));
       const message = slackSpy.mock.calls.at(-1)[0] as string;
       // mockUserEntity.email = 'user@email.com' → masked = 'u**r@email.com'
       expect(message).toContain('u**r@email.com');

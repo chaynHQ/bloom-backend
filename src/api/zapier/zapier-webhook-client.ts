@@ -46,7 +46,9 @@ export class ZapierWebhookClient {
       this.logger.log('Triggered webhook to delete contact from respond.io');
       return response;
     } catch (err) {
-      this.logger.error(`Unable to delete contact from respond.io: ${err?.message || 'unknown error'}`);
+      this.logger.error(
+        `Unable to delete contact from respond.io: ${err?.message || 'unknown error'}`,
+      );
       throw new HttpException('Unable to delete contact from respond.io', HttpStatus.BAD_REQUEST);
     }
   }

@@ -34,7 +34,10 @@ export class PartnerFeatureController {
     @Param() params: PartnerFeatureParamDto,
     @Body() updatePartnerFeatureDto: UpdatePartnerFeatureDto,
   ) {
-    return await this.partnerFeatureService.updatePartnerFeature(params.id, updatePartnerFeatureDto);
+    return await this.partnerFeatureService.updatePartnerFeature(
+      params.id,
+      updatePartnerFeatureDto,
+    );
   }
 
   @Get('/automatic-access-code/:partnerName')
@@ -44,6 +47,8 @@ export class PartnerFeatureController {
   })
   @ApiParam({ name: 'partnerName', description: 'Updates partner feature by id' })
   async getAutomaticAccessCodeFeatureForPartner(@Param() params: PartnerNameParamDto) {
-    return await this.partnerFeatureService.getAutomaticAccessCodeFeatureForPartner(params.partnerName);
+    return await this.partnerFeatureService.getAutomaticAccessCodeFeatureForPartner(
+      params.partnerName,
+    );
   }
 }

@@ -307,7 +307,9 @@ export class FrontChatService {
 
     const conversationId = conversationUrl.split('/').pop();
     if (conversationId) {
-      await this.chatUserService.getOrCreateChatUser(userId, { frontConversationId: conversationId });
+      await this.chatUserService.getOrCreateChatUser(userId, {
+        frontConversationId: conversationId,
+      });
       logger.log(`Resolved conversation ID ${conversationId} for user ${userId}`);
       await this.syncConversationLanguage(userId);
     }
@@ -413,7 +415,9 @@ export class FrontChatService {
         matching.sort((a, b) => (b.created_at ?? 0) - (a.created_at ?? 0))[0]?.id ?? null;
 
       if (conversationId) {
-        await this.chatUserService.getOrCreateChatUser(userId, { frontConversationId: conversationId });
+        await this.chatUserService.getOrCreateChatUser(userId, {
+          frontConversationId: conversationId,
+        });
         logger.log(`Resolved conversation ${conversationId} for user ${userId} via contact lookup`);
         await this.syncConversationLanguage(userId);
       }
@@ -596,7 +600,9 @@ export class FrontChatService {
 
     // Save frontContactId even if the list-add failed — the canonical ID is still valid.
     if (resolvedId) {
-      this.chatUserService.updateChatUserByEmail(email, { frontContactId: resolvedId }).catch(() => {});
+      this.chatUserService
+        .updateChatUserByEmail(email, { frontContactId: resolvedId })
+        .catch(() => {});
     }
   }
 

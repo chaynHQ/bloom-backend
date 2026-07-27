@@ -55,7 +55,7 @@ type DOMPurifyConfig = {
  * @SecureInput('text', { required: true, maxLength: 50 })
  * @SecureInput('email', { required: true })
  * @SecureInput('html', { maxLength: 5000, allowedTags: ['b', 'i', 'p'] })
- * 
+ *
  * NOTE: For database UUIDs, use @IsUUID() validation instead of @SecureInput
  */
 export function SecureInput(type: SecureInputType, options: SecureInputOptions = {}) {
@@ -328,4 +328,3 @@ function IsSecureInput(validationOptions?: ValidationOptions) {
     validationOptions,
   );
 }
-

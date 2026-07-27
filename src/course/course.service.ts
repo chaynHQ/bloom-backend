@@ -6,5 +6,4 @@ import { CourseEntity } from '../entities/course.entity';
 @Injectable()
 export class CourseService {
   constructor(@InjectRepository(CourseEntity) private courseRepository: Repository<CourseEntity>) {}
-
 }

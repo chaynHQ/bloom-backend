@@ -307,7 +307,9 @@ export class ReportingService {
     try {
       return await this.dbMetricsService.collect(window);
     } catch (err) {
-      this.logger.error(`Reporting DB metrics failed wholesale: ${err?.message || 'unknown error'}`);
+      this.logger.error(
+        `Reporting DB metrics failed wholesale: ${err?.message || 'unknown error'}`,
+      );
       return emptyDbMetrics();
     }
   }
@@ -513,15 +515,13 @@ function computeAnomalies(
     .filter((a) => !outage.some((o) => o.source === a.source && o.label === a.label))
     .sort((a, b) => Math.abs(b.rawSigma) - Math.abs(a.rawSigma))
     .slice(0, Math.max(0, ANOMALY_LIMIT - outage.length))
-    .map(
-      (a): Anomaly => ({
-        source: a.source,
-        label: a.label,
-        current: a.current,
-        mean: a.mean,
-        sigma: a.sigma,
-      }),
-    );
+    .map((a): Anomaly => ({
+      source: a.source,
+      label: a.label,
+      current: a.current,
+      mean: a.mean,
+      sigma: a.sigma,
+    }));
 
   return [...outage, ...scored];
 }

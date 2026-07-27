@@ -114,7 +114,10 @@ export class UserController {
   @ApiBearerAuth()
   @Patch('/admin/:id')
   @UseGuards(SuperAdminAuthGuard)
-  async adminUpdateUser(@Param() params: UserParamDto, @Body() adminUpdateUserDto: AdminUpdateUserDto) {
+  async adminUpdateUser(
+    @Param() params: UserParamDto,
+    @Body() adminUpdateUserDto: AdminUpdateUserDto,
+  ) {
     return await this.userService.adminUpdateUser(adminUpdateUserDto, params.id);
   }
 
@@ -139,7 +142,9 @@ export class UserController {
 
   @ApiBearerAuth()
   @Get('/bulk-upload-mailchimp-profiles')
-  @ApiOperation({ description: 'Bulk creates Mailchimp profiles for users created within date range' })
+  @ApiOperation({
+    description: 'Bulk creates Mailchimp profiles for users created within date range',
+  })
   @UseGuards(SuperAdminAuthGuard)
   async bulkUploadMailchimpProfiles(
     @Query('startDate') startDate: string,
@@ -157,7 +162,9 @@ export class UserController {
 
   @ApiBearerAuth()
   @Get('/bulk-update-mailchimp-profiles')
-  @ApiOperation({ description: 'Bulk updates Mailchimp profiles for users updated within date range' })
+  @ApiOperation({
+    description: 'Bulk updates Mailchimp profiles for users updated within date range',
+  })
   @UseGuards(SuperAdminAuthGuard)
   async bulkUpdateMailchimpProfiles(
     @Query('startDate') startDate: string,
