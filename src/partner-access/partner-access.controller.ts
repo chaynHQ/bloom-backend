@@ -37,6 +37,8 @@ export class PartnerAccessController {
       createPartnerAccessDto,
       req['partnerId'],
       req['partnerAdminId'],
+      undefined,
+      true,
     );
     return formatPartnerAccessObject(access);
   }
@@ -57,9 +59,7 @@ export class PartnerAccessController {
   @UseGuards(SuperAdminAuthGuard)
   @Get()
   @ApiBody({ type: GetPartnerAccessesDto, required: false })
-  async getPartnerAccessCodes(
-    @Body() getPartnerAccessDto: GetPartnerAccessesDto | undefined,
-  ) {
+  async getPartnerAccessCodes(@Body() getPartnerAccessDto: GetPartnerAccessesDto | undefined) {
     const accesses = await this.partnerAccessService.getPartnerAccessCodes(getPartnerAccessDto);
     return formatPartnerAccessObjects(accesses);
   }
@@ -84,10 +84,10 @@ export class PartnerAccessController {
     description: 'Validates a partner access code',
   })
   @ApiBody({ type: ValidatePartnerAccessCodeDto })
-  async validatePartnerAccessCode(
-    @Body() { partnerAccessCode }: ValidatePartnerAccessCodeDto,
-  ) {
-    const access = await this.partnerAccessService.getPartnerAccessByCode(partnerAccessCode.toUpperCase());
+  async validatePartnerAccessCode(@Body() { partnerAccessCode }: ValidatePartnerAccessCodeDto) {
+    const access = await this.partnerAccessService.getPartnerAccessByCode(
+      partnerAccessCode.toUpperCase(),
+    );
     return formatPartnerAccessObject(access);
   }
 

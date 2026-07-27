@@ -121,9 +121,17 @@ export class SubscriptionUserService {
 
       const updatedSubscriptions: SubscriptionUserEntity[] = await Promise.all(
         subscriptions.map(async (subs): Promise<SubscriptionUserEntity> => {
-          if (subs.cancelledAt !== null) {
-            await this.cancelWhatsappSubscription(userId, { cancelledAt }, subs.id);
+          if (!subs.cancelledAt) {
+            try {
+              await this.cancelWhatsappSubscription(userId, { cancelledAt }, subs.id);
+            } catch (err) {
+              this.logger.error(
+                `softDeleteSubscriptionsForUser - could not remove contact from respond.io for subscription ${subs.id}. Number retained for manual removal: ${err?.message || 'unknown error'}`,
+              );
+              return subs;
+            }
           }
+
           const subscription = await this.subscriptionUserRepository.findOne({
             where: { id: subs.id },
           });
@@ -149,14 +157,17 @@ export class SubscriptionUserService {
     try {
       const userSubscriptions = await this.subscriptionUserRepository.find({
         where: { userId: userId },
-        relations: ['subscription'],
+        relations: { subscription: true },
       });
 
       this.logger.log(`User ${userId} has ${userSubscriptions.length} subscriptions`);
 
       return userSubscriptions;
     } catch (err) {
-      throw new HttpException(`getSubscriptions error - ${err?.message || 'unknown error'}`, HttpStatus.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        `getSubscriptions error - ${err?.message || 'unknown error'}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 }

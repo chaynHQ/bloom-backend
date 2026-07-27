@@ -14,7 +14,7 @@ import {
   mockSubscriptionUserRepositoryMethods,
   mockZapierWebhookClientMethods,
 } from 'test/utils/mockedServices';
-import { Repository } from 'typeorm/repository/Repository';
+import { Repository } from 'typeorm';
 import { SubscriptionUserService } from './subscription-user.service';
 
 describe('SubscriptionUserService', () => {
@@ -27,6 +27,10 @@ describe('SubscriptionUserService', () => {
   let mockEventLogRepository: DeepMocked<Repository<EventLogEntity>>;
 
   beforeEach(async () => {
+    // mockedZapierWebhookClient is created once at module scope, so its call history and
+    // any queued one-off implementations leak between tests unless cleared.
+    jest.clearAllMocks();
+
     mockedSubscriptionUserRepository = createMock<Repository<SubscriptionUserEntity>>(
       mockSubscriptionUserRepositoryMethods,
     );
@@ -75,6 +79,62 @@ describe('SubscriptionUserService', () => {
         { ...mockSubscriptionUserEntity, subscriptionInfo: 'Number Redacted' },
       ]);
     });
+
+    // A subscription loaded from the database has cancelledAt of null, not undefined. The
+    // guard here previously compared with !== null, which is false for null and true for
+    // undefined, so it passed against the mock and silently skipped respond.io in
+    // production. These tests pin the null case.
+    const givenSubscription = (subscription: SubscriptionUserEntity) => {
+      mockedSubscriptionUserRepository.find.mockResolvedValueOnce([subscription]);
+      // cancelWhatsappSubscription re-reads the row, so the query builder must return it too.
+      mockedSubscriptionUserRepository.createQueryBuilder.mockReturnValue({
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue(subscription),
+      } as any);
+    };
+
+    it('removes an active subscription from respond.io before redacting the number', async () => {
+      givenSubscription({
+        ...mockSubscriptionUserEntity,
+        cancelledAt: null,
+      } as unknown as SubscriptionUserEntity);
+
+      const response = await service.softDeleteSubscriptionsForUser(mockUserEntity.id);
+
+      expect(mockedZapierWebhookClient.deleteContactFromRespondIO).toHaveBeenCalledWith({
+        phonenumber: mockSubscriptionUserEntity.subscriptionInfo,
+      });
+      expect(response[0].subscriptionInfo).toBe('Number Redacted');
+    });
+
+    it('does not call respond.io again for an already cancelled subscription', async () => {
+      givenSubscription({
+        ...mockSubscriptionUserEntity,
+        cancelledAt: new Date(),
+      } as unknown as SubscriptionUserEntity);
+
+      const response = await service.softDeleteSubscriptionsForUser(mockUserEntity.id);
+
+      expect(mockedZapierWebhookClient.deleteContactFromRespondIO).not.toHaveBeenCalled();
+      expect(response[0].subscriptionInfo).toBe('Number Redacted');
+    });
+
+    it('retains the number when respond.io removal fails, so the contact can still be found', async () => {
+      givenSubscription({
+        ...mockSubscriptionUserEntity,
+        cancelledAt: null,
+      } as unknown as SubscriptionUserEntity);
+      mockedZapierWebhookClient.deleteContactFromRespondIO.mockRejectedValueOnce(
+        new Error('zapier unavailable'),
+      );
+
+      const response = await service.softDeleteSubscriptionsForUser(mockUserEntity.id);
+
+      expect(response[0].subscriptionInfo).toBe(mockSubscriptionUserEntity.subscriptionInfo);
+      expect(response[0].subscriptionInfo).not.toBe('Number Redacted');
+    });
   });
 
   describe('getUserSubscriptions', () => {
@@ -92,7 +152,7 @@ describe('SubscriptionUserService', () => {
       expect(result).toEqual([]);
       expect(mockedSubscriptionUserRepository.find).toHaveBeenCalledWith({
         where: { userId: mockUserEntity.id },
-        relations: ['subscription'],
+        relations: { subscription: true },
       });
     });
   });

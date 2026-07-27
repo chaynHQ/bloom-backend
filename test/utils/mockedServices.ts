@@ -1,5 +1,5 @@
 import { PartialFuncReturn } from '@golevelup/ts-jest';
-import { UserRecord } from 'firebase-admin/lib/auth/user-record';
+import { UserRecord } from 'firebase-admin/auth';
 import { ClsService } from 'nestjs-cls';
 import { SlackMessageClient } from 'src/api/slack/slack-api';
 import { ZapierWebhookClient } from 'src/api/zapier/zapier-webhook-client';

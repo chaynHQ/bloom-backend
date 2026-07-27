@@ -60,8 +60,8 @@ export class PartnerAccessEntity extends BaseBloomEntity {
   @Column()
   featureTherapy: boolean;
 
-  @Column({ unique: true, length: 6 })
-  accessCode: string;
+  @Column({ unique: true, length: 6, nullable: true })
+  accessCode: string | null;
 
   @Column()
   therapySessionsRemaining: number;

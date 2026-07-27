@@ -333,6 +333,8 @@ export const EVENT_GROUPS: EventGroup[] = [
           { event: 'HEADER_LANGUAGE_EN_CLICKED', label: 'EN' },
           { event: 'HEADER_LANGUAGE_DE_CLICKED', label: 'DE' },
           { event: 'HEADER_LANGUAGE_FR_CLICKED', label: 'FR' },
+          { event: 'HEADER_LANGUAGE_TR_CLICKED', label: 'TR' },
+          { event: 'HEADER_LANGUAGE_AR_CLICKED', label: 'AR' },
           { event: 'HEADER_LANGUAGE_ES_CLICKED', label: 'ES' },
           { event: 'HEADER_LANGUAGE_PT_CLICKED', label: 'PT' },
           { event: 'HEADER_LANGUAGE_HI_CLICKED', label: 'HI' },

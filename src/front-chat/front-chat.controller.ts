@@ -109,7 +109,10 @@ export class FrontChatController {
   }
 
   // Fire-and-forget — chat activity sync is best-effort and must not block the user.
-  private syncChatActivity(chatUser: Awaited<ReturnType<ChatUserService['markAsRead']>>, email: string) {
+  private syncChatActivity(
+    chatUser: Awaited<ReturnType<ChatUserService['markAsRead']>>,
+    email: string,
+  ) {
     if (!chatUser) return;
     this.serviceUserProfilesService
       .updateServiceUserProfilesChatActivity(chatUser, email)

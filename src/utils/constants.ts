@@ -41,6 +41,17 @@ export enum STORYBLOK_STORY_STATUS_ENUM {
   MOVED = 'moved',
 }
 
+// The library theme a course/session/resource belongs to. Mirrors the `themes` datasource in
+// Storyblok (each story carries a `theme` value matching one of these).
+export enum THEMES {
+  RECOGNISING_HARM = 'recognising-harm',
+  WHY_HARM_HAPPENS = 'why-harm-happens',
+  BODY_AFTER_TRAUMA = 'body-after-trauma',
+  SETTING_BOUNDARIES = 'setting-boundaries',
+  HEALING_JOURNEY = 'healing-journey',
+  STAYING_SAFE = 'staying-safe',
+}
+
 export enum EMAIL_REMINDERS_FREQUENCY {
   TWO_WEEKS = 'TWO_WEEKS',
   ONE_MONTH = 'ONE_MONTH',
@@ -264,3 +275,12 @@ export const mailchimpServerPrefix = getEnv(
 export const mailchimpWebhookSecret = process.env.MAILCHIMP_WEBHOOK_SECRET || '';
 
 export const frontSupportEmail = process.env.FRONT_SUPPORT_EMAIL || 'support@bloom.chayn.co';
+
+// Reserved Cypress test accounts that must survive the bulk test-user deletion on
+// non-production environments (they're needed for automated tests on staging). On
+// production they are not protected and can be deleted. Comma-separated and kept in
+// an env var so the specific addresses stay out of source control.
+export const cypressReservedTestEmails = (process.env.CYPRESS_RESERVED_TEST_EMAILS || '')
+  .split(',')
+  .map((email) => email.trim().toLowerCase())
+  .filter(Boolean);

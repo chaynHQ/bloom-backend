@@ -42,7 +42,9 @@ export class ResourceFeedbackService {
         `*${resource.name}* resource was rated *_${resourceFeedbackDto.feedbackTags}_* ${resourceFeedbackDto.feedbackDescription.length > 0 ? `with the comment: \n> _${resourceFeedbackDto.feedbackDescription}_` : ''}`,
       );
     } catch (error) {
-      logger.error(`Failed to send Slack message for resource feedback: ${error?.message || 'unknown error'}`);
+      logger.error(
+        `Failed to send Slack message for resource feedback: ${error?.message || 'unknown error'}`,
+      );
     }
   }
 }

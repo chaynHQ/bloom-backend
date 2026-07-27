@@ -1,4 +1,5 @@
-import * as admin from 'firebase-admin';
+import { cert, initializeApp as initializeAdminApp } from 'firebase-admin/app';
+import { getAuth as getAdminAuth } from 'firebase-admin/auth';
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/auth';
 import {
@@ -50,13 +51,13 @@ export const firebaseFactory = {
     };
 
     firebase.initializeApp(firebaseConfig);
-    const adminAuth = admin.initializeApp({
-      credential: admin.credential.cert(firebaseAdminConfig),
+    const adminApp = initializeAdminApp({
+      credential: cert(firebaseAdminConfig),
     });
 
     return {
       auth: firebase.auth(),
-      admin: adminAuth,
+      admin: getAdminAuth(adminApp),
     };
   },
 };

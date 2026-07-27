@@ -12,10 +12,11 @@ export class SessionFeedbackEntity extends BaseBloomEntity {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'sessionId' })
-  session: SessionEntity;
+  session: SessionEntity | null;
 
-  @Column({ name: 'sessionId' })
-  sessionId: string;
+  // Must remain nullable due to existing null values in prod database (following bug presesnt jan-dec 2025)
+  @Column({ name: 'sessionId', nullable: true })
+  sessionId: string | null;
 
   @Column()
   feedbackTags: FEEDBACK_TAGS_ENUM;

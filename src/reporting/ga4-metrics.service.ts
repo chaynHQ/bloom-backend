@@ -115,7 +115,10 @@ export class Ga4MetricsService {
       limit: 5,
     }));
 
-    const responses = await this.runInBatches(requests, (i) => `breakdown[${BREAKDOWNS[i].apiName}]`);
+    const responses = await this.runInBatches(
+      requests,
+      (i) => `breakdown[${BREAKDOWNS[i].apiName}]`,
+    );
 
     return BREAKDOWNS.map((spec, i): Ga4Breakdown | null => {
       const resp = responses[i];
@@ -195,9 +198,7 @@ export class Ga4MetricsService {
           this.logger.warn(
             `GA4 batchRunReports failed (offset ${offset}); falling back to individual calls: ${extractGa4Reason(err)}`,
           );
-          return Promise.all(
-            reqs.map((req, j) => this.runSingleSafe(req, describe(offset + j))),
-          );
+          return Promise.all(reqs.map((req, j) => this.runSingleSafe(req, describe(offset + j))));
         }
       }),
     );
