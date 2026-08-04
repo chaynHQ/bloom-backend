@@ -18,7 +18,7 @@ import {
   mockUserEntity,
 } from 'test/utils/mockData';
 import { mockUserRepositoryMethods } from 'test/utils/mockedServices';
-import { Repository } from 'typeorm';
+import { IsNull, Repository } from 'typeorm';
 import {
   EMAIL_REMINDERS_FREQUENCY,
   SIMPLYBOOK_ACTION_ENUM,
@@ -907,6 +907,84 @@ describe('Service user profiles', () => {
 
       expect(mockFrontChatService.updateContactCustomFields).not.toHaveBeenCalled();
       expect(updateMailchimpProfile).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('bulkSyncFrontContactCustomFields', () => {
+    const userA = { ...mockUserEntity, id: 'user-a', email: 'a@example.com' } as UserEntity;
+    const userB = { ...mockUserEntity, id: 'user-b', email: 'b@example.com' } as UserEntity;
+
+    beforeEach(() => {
+      // clearAllMocks doesn't drop implementations — earlier tests leave this mock rejecting.
+      jest.mocked(mockFrontChatService.updateContactCustomFields).mockReset();
+    });
+
+    it('re-sends the complete custom field set for each user, without the contact list lookup', async () => {
+      jest.mocked(mockedUserRepository.find).mockResolvedValueOnce([userA, userB]);
+
+      const summary = await service.bulkSyncFrontContactCustomFields('2026-05-01', '2026-06-01');
+
+      expect(mockFrontChatService.updateContactCustomFields).toHaveBeenCalledTimes(2);
+      expect(mockFrontChatService.updateContactCustomFields).toHaveBeenNthCalledWith(
+        1,
+        expect.objectContaining({
+          user_id: 'user-a',
+          signed_up_at: mockUserEntity.createdAt.toISOString(),
+          last_active_at: mockUserEntity.lastActiveAt.toISOString(),
+        }),
+        'a@example.com',
+        { syncContactList: false },
+      );
+      expect(summary).toEqual({ total: 2, updated: 2, skipped: 0, notFound: 0, failed: 0 });
+    });
+
+    it('excludes deleted users, whose anonymised email no longer matches a Front contact', async () => {
+      jest.mocked(mockedUserRepository.find).mockResolvedValueOnce([]);
+
+      await service.bulkSyncFrontContactCustomFields('2026-05-01', '2026-06-01');
+
+      expect(jest.mocked(mockedUserRepository.find).mock.calls[0][0].where).toEqual(
+        expect.objectContaining({ deletedAt: IsNull() }),
+      );
+    });
+
+    it('counts contacts that no longer exist rather than creating them', async () => {
+      jest.mocked(mockedUserRepository.find).mockResolvedValueOnce([userA]);
+      const notFound = new Error('Front API PATCH failed (404): no contact') as Error & {
+        cause?: { status: number };
+      };
+      notFound.cause = { status: 404 };
+      jest
+        .mocked(mockFrontChatService.updateContactCustomFields)
+        .mockRejectedValueOnce(notFound as never);
+
+      const summary = await service.bulkSyncFrontContactCustomFields('2026-05-01', '2026-06-01');
+
+      expect(mockFrontChatService.createContact).not.toHaveBeenCalled();
+      expect(summary).toEqual({ total: 1, updated: 0, skipped: 0, notFound: 1, failed: 0 });
+    });
+
+    it('carries on past a failing contact and reports it', async () => {
+      jest.mocked(mockedUserRepository.find).mockResolvedValueOnce([userA, userB]);
+      jest
+        .mocked(mockFrontChatService.updateContactCustomFields)
+        .mockRejectedValueOnce(new Error('Front API 500') as never);
+
+      const summary = await service.bulkSyncFrontContactCustomFields('2026-05-01', '2026-06-01');
+
+      expect(mockFrontChatService.updateContactCustomFields).toHaveBeenCalledTimes(2);
+      expect(summary).toEqual({ total: 2, updated: 1, skipped: 0, notFound: 0, failed: 1 });
+    });
+
+    it('skips Cypress test emails', async () => {
+      jest
+        .mocked(mockedUserRepository.find)
+        .mockResolvedValueOnce([{ ...userA, email: 'cypresstestemail+1@chayn.co' } as UserEntity]);
+
+      const summary = await service.bulkSyncFrontContactCustomFields('2026-05-01', '2026-06-01');
+
+      expect(mockFrontChatService.updateContactCustomFields).not.toHaveBeenCalled();
+      expect(summary).toEqual({ total: 1, updated: 0, skipped: 1, notFound: 0, failed: 0 });
     });
   });
 

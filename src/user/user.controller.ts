@@ -179,4 +179,40 @@ export class UserController {
     await this.serviceUserProfilesService.bulkUpdateMailchimpProfiles(startDate, endDate);
     return 'ok';
   }
+
+  // POST rather than GET like the bulk Mailchimp routes above: this writes to thousands of Front
+  // contacts and takes minutes, so it must not be triggerable by a browser prefetch or a retry.
+  @ApiBearerAuth()
+  @Post('/bulk-sync-front-contacts')
+  @ApiOperation({
+    description:
+      'Re-sends the complete Front custom field set for users created within a date range. ' +
+      'Backfills contacts whose datetime fields were written as ISO strings and landed on ' +
+      '01/01/1970. Idempotent — one Front API call per user, so run it a month at a time.',
+  })
+  @UseGuards(SuperAdminAuthGuard)
+  async bulkSyncFrontContacts(
+    @Query('startDate') startDate: string,
+    @Query('endDate') endDate: string,
+    @Query('limit') limit?: string,
+  ) {
+    if (!startDate || !endDate) {
+      throw new HttpException(
+        'startDate and endDate query params are required (YYYY-MM-DD)',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    let parsedLimit: number | undefined;
+    if (limit !== undefined) {
+      parsedLimit = Number(limit);
+      if (!Number.isInteger(parsedLimit) || parsedLimit < 1) {
+        throw new HttpException('limit must be a positive integer', HttpStatus.BAD_REQUEST);
+      }
+    }
+    return await this.serviceUserProfilesService.bulkSyncFrontContactCustomFields(
+      startDate,
+      endDate,
+      parsedLimit,
+    );
+  }
 }

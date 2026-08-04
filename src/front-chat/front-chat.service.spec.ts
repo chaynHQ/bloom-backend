@@ -64,12 +64,10 @@ describe('FrontChatService', () => {
       getChatUser: jest.fn().mockResolvedValue(null),
       updateChatUserByEmail: jest.fn().mockResolvedValue(null),
       clearConversationId: jest.fn().mockResolvedValue(undefined),
-      setLastMessageSentAt: jest
-        .fn()
-        .mockImplementation(async (chatUser, sentAt) => ({
-          ...chatUser,
-          lastMessageSentAt: sentAt,
-        })),
+      setLastMessageSentAt: jest.fn().mockImplementation(async (chatUser, sentAt) => ({
+        ...chatUser,
+        lastMessageSentAt: sentAt,
+      })),
     };
     mockUserRepository.findOneBy.mockResolvedValue(null);
 
@@ -223,6 +221,20 @@ describe('FrontChatService', () => {
     it('should skip for Cypress test emails', async () => {
       await service.updateContactCustomFields({ language: 'en' }, 'cypresstestemail+1@chayn.co');
       expect(mockFetch).not.toHaveBeenCalled();
+    });
+
+    it('PATCHes only, skipping the contact list lookup, when syncContactList is false', async () => {
+      mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({}) }); // PATCH
+
+      await service.updateContactCustomFields({ language: 'en' }, 'user@example.com', {
+        syncContactList: false,
+      });
+
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      expect(mockFetch).toHaveBeenCalledWith(
+        'https://api2.frontapp.com/contacts/alt:email:user%40example.com',
+        expect.objectContaining({ method: 'PATCH' }),
+      );
     });
   });
 

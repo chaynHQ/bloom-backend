@@ -23,7 +23,7 @@ import { UserEntity } from 'src/entities/user.entity';
 import { FrontChatContactCustomFields } from 'src/front-chat/front-chat.interface';
 import { FrontChatService } from 'src/front-chat/front-chat.service';
 import { Logger } from 'src/logger/logger';
-import { And, ILike, Raw, Repository } from 'typeorm';
+import { And, ILike, IsNull, Raw, Repository } from 'typeorm';
 import {
   LANGUAGE_DEFAULT,
   PROGRESS_STATUS,
@@ -37,6 +37,19 @@ import { getAcronym, isCypressTestEmail } from '../utils/utils';
 
 // Errors are swallowed and logged rather than thrown to avoid disrupting the calling flow.
 const logger = new Logger('ServiceUserProfiles');
+
+// Paced under Front's per-minute rate limit. frontApiRequest retries a 429 (up to 60 s), so
+// exceeding the limit costs far more time than the pacing does.
+const FRONT_BULK_SYNC_DELAY_MS = 300;
+const FRONT_BULK_SYNC_LOG_EVERY = 50;
+
+export interface FrontBulkSyncSummary {
+  total: number;
+  updated: number;
+  skipped: number;
+  notFound: number;
+  failed: number;
+}
 
 @Injectable()
 export class ServiceUserProfilesService {
@@ -616,6 +629,85 @@ export class ServiceUserProfilesService {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
+  }
+
+  // One-off backfill for Front contacts written before datetime custom fields were serialised as
+  // epoch seconds — those landed on 01/01/1970 in Front (see serializeCustomFields). Re-sends the
+  // complete field set rebuilt from the DB, so it repairs every stale field, not just the dates.
+  // Idempotent: re-running it, or running it over contacts that are already correct, is a no-op
+  // in effect. Costs one Front API call per user, so run it in chunks (a month of signups at a
+  // time) to stay inside Front's rate limit and the request timeout.
+  public async bulkSyncFrontContactCustomFields(
+    startDate: string,
+    endDate: string,
+    limit?: number,
+  ): Promise<FrontBulkSyncSummary> {
+    const users = await this.userRepository.find({
+      where: {
+        createdAt: And(
+          Raw((alias) => `${alias} >= :startDate`, { startDate }),
+          Raw((alias) => `${alias} < :endDate`, { endDate }),
+        ),
+        // Deleting an account anonymises the DB row's email while the Front contact keeps the
+        // original — there's no longer an email to look the contact up by.
+        deletedAt: IsNull(),
+      },
+      relations: {
+        partnerAccess: { partner: true, therapySession: true },
+        courseUser: { course: true, sessionUser: { session: true } },
+      },
+      order: { createdAt: 'ASC' },
+      ...(limit && { take: limit }),
+    });
+
+    const summary: FrontBulkSyncSummary = {
+      total: users.length,
+      updated: 0,
+      skipped: 0,
+      notFound: 0,
+      failed: 0,
+    };
+    logger.log(
+      `Front contact bulk sync: starting for ${users.length} users created between ${startDate} and ${endDate}`,
+    );
+
+    for (const [index, user] of users.entries()) {
+      if (isCypressTestEmail(user.email)) {
+        summary.skipped++;
+        continue;
+      }
+
+      try {
+        await this.frontChatService.updateContactCustomFields(
+          this.buildFrontCustomFields(user),
+          user.email,
+          { syncContactList: false },
+        );
+        summary.updated++;
+      } catch (error) {
+        if (this.isFrontContactNotFound(error)) {
+          // No contact to repair. Deliberately not created here — a backfill shouldn't add
+          // contacts for users who never had one.
+          summary.notFound++;
+        } else {
+          summary.failed++;
+          const message = error instanceof Error ? error.message : 'unknown error';
+          logger.error(`Front contact bulk sync failed for user ${user.id}: ${message}`);
+        }
+      }
+
+      if ((index + 1) % FRONT_BULK_SYNC_LOG_EVERY === 0) {
+        logger.log(`Front contact bulk sync: ${index + 1}/${users.length} processed`);
+      }
+      if (index < users.length - 1) {
+        await new Promise((resolve) => setTimeout(resolve, FRONT_BULK_SYNC_DELAY_MS));
+      }
+    }
+
+    logger.log(
+      `Front contact bulk sync complete for ${startDate}–${endDate}: ${JSON.stringify(summary)}`,
+    );
+    return summary;
   }
 
   serializePartnersString(partnerAccesses: PartnerAccessEntity[]) {
