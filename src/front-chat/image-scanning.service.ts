@@ -1,7 +1,7 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import * as tf from '@tensorflow/tfjs-node';
-import * as nsfwjs from 'nsfwjs';
-import * as path from 'path';
+import { load, NSFWJS } from 'nsfwjs/core';
+import { MobileNetV2Model } from 'nsfwjs/models/mobilenet_v2';
 import { Logger } from 'src/logger/logger';
 
 const logger = new Logger('ImageScanningService');
@@ -10,14 +10,14 @@ const THRESHOLD = 0.6; // 60% confidence; tune later if we see false positives/n
 
 @Injectable()
 export class ImageScanningService implements OnModuleInit {
-  private model: nsfwjs.NSFWJS;
+  private model: NSFWJS;
 
   async onModuleInit() {
-    const modelPath = path.resolve(__dirname, 'assets', 'model');
-    this.model = await nsfwjs.load(`file://${modelPath}/`, { size: 224 }); // local, no network. Trailing slash required.
-    logger.log('Local NSFW model loaded');
+    // Model ships inside the nsfwjs package (loaded from node_modules), so nothing is
+    // committed to the repo and no network call is made at runtime.
+    this.model = await load('MobileNetV2', { modelDefinitions: [MobileNetV2Model] });
+    logger.log('Bundled NSFW model loaded');
   }
-
   async scanImage(buffer: Buffer): Promise<{ isSafe: boolean; reason?: string }> {
     let tensor: tf.Tensor3D | undefined;
     try {

@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import * as nsfwjs from 'nsfwjs';
+import { load as nsfwLoad } from 'nsfwjs/core';
 import { ChatUserService } from 'src/chat-user/chat-user.service';
 import { ChatUserEntity } from 'src/entities/chat-user.entity';
 import { UserEntity } from 'src/entities/user.entity';
@@ -26,9 +26,11 @@ jest.mock('src/utils/constants', () => ({
 
 //TFJS // Controllable fake model —  tests classify() returns.
 const mockClassify = jest.fn();
-jest.mock('nsfwjs', () => ({
+jest.mock('nsfwjs/core', () => ({
   load: jest.fn().mockResolvedValue({ classify: (...args) => mockClassify(...args) }),
 }));
+jest.mock('nsfwjs/models/mobilenet_v2', () => ({ MobileNetV2Model: {} }));
+
 jest.mock('@tensorflow/tfjs-node', () => ({
   node: { decodeImage: jest.fn(() => ({ dispose: jest.fn() })) },
 }));
@@ -892,7 +894,7 @@ describe('FrontChatService', () => {
     //IMG scan ────────────────────────────────────────
 
     it('blocks an explicit image and never forwards it', async () => {
-      (nsfwjs.load as jest.Mock).mockResolvedValue({
+      (nsfwLoad as jest.Mock).mockResolvedValue({
         classify: (...args: unknown[]) => mockClassify(...args),
       });
       await (service as any).imageScanningService.onModuleInit();
@@ -905,7 +907,7 @@ describe('FrontChatService', () => {
     });
 
     it('raises a Rollbar alert (logger.error) when blocking', async () => {
-      (nsfwjs.load as jest.Mock).mockResolvedValue({
+      (nsfwLoad as jest.Mock).mockResolvedValue({
         classify: (...args: unknown[]) => mockClassify(...args),
       });
       await (service as any).imageScanningService.onModuleInit();
@@ -918,7 +920,10 @@ describe('FrontChatService', () => {
       errorSpy.mockRestore();
     });
 
-    /*     it(' a thread note when blocking', async () => {
+    it('notifies the agent with a thread note when blocking', async () => {
+      (nsfwLoad as jest.Mock).mockResolvedValue({
+        classify: (...args: unknown[]) => mockClassify(...args),
+      });
       await (service as any).imageScanningService.onModuleInit();
       mockClassify.mockResolvedValue([{ className: 'Porn', probability: 0.9 }]);
       const noteSpy = jest.spyOn(service, 'sendChannelTextMessage').mockResolvedValue(null);
@@ -926,7 +931,7 @@ describe('FrontChatService', () => {
       await expect(service.sendChannelAttachment(user, file)).rejects.toThrow();
 
       expect(noteSpy).toHaveBeenCalledWith(user, expect.stringContaining('blocked'));
-    }); */
+    });
 
     it('forwards a safe image normally', async () => {
       mockClassify.mockResolvedValue([{ className: 'Neutral', probability: 0.95 }]);

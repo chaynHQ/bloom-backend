@@ -42,3 +42,4 @@ lerna-debug.log*
 *.dump
 *.dir.tar.gz
 postgres-data
+src/front-chat/assets/
