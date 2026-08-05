@@ -18,7 +18,7 @@ import {
   mockUserEntity,
 } from 'test/utils/mockData';
 import { mockUserRepositoryMethods } from 'test/utils/mockedServices';
-import { IsNull, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import {
   EMAIL_REMINDERS_FREQUENCY,
   SIMPLYBOOK_ACTION_ENUM,
@@ -910,19 +910,65 @@ describe('Service user profiles', () => {
     });
   });
 
-  describe('bulkSyncFrontContactCustomFields', () => {
+  describe('Front contact backfill', () => {
     const userA = { ...mockUserEntity, id: 'user-a', email: 'a@example.com' } as UserEntity;
     const userB = { ...mockUserEntity, id: 'user-b', email: 'b@example.com' } as UserEntity;
+
+    // Chainable stub for the selection query, which the backfill runs before hydrating users.
+    const stubSelectionQuery = (ids: string[]) => {
+      const query = {
+        leftJoin: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        select: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue(ids.map((id) => ({ id }))),
+        getCount: jest.fn().mockResolvedValue(ids.length),
+      };
+      jest.spyOn(mockedUserRepository, 'createQueryBuilder').mockReturnValue(query as never);
+      return query;
+    };
 
     beforeEach(() => {
       // clearAllMocks doesn't drop implementations — earlier tests leave this mock rejecting.
       jest.mocked(mockFrontChatService.updateContactCustomFields).mockReset();
+      (service as unknown as { frontContactBackfill: unknown }).frontContactBackfill = null;
+    });
+
+    it('covers the whole Front contact list by default, not just recent signups', async () => {
+      const query = stubSelectionQuery([]);
+      jest.mocked(mockedUserRepository.find).mockResolvedValue([]);
+
+      const progress = await service.runFrontContactBackfill();
+
+      // Deleted users are excluded: their DB email is anonymised, so no contact can be found.
+      expect(query.where).toHaveBeenCalledWith('u."deletedAt" IS NULL');
+
+      // The migration imported users active in Crisp over the 6 months before it ran, whose
+      // signup dates go back years — the OR on frontContactId is what picks those up.
+      const brackets = query.andWhere.mock.calls[0][0] as {
+        whereFactory: (qb: unknown) => void;
+      };
+      const clauses = { where: jest.fn().mockReturnThis(), orWhere: jest.fn().mockReturnThis() };
+      brackets.whereFactory(clauses);
+      expect(clauses.where).toHaveBeenCalledWith('u."createdAt" >= :since', {
+        since: new Date('2025-11-01T00:00:00.000Z'),
+      });
+      expect(clauses.orWhere).toHaveBeenCalledWith('cu."frontContactId" IS NOT NULL');
+      expect(clauses.orWhere).toHaveBeenCalledWith('cu."lastMessageSentAt" >= :since', {
+        since: new Date('2025-11-01T00:00:00.000Z'),
+      });
+
+      expect(progress.since).toBe('2025-11-01T00:00:00.000Z');
+      expect(progress.until).toBeUndefined();
     });
 
     it('re-sends the complete custom field set for each user, without the contact list lookup', async () => {
-      jest.mocked(mockedUserRepository.find).mockResolvedValueOnce([userA, userB]);
+      stubSelectionQuery(['user-a', 'user-b']);
+      jest.mocked(mockedUserRepository.find).mockResolvedValue([userA, userB]);
 
-      const summary = await service.bulkSyncFrontContactCustomFields('2026-05-01', '2026-06-01');
+      const progress = await service.runFrontContactBackfill();
 
       expect(mockFrontChatService.updateContactCustomFields).toHaveBeenCalledTimes(2);
       expect(mockFrontChatService.updateContactCustomFields).toHaveBeenNthCalledWith(
@@ -935,21 +981,59 @@ describe('Service user profiles', () => {
         'a@example.com',
         { syncContactList: false },
       );
-      expect(summary).toEqual({ total: 2, updated: 2, skipped: 0, notFound: 0, failed: 0 });
-    });
-
-    it('excludes deleted users, whose anonymised email no longer matches a Front contact', async () => {
-      jest.mocked(mockedUserRepository.find).mockResolvedValueOnce([]);
-
-      await service.bulkSyncFrontContactCustomFields('2026-05-01', '2026-06-01');
-
-      expect(jest.mocked(mockedUserRepository.find).mock.calls[0][0].where).toEqual(
-        expect.objectContaining({ deletedAt: IsNull() }),
+      expect(progress).toEqual(
+        expect.objectContaining({
+          status: 'completed',
+          total: 2,
+          processed: 2,
+          updated: 2,
+          skipped: 0,
+          notFound: 0,
+          failed: 0,
+        }),
       );
     });
 
+    it('reports progress and errors while running for the dashboard to poll', async () => {
+      stubSelectionQuery(['user-a']);
+      jest.mocked(mockedUserRepository.find).mockResolvedValue([userA]);
+
+      expect(service.getFrontContactBackfillStatus()).toEqual({ status: 'idle' });
+
+      const run = service.runFrontContactBackfill();
+      expect(service.isFrontContactBackfillRunning()).toBe(true);
+      expect(service.getFrontContactBackfillStatus().status).toBe('running');
+
+      await run;
+      const status = service.getFrontContactBackfillStatus();
+      expect(status.status).toBe('completed');
+      expect(status.progress?.completedAt).toBeInstanceOf(Date);
+      expect(service.isFrontContactBackfillRunning()).toBe(false);
+    });
+
+    it('does not reject from the fire-and-forget entry point, which would crash the process', async () => {
+      stubSelectionQuery(['user-a']);
+      jest.mocked(mockedUserRepository.find).mockResolvedValue([userA]);
+
+      const run = service.runFrontContactBackfill();
+      // Detached by the controller, so a rejection here has nowhere to go — it must be caught.
+      expect(() => service.startFrontContactBackfill()).not.toThrow();
+      await run;
+      await new Promise(process.nextTick);
+    });
+
+    it('refuses to start a second run while one is in progress', async () => {
+      stubSelectionQuery(['user-a']);
+      jest.mocked(mockedUserRepository.find).mockResolvedValue([userA]);
+
+      const run = service.runFrontContactBackfill();
+      await expect(service.runFrontContactBackfill()).rejects.toThrow('already in progress');
+      await run;
+    });
+
     it('counts contacts that no longer exist rather than creating them', async () => {
-      jest.mocked(mockedUserRepository.find).mockResolvedValueOnce([userA]);
+      stubSelectionQuery(['user-a']);
+      jest.mocked(mockedUserRepository.find).mockResolvedValue([userA]);
       const notFound = new Error('Front API PATCH failed (404): no contact') as Error & {
         cause?: { status: number };
       };
@@ -958,33 +1042,66 @@ describe('Service user profiles', () => {
         .mocked(mockFrontChatService.updateContactCustomFields)
         .mockRejectedValueOnce(notFound as never);
 
-      const summary = await service.bulkSyncFrontContactCustomFields('2026-05-01', '2026-06-01');
+      const progress = await service.runFrontContactBackfill();
 
       expect(mockFrontChatService.createContact).not.toHaveBeenCalled();
-      expect(summary).toEqual({ total: 1, updated: 0, skipped: 0, notFound: 1, failed: 0 });
+      expect(progress).toEqual(
+        expect.objectContaining({ total: 1, updated: 0, notFound: 1, failed: 0 }),
+      );
     });
 
-    it('carries on past a failing contact and reports it', async () => {
-      jest.mocked(mockedUserRepository.find).mockResolvedValueOnce([userA, userB]);
+    it('carries on past a failing contact and records the error', async () => {
+      stubSelectionQuery(['user-a', 'user-b']);
+      jest.mocked(mockedUserRepository.find).mockResolvedValue([userA, userB]);
       jest
         .mocked(mockFrontChatService.updateContactCustomFields)
         .mockRejectedValueOnce(new Error('Front API 500') as never);
 
-      const summary = await service.bulkSyncFrontContactCustomFields('2026-05-01', '2026-06-01');
+      const progress = await service.runFrontContactBackfill();
 
       expect(mockFrontChatService.updateContactCustomFields).toHaveBeenCalledTimes(2);
-      expect(summary).toEqual({ total: 2, updated: 1, skipped: 0, notFound: 0, failed: 1 });
+      expect(progress).toEqual(
+        expect.objectContaining({ status: 'completed', total: 2, updated: 1, failed: 1 }),
+      );
+      expect(service.getFrontContactBackfillStatus().errors).toEqual([
+        expect.objectContaining({ userId: 'user-a', error: 'Front API 500' }),
+      ]);
     });
 
     it('skips Cypress test emails', async () => {
+      stubSelectionQuery(['user-a']);
       jest
         .mocked(mockedUserRepository.find)
-        .mockResolvedValueOnce([{ ...userA, email: 'cypresstestemail+1@chayn.co' } as UserEntity]);
+        .mockResolvedValue([{ ...userA, email: 'cypresstestemail+1@chayn.co' } as UserEntity]);
 
-      const summary = await service.bulkSyncFrontContactCustomFields('2026-05-01', '2026-06-01');
+      const progress = await service.runFrontContactBackfill();
 
       expect(mockFrontChatService.updateContactCustomFields).not.toHaveBeenCalled();
-      expect(summary).toEqual({ total: 1, updated: 0, skipped: 1, notFound: 0, failed: 0 });
+      expect(progress).toEqual(expect.objectContaining({ total: 1, skipped: 1, updated: 0 }));
+    });
+
+    it('rejects an invalid date rather than silently backfilling the default window', async () => {
+      stubSelectionQuery([]);
+
+      await expect(
+        service.countFrontContactBackfillUsers({ startDate: 'not-a-date' }),
+      ).rejects.toThrow('Invalid startDate');
+      await expect(
+        service.countFrontContactBackfillUsers({
+          startDate: '2026-05-01',
+          endDate: '2026-04-01',
+        }),
+      ).rejects.toThrow('endDate must be after startDate');
+    });
+
+    it('reports how many contacts a default run would cover', async () => {
+      stubSelectionQuery(['user-a', 'user-b']);
+
+      await expect(service.countFrontContactBackfillUsers()).resolves.toEqual({
+        total: 2,
+        since: '2025-11-01T00:00:00.000Z',
+        until: undefined,
+      });
     });
   });
 

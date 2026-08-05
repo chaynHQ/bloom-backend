@@ -23,7 +23,7 @@ import { UserEntity } from 'src/entities/user.entity';
 import { FrontChatContactCustomFields } from 'src/front-chat/front-chat.interface';
 import { FrontChatService } from 'src/front-chat/front-chat.service';
 import { Logger } from 'src/logger/logger';
-import { And, ILike, IsNull, Raw, Repository } from 'typeorm';
+import { And, Brackets, ILike, In, Raw, Repository } from 'typeorm';
 import {
   LANGUAGE_DEFAULT,
   PROGRESS_STATUS,
@@ -40,19 +40,77 @@ const logger = new Logger('ServiceUserProfiles');
 
 // Paced under Front's per-minute rate limit. frontApiRequest retries a 429 (up to 60 s), so
 // exceeding the limit costs far more time than the pacing does.
-const FRONT_BULK_SYNC_DELAY_MS = 300;
-const FRONT_BULK_SYNC_LOG_EVERY = 50;
+const FRONT_BACKFILL_DELAY_MS = 300;
+const FRONT_BACKFILL_LOG_EVERY = 50;
+const FRONT_BACKFILL_PAGE_SIZE = 100;
+const FRONT_BACKFILL_MAX_ERRORS = 50;
 
-export interface FrontBulkSyncSummary {
+// The Crisp migration ran in May 2026 and imported everyone active in Crisp over the preceding
+// six months, so this — not "six months ago" — is where the Front contact list begins. Anchoring
+// it to today's date instead would drop the contacts whose last activity was in that window.
+const CRISP_MIGRATION_CONTACT_WINDOW_START = '2025-11-01T00:00:00.000Z';
+
+export interface FrontContactBackfillOptions {
+  startDate?: string;
+  endDate?: string;
+  limit?: number;
+}
+
+export interface FrontContactBackfillProgress {
+  status: 'running' | 'completed' | 'failed';
   total: number;
+  processed: number;
   updated: number;
   skipped: number;
   notFound: number;
   failed: number;
+  since: string;
+  until?: string;
+  startedAt: Date;
+  completedAt?: Date;
 }
+
+export interface FrontContactBackfillError {
+  userId?: string;
+  error: string;
+  timestamp: Date;
+}
+
+export interface FrontContactBackfillStatus {
+  status: FrontContactBackfillProgress['status'] | 'idle';
+  progress?: FrontContactBackfillProgress;
+  errors?: FrontContactBackfillError[];
+}
+
+// Throws rather than silently falling back to the default window: a typo'd date that quietly
+// backfills everything is worse than a 400.
+const resolveBackfillWindow = (options: FrontContactBackfillOptions) => {
+  const parse = (value: string, field: string): Date => {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      throw new HttpException(`Invalid ${field}: ${value}`, HttpStatus.BAD_REQUEST);
+    }
+    return date;
+  };
+
+  const since = options.startDate
+    ? parse(options.startDate, 'startDate')
+    : new Date(CRISP_MIGRATION_CONTACT_WINDOW_START);
+  const until = options.endDate ? parse(options.endDate, 'endDate') : undefined;
+  if (until && until <= since) {
+    throw new HttpException('endDate must be after startDate', HttpStatus.BAD_REQUEST);
+  }
+  return { since, until };
+};
 
 @Injectable()
 export class ServiceUserProfilesService {
+  // In-memory, single job at a time — enough for a one-off admin backfill. It resets on deploy,
+  // and on a multi-instance deployment the status poll only sees the instance it lands on; the
+  // run itself is unaffected and the summary is always in the logs.
+  private frontContactBackfill: FrontContactBackfillProgress | null = null;
+  private frontContactBackfillErrors: FrontContactBackfillError[] = [];
+
   constructor(
     @InjectRepository(UserEntity) private userRepository: Repository<UserEntity>,
     private frontChatService: FrontChatService,
@@ -631,83 +689,189 @@ export class ServiceUserProfilesService {
     }
   }
 
+  getFrontContactBackfillStatus(): FrontContactBackfillStatus {
+    if (!this.frontContactBackfill) return { status: 'idle' };
+    return {
+      status: this.frontContactBackfill.status,
+      progress: this.frontContactBackfill,
+      errors: this.frontContactBackfillErrors,
+    };
+  }
+
+  isFrontContactBackfillRunning(): boolean {
+    return this.frontContactBackfill?.status === 'running';
+  }
+
+  // Selects every user who should have a Front contact. Front's contact list is the union of
+  // two populations, so a signup-date window alone would miss half of it:
+  //  - everyone who signed up from `since` onwards, each of whom got a contact at signup, and
+  //  - everyone the Crisp migration imported: users active in Crisp in the 6 months before it
+  //    ran, whose signup date can be years earlier.
+  // frontContactId is the direct evidence of the second group — it's written when a contact is
+  // created or added to the contact list, including by the migration's re-sync. Where that write
+  // was lost, an explicit earlier startDate widens the net.
+  private buildFrontContactBackfillQuery(since: Date, until?: Date) {
+    // Aliased 'u', not 'user': the raw column references below are unquoted at the alias, and
+    // an unquoted `user` is a reserved word in Postgres. Real column names throughout, quoted —
+    // the entity's `id` property maps to the "userId" column.
+    const query = this.userRepository
+      .createQueryBuilder('u')
+      .leftJoin(ChatUserEntity, 'cu', 'cu."userId" = u."userId"')
+      // Deleting an account anonymises the DB row's email while the Front contact keeps the
+      // original — there's no longer an email to look the contact up by.
+      .where('u."deletedAt" IS NULL')
+      .andWhere(
+        new Brackets((where) => {
+          where
+            .where('u."createdAt" >= :since', { since })
+            .orWhere('cu."frontContactId" IS NOT NULL')
+            .orWhere('cu."lastMessageSentAt" >= :since', { since });
+        }),
+      )
+      .orderBy('u."createdAt"', 'ASC');
+
+    if (until) query.andWhere('u."createdAt" < :until', { until });
+    return query;
+  }
+
+  // Parses and validates the window without touching the database — for rejecting a bad request
+  // before a run is detached into the background.
+  public validateFrontContactBackfillOptions(options: FrontContactBackfillOptions = {}): void {
+    resolveBackfillWindow(options);
+  }
+
+  // Counts what a backfill would cover, so the dashboard can show the size of the job before
+  // anyone starts it.
+  public async countFrontContactBackfillUsers(
+    options: FrontContactBackfillOptions = {},
+  ): Promise<{ total: number; since: string; until?: string }> {
+    const { since, until } = resolveBackfillWindow(options);
+    const total = await this.buildFrontContactBackfillQuery(since, until).getCount();
+    return { total, since: since.toISOString(), until: until?.toISOString() };
+  }
+
+  // Fire-and-forget entry point for the controller. runFrontContactBackfill rejects before its
+  // try block if a run is already going or the window is unparseable — detaching that promise
+  // bare would take the process down with an unhandled rejection, so it is caught here.
+  public startFrontContactBackfill(options: FrontContactBackfillOptions = {}): void {
+    void this.runFrontContactBackfill(options).catch((error) => {
+      const message = error instanceof Error ? error.message : 'unknown error';
+      logger.error(`Front contact backfill could not start: ${message}`);
+    });
+  }
+
   // One-off backfill for Front contacts written before datetime custom fields were serialised as
   // epoch seconds — those landed on 01/01/1970 in Front (see serializeCustomFields). Re-sends the
   // complete field set rebuilt from the DB, so it repairs every stale field, not just the dates.
   // Idempotent: re-running it, or running it over contacts that are already correct, is a no-op
-  // in effect. Costs one Front API call per user, so run it in chunks (a month of signups at a
-  // time) to stay inside Front's rate limit and the request timeout.
-  public async bulkSyncFrontContactCustomFields(
-    startDate: string,
-    endDate: string,
-    limit?: number,
-  ): Promise<FrontBulkSyncSummary> {
-    const users = await this.userRepository.find({
-      where: {
-        createdAt: And(
-          Raw((alias) => `${alias} >= :startDate`, { startDate }),
-          Raw((alias) => `${alias} < :endDate`, { endDate }),
-        ),
-        // Deleting an account anonymises the DB row's email while the Front contact keeps the
-        // original — there's no longer an email to look the contact up by.
-        deletedAt: IsNull(),
-      },
-      relations: {
-        partnerAccess: { partner: true, therapySession: true },
-        courseUser: { course: true, sessionUser: { session: true } },
-      },
-      order: { createdAt: 'ASC' },
-      ...(limit && { take: limit }),
-    });
+  // in effect. Long-running (one Front API call per user, paced), so the controller kicks it off
+  // in the background and the dashboard polls getFrontContactBackfillStatus.
+  public async runFrontContactBackfill(
+    options: FrontContactBackfillOptions = {},
+  ): Promise<FrontContactBackfillProgress> {
+    if (this.isFrontContactBackfillRunning()) {
+      throw new Error('A Front contact backfill is already in progress');
+    }
 
-    const summary: FrontBulkSyncSummary = {
-      total: users.length,
+    const { since, until } = resolveBackfillWindow(options);
+    this.frontContactBackfillErrors = [];
+    this.frontContactBackfill = {
+      status: 'running',
+      total: 0,
+      processed: 0,
       updated: 0,
       skipped: 0,
       notFound: 0,
       failed: 0,
+      since: since.toISOString(),
+      until: until?.toISOString(),
+      startedAt: new Date(),
     };
-    logger.log(
-      `Front contact bulk sync: starting for ${users.length} users created between ${startDate} and ${endDate}`,
-    );
+    const progress = this.frontContactBackfill;
 
-    for (const [index, user] of users.entries()) {
-      if (isCypressTestEmail(user.email)) {
-        summary.skipped++;
-        continue;
-      }
+    try {
+      const query = this.buildFrontContactBackfillQuery(since, until);
+      if (options.limit) query.take(options.limit);
+      // Ids first, then hydrate a page at a time — the full relation graph for every user at
+      // once would be a large amount of memory to hold for the length of the run.
+      const userIds = (await query.select('u.id').getMany()).map((user) => user.id);
+      progress.total = userIds.length;
+      logger.log(
+        `Front contact backfill: starting for ${userIds.length} users (since ${since.toISOString()}${
+          until ? `, until ${until.toISOString()}` : ''
+        })`,
+      );
 
-      try {
-        await this.frontChatService.updateContactCustomFields(
-          this.buildFrontCustomFields(user),
-          user.email,
-          { syncContactList: false },
-        );
-        summary.updated++;
-      } catch (error) {
-        if (this.isFrontContactNotFound(error)) {
-          // No contact to repair. Deliberately not created here — a backfill shouldn't add
-          // contacts for users who never had one.
-          summary.notFound++;
-        } else {
-          summary.failed++;
-          const message = error instanceof Error ? error.message : 'unknown error';
-          logger.error(`Front contact bulk sync failed for user ${user.id}: ${message}`);
+      for (let offset = 0; offset < userIds.length; offset += FRONT_BACKFILL_PAGE_SIZE) {
+        const users = await this.userRepository.find({
+          where: { id: In(userIds.slice(offset, offset + FRONT_BACKFILL_PAGE_SIZE)) },
+          relations: {
+            partnerAccess: { partner: true, therapySession: true },
+            courseUser: { course: true, sessionUser: { session: true } },
+          },
+        });
+
+        for (const user of users) {
+          await this.backfillFrontContact(user, progress);
+          if (progress.processed % FRONT_BACKFILL_LOG_EVERY === 0) {
+            logger.log(`Front contact backfill: ${progress.processed}/${progress.total} processed`);
+          }
+          if (progress.processed < progress.total) {
+            await new Promise((resolve) => setTimeout(resolve, FRONT_BACKFILL_DELAY_MS));
+          }
         }
       }
 
-      if ((index + 1) % FRONT_BULK_SYNC_LOG_EVERY === 0) {
-        logger.log(`Front contact bulk sync: ${index + 1}/${users.length} processed`);
-      }
-      if (index < users.length - 1) {
-        await new Promise((resolve) => setTimeout(resolve, FRONT_BULK_SYNC_DELAY_MS));
-      }
+      progress.status = 'completed';
+    } catch (error) {
+      progress.status = 'failed';
+      const message = error instanceof Error ? error.message : 'unknown error';
+      logger.error(`Front contact backfill failed: ${message}`);
+      this.recordFrontContactBackfillError(message);
     }
 
-    logger.log(
-      `Front contact bulk sync complete for ${startDate}–${endDate}: ${JSON.stringify(summary)}`,
-    );
-    return summary;
+    progress.completedAt = new Date();
+    logger.log(`Front contact backfill ${progress.status}: ${JSON.stringify(progress)}`);
+    return progress;
+  }
+
+  private async backfillFrontContact(
+    user: UserEntity,
+    progress: FrontContactBackfillProgress,
+  ): Promise<void> {
+    progress.processed++;
+
+    if (isCypressTestEmail(user.email)) {
+      progress.skipped++;
+      return;
+    }
+
+    try {
+      await this.frontChatService.updateContactCustomFields(
+        this.buildFrontCustomFields(user),
+        user.email,
+        { syncContactList: false },
+      );
+      progress.updated++;
+    } catch (error) {
+      if (this.isFrontContactNotFound(error)) {
+        // No contact to repair. Deliberately not created here — a backfill shouldn't add
+        // contacts for users who never had one.
+        progress.notFound++;
+        return;
+      }
+      progress.failed++;
+      const message = error instanceof Error ? error.message : 'unknown error';
+      logger.error(`Front contact backfill failed for user ${user.id}: ${message}`);
+      this.recordFrontContactBackfillError(message, user.id);
+    }
+  }
+
+  // Capped: a run over every contact with a systemic failure (expired token, Front outage) would
+  // otherwise accumulate one error object per user and the status response would balloon.
+  private recordFrontContactBackfillError(error: string, userId?: string): void {
+    if (this.frontContactBackfillErrors.length >= FRONT_BACKFILL_MAX_ERRORS) return;
+    this.frontContactBackfillErrors.push({ userId, error, timestamp: new Date() });
   }
 
   serializePartnersString(partnerAccesses: PartnerAccessEntity[]) {

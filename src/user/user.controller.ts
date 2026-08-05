@@ -22,6 +22,7 @@ import { FirebaseAuthGuard } from '../firebase/firebase-auth.guard';
 import { ControllerDecorator } from '../utils/controller.decorator';
 import { AdminUpdateUserDto } from './dtos/admin-update-user.dto';
 import { CreateUserDto } from './dtos/create-user.dto';
+import { FrontContactBackfillDto } from './dtos/front-contact-backfill.dto';
 import { GetUserDto } from './dtos/get-user.dto';
 import { UpdateUserDto } from './dtos/update-user.dto';
 import { UserParamDto } from './dtos/user-param.dto';
@@ -180,39 +181,58 @@ export class UserController {
     return 'ok';
   }
 
+  @ApiBearerAuth()
+  @Get('/front-contact-backfill')
+  @ApiOperation({
+    description:
+      'Status of the Front contact backfill, plus how many contacts a run would cover. ' +
+      'Poll this while a backfill is running.',
+  })
+  @UseGuards(SuperAdminAuthGuard)
+  async getFrontContactBackfillStatus() {
+    const status = this.serviceUserProfilesService.getFrontContactBackfillStatus();
+    // Counting means a join across every user, and the dashboard polls this every few seconds
+    // while a run is in progress — during a run the in-flight totals say the same thing.
+    if (status.status === 'running' && status.progress) {
+      return {
+        ...status,
+        coverage: {
+          total: status.progress.total,
+          since: status.progress.since,
+          until: status.progress.until,
+        },
+      };
+    }
+    // Idle: the count is the default full-coverage set, which is what the dashboard offers to run.
+    const coverage = await this.serviceUserProfilesService.countFrontContactBackfillUsers();
+    return { ...status, coverage };
+  }
+
   // POST rather than GET like the bulk Mailchimp routes above: this writes to thousands of Front
   // contacts and takes minutes, so it must not be triggerable by a browser prefetch or a retry.
   @ApiBearerAuth()
-  @Post('/bulk-sync-front-contacts')
+  @Post('/front-contact-backfill')
   @ApiOperation({
     description:
-      'Re-sends the complete Front custom field set for users created within a date range. ' +
-      'Backfills contacts whose datetime fields were written as ISO strings and landed on ' +
-      '01/01/1970. Idempotent — one Front API call per user, so run it a month at a time.',
+      'Starts a backfill that re-sends the complete Front custom field set for every user who ' +
+      'should have a Front contact, repairing contacts whose datetime fields were written as ' +
+      'ISO strings and landed on 01/01/1970. Defaults cover the whole contact list. Idempotent. ' +
+      'Returns immediately — poll GET /front-contact-backfill for progress.',
   })
   @UseGuards(SuperAdminAuthGuard)
-  async bulkSyncFrontContacts(
-    @Query('startDate') startDate: string,
-    @Query('endDate') endDate: string,
-    @Query('limit') limit?: string,
-  ) {
-    if (!startDate || !endDate) {
+  async startFrontContactBackfill(
+    @Body() options: FrontContactBackfillDto = {},
+  ): Promise<{ status: 'started' }> {
+    if (this.serviceUserProfilesService.isFrontContactBackfillRunning()) {
       throw new HttpException(
-        'startDate and endDate query params are required (YYYY-MM-DD)',
+        'A Front contact backfill is already in progress',
         HttpStatus.BAD_REQUEST,
       );
     }
-    let parsedLimit: number | undefined;
-    if (limit !== undefined) {
-      parsedLimit = Number(limit);
-      if (!Number.isInteger(parsedLimit) || parsedLimit < 1) {
-        throw new HttpException('limit must be a positive integer', HttpStatus.BAD_REQUEST);
-      }
-    }
-    return await this.serviceUserProfilesService.bulkSyncFrontContactCustomFields(
-      startDate,
-      endDate,
-      parsedLimit,
-    );
+    // Validate the window before detaching, so a bad date is a 400 rather than a failed run.
+    this.serviceUserProfilesService.validateFrontContactBackfillOptions(options);
+
+    this.serviceUserProfilesService.startFrontContactBackfill(options);
+    return { status: 'started' };
   }
 }
