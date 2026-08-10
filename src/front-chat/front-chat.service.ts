@@ -528,7 +528,14 @@ export class FrontChatService {
     }
   }
 
-  async updateContactCustomFields(customFields: FrontChatContactCustomFields, email: string) {
+  // syncContactList: false skips the extra GET + POST that keeps the contact on the Front contact
+  // list. Bulk backfills run over contacts that are already listed, and Front's rate limit is the
+  // binding constraint there — three calls per contact instead of one triples the run time.
+  async updateContactCustomFields(
+    customFields: FrontChatContactCustomFields,
+    email: string,
+    { syncContactList = true }: { syncContactList?: boolean } = {},
+  ) {
     if (isCypressTestEmail(email)) {
       logger.log('Skipping Front Chat contact custom fields update for Cypress test email');
       return null;
@@ -539,7 +546,7 @@ export class FrontChatService {
       const result = await frontApiRequest('PATCH', `/contacts/${contactId}`, {
         custom_fields: serializeCustomFields(customFields),
       });
-      await this.addToFrontContactList(email);
+      if (syncContactList) await this.addToFrontContactList(email);
       return result;
     } catch (error) {
       // Do NOT fall back to createContact here — it would replace the existing record with

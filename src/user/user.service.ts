@@ -31,6 +31,17 @@ export const CYPRESS_TEST_USER_EMAIL_FILTERS = [
   { email: ILike('test-%@chayn.co') },
 ];
 
+// Compares the whole calendar day, not just the day-of-month: the same date one month apart
+// (e.g. 4 July and 4 August) is a different day and must still trigger a profile sync.
+// UTC because that's the timezone last_active_at is serialised in for Front and Mailchimp.
+// TypeORM can hand back dates as strings in some query contexts — normalise both sides.
+const isSameUtcDay = (a: Date | string, b: Date | string): boolean => {
+  const aTime = new Date(a).getTime();
+  const bTime = new Date(b).getTime();
+  if (Number.isNaN(aTime) || Number.isNaN(bTime)) return false;
+  return new Date(aTime).toISOString().slice(0, 10) === new Date(bTime).toISOString().slice(0, 10);
+};
+
 @Injectable()
 export class UserService {
   private readonly logger = new Logger('UserService');
@@ -261,7 +272,7 @@ export class UserService {
       Object.keys(updateUserDto).length === 1 &&
       !!updateUserDto.lastActiveAt &&
       !!user.lastActiveAt &&
-      updateUserDto.lastActiveAt.getDate() === user.lastActiveAt.getDate()
+      isSameUtcDay(updateUserDto.lastActiveAt, user.lastActiveAt)
     ) {
       // Do nothing, prevent unnecessay updates to service profiles when last active date is same date
     } else {
