@@ -55,7 +55,7 @@ type DOMPurifyConfig = {
  * @SecureInput('text', { required: true, maxLength: 50 })
  * @SecureInput('email', { required: true })
  * @SecureInput('html', { maxLength: 5000, allowedTags: ['b', 'i', 'p'] })
- * 
+ *
  * NOTE: For database UUIDs, use @IsUUID() validation instead of @SecureInput
  */
 export function SecureInput(type: SecureInputType, options: SecureInputOptions = {}) {
@@ -100,6 +100,13 @@ function getSecureTransform(
 
   return Transform(({ value }: TransformFnParams) => {
     if (typeof value !== 'string') return value;
+
+    // Passwords are opaque secrets: never rendered as HTML and never string-concatenated into
+    // SQL (TypeORM parameterises queries), so sanitising/trimming/truncating them provides no
+    // security benefit and actively corrupts valid inputs (e.g. an HTML-like sequence would be
+    // stripped, and a trailing space silently removed). Preserve the exact submitted value so it
+    // matches at login. Length is enforced by the MaxLength validator instead of truncation.
+    if (type === 'password') return value;
 
     // Remove control characters first (C0 and C1 control characters)
     // eslint-disable-next-line no-control-regex
@@ -153,7 +160,6 @@ function getSecureTransform(
 
       case 'plaintext':
       case 'text':
-      case 'password':
         // Strip all HTML for plain text fields with maximum security
         return DOMPurify.sanitize(cleanedValue, {
           ALLOWED_TAGS: [],
@@ -216,6 +222,12 @@ function getSecureValidators(
           ...customValidation,
         }),
       );
+      break;
+
+    case 'password':
+      // Opaque secret: only the length/required checks added above apply. Do NOT run the
+      // XSS/SQL-injection matcher — it rejects perfectly valid passwords containing characters
+      // like '#', '--', '..', '||' or '&&', which was causing legitimate signups to 400.
       break;
 
     default:
@@ -316,4 +328,3 @@ function IsSecureInput(validationOptions?: ValidationOptions) {
     validationOptions,
   );
 }
-

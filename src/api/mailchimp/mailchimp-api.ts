@@ -287,10 +287,9 @@ export const sendMailchimpUserEvent = async (email: string, event: MAILCHIMP_CUS
   } catch (error) {
     // Surface status on the thrown error so callers can detect 404 (archived/missing member)
     // and recover by recreating the profile before retrying the event.
-    const apiError = new Error(
-      `Send mailchimp user event failed: ${formatMailchimpError(error)}`,
-      { cause: error },
-    ) as Error & { status?: number };
+    const apiError = new Error(`Send mailchimp user event failed: ${formatMailchimpError(error)}`, {
+      cause: error,
+    }) as Error & { status?: number };
     apiError.status = (error as { status?: number })?.status;
     throw apiError;
   }

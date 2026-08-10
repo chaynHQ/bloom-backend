@@ -33,8 +33,14 @@ describe('Ga4DataClient', () => {
     // batchRunReports.
     apiCallMock.mockResolvedValueOnce({ data: { reports: [{ rowCount: 1 }, { rowCount: 2 }] } });
     const batchResult = await client.batchRunReports([
-      { metrics: [{ name: 'eventCount' }], dateRanges: [{ startDate: '2026-04-20', endDate: '2026-04-20' }] },
-      { metrics: [{ name: 'totalUsers' }], dateRanges: [{ startDate: '2026-04-20', endDate: '2026-04-20' }] },
+      {
+        metrics: [{ name: 'eventCount' }],
+        dateRanges: [{ startDate: '2026-04-20', endDate: '2026-04-20' }],
+      },
+      {
+        metrics: [{ name: 'totalUsers' }],
+        dateRanges: [{ startDate: '2026-04-20', endDate: '2026-04-20' }],
+      },
     ]);
     expect(batchResult).toEqual([{ rowCount: 1 }, { rowCount: 2 }]);
     expect(apiCallMock).toHaveBeenLastCalledWith({

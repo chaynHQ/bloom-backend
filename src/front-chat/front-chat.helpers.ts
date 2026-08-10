@@ -90,14 +90,43 @@ export function chatClientContextToCustomFields(
   return fields;
 }
 
+// Front datetime custom fields are stored as epoch timestamps in SECONDS
+// (https://dev.frontapp.com/docs/custom-fields). Sending an ISO 8601 string makes Front
+// coerce the value to 0, which surfaces as 01/01/1970 on every contact. These keys are
+// built as ISO strings internally (Mailchimp needs that form) and converted on the way out.
+const FRONT_DATETIME_CUSTOM_FIELDS = new Set([
+  'signed_up_at',
+  'last_active_at',
+  'deleted_at',
+  'therapy_session_first_at',
+  'therapy_session_next_at',
+  'therapy_session_last_at',
+]);
+
+// Returns epoch seconds, or undefined when the value isn't a usable date — an unparseable
+// date must be omitted rather than sent, otherwise it lands as 1970 again.
+export function toFrontEpochSeconds(value: string | number | boolean): number | undefined {
+  if (typeof value === 'boolean') return undefined;
+  // Already epoch seconds — pass through so re-serialising a converted value is a no-op.
+  if (typeof value === 'number') return Number.isFinite(value) ? Math.floor(value) : undefined;
+  const ms = new Date(value).getTime();
+  return Number.isNaN(ms) ? undefined : Math.floor(ms / 1000);
+}
+
 export function serializeCustomFields(
   fields: FrontChatContactCustomFields,
 ): Record<string, string | number | boolean> {
   const serialized: Record<string, string | number | boolean> = {};
   for (const [key, value] of Object.entries(fields)) {
-    if (value !== undefined && value !== null) {
-      serialized[key] = value;
+    if (value === undefined || value === null) continue;
+
+    if (FRONT_DATETIME_CUSTOM_FIELDS.has(key)) {
+      const epochSeconds = toFrontEpochSeconds(value);
+      if (epochSeconds !== undefined) serialized[key] = epochSeconds;
+      continue;
     }
+
+    serialized[key] = value;
   }
   return serialized;
 }

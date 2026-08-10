@@ -12,11 +12,7 @@ import { ReportPeriod, ReportWindow } from './reporting.types';
  *
  * Returned `from`/`to` are UTC instants covering the entire local-TZ range.
  */
-export function computeRange(
-  period: ReportPeriod,
-  now: Date,
-  timezone: string,
-): ReportWindow {
+export function computeRange(period: ReportPeriod, now: Date, timezone: string): ReportWindow {
   const zoned = DateTime.fromJSDate(now, { zone: timezone });
   if (!zoned.isValid) {
     throw new Error(`Invalid timezone: ${timezone}`);

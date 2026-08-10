@@ -209,9 +209,11 @@ describe('PartnerAccessService', () => {
       // Mocks that the accesscode already exists
       jest.spyOn(repo, 'findOne').mockResolvedValueOnce(mockPartnerAccessEntity);
 
-      jest.spyOn(mockFrontChatService, 'updateContactCustomFields').mockImplementationOnce(async () => {
-        throw new Error('Test throw');
-      });
+      jest
+        .spyOn(mockFrontChatService, 'updateContactCustomFields')
+        .mockImplementationOnce(async () => {
+          throw new Error('Test throw');
+        });
 
       const partnerAccess = await service.assignPartnerAccess(mockUserEntity, '123456');
 
