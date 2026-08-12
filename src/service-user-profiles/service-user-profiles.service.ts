@@ -119,7 +119,9 @@ export class ServiceUserProfilesService {
       exists = await this.frontChatService.contactExists(email);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'unknown error';
-      logger.error(`getOrCreateFrontContact existence check failed for user ${user.id}: ${message}`);
+      logger.error(
+        `getOrCreateFrontContact existence check failed for user ${user.id}: ${message}`,
+      );
       return;
     }
 
@@ -144,7 +146,9 @@ export class ServiceUserProfilesService {
         logger.log(`Backfilled Front contact for user ${hydratedUser.id}`);
       } catch (error) {
         const message = error instanceof Error ? error.message : 'unknown error';
-        logger.error(`getOrCreateFrontContact create failed for user ${hydratedUser.id}: ${message}`);
+        logger.error(
+          `getOrCreateFrontContact create failed for user ${hydratedUser.id}: ${message}`,
+        );
       }
     } else {
       // Contact already exists — ensure the channel handle is present so Channel API

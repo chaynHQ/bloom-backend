@@ -13,7 +13,9 @@ export class BloomBackend1783516811780 implements MigrationInterface {
     await queryRunner.query(
       `CREATE TYPE "public"."course_themes_enum" AS ENUM('recognising-harm', 'why-harm-happens', 'body-after-trauma', 'setting-boundaries', 'healing-journey', 'staying-safe')`,
     );
-    await queryRunner.query(`ALTER TABLE "course" ADD "themes" "public"."course_themes_enum" array`);
+    await queryRunner.query(
+      `ALTER TABLE "course" ADD "themes" "public"."course_themes_enum" array`,
+    );
     await queryRunner.query(
       `CREATE TYPE "public"."resource_themes_enum" AS ENUM('recognising-harm', 'why-harm-happens', 'body-after-trauma', 'setting-boundaries', 'healing-journey', 'staying-safe')`,
     );

@@ -20,10 +20,7 @@ export class ResourceUserController {
       'Stores relationship between a `User` and `Resource` records, once a user has started a resource.',
   })
   @UseGuards(FirebaseAuthGuard)
-  async createResourceUser(
-    @Req() req: Request,
-    @Body() createResourceUserDto: ResourceUserDto,
-  ) {
+  async createResourceUser(@Req() req: Request, @Body() createResourceUserDto: ResourceUserDto) {
     return await this.resourceUserService.createResourceUser(
       req['userEntity'] as UserEntity,
       createResourceUserDto,

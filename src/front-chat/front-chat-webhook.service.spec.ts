@@ -22,7 +22,11 @@ describe('FrontChatWebhookService.handleFrontChannelOutbound', () => {
 
   const outbound = {
     type: 'message',
-    payload: { id: 'msg_1', text: 'Hi from support', recipients: [{ role: 'to', handle: 'user@example.com' }] },
+    payload: {
+      id: 'msg_1',
+      text: 'Hi from support',
+      recipients: [{ role: 'to', handle: 'user@example.com' }],
+    },
   };
 
   beforeEach(() => jest.clearAllMocks());

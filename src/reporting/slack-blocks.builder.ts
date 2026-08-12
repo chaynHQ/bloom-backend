@@ -730,13 +730,11 @@ function dbCells(
 ): GridCell[] {
   const db = payload.db;
   return keys
-    .map(
-      (key): GridCell => ({
-        label: DB_METRIC_LABELS[key],
-        value: db[key],
-        baseline: ctx.baseline?.db[key],
-      }),
-    )
+    .map((key): GridCell => ({
+      label: DB_METRIC_LABELS[key],
+      value: db[key],
+      baseline: ctx.baseline?.db[key],
+    }))
     .filter((cell) => !isFlatlineZero(cell));
 }
 
@@ -744,14 +742,12 @@ function ga4OverviewCells(payload: ReportPayload, ctx: RenderContext): GridCell[
   const ov = payload.ga4.overview;
   if ('unavailable' in ov) return [];
   return (Object.keys(GA4_OVERVIEW_LABELS) as Array<keyof Ga4OverviewMetrics>)
-    .map(
-      (key): GridCell => ({
-        label: GA4_OVERVIEW_LABELS[key],
-        value: ov[key],
-        baseline: ctx.baseline?.ga4Overview[key],
-        decimals: key === 'averageSessionDuration' ? 1 : 0,
-      }),
-    )
+    .map((key): GridCell => ({
+      label: GA4_OVERVIEW_LABELS[key],
+      value: ov[key],
+      baseline: ctx.baseline?.ga4Overview[key],
+      decimals: key === 'averageSessionDuration' ? 1 : 0,
+    }))
     .filter((cell) => !isFlatlineZero(cell));
 }
 

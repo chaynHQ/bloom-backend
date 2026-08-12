@@ -11,15 +11,19 @@ import { FrontChatScheduler } from './front-chat.scheduler';
 
 describe('FrontChatScheduler — unread notification flow', () => {
   let scheduler: FrontChatScheduler;
-  let chatUserService: jest.Mocked<Pick<
-    ChatUserService,
-    | 'getUsersWithUnreadMessages'
-    | 'markUnreadNotificationPending'
-    | 'markUnreadNotificationSent'
-    | 'markUnreadNotificationFailed'
-    | 'recoverStalePendingNotifications'
-  >>;
-  let serviceUserProfiles: jest.Mocked<Pick<ServiceUserProfilesService, 'sendMailchimpUserEventWithRecovery'>>;
+  let chatUserService: jest.Mocked<
+    Pick<
+      ChatUserService,
+      | 'getUsersWithUnreadMessages'
+      | 'markUnreadNotificationPending'
+      | 'markUnreadNotificationSent'
+      | 'markUnreadNotificationFailed'
+      | 'recoverStalePendingNotifications'
+    >
+  >;
+  let serviceUserProfiles: jest.Mocked<
+    Pick<ServiceUserProfilesService, 'sendMailchimpUserEventWithRecovery'>
+  >;
 
   const buildChatUser = (id: string): ChatUserEntity =>
     ({ id, userId: `u-${id}`, unreadNotificationAttempts: 0 }) as ChatUserEntity;
