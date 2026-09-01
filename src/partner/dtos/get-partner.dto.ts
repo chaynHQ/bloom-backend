@@ -1,6 +1,6 @@
 import { FeatureEntity } from '../../entities/feature.entity';
 
-export class GetPartnerFeatureDto {
+export class GetPartnerFeatureResponseDto {
   partnerId: string;
   featureId: string;
   feature: FeatureEntity;
@@ -11,5 +11,5 @@ export class GetPartnerDto {
   id: string;
   name: string;
   isActive: boolean;
-  partnerFeature: GetPartnerFeatureDto[];
+  partnerFeature: GetPartnerFeatureResponseDto[];
 }
