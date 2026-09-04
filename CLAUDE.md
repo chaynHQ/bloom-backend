@@ -84,3 +84,9 @@ GitHub Actions (`.github/workflows/.ci.yml`): Prettier → ESLint → Jest → b
 
 - `develop` — main integration branch; open PRs against this
 - `main` — production
+
+## Code Quality
+
+- Follow existing project structure patterns
+- Do not overly abstract
+- Do not add justification or overly verbose comments
