@@ -45,9 +45,15 @@ const DAILY_HEADLINE_KEYS: ReadonlyArray<keyof DbMetrics> = [
 ];
 
 const RESOURCE_CATEGORY_LABELS: Record<string, string> = {
+  // Legacy categories, retained until the step 7 content merge + migration.
   short_video: 'Short videos',
   single_video: 'Single videos',
   conversation: 'Conversations',
+  // Format-based categories.
+  video: 'Videos',
+  audio: 'Audio',
+  written: 'Written',
+  activity: 'Activities',
 };
 
 type Block = Record<string, unknown>;

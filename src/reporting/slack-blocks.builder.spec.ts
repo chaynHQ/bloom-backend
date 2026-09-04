@@ -277,4 +277,39 @@ describe('buildReportBlocks', () => {
       '*Foundations: S12*\\n2 started · 1 completed',
     );
   });
+
+  it('labels format-based resource categories (video/audio/written/activity)', () => {
+    const payload: ReportPayload = {
+      period: 'weekly',
+      window: baseWindow,
+      db: fullDb,
+      dbBreakdowns: {
+        ...emptyBreakdowns,
+        resources: [
+          {
+            category: 'video',
+            resourcesStarted: 4,
+            resourcesCompleted: 2,
+            resources: [{ name: 'Breathing', started: 4, completed: 2 }],
+          },
+          {
+            category: 'written',
+            resourcesStarted: 3,
+            resourcesCompleted: 1,
+            resources: [{ name: 'Journaling', started: 3, completed: 1 }],
+          },
+        ],
+      },
+      ga4: {
+        overview: unavailable('x'),
+        events: unavailable('x'),
+        breakdowns: [],
+        eventBreakdowns: [],
+      },
+      trigger: 'scheduled',
+    };
+    const serialized = JSON.stringify(buildReportBlocks(payload));
+    expect(serialized).toContain('Videos: Breathing');
+    expect(serialized).toContain('Written: Journaling');
+  });
 });
