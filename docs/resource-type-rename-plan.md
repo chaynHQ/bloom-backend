@@ -8,6 +8,26 @@
 >
 > Touches `bloom-frontend`, `bloom-backend`, Storyblok CMS, and Google Analytics 4.
 
+## Current status (2026-09-04)
+
+- **Step 1 bloom-backend code — done, not deployed.** `constants.ts`, `webhooks.service.ts`
+  (category derived + written on update for old + new components), `RESOURCE_CATEGORY_LABELS`
+  are on `resources-refactor-new-types`, tests/lint/build green. New GA event names deliberately
+  **not** added yet — `bloom-frontend` hasn't defined `RESOURCE_{VIDEO,AUDIO,WRITTEN,ACTIVITY,GROUNDING}_*`
+  anywhere, so there's nothing yet to mirror; that lands with frontend steps 5 / 7b.
+- **Step 1 Storyblok — done.** Content-team schema review complete; `01-create-blocks.mjs`
+  run against the space (components + `video/`/`audio/`/`written/`/`activity/`/`grounding-exercises/`
+  folders exist).
+- **Step 2 — in progress on bloom-frontend.** Activity stories are being created but currently
+  sit as **drafts** (not published).
+- **⚠️ Sequencing risk:** a draft doesn't call the webhook, but the moment any `resource_activity`
+  / `resource_written` story is **published** the webhook fires against whatever backend code is
+  live. Until this backend deploy ships, that's the *old* code, which doesn't recognise the new
+  components — the story publishes fine in Storyblok but gets **no** `resource` row, silently
+  (unknown components already return a 200 with no-op). Per the landmine below, `resource-user`
+  and feedback then 404 for that content with no obvious cause. **Backend must deploy before
+  step 2 publishes anything** — draft is safe, publish is not.
+
 ## End state
 
 | Today         | Component                                | Route                   | →   | Component            | Route                      | `resource.category` |
@@ -26,12 +46,11 @@ GA event prefixes become `RESOURCE_{VIDEO,AUDIO,WRITTEN,ACTIVITY,GROUNDING}_*`; 
 | #   | Decision                                                                                                                                                                                                                      |
 | --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 1   | **Gating:** per-story `login_required` boolean on every resource block, default **true**. The page component reads it and renders the preview + login overlay itself (like `shorts` today) — not `AuthGuard`, not path-based. |
-| 2   | **Grounding:** one `/grounding` page, each exercise in an overlay addressed by `?id=<slug>`. No progress, no feedback, not in the library, not in the `Format` union, no backend `resource` row.                              |
-| 3   | **Relations:** drop `related_session` + `related_course` everywhere. Keep `related_content` (video/audio/written/activity) + add `related_grounding` (grounding only).                                                        |
-| 4   | **Merge:** `resource_short_video` + `resource_single_video` → one `resource_video`. Public shorts get `login_required=false` during the move.                                                                                 |
-| 5   | **Canonical strings** `video` / `audio` / `written` / `activity` — identical in both repos, the DB column, and GA.                                                                                                            |
-| 6   | **GA:** rename events at the merge (step 7). No frontend dual-emit; `bloom-backend/reporting.events.ts` lists old + new for ~2 reporting cycles, then drops old.                                                              |
-| 7   | **Old URLs:** permanent (301) redirects.                                                                                                                                                                                      |
+| 2   | **Grounding:** one `/grounding` page, each exercise in an overlay addressed by `?id=<slug>`. No progress, no feedback, not in the library, not in the `Format` union, no backend `resource` row.                              |     |
+| 3   | **Merge:** `resource_short_video` + `resource_single_video` → one `resource_video`. Public shorts get `login_required=false` during the move.                                                                                 |
+| 4   | **Canonical strings** `video` / `audio` / `written` / `activity` — identical in both repos, the DB column, and GA.                                                                                                            |
+| 5   | **GA:** rename events at the merge (step 7). No frontend dual-emit; `bloom-backend/reporting.events.ts` lists old + new for ~2 reporting cycles, then drops old.                                                              |
+| 6   | **Old URLs:** permanent (301) redirects.                                                                                                                                                                                      |
 
 ### Needs a human
 
@@ -70,43 +89,50 @@ The rule: **a consumer is deployed before the data it reads changes; data it sto
 
 ## Step 1 — Create resource types for video, audio, written, activity, grounding
 
-**Storyblok** — `scripts/storyblok/01-create-blocks.ts` (after content-team schema review):
+**Storyblok** — `scripts/storyblok/01-create-blocks.mjs` (after content-team schema review). **Done** — dry-run by default, `--write --yes` to apply; idempotent; snapshots + manifest to `.storyblok-provision/`.
 
 - `POST /components` for:
   - `resource_video` — superset of `resource_short_video` + `resource_single_video` (`subtitle?`, `team_members_section?`, `references?` optional). Step 7 moves `shorts/*` + `videos/*` into it.
   - `resource_audio` — clone `resource_conversation`'s `schema`.
-  - `resource_written`, `resource_activity` — new.
+  - `resource_written`, `resource_activity` — clone `resource_conversation` with `audio` + `audio_transcript` replaced by a single `body` richtext field.
   - `resource_grounding` — minimal (name, description, body, languages, `included_for_partners`, seo). No relations, no gating field, no progress fields.
-- All except grounding get `login_required` (boolean, default true), `related_content`, `related_grounding`.
-- `POST /stories` with `is_folder: true` for `video/`, `audio/`, `written/`, `activity/`, `grounding/`.
-- `PUT /components/:id` on the existing three blocks: add `related_grounding`, widen `related_content` to accept `resource_activity` (step 3 populates them).
+- All except grounding get `login_required` (boolean, default true), `related_content` (widened to accept every new + old resource type on the new blocks), `related_grounding` (filtered to `resource_grounding`).
+- `POST /stories` with `is_folder: true` for `video/`, `audio/`, `written/`, `activity/`, and the grounding folder.
+  - **The grounding folder is created as `grounding-exercises/`, not `grounding/`** — the live flat `grounding` page owns that slug until step 6's post-verify delete, and Storyblok slugs are unique among siblings. Steps 2–5 select grounding content by component filter or `starts_with: 'grounding-exercises/'`; **step 5/6 renames `grounding-exercises/` → `grounding/`** once the flat page is deleted. `related_grounding` refs are by uuid, so the rename is transparent to them.
+- `PUT /components/:id` on the existing three blocks: add `related_grounding`, widen `related_content` to accept `resource_activity` (step 3 populates them). `related_exercises` / `related_session` left intact.
 - Old blocks / folders / flat pages untouched.
 
 **bloom-backend (ship before any content is published):**
 
-- `src/utils/constants.ts` — add `VIDEO/AUDIO/WRITTEN/ACTIVITY` to `RESOURCE_CATEGORIES` and `RESOURCE_{VIDEO,AUDIO,WRITTEN,ACTIVITY}` to `STORYBLOK_PAGE_COMPONENTS` (keep old members). No `RESOURCE_GROUNDING` — grounding gets no row.
-- `src/webhooks/webhooks.service.ts` `updateOrCreateStoryData` — recognise old + new resource components (not `resource_grounding`); derive `category` from the component and **write it on update, not just create** (fixes the existing insert-only bug); keep the `undefined` fall-through for everything else.
-- `src/reporting/` — add the new event names + `RESOURCE_CATEGORY_LABELS` keys alongside the old ones; update specs; regenerate snapshots and review.
-- Deploy. Verify: publish a still-old resource story → backend logs success and the `resource` row carries the derived `category`.
+- ✅ `src/utils/constants.ts` — add `VIDEO/AUDIO/WRITTEN/ACTIVITY` to `RESOURCE_CATEGORIES` and `RESOURCE_{VIDEO,AUDIO,WRITTEN,ACTIVITY}` to `STORYBLOK_PAGE_COMPONENTS` (keep old members). No `RESOURCE_GROUNDING` — grounding gets no row.
+- ✅ `src/webhooks/webhooks.service.ts` `updateOrCreateStoryData` — recognise old + new resource components (not `resource_grounding`); derive `category` from the component and **write it on update, not just create** (fixes the existing insert-only bug); keep the `undefined` fall-through for everything else.
+- ✅ `src/reporting/` — `RESOURCE_CATEGORY_LABELS` keys added alongside the old ones (specs updated). New GA **event names** deferred to whichever PR (frontend step 5, or step 7b) actually introduces the matching `RESOURCE_{VIDEO,AUDIO,WRITTEN,ACTIVITY,GROUNDING}_*` strings — nothing to mirror yet, and decision 5 puts the rename at the merge anyway.
+- ⏳ **Deploy — not yet done.** This is the current blocker for step 2 publishing anything (see Current status above). Verify once deployed: publish a still-old resource story → backend logs success and the `resource` row carries the derived `category`; publish a new `resource_activity`/`resource_written` → row created with the right `category`; publish/move a `resource_grounding` → still no row.
 
 ## Step 2 — Copy activity + grounding content into resources
 
-- `scripts/storyblok/02-copy-exercise-content.ts`: `GET` the flat `/activities` and `/grounding` stories, iterate their accordion `bloks`, and `POST /stories` one per item into `activity/` (`resource_activity`) or `grounding/` (`resource_grounding`) — **`slug` = the old accordion id verbatim** (so `?openacc=<id>` and `?id=<id>` are the same string, no per-item redirect needed) — carrying name, body, and each locale's `translated_slugs`, then `PUT ?publish=1`. Idempotent: skip a story that already exists.
+*bloom-frontend + Storyblok only — no bloom-backend code. In progress; see Current status.*
+
+- `scripts/storyblok/02-copy-exercise-content.ts`: `GET` the flat `/activities` and `/grounding` stories, iterate their accordion `bloks`, and `POST /stories` one per item into `activity/` (`resource_activity`) or `grounding-exercises/` (`resource_grounding`; renamed to `grounding/` in step 6) — **`slug` = the old accordion id verbatim** (so `?openacc=<id>` and `?id=<id>` are the same string, no per-item redirect needed) — carrying name, body, and each locale's `translated_slugs`, then `PUT ?publish=1`. Idempotent: skip a story that already exists.
 - Manifest `{ oldAccordionId, type, newSlug, newUuid }` per locale — feeds steps 3 and 5.
 - Publish in throttled batches; watch backend logs + Rollbar. Grounding produces no `resource` row (expected).
 - **Verify** every `resource_activity` story got a `resource` row (query the backend / DB by `storyblokUuid`) and re-publish any misses — `resource-user` and feedback endpoints return **404, not create-on-demand**, if the row is absent.
 
 ## Step 3 — Copy `related_exercises` references (grounding only, for now)
 
+*bloom-frontend + Storyblok only — no bloom-backend code.* The re-publishes it triggers hit the
+same `updateOrCreateStoryData` path as any other resource republish (old components, unchanged
+category) — already covered by step 1's backend code, nothing new needed here.
+
 - `scripts/storyblok/03-remap-related-exercises.ts`: for every `resource_short_video` / `resource_single_video` / `resource_conversation` story with `related_exercises`, take the `grounding-*` ids → `related_grounding` (uuids via the manifest); `PUT`.
 - **`activity-*` ids are not touched yet** — the live frontend's `related_content` renderer can't handle `resource_activity` refs until the step-6 deploy. They move into `related_content` in step 6's post-verify backfill.
 - Leave `related_exercises` in place (live frontend still reads it until the step-6 deploy). Re-publish touched stories.
 
-## Step 4 — Point the frontend at `related_grounding`, drop `related_exercises`
+## Step 4 — Point the frontend at `related_grounding`, drop `related_exercises` prop
 
 - `ResourceGroundingSection.tsx` — take `groundingIds: string[]` from `related_grounding`; drop the `grounding-`/`activity-` prefix split and `EXERCISE_CATEGORIES`; each card links `/grounding?id=<slug>`.
-- `ResourcePageLayout.tsx` — rename the `relatedExercises` prop to `relatedGrounding`; remove the `related_session` prop and the "this clip is from Session X / Course Y" block.
-- The three `StoryblokResource*Page.tsx` + `app/[locale]/{shorts,videos,conversations}/[slug]/page.tsx` — read `related_grounding`; drop `related_exercises` / `related_session` / `related_course` props and their `resolve_relations`.
+- `ResourcePageLayout.tsx` — rename the `relatedExercises` prop to `relatedGrounding`.
+- The three `StoryblokResource*Page.tsx` + `app/[locale]/{shorts,videos,conversations}/[slug]/page.tsx` — read `related_grounding`; drop `related_exercises` prop and their `resolve_relations` but keep the storyblok field in tact to support current production pages.
 - `getNextResourceButtonLabel.ts` — drop the `/conversations/` and session branches.
 - `yarn type-check && lint && test`.
 
@@ -117,7 +143,7 @@ The rule: **a consumer is deployed before the data it reads changes; data it sto
 - **Gating:** resource page reads `login_required`; when true + logged-out → preview + login overlay. Remove `video/audio/written/activity` from `AuthGuard.authenticatedPathHeads` and `libraryData.AUTHENTICATED_PATH_HEADS`; the library `requiresAccount` badge reads `login_required`.
 - Routes:
   - `app/[locale]/{written,activity}/[slug]/page.tsx` — one shape: `getStoryblokStory('<type>/${slug}')`, `resolve_relations` for `related_content` + `related_grounding`, `generateStaticParams` from `starts_with` + `published`, `titleParent` metadata. (`/audio` waits for 7a — no audio content until step 7.)
-  - `app/[locale]/grounding/page.tsx` — fetch all `resource_grounding` stories; render cards; `?id=<slug>` **and** `?openacc=<id>` (same string — step 2 set `slug` = accordion id) open the overlay; fire `RESOURCE_GROUNDING_VIEWED`.
+  - `app/[locale]/grounding/page.tsx` — fetch all `resource_grounding` stories (by component filter, **not** a folder path — the folder is still `grounding-exercises/` at this point); render cards; `?id=<slug>` **and** `?openacc=<id>` (same string — step 2 set `slug` = accordion id) open the overlay; fire `RESOURCE_GROUNDING_VIEWED`.
   - `app/[locale]/[slug]/page.tsx` `excludePaths` += `written`, `activity`, `grounding`.
 - Page components `StoryblokResource{Audio,Written,Activity}Page.tsx` on the existing redesign primitives (`ResourceHero`, `ResourcePageLayout`, `ResourceActions`, `ResourceAudioPlayer`, `ResourceMediaCard`, `ResourceCompleteCard`, `ResourceFeedbackDialog`); written + activity wire into `resource-user` progress + feedback. (Written content is authored by the content team in `written/` any time after step 1; each publish creates its `resource` row via the step-1 webhook — spot-check the row exists before relying on progress.)
 - `ResourceCarousel` / `StoryblokResourceCarousel` / `StoryblokRelatedContent` — add `resource_audio` / `resource_written` / `resource_activity` cases (their `default` silently drops the card); `included_for_partners` filter applies to all types.
@@ -133,7 +159,7 @@ The rule: **a consumer is deployed before the data it reads changes; data it sto
 - Merge steps 4–5 to `develop` → staging → run the verification checklist for written / activity / grounding → `develop` → `main`.
 - **Post-verify, only after production is confirmed green:**
   - `scripts/storyblok/03b-activities-to-related-content.ts` — append the `activity-*` refs from `related_exercises` into `related_content` (the deployed frontend now renders them); re-publish.
-  - `scripts/storyblok/04-delete-flat-pages.ts` — `DELETE /stories/:id` for the flat `grounding` + `activities` stories (now shadowed by the new route + redirect).
+  - `scripts/storyblok/04-delete-flat-pages.ts` — `DELETE /stories/:id` for the flat `grounding` + `activities` stories (now shadowed by the new route + redirect), then `PUT /stories/:id` to rename the `grounding-exercises/` folder slug → `grounding/` (uuid-stable; `related_grounding` refs unaffected). If `getLibraryStories.ts` / the grounding route switch to `starts_with: 'grounding/'`, that frontend change ships in the same deploy as the rename.
 - Confirm again in production, then start step 7.
 
 ## Step 7 — Move conversations + shorts (+ somatic videos) into audio / video
@@ -210,7 +236,6 @@ ALTER TABLE "resource" ALTER COLUMN "category" TYPE "public"."resource_category_
 - **enum value drift** — frontend `CONVERSATION='resource_conversation'` vs backend `'conversation'` vs GA `resource_conversation`; unify to `audio`.
 - **`full_slug` collisions on the video merge** — if a leaf slug exists in both `shorts/` and `videos/`, the move `PUT` is rejected. Pre-flight scan + rename-in-place before 7a (step 7 pre-flight).
 - **`resource-user` / feedback are not create-on-demand** — they 404 if no `resource` row exists for the `storyblokUuid`. Every new `resource_activity` / `resource_written` story must be confirmed to have produced a row (webhook) before it's linked anywhere users can complete it.
-- **intentional UX change** — decision 3 removes `related_session` / `related_course`, so the "this video is from Session X — continue the course" block disappears from every short and somatic video. Confirm with product; it's expected, not a regression.
 - **`ResourceCarousel` / `StoryblokRelatedContent` fail silently** — an untaught `component` renders no card (empty carousel → `<div/>`). 7a must teach the new components while keeping the old.
 - **`dynamicParams = false` + ISR on resource pages** — a moved story's old path hard-404s once its cache refreshes. Step 7a's dual-path fetch + 301s (deployed before any move) close the gap; `dynamicParams` only goes back to `false` in 7d.
 - **no sitemap generator in the repo** — `public/sitemap.xml` is hand/externally maintained; regenerate it from the 7c manifest (or find the real process) in step 7d.
