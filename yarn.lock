@@ -2255,9 +2255,9 @@
     markdown-it "^14.1.0"
 
 "@tiptap/core@^3.22.3":
-  version "3.22.5"
-  resolved "https://registry.yarnpkg.com/@tiptap/core/-/core-3.22.5.tgz#1e9757612eee9fef50678f0a45c681127b3a759f"
-  integrity sha512-L1lhWz6ujGny8LduTJ7MBWYhzigwOvfUJUrJ7IzOJSuy3+OAzisdGDD1GV7LEO/hU0Hr2Mkm1wajRIHExvS9HQ==
+  version "3.31.3"
+  resolved "https://registry.yarnpkg.com/@tiptap/core/-/core-3.31.3.tgz#97e1a5aa228ee8bce19b23d6570d4985446a0b9b"
+  integrity sha512-Cz50pvciQrxdSxgTkHOVz0uD0Yl/8Xt0QatGD6ILm47jW8EzyHR9RkUGs/D5IqzXKuVPntfw1ttaT926vXfiRg==
 
 "@tiptap/extension-blockquote@^3.22.3":
   version "3.22.5"
