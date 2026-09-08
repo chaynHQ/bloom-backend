@@ -2,7 +2,7 @@ import { PartnerAdminEntity } from 'src/entities/partner-admin.entity';
 import { PartnerEntity } from 'src/entities/partner.entity';
 import { ResourceUserEntity } from 'src/entities/resource-user.entity';
 import { IPartnerFeature } from 'src/partner-feature/partner-feature.interface';
-import { IPartner } from 'src/partner/partner.interface';
+import { GetPartnerDto } from 'src/partner/dtos/get-partner.dto';
 import { GetSubscriptionUserDto } from 'src/subscription-user/dto/get-subscription-user.dto';
 import { CourseUserEntity } from '../entities/course-user.entity';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
@@ -133,7 +133,7 @@ export const formatUserObject = (userObject: UserEntity): GetUserDto => {
   };
 };
 
-export const formatPartnerObject = (partnerObject: PartnerEntity): IPartner => {
+export const formatPartnerObject = (partnerObject: PartnerEntity): GetPartnerDto => {
   return {
     name: partnerObject.name,
     id: partnerObject.id,

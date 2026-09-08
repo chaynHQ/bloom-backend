@@ -1,4 +1,4 @@
-import { IPartner } from '../partner/partner.interface';
+import { GetPartnerDto } from '../partner/dtos/get-partner.dto';
 
 export interface IPartnerAdmin {
   id?: string;
@@ -10,5 +10,5 @@ export interface IPartnerAdmin {
 }
 
 export interface IPartnerAdminWithPartner extends IPartnerAdmin {
-  partner: IPartner;
+  partner: GetPartnerDto;
 }
