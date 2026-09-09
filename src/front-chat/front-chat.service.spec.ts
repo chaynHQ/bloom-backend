@@ -1,11 +1,14 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { load as nsfwLoad } from 'nsfwjs/core';
 import { ChatUserService } from 'src/chat-user/chat-user.service';
 import { ChatUserEntity } from 'src/entities/chat-user.entity';
 import { UserEntity } from 'src/entities/user.entity';
 import { EVENT_NAME } from 'src/event-logger/event-logger.interface';
 import { EventLoggerService } from 'src/event-logger/event-logger.service';
+import { Logger } from 'src/logger/logger';
 import { fetchFrontAttachment, FrontChatService } from './front-chat.service';
+import { ImageScanningService } from './image-scanning.service';
 
 const mockFetch = jest.fn();
 global.fetch = mockFetch;
@@ -19,6 +22,17 @@ jest.mock('src/utils/constants', () => ({
   frontChannelId: 'cha_test',
   frontContactListId: 'grp_test',
   frontSupportEmail: 'test-support@bloom.chayn.co',
+}));
+
+//TFJS // Controllable fake model —  tests classify() returns.
+const mockClassify = jest.fn();
+jest.mock('nsfwjs/core', () => ({
+  load: jest.fn().mockResolvedValue({ classify: (...args) => mockClassify(...args) }),
+}));
+jest.mock('nsfwjs/models/mobilenet_v2', () => ({ MobileNetV2Model: {} }));
+
+jest.mock('@tensorflow/tfjs-node', () => ({
+  node: { decodeImage: jest.fn(() => ({ dispose: jest.fn() })) },
 }));
 
 const buildChatUser = (overrides: Partial<ChatUserEntity> = {}): ChatUserEntity =>
@@ -64,18 +78,17 @@ describe('FrontChatService', () => {
       getChatUser: jest.fn().mockResolvedValue(null),
       updateChatUserByEmail: jest.fn().mockResolvedValue(null),
       clearConversationId: jest.fn().mockResolvedValue(undefined),
-      setLastMessageSentAt: jest
-        .fn()
-        .mockImplementation(async (chatUser, sentAt) => ({
-          ...chatUser,
-          lastMessageSentAt: sentAt,
-        })),
+      setLastMessageSentAt: jest.fn().mockImplementation(async (chatUser, sentAt) => ({
+        ...chatUser,
+        lastMessageSentAt: sentAt,
+      })),
     };
     mockUserRepository.findOneBy.mockResolvedValue(null);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         FrontChatService,
+        ImageScanningService,
         { provide: ChatUserService, useValue: chatUserService },
         { provide: EventLoggerService, useValue: eventLoggerService },
         { provide: getRepositoryToken(UserEntity), useValue: mockUserRepository },
@@ -876,6 +889,81 @@ describe('FrontChatService', () => {
       await expect(service.sendChannelAttachment(user, file)).rejects.toThrow(
         'Front attachment upload failed (413)',
       );
+    });
+
+    //IMG scan ────────────────────────────────────────
+
+    it('blocks an explicit image and never forwards it', async () => {
+      (nsfwLoad as jest.Mock).mockResolvedValue({
+        classify: (...args: unknown[]) => mockClassify(...args),
+      });
+      await (service as any).imageScanningService.onModuleInit();
+      mockClassify.mockResolvedValue([{ className: 'Porn', probability: 0.9 }]);
+
+      await expect(service.sendChannelAttachment(user, file)).rejects.toThrow();
+
+      const uploadCall = mockFetch.mock.calls.find(([, init]) => init?.body instanceof FormData);
+      expect(uploadCall).toBeUndefined();
+    });
+
+    it('raises a Rollbar alert (logger.error) when blocking', async () => {
+      (nsfwLoad as jest.Mock).mockResolvedValue({
+        classify: (...args: unknown[]) => mockClassify(...args),
+      });
+      await (service as any).imageScanningService.onModuleInit();
+      mockClassify.mockResolvedValue([{ className: 'Porn', probability: 0.9 }]);
+      const errorSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
+
+      await expect(service.sendChannelAttachment(user, file)).rejects.toThrow();
+
+      expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('Blocked explicit image'));
+      errorSpy.mockRestore();
+    });
+
+    it('notifies the agent with a thread note when blocking', async () => {
+      (nsfwLoad as jest.Mock).mockResolvedValue({
+        classify: (...args: unknown[]) => mockClassify(...args),
+      });
+      await (service as any).imageScanningService.onModuleInit();
+      mockClassify.mockResolvedValue([{ className: 'Porn', probability: 0.9 }]);
+      const noteSpy = jest.spyOn(service, 'sendChannelTextMessage').mockResolvedValue(null);
+
+      await expect(service.sendChannelAttachment(user, file)).rejects.toThrow();
+
+      expect(noteSpy).toHaveBeenCalledWith(user, expect.stringContaining('blocked'));
+    });
+
+    it('forwards a safe image normally', async () => {
+      mockClassify.mockResolvedValue([{ className: 'Neutral', probability: 0.95 }]);
+      mockFetch.mockResolvedValue({ ok: true, status: 202, json: async () => ({}) });
+
+      await service.sendChannelAttachment(user, file);
+
+      const uploadCall = mockFetch.mock.calls.find(([, init]) => init?.body instanceof FormData);
+      expect(uploadCall).toBeDefined();
+    });
+
+    it('forwards an image scoring below the threshold', async () => {
+      mockClassify.mockResolvedValue([{ className: 'Sexy', probability: 0.4 }]);
+      mockFetch.mockResolvedValue({ ok: true, status: 202, json: async () => ({}) });
+
+      await service.sendChannelAttachment(user, file);
+
+      const uploadCall = mockFetch.mock.calls.find(([, init]) => init?.body instanceof FormData);
+      expect(uploadCall).toBeDefined();
+    });
+
+    it('does not scan non-image files', async () => {
+      mockFetch.mockResolvedValue({ ok: true, status: 202, json: async () => ({}) });
+      const pdf = {
+        ...file,
+        mimetype: 'application/pdf',
+        originalname: 'doc.pdf',
+      } as Express.Multer.File;
+
+      await service.sendChannelAttachment(user, pdf);
+
+      expect(mockClassify).not.toHaveBeenCalled();
     });
   });
 });

@@ -19,11 +19,13 @@ import { SubscriptionUserService } from 'src/subscription-user/subscription-user
 import { SubscriptionService } from 'src/subscription/subscription.service';
 import { TherapySessionService } from 'src/therapy-session/therapy-session.service';
 import { UserService } from 'src/user/user.service';
+import { FrontChatWebhookService } from './front-chat-webhook.service';
 import { FrontChatController } from './front-chat.controller';
 import { FrontChatGateway } from './front-chat.gateway';
 import { FrontChatScheduler } from './front-chat.scheduler';
 import { FrontChatService } from './front-chat.service';
-import { FrontChatWebhookService } from './front-chat-webhook.service';
+
+import { ImageScanningService } from './image-scanning.service';
 
 @Module({
   imports: [
@@ -54,6 +56,7 @@ import { FrontChatWebhookService } from './front-chat-webhook.service';
     TherapySessionService,
     ZapierWebhookClient,
     SlackMessageClient,
+    ImageScanningService,
   ],
   controllers: [FrontChatController],
   exports: [FrontChatService, FrontChatGateway, FrontChatWebhookService],
