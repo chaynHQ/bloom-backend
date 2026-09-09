@@ -474,7 +474,7 @@ describe('WebhooksService', () => {
         slug: mockResourceStoryblokResult.data.story.full_slug,
         name: mockResourceStoryblokResult.data.story.name,
         category: RESOURCE_CATEGORIES.SHORT_VIDEO,
-        themes: [THEMES.RECOGNISING_HARM],
+        themes: [THEMES.RECOGNISING_ABUSE],
       };
 
       const resource = (await service.handleStoryUpdated(body)) as ResourceEntity;
