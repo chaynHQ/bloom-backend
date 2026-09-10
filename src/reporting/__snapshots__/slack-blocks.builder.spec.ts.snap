@@ -294,12 +294,12 @@ useful (3)",
   {
     "fields": [
       {
-        "text": "*Short videos: Breathing*
+        "text": "*Videos: Breathing*
 6 started · 3 completed",
         "type": "mrkdwn",
       },
       {
-        "text": "*Short videos: Grounding*
+        "text": "*Videos: Grounding*
 3 started · 2 completed",
         "type": "mrkdwn",
       },

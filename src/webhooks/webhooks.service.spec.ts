@@ -473,7 +473,7 @@ describe('WebhooksService', () => {
         status: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
         slug: mockResourceStoryblokResult.data.story.full_slug,
         name: mockResourceStoryblokResult.data.story.name,
-        category: RESOURCE_CATEGORIES.SHORT_VIDEO,
+        category: RESOURCE_CATEGORIES.VIDEO,
         themes: [THEMES.RECOGNISING_ABUSE],
       };
 
@@ -497,7 +497,7 @@ describe('WebhooksService', () => {
 
       const updatedMockResourceStoryblokResult = { ...mockResourceStoryblokResult };
       const newName = 'New resource name';
-      const newSlug = 'resources/shorts/new-resource-name';
+      const newSlug = 'video/new-resource-name';
       updatedMockResourceStoryblokResult.data.story.content.name = newName;
       updatedMockResourceStoryblokResult.data.story.full_slug = newSlug;
 
@@ -516,7 +516,7 @@ describe('WebhooksService', () => {
         status: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
         slug: newSlug,
         name: newName,
-        category: RESOURCE_CATEGORIES.SHORT_VIDEO,
+        category: RESOURCE_CATEGORIES.VIDEO,
       };
 
       const updatedResource = (await service.handleStoryUpdated(body)) as ResourceEntity;
@@ -539,7 +539,7 @@ describe('WebhooksService', () => {
 
       const updatedMockResourceStoryblokResult = { ...mockResourceStoryblokResult };
       const newName = 'New resource name';
-      const newSlug = 'resources/shorts/new-resource-name';
+      const newSlug = 'video/new-resource-name';
       updatedMockResourceStoryblokResult.data.story.content.name = newName;
       updatedMockResourceStoryblokResult.data.story.full_slug = newSlug;
 
@@ -558,7 +558,7 @@ describe('WebhooksService', () => {
         status: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
         slug: newSlug,
         name: newName,
-        category: RESOURCE_CATEGORIES.SHORT_VIDEO,
+        category: RESOURCE_CATEGORIES.VIDEO,
       };
 
       const updatedResource = (await service.handleStoryUpdated(body)) as ResourceEntity;
@@ -590,7 +590,9 @@ describe('WebhooksService', () => {
 
     it('should derive category "written" and create a resource for a resource_written story', async () => {
       const resourceSaveRepoSpy = jest.spyOn(mockedResourceRepository, 'save');
-      jest.spyOn(mockedResourceRepository, 'findOneBy').mockImplementationOnce(async () => undefined);
+      jest
+        .spyOn(mockedResourceRepository, 'findOneBy')
+        .mockImplementationOnce(async () => undefined);
 
       const storyblokResult = buildResourceStoryblokResult(
         STORYBLOK_PAGE_COMPONENTS.RESOURCE_WRITTEN,
@@ -616,12 +618,10 @@ describe('WebhooksService', () => {
 
     it('should write category on update when an existing resource changed component', async () => {
       const resourceSaveRepoSpy = jest.spyOn(mockedResourceRepository, 'save');
-      jest
-        .spyOn(mockedResourceRepository, 'findOneBy')
-        .mockImplementationOnce(async () => ({
-          ...mockResource2,
-          category: RESOURCE_CATEGORIES.SHORT_VIDEO,
-        }));
+      jest.spyOn(mockedResourceRepository, 'findOneBy').mockImplementationOnce(async () => ({
+        ...mockResource2,
+        category: RESOURCE_CATEGORIES.AUDIO,
+      }));
 
       const storyblokResult = buildResourceStoryblokResult(
         STORYBLOK_PAGE_COMPONENTS.RESOURCE_VIDEO,
@@ -647,23 +647,30 @@ describe('WebhooksService', () => {
       resourceSaveRepoSpy.mockClear();
     });
 
-    it('should not create a resource row for a resource_grounding story', async () => {
+    it('should derive category "grounding" and create a resource for a resource_grounding story', async () => {
       const resourceSaveRepoSpy = jest.spyOn(mockedResourceRepository, 'save');
+      jest
+        .spyOn(mockedResourceRepository, 'findOneBy')
+        .mockImplementationOnce(async () => undefined);
 
       const storyblokResult = buildResourceStoryblokResult(
-        'resource_grounding',
+        STORYBLOK_PAGE_COMPONENTS.RESOURCE_GROUNDING,
         'grounding/a-grounding-exercise',
+        'resourceGroundingUuid',
       );
       (apiCall as jest.Mock).mockResolvedValueOnce(storyblokResult);
 
-      const result = await service.handleStoryUpdated({
+      const resource = (await service.handleStoryUpdated({
         action: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
         full_slug: storyblokResult.data.story.full_slug,
         text: '',
-      });
+      })) as ResourceEntity;
 
-      expect(result).toBeUndefined();
-      expect(resourceSaveRepoSpy).not.toHaveBeenCalled();
+      expect(resource.category).toBe(RESOURCE_CATEGORIES.GROUNDING);
+      expect(resource.storyblokUuid).toBe('resourceGroundingUuid');
+      expect(resourceSaveRepoSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ category: RESOURCE_CATEGORIES.GROUNDING }),
+      );
 
       resourceSaveRepoSpy.mockClear();
     });
