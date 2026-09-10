@@ -186,9 +186,10 @@ export const EVENT_GROUPS: EventGroup[] = [
     topic: 'resources',
     title: 'Resource events',
     emoji: ':headphones:',
-    // shorts + somatic videos → `video`, conversations → `audio`, were merged and renamed
-    // so we keep their GA events until Jan 2027. Each item sums the new name with the pre-redesign
-    // old name(s) to keep the data continuous
+    // The video/audio resource events were renamed from shorts/single-video/conversation.
+    // GA4 keeps the old and new names as separate series, so each item sums both — the line
+    // and its baseline stay continuous across the rename. Drop the old names once no reporting
+    // window still spans the rename date (the yearly digest is the last, ~Jan 2027).
     lines: [
       {
         label: 'Videos',
@@ -641,7 +642,9 @@ export const ANOMALY_WATCHED_EVENTS: ReadonlyArray<AnomalyWatchedEvent> = [
   { event: 'SESSION_COMPLETE_ERROR', label: 'Session completion errors' },
   { event: 'RESOURCE_VIDEO_COMPLETE_ERROR', label: 'Video completion errors' },
   { event: 'RESOURCE_AUDIO_COMPLETE_ERROR', label: 'Audio completion errors' },
-  // Legacy names — watched separately (per-event baseline variance matters here); drop in step 8.
+  // Pre-rename names, watched separately — per-event baseline variance matters for anomaly
+  // scoring, so these aren't summed into the two above. Remove alongside the summed old names
+  // in EVENT_GROUPS once GA history no longer spans the rename (~Jan 2027).
   { event: 'RESOURCE_CONVERSATION_COMPLETE_ERROR', label: 'Conversation completion errors' },
   { event: 'RESOURCE_SHORT_VIDEO_COMPLETE_ERROR', label: 'Short video completion errors' },
   { event: 'RESOURCE_SINGLE_VIDEO_COMPLETE_ERROR', label: 'Single video completion errors' },

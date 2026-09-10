@@ -497,7 +497,7 @@ describe('WebhooksService', () => {
 
       const updatedMockResourceStoryblokResult = { ...mockResourceStoryblokResult };
       const newName = 'New resource name';
-      const newSlug = 'resources/shorts/new-resource-name';
+      const newSlug = 'video/new-resource-name';
       updatedMockResourceStoryblokResult.data.story.content.name = newName;
       updatedMockResourceStoryblokResult.data.story.full_slug = newSlug;
 
@@ -539,7 +539,7 @@ describe('WebhooksService', () => {
 
       const updatedMockResourceStoryblokResult = { ...mockResourceStoryblokResult };
       const newName = 'New resource name';
-      const newSlug = 'resources/shorts/new-resource-name';
+      const newSlug = 'video/new-resource-name';
       updatedMockResourceStoryblokResult.data.story.content.name = newName;
       updatedMockResourceStoryblokResult.data.story.full_slug = newSlug;
 
