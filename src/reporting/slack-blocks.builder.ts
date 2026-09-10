@@ -1,6 +1,6 @@
 import { DateTime } from 'luxon';
 import { SLACK_BLOCK_SAFETY_MARGIN } from './reporting.constants';
-import { EVENT_GROUPS, EventLine, EventTopic } from './reporting.events';
+import { EVENT_GROUPS, EventLine, EventTopic, toEventNames } from './reporting.events';
 import {
   Anomaly,
   BaselineStat,
@@ -437,14 +437,13 @@ function analyticsEventsBlocks(topic: EventTopic, ga4: Ga4Metrics, ctx: RenderCo
     for (const line of group.lines) {
       const lineCounts = line.items.map((item) => ({
         label: item.label,
-        event: item.event,
-        count: counts.get(item.event) ?? 0,
+        count: toEventNames(item.event).reduce((sum, name) => sum + (counts.get(name) ?? 0), 0),
       }));
       const nonZero = lineCounts.filter((i) => i.count > 0);
       if (nonZero.length === 0) continue;
 
       const baseline = sumLineBaseline(
-        line.items.map((i) => i.event),
+        line.items.flatMap((i) => toEventNames(i.event)),
         eventBaselines,
       );
       const subline = buildEventBreakdownSubline(line, breakdownIdx);

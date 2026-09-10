@@ -6,9 +6,15 @@
  */
 
 interface EventItem {
-  event: string;
+  /** One GA4 event name, or several whose counts are summed into this item —
+   *  used to fold a renamed event's old + new names into one continuous line. */
+  event: string | string[];
   label: string;
 }
+
+/** Normalise an `EventItem['event']` to a list. */
+export const toEventNames = (event: string | string[]): string[] =>
+  Array.isArray(event) ? event : [event];
 
 /** `breakdownParam` adds an inline "by X: A (n), B (n), C (n)" sub-line
  *  from a GA4 custom dimension. The dimension must exist in GA4. */
@@ -180,22 +186,51 @@ export const EVENT_GROUPS: EventGroup[] = [
     topic: 'resources',
     title: 'Resource events',
     emoji: ':headphones:',
-    // Legacy short/single/conversation lines kept for the GA transition window; drop in step 8.
+    // Step 7 merged shorts + somatic videos → `video` and conversations → `audio` and
+    // renamed their GA events. Each item sums the new name with the old name(s) so the
+    // line stays continuous across the cutover; drop the old names in step 8.
     lines: [
       {
         label: 'Videos',
         items: [
-          { event: 'RESOURCE_VIDEO_VIEWED', label: 'viewed' },
-          { event: 'RESOURCE_VIDEO_VIDEO_STARTED', label: 'started' },
-          { event: 'RESOURCE_VIDEO_VIDEO_FINISHED', label: 'finished' },
+          {
+            event: [
+              'RESOURCE_VIDEO_VIEWED',
+              'RESOURCE_SHORT_VIDEO_VIEWED',
+              'RESOURCE_SINGLE_VIDEO_VIEWED',
+            ],
+            label: 'viewed',
+          },
+          {
+            event: [
+              'RESOURCE_VIDEO_STARTED',
+              'RESOURCE_SHORT_VIDEO_STARTED',
+              'RESOURCE_SINGLE_VIDEO_VIDEO_STARTED',
+            ],
+            label: 'started',
+          },
+          {
+            event: [
+              'RESOURCE_VIDEO_FINISHED',
+              'RESOURCE_SHORT_VIDEO_FINISHED',
+              'RESOURCE_SINGLE_VIDEO_VIDEO_FINISHED',
+            ],
+            label: 'finished',
+          },
         ],
       },
       {
         label: 'Audio',
         items: [
-          { event: 'RESOURCE_AUDIO_VIEWED', label: 'viewed' },
-          { event: 'RESOURCE_AUDIO_AUDIO_STARTED', label: 'audio started' },
-          { event: 'RESOURCE_AUDIO_AUDIO_FINISHED', label: 'audio finished' },
+          { event: ['RESOURCE_AUDIO_VIEWED', 'RESOURCE_CONVERSATION_VIEWED'], label: 'viewed' },
+          {
+            event: ['RESOURCE_AUDIO_STARTED', 'RESOURCE_CONVERSATION_AUDIO_STARTED'],
+            label: 'audio started',
+          },
+          {
+            event: ['RESOURCE_AUDIO_FINISHED', 'RESOURCE_CONVERSATION_AUDIO_FINISHED'],
+            label: 'audio finished',
+          },
         ],
       },
       {
@@ -221,33 +256,14 @@ export const EVENT_GROUPS: EventGroup[] = [
       {
         label: 'Resource → session navigation',
         items: [
-          { event: 'RESOURCE_VIDEO_VISIT_SESSION', label: 'from video' },
-          { event: 'RESOURCE_SHORT_VIDEO_VISIT_SESSION', label: 'from short' },
-          { event: 'RESOURCE_SINGLE_VIDEO_VISIT_SESSION', label: 'from single' },
-        ],
-      },
-      {
-        label: 'Conversations (legacy)',
-        items: [
-          { event: 'RESOURCE_CONVERSATION_VIEWED', label: 'viewed' },
-          { event: 'RESOURCE_CONVERSATION_AUDIO_STARTED', label: 'audio started' },
-          { event: 'RESOURCE_CONVERSATION_AUDIO_FINISHED', label: 'audio finished' },
-        ],
-      },
-      {
-        label: 'Short videos (legacy)',
-        items: [
-          { event: 'RESOURCE_SHORT_VIDEO_VIEWED', label: 'viewed' },
-          { event: 'RESOURCE_SHORT_VIDEO_STARTED', label: 'started' },
-          { event: 'RESOURCE_SHORT_VIDEO_FINISHED', label: 'finished' },
-        ],
-      },
-      {
-        label: 'Single videos (legacy)',
-        items: [
-          { event: 'RESOURCE_SINGLE_VIDEO_VIEWED', label: 'viewed' },
-          { event: 'RESOURCE_SINGLE_VIDEO_VIDEO_STARTED', label: 'started' },
-          { event: 'RESOURCE_SINGLE_VIDEO_VIDEO_FINISHED', label: 'finished' },
+          {
+            event: [
+              'RESOURCE_VIDEO_VISIT_SESSION',
+              'RESOURCE_SHORT_VIDEO_VISIT_SESSION',
+              'RESOURCE_SINGLE_VIDEO_VISIT_SESSION',
+            ],
+            label: 'from video',
+          },
         ],
       },
     ],
@@ -501,20 +517,34 @@ export const EVENT_GROUPS: EventGroup[] = [
       {
         label: 'Resource errors',
         items: [
-          { event: 'RESOURCE_VIDEO_STARTED_ERROR', label: 'video start' },
-          { event: 'RESOURCE_VIDEO_COMPLETE_ERROR', label: 'video complete' },
-          { event: 'RESOURCE_AUDIO_STARTED_ERROR', label: 'audio start' },
-          { event: 'RESOURCE_AUDIO_COMPLETE_ERROR', label: 'audio complete' },
+          {
+            event: [
+              'RESOURCE_VIDEO_STARTED_ERROR',
+              'RESOURCE_SHORT_VIDEO_STARTED_ERROR',
+              'RESOURCE_SINGLE_VIDEO_STARTED_ERROR',
+            ],
+            label: 'video start',
+          },
+          {
+            event: [
+              'RESOURCE_VIDEO_COMPLETE_ERROR',
+              'RESOURCE_SHORT_VIDEO_COMPLETE_ERROR',
+              'RESOURCE_SINGLE_VIDEO_COMPLETE_ERROR',
+            ],
+            label: 'video complete',
+          },
+          {
+            event: ['RESOURCE_AUDIO_STARTED_ERROR', 'RESOURCE_CONVERSATION_STARTED_ERROR'],
+            label: 'audio start',
+          },
+          {
+            event: ['RESOURCE_AUDIO_COMPLETE_ERROR', 'RESOURCE_CONVERSATION_COMPLETE_ERROR'],
+            label: 'audio complete',
+          },
           { event: 'RESOURCE_WRITTEN_STARTED_ERROR', label: 'written start' },
           { event: 'RESOURCE_WRITTEN_COMPLETE_ERROR', label: 'written complete' },
           { event: 'RESOURCE_ACTIVITY_STARTED_ERROR', label: 'activity start' },
           { event: 'RESOURCE_ACTIVITY_COMPLETE_ERROR', label: 'activity complete' },
-          { event: 'RESOURCE_CONVERSATION_STARTED_ERROR', label: 'conv start' },
-          { event: 'RESOURCE_CONVERSATION_COMPLETE_ERROR', label: 'conv complete' },
-          { event: 'RESOURCE_SHORT_VIDEO_STARTED_ERROR', label: 'short start' },
-          { event: 'RESOURCE_SHORT_VIDEO_COMPLETE_ERROR', label: 'short complete' },
-          { event: 'RESOURCE_SINGLE_VIDEO_STARTED_ERROR', label: 'single start' },
-          { event: 'RESOURCE_SINGLE_VIDEO_COMPLETE_ERROR', label: 'single complete' },
         ],
       },
       {
@@ -577,7 +607,9 @@ let _renderedNames: Set<string> | null = null;
 export function renderedEventNames(): ReadonlySet<string> {
   if (_renderedNames) return _renderedNames;
   const set = new Set<string>();
-  for (const g of EVENT_GROUPS) for (const l of g.lines) for (const i of l.items) set.add(i.event);
+  for (const g of EVENT_GROUPS)
+    for (const l of g.lines)
+      for (const i of l.items) for (const name of toEventNames(i.event)) set.add(name);
   _renderedNames = set;
   return set;
 }
@@ -605,6 +637,7 @@ export const ANOMALY_WATCHED_EVENTS: ReadonlyArray<AnomalyWatchedEvent> = [
   { event: 'SESSION_COMPLETE_ERROR', label: 'Session completion errors' },
   { event: 'RESOURCE_VIDEO_COMPLETE_ERROR', label: 'Video completion errors' },
   { event: 'RESOURCE_AUDIO_COMPLETE_ERROR', label: 'Audio completion errors' },
+  // Legacy names — watched separately (per-event baseline variance matters here); drop in step 8.
   { event: 'RESOURCE_CONVERSATION_COMPLETE_ERROR', label: 'Conversation completion errors' },
   { event: 'RESOURCE_SHORT_VIDEO_COMPLETE_ERROR', label: 'Short video completion errors' },
   { event: 'RESOURCE_SINGLE_VIDEO_COMPLETE_ERROR', label: 'Single video completion errors' },

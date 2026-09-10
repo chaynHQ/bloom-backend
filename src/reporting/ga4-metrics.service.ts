@@ -3,7 +3,7 @@ import { DateTime } from 'luxon';
 import { Ga4DataClient } from 'src/api/ga4/ga4-data.client';
 import { Ga4RunReportRequest, Ga4RunReportResponse } from 'src/api/ga4/ga4.types';
 import { Logger } from 'src/logger/logger';
-import { BREAKDOWNS, EVENT_GROUPS, EventLine } from './reporting.events';
+import { BREAKDOWNS, EVENT_GROUPS, EventLine, toEventNames } from './reporting.events';
 import {
   Ga4Breakdown,
   Ga4EventBreakdown,
@@ -148,7 +148,7 @@ export class Ga4MetricsService {
       dimensionFilter: {
         filter: {
           fieldName: 'eventName',
-          inListFilter: { values: line.items.map((i) => i.event) },
+          inListFilter: { values: line.items.flatMap((i) => toEventNames(i.event)) },
         },
       },
     }));

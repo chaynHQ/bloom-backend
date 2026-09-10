@@ -138,6 +138,30 @@ describe('buildReportBlocks', () => {
     expect(buildReportBlocks(payload)).toMatchSnapshot();
   });
 
+  it('sums a renamed event across its old + new names into one resource line', () => {
+    const serialized = JSON.stringify(
+      buildReportBlocks({
+        period: 'weekly',
+        window: baseWindow,
+        db: fullDb,
+        dbBreakdowns: emptyBreakdowns,
+        ga4: {
+          overview: unavailable('x'),
+          // "viewed" spans the new + both legacy video names; they must add to 30.
+          events: [
+            { eventName: 'RESOURCE_VIDEO_VIEWED', eventCount: 12, totalUsers: 10 },
+            { eventName: 'RESOURCE_SHORT_VIDEO_VIEWED', eventCount: 10, totalUsers: 8 },
+            { eventName: 'RESOURCE_SINGLE_VIDEO_VIEWED', eventCount: 8, totalUsers: 6 },
+          ],
+          breakdowns: [],
+          eventBreakdowns: [],
+        },
+        trigger: 'scheduled',
+      }),
+    );
+    expect(serialized).toContain('*Videos*\\nviewed (30)');
+  });
+
   it('daily renders the lighter snapshot title, trims headline to 6 cells, and drops per-topic replies', () => {
     const blocks = buildReportBlocks({
       period: 'daily',
