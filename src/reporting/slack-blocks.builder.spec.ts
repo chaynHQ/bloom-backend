@@ -75,7 +75,7 @@ describe('buildReportBlocks', () => {
         ],
         resources: [
           {
-            category: 'short_video',
+            category: 'video',
             resourcesStarted: 9,
             resourcesCompleted: 5,
             resources: [

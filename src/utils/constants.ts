@@ -16,16 +16,13 @@ export enum SIGNUP_TYPE {
   PARTNER_USER_WITHOUT_CODE = 'PARTNER_USER_WITHOUT_CODE',
 }
 
+// Canonical strings shared with bloom-frontend, GA, and the resource_category_enum PG type.
 export enum RESOURCE_CATEGORIES {
-  // Legacy categories, retained until the step 7 content merge + migration.
-  SHORT_VIDEO = 'short_video',
-  SINGLE_VIDEO = 'single_video',
-  CONVERSATION = 'conversation',
-  // Format-based categories. Canonical strings shared with bloom-frontend and GA.
   VIDEO = 'video',
   AUDIO = 'audio',
   WRITTEN = 'written',
   ACTIVITY = 'activity',
+  GROUNDING = 'grounding',
 }
 
 export enum STORYBLOK_PAGE_COMPONENTS {
@@ -39,6 +36,7 @@ export enum STORYBLOK_PAGE_COMPONENTS {
   RESOURCE_AUDIO = 'resource_audio',
   RESOURCE_WRITTEN = 'resource_written',
   RESOURCE_ACTIVITY = 'resource_activity',
+  RESOURCE_GROUNDING = 'resource_grounding',
   MEET_THE_TEAM = 'meet_the_team',
   WELCOME = 'Welcome',
   PAGE = 'page',

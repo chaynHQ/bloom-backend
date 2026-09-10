@@ -54,6 +54,7 @@ const RESOURCE_CATEGORY_LABELS: Record<string, string> = {
   audio: 'Audio',
   written: 'Written',
   activity: 'Activities',
+  grounding: 'Grounding',
 };
 
 type Block = Record<string, unknown>;

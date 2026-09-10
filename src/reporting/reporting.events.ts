@@ -180,9 +180,54 @@ export const EVENT_GROUPS: EventGroup[] = [
     topic: 'resources',
     title: 'Resource events',
     emoji: ':headphones:',
+    // Legacy short/single/conversation lines kept for the GA transition window; drop in step 8.
     lines: [
       {
-        label: 'Conversations',
+        label: 'Videos',
+        items: [
+          { event: 'RESOURCE_VIDEO_VIEWED', label: 'viewed' },
+          { event: 'RESOURCE_VIDEO_VIDEO_STARTED', label: 'started' },
+          { event: 'RESOURCE_VIDEO_VIDEO_FINISHED', label: 'finished' },
+        ],
+      },
+      {
+        label: 'Audio',
+        items: [
+          { event: 'RESOURCE_AUDIO_VIEWED', label: 'viewed' },
+          { event: 'RESOURCE_AUDIO_AUDIO_STARTED', label: 'audio started' },
+          { event: 'RESOURCE_AUDIO_AUDIO_FINISHED', label: 'audio finished' },
+        ],
+      },
+      {
+        label: 'Written',
+        items: [
+          { event: 'RESOURCE_WRITTEN_VIEWED', label: 'viewed' },
+          { event: 'RESOURCE_WRITTEN_STARTED_SUCCESS', label: 'started' },
+          { event: 'RESOURCE_WRITTEN_COMPLETE_SUCCESS', label: 'completed' },
+        ],
+      },
+      {
+        label: 'Activities',
+        items: [
+          { event: 'RESOURCE_ACTIVITY_VIEWED', label: 'viewed' },
+          { event: 'RESOURCE_ACTIVITY_STARTED_SUCCESS', label: 'started' },
+          { event: 'RESOURCE_ACTIVITY_COMPLETE_SUCCESS', label: 'completed' },
+        ],
+      },
+      {
+        label: 'Grounding',
+        items: [{ event: 'RESOURCE_GROUNDING_VIEWED', label: 'viewed' }],
+      },
+      {
+        label: 'Resource → session navigation',
+        items: [
+          { event: 'RESOURCE_VIDEO_VISIT_SESSION', label: 'from video' },
+          { event: 'RESOURCE_SHORT_VIDEO_VISIT_SESSION', label: 'from short' },
+          { event: 'RESOURCE_SINGLE_VIDEO_VISIT_SESSION', label: 'from single' },
+        ],
+      },
+      {
+        label: 'Conversations (legacy)',
         items: [
           { event: 'RESOURCE_CONVERSATION_VIEWED', label: 'viewed' },
           { event: 'RESOURCE_CONVERSATION_AUDIO_STARTED', label: 'audio started' },
@@ -190,7 +235,7 @@ export const EVENT_GROUPS: EventGroup[] = [
         ],
       },
       {
-        label: 'Short videos',
+        label: 'Short videos (legacy)',
         items: [
           { event: 'RESOURCE_SHORT_VIDEO_VIEWED', label: 'viewed' },
           { event: 'RESOURCE_SHORT_VIDEO_STARTED', label: 'started' },
@@ -198,18 +243,11 @@ export const EVENT_GROUPS: EventGroup[] = [
         ],
       },
       {
-        label: 'Single videos',
+        label: 'Single videos (legacy)',
         items: [
           { event: 'RESOURCE_SINGLE_VIDEO_VIEWED', label: 'viewed' },
           { event: 'RESOURCE_SINGLE_VIDEO_VIDEO_STARTED', label: 'started' },
           { event: 'RESOURCE_SINGLE_VIDEO_VIDEO_FINISHED', label: 'finished' },
-        ],
-      },
-      {
-        label: 'Resource → session navigation',
-        items: [
-          { event: 'RESOURCE_SHORT_VIDEO_VISIT_SESSION', label: 'from short' },
-          { event: 'RESOURCE_SINGLE_VIDEO_VISIT_SESSION', label: 'from single' },
         ],
       },
     ],
@@ -463,6 +501,14 @@ export const EVENT_GROUPS: EventGroup[] = [
       {
         label: 'Resource errors',
         items: [
+          { event: 'RESOURCE_VIDEO_STARTED_ERROR', label: 'video start' },
+          { event: 'RESOURCE_VIDEO_COMPLETE_ERROR', label: 'video complete' },
+          { event: 'RESOURCE_AUDIO_STARTED_ERROR', label: 'audio start' },
+          { event: 'RESOURCE_AUDIO_COMPLETE_ERROR', label: 'audio complete' },
+          { event: 'RESOURCE_WRITTEN_STARTED_ERROR', label: 'written start' },
+          { event: 'RESOURCE_WRITTEN_COMPLETE_ERROR', label: 'written complete' },
+          { event: 'RESOURCE_ACTIVITY_STARTED_ERROR', label: 'activity start' },
+          { event: 'RESOURCE_ACTIVITY_COMPLETE_ERROR', label: 'activity complete' },
           { event: 'RESOURCE_CONVERSATION_STARTED_ERROR', label: 'conv start' },
           { event: 'RESOURCE_CONVERSATION_COMPLETE_ERROR', label: 'conv complete' },
           { event: 'RESOURCE_SHORT_VIDEO_STARTED_ERROR', label: 'short start' },
@@ -557,6 +603,8 @@ export const ANOMALY_WATCHED_EVENTS: ReadonlyArray<AnomalyWatchedEvent> = [
   { event: 'RESET_PASSWORD_ERROR', label: 'Password reset errors' },
   { event: 'SESSION_STARTED_ERROR', label: 'Session start errors' },
   { event: 'SESSION_COMPLETE_ERROR', label: 'Session completion errors' },
+  { event: 'RESOURCE_VIDEO_COMPLETE_ERROR', label: 'Video completion errors' },
+  { event: 'RESOURCE_AUDIO_COMPLETE_ERROR', label: 'Audio completion errors' },
   { event: 'RESOURCE_CONVERSATION_COMPLETE_ERROR', label: 'Conversation completion errors' },
   { event: 'RESOURCE_SHORT_VIDEO_COMPLETE_ERROR', label: 'Short video completion errors' },
   { event: 'RESOURCE_SINGLE_VIDEO_COMPLETE_ERROR', label: 'Single video completion errors' },

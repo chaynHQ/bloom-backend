@@ -29,6 +29,8 @@ export class ResourceEntity extends BaseBloomEntity {
   themes: THEMES[];
 
   @Column({
+    type: 'enum',
+    enum: RESOURCE_CATEGORIES,
     nullable: false,
   })
   category: RESOURCE_CATEGORIES;
