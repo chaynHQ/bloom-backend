@@ -186,9 +186,9 @@ export const EVENT_GROUPS: EventGroup[] = [
     topic: 'resources',
     title: 'Resource events',
     emoji: ':headphones:',
-    // Step 7 merged shorts + somatic videos → `video` and conversations → `audio` and
-    // renamed their GA events. Each item sums the new name with the old name(s) so the
-    // line stays continuous across the cutover; drop the old names in step 8.
+    // shorts + somatic videos → `video`, conversations → `audio`, were merged and renamed
+    // so we keep their GA events until Jan 2027. Each item sums the new name with the pre-redesign
+    // old name(s) to keep the data continuous
     lines: [
       {
         label: 'Videos',
@@ -263,6 +263,10 @@ export const EVENT_GROUPS: EventGroup[] = [
               'RESOURCE_SINGLE_VIDEO_VISIT_SESSION',
             ],
             label: 'from video',
+          },
+          {
+            event: ['RESOURCE_AUDIO_VISIT_SESSION', 'RESOURCE_CONVERSATION_VISIT_SESSION'],
+            label: 'from audio',
           },
         ],
       },

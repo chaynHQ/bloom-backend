@@ -16,4 +16,10 @@ describe('reporting.events', () => {
     expect(names.has('RESOURCE_AUDIO_STARTED')).toBe(true);
     expect(names.has('RESOURCE_CONVERSATION_AUDIO_STARTED')).toBe(true);
   });
+
+  it('does not carry the transient double-word names from the redesign→7a-fix window', () => {
+    const names = renderedEventNames();
+    expect(names.has('RESOURCE_AUDIO_AUDIO_STARTED')).toBe(false);
+    expect(names.has('RESOURCE_VIDEO_VIDEO_STARTED')).toBe(false);
+  });
 });
