@@ -37,6 +37,17 @@ import { MailchimpWebhookDto } from './dto/mailchimp-webhook.dto';
 import { SimplybookNotificationType, SimplybookWebhookDto } from './dto/simplybook-webhook.dto';
 import { StoryWebhookDto } from './dto/story.dto';
 
+// Storyblok resource page components that sync to a `resource` row, mapped to the `category` they derive.
+const RESOURCE_COMPONENT_CATEGORIES: Partial<
+  Record<STORYBLOK_PAGE_COMPONENTS, RESOURCE_CATEGORIES>
+> = {
+  [STORYBLOK_PAGE_COMPONENTS.RESOURCE_VIDEO]: RESOURCE_CATEGORIES.VIDEO,
+  [STORYBLOK_PAGE_COMPONENTS.RESOURCE_AUDIO]: RESOURCE_CATEGORIES.AUDIO,
+  [STORYBLOK_PAGE_COMPONENTS.RESOURCE_WRITTEN]: RESOURCE_CATEGORIES.WRITTEN,
+  [STORYBLOK_PAGE_COMPONENTS.RESOURCE_ACTIVITY]: RESOURCE_CATEGORIES.ACTIVITY,
+  [STORYBLOK_PAGE_COMPONENTS.RESOURCE_GROUNDING]: RESOURCE_CATEGORIES.GROUNDING,
+};
+
 @Injectable()
 export class WebhooksService {
   private readonly logger = new Logger('WebhooksService');
@@ -484,23 +495,16 @@ export class WebhooksService {
     }; // includes storyblok id and uuid for new stories only
 
     try {
-      if (
-        storyPageComponent === STORYBLOK_PAGE_COMPONENTS.RESOURCE_SHORT_VIDEO ||
-        storyPageComponent === STORYBLOK_PAGE_COMPONENTS.RESOURCE_CONVERSATION ||
-        storyPageComponent === STORYBLOK_PAGE_COMPONENTS.RESOURCE_SINGLE_VIDEO
-      ) {
-        const resourceCategory =
-          storyPageComponent === STORYBLOK_PAGE_COMPONENTS.RESOURCE_SHORT_VIDEO
-            ? RESOURCE_CATEGORIES.SHORT_VIDEO
-            : storyPageComponent === STORYBLOK_PAGE_COMPONENTS.RESOURCE_SINGLE_VIDEO
-              ? RESOURCE_CATEGORIES.SINGLE_VIDEO
-              : RESOURCE_CATEGORIES.CONVERSATION;
+      const resourceCategory = RESOURCE_COMPONENT_CATEGORIES[storyPageComponent];
 
+      if (resourceCategory) {
         const existingResource = await this.resourceRepository.findOneBy({
           storyblokUuid: storyData.uuid,
         });
+        // `category` is written on update as well as create, so a story that
+        // switched component doesn't keep a stale category.
         const data = existingResource
-          ? { ...existingResource, ...updatedStoryData }
+          ? { ...existingResource, ...updatedStoryData, category: resourceCategory }
           : { ...newStoryData, category: resourceCategory };
 
         const resource = await this.resourceRepository.save(data);

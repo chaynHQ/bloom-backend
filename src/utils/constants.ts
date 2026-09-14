@@ -16,19 +16,24 @@ export enum SIGNUP_TYPE {
   PARTNER_USER_WITHOUT_CODE = 'PARTNER_USER_WITHOUT_CODE',
 }
 
+// Canonical strings shared with bloom-frontend, GA, and the resource_category_enum PG type.
 export enum RESOURCE_CATEGORIES {
-  SHORT_VIDEO = 'short_video',
-  SINGLE_VIDEO = 'single_video',
-  CONVERSATION = 'conversation',
+  VIDEO = 'video',
+  AUDIO = 'audio',
+  WRITTEN = 'written',
+  ACTIVITY = 'activity',
+  GROUNDING = 'grounding',
 }
 
 export enum STORYBLOK_PAGE_COMPONENTS {
   COURSE = 'Course',
   SESSION = 'Session',
   SESSION_IBA = 'session_iba',
-  RESOURCE_SINGLE_VIDEO = 'resource_single_video',
-  RESOURCE_SHORT_VIDEO = 'resource_short_video',
-  RESOURCE_CONVERSATION = 'resource_conversation',
+  RESOURCE_VIDEO = 'resource_video',
+  RESOURCE_AUDIO = 'resource_audio',
+  RESOURCE_WRITTEN = 'resource_written',
+  RESOURCE_ACTIVITY = 'resource_activity',
+  RESOURCE_GROUNDING = 'resource_grounding',
   MEET_THE_TEAM = 'meet_the_team',
   WELCOME = 'Welcome',
   PAGE = 'page',
@@ -44,8 +49,8 @@ export enum STORYBLOK_STORY_STATUS_ENUM {
 // The library theme a course/session/resource belongs to. Mirrors the `themes` datasource in
 // Storyblok (each story carries a `theme` value matching one of these).
 export enum THEMES {
-  RECOGNISING_HARM = 'recognising-harm',
-  WHY_HARM_HAPPENS = 'why-harm-happens',
+  RECOGNISING_ABUSE = 'recognising-abuse',
+  WHY_ABUSE_HAPPENS = 'why-abuse-happens',
   BODY_AFTER_TRAUMA = 'body-after-trauma',
   SETTING_BOUNDARIES = 'setting-boundaries',
   HEALING_JOURNEY = 'healing-journey',
