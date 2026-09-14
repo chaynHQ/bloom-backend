@@ -108,7 +108,12 @@ describe('PartnerService', () => {
 
     it('when supplied with multiple fields including active should update all fields and cascade to admins and access', async () => {
       jest.spyOn(mockPartnerRepository, 'save').mockImplementationOnce(() => {
-        return Promise.resolve({ ...mockPartnerEntity, logo: 'logo.png', website: 'https://example.com', isActive: false });
+        return Promise.resolve({
+          ...mockPartnerEntity,
+          logo: 'logo.png',
+          website: 'https://example.com',
+          isActive: false,
+        });
       });
 
       jest.spyOn(mockPartnerAccessRepository, 'createQueryBuilder').mockImplementationOnce(
@@ -137,7 +142,12 @@ describe('PartnerService', () => {
       });
       expect(mockPartnerAdminRepository.createQueryBuilder).toHaveBeenCalled();
       expect(mockPartnerAccessRepository.createQueryBuilder).toHaveBeenCalled();
-      expect(response).toMatchObject({ ...mockPartnerEntity, logo: 'logo.png', website: 'https://example.com', isActive: false });
+      expect(response).toMatchObject({
+        ...mockPartnerEntity,
+        logo: 'logo.png',
+        website: 'https://example.com',
+        isActive: false,
+      });
     });
 
     it('when supplied with partial fields should preserve existing values for unprovided fields', async () => {
@@ -153,7 +163,10 @@ describe('PartnerService', () => {
         ...mockPartnerEntity,
         logo: 'new-logo.png',
       });
-      expect(response).toMatchObject({ isActive: mockPartnerEntity.isActive, logo: 'new-logo.png' });
+      expect(response).toMatchObject({
+        isActive: mockPartnerEntity.isActive,
+        logo: 'new-logo.png',
+      });
       expect(mockPartnerAdminRepository.createQueryBuilder).not.toHaveBeenCalled();
       expect(mockPartnerAccessRepository.createQueryBuilder).not.toHaveBeenCalled();
     });

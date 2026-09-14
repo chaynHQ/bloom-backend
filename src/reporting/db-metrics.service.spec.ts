@@ -152,9 +152,7 @@ describe('DbMetricsService', () => {
       qbStub([{ courseName: 'Foundations', started: '5', completed: '2' }]),
     );
     (repos.resourceUser.createQueryBuilder as unknown as jest.Mock).mockReturnValue(
-      qbStub([
-        { category: 'short_video', resourceName: 'Breathing', started: '9', completed: '6' },
-      ]),
+      qbStub([{ category: 'video', resourceName: 'Breathing', started: '9', completed: '6' }]),
     );
     // Remaining QB-backed breakdowns aren't the focus — return empty.
     [
@@ -184,7 +182,7 @@ describe('DbMetricsService', () => {
       completed: 5,
     });
     expect(breakdowns.resources[0]).toMatchObject({
-      category: 'short_video',
+      category: 'video',
       resourcesStarted: 9,
       resourcesCompleted: 6,
     });
