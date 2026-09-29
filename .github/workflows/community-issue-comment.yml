@@ -47,25 +47,3 @@ jobs:
             Support Chayn's mission? ⭐ Please star this repo to help us find more contributors like you!
             Learn more about our [impact](https://github.com/chaynHQ/.github/blob/main/profile/README.md) and [sign-up for our volunteer programs](https://www.chayn.co/get-involved)to join our mission!. 🌸`
             })
-
-  # Job: Stale label comment
-  # Triggers:
-  #   Labeled as stale by maintainer
-  #   'Label Stale Contributions' workflow runs
-  # Returns: Posts warning comment tagging assignee
-  stale-label-comment:
-    if: ${{ (github.event.action == 'labeled' && github.event.label.name == 'stale') || github.event_name == 'workflow_run' }}
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Post stale issue comment
-        id: stale-label-comment
-        uses: actions/github-script@v9 # https://github.com/actions/github-script
-        with:
-          github-token: ${{secrets.GITHUB_TOKEN}}
-          script: |
-            github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.payload.issue.number,
-              body: `@${context.payload.issue.assignee.login} As per Chayn policy, after 30 days of inactivity, we will be unassigning this issue. Please comment to stay assigned.`
-            })
