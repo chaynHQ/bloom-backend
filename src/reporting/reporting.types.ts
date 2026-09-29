@@ -229,8 +229,7 @@ export interface DbResourceBreakdownRow {
 }
 
 export interface DbResourceCategoryBreakdownRow {
-  /** Raw enum from ResourceEntity (short_video / single_video / conversation).
-   *  Humanised at render time. */
+  /** Raw resource.category enum value. Humanised at render time. */
   category: string;
   resourcesStarted: number;
   resourcesCompleted: number;
