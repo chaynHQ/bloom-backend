@@ -354,6 +354,36 @@ describe('UserService', () => {
       expect(user.email).toBe(updateUserDto.email);
     });
 
+    it('should skip the service profile sync when only lastActiveAt changes within the same day', async () => {
+      jest.spyOn(repo, 'findOneBy').mockResolvedValueOnce({
+        ...mockUserEntity,
+        lastActiveAt: new Date('2026-08-04T09:00:00.000Z'),
+      } as UserEntity);
+      const profileSpy = jest.spyOn(serviceUserProfilesService, 'updateServiceUserProfilesUser');
+
+      await service.updateUser(
+        { lastActiveAt: new Date('2026-08-04T21:30:00.000Z') },
+        mockUserEntity.id,
+      );
+
+      expect(profileSpy).not.toHaveBeenCalled();
+    });
+
+    it('should sync service profiles when lastActiveAt falls on the same day of a different month', async () => {
+      jest.spyOn(repo, 'findOneBy').mockResolvedValueOnce({
+        ...mockUserEntity,
+        lastActiveAt: new Date('2026-07-04T09:00:00.000Z'),
+      } as UserEntity);
+      const profileSpy = jest.spyOn(serviceUserProfilesService, 'updateServiceUserProfilesUser');
+
+      await service.updateUser(
+        { lastActiveAt: new Date('2026-08-04T09:00:00.000Z') },
+        mockUserEntity.id,
+      );
+
+      expect(profileSpy).toHaveBeenCalled();
+    });
+
     it('should not fail update on mailchimp api call errors', async () => {
       const mocked = jest.mocked(updateMailchimpProfile);
       mocked.mockRejectedValue(new Error('Mailchimp API call failed'));

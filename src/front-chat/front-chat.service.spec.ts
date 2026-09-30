@@ -64,12 +64,10 @@ describe('FrontChatService', () => {
       getChatUser: jest.fn().mockResolvedValue(null),
       updateChatUserByEmail: jest.fn().mockResolvedValue(null),
       clearConversationId: jest.fn().mockResolvedValue(undefined),
-      setLastMessageSentAt: jest
-        .fn()
-        .mockImplementation(async (chatUser, sentAt) => ({
-          ...chatUser,
-          lastMessageSentAt: sentAt,
-        })),
+      setLastMessageSentAt: jest.fn().mockImplementation(async (chatUser, sentAt) => ({
+        ...chatUser,
+        lastMessageSentAt: sentAt,
+      })),
     };
     mockUserRepository.findOneBy.mockResolvedValue(null);
 

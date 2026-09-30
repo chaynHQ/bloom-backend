@@ -75,7 +75,7 @@ describe('buildReportBlocks', () => {
         ],
         resources: [
           {
-            category: 'short_video',
+            category: 'video',
             resourcesStarted: 9,
             resourcesCompleted: 5,
             resources: [
@@ -136,6 +136,30 @@ describe('buildReportBlocks', () => {
       runId: 'run-123',
     };
     expect(buildReportBlocks(payload)).toMatchSnapshot();
+  });
+
+  it('sums a renamed event across its old + new names into one resource line', () => {
+    const serialized = JSON.stringify(
+      buildReportBlocks({
+        period: 'weekly',
+        window: baseWindow,
+        db: fullDb,
+        dbBreakdowns: emptyBreakdowns,
+        ga4: {
+          overview: unavailable('x'),
+          // "viewed" spans the new + both legacy video names; they must add to 30.
+          events: [
+            { eventName: 'RESOURCE_VIDEO_VIEWED', eventCount: 12, totalUsers: 10 },
+            { eventName: 'RESOURCE_SHORT_VIDEO_VIEWED', eventCount: 10, totalUsers: 8 },
+            { eventName: 'RESOURCE_SINGLE_VIDEO_VIEWED', eventCount: 8, totalUsers: 6 },
+          ],
+          breakdowns: [],
+          eventBreakdowns: [],
+        },
+        trigger: 'scheduled',
+      }),
+    );
+    expect(serialized).toContain('*Videos*\\nviewed (30)');
   });
 
   it('daily renders the lighter snapshot title, trims headline to 6 cells, and drops per-topic replies', () => {
@@ -276,5 +300,40 @@ describe('buildReportBlocks', () => {
     expect(JSON.stringify(buildReportBlocks({ ...base, period: 'quarterly' }))).toContain(
       '*Foundations: S12*\\n2 started · 1 completed',
     );
+  });
+
+  it('labels format-based resource categories (video/audio/written/activity)', () => {
+    const payload: ReportPayload = {
+      period: 'weekly',
+      window: baseWindow,
+      db: fullDb,
+      dbBreakdowns: {
+        ...emptyBreakdowns,
+        resources: [
+          {
+            category: 'video',
+            resourcesStarted: 4,
+            resourcesCompleted: 2,
+            resources: [{ name: 'Breathing', started: 4, completed: 2 }],
+          },
+          {
+            category: 'written',
+            resourcesStarted: 3,
+            resourcesCompleted: 1,
+            resources: [{ name: 'Journaling', started: 3, completed: 1 }],
+          },
+        ],
+      },
+      ga4: {
+        overview: unavailable('x'),
+        events: unavailable('x'),
+        breakdowns: [],
+        eventBreakdowns: [],
+      },
+      trigger: 'scheduled',
+    };
+    const serialized = JSON.stringify(buildReportBlocks(payload));
+    expect(serialized).toContain('Videos: Breathing');
+    expect(serialized).toContain('Written: Journaling');
   });
 });
