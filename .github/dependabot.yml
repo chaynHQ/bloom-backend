@@ -10,10 +10,6 @@ updates:
       interval: "weekly"
       time: "09:00"
       timezone: "Europe/London"
-    assignees:
-      - bl00dymarie
-    reviewers:
-      - bl00dymarie
     groups:
       dev-deps:
         dependency-type: "development"
@@ -36,10 +32,6 @@ updates:
       interval: "weekly"
       time: "09:00"
       timezone: "Europe/London"
-    assignees:
-      - bl00dymarie
-    reviewers:
-      - bl00dymarie
     groups:
       actions-deps:
         patterns:
