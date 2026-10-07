@@ -57,7 +57,7 @@
     "nestjs-cls": "^6.2.2",
     "newrelic": "^14.5.1",
     "otplib": "^13.5.0",
-    "pg": "^8.23.0",
+    "pg": "^8.23.1",
     "pg-connection-string": "^2.7.0",
     "reflect-metadata": "^0.2.1",
     "rimraf": "^6.1.3",
