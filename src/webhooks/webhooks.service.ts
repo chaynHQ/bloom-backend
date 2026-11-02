@@ -476,11 +476,11 @@ export class WebhooksService {
     }
   }
 
-  // A modular course is linked to every piece its translatable `sessions` field lists in any
-  // language, as a `weeks` course is to its sessions. A listed piece with no resource row yet gets
-  // one, as publishing it would have done.
+  // A modular course is linked to every resource its translatable `sessions` field lists in any
+  // language, as a `weeks` course is to its sessions. A listed resource with no row yet gets one,
+  // as publishing it would have done.
   private async getCourseResources(storyData: ISbStoryData): Promise<ResourceEntity[]> {
-    const uuids = new Set<string>();
+    const resourceUuids = new Set<string>();
     const languages = new Set<string>(['default', ...(storyData.content.languages ?? [])]);
     for (const language of languages) {
       let sessions: unknown = storyData.content.sessions;
@@ -492,21 +492,25 @@ export class WebhooksService {
         sessions = response?.data?.story?.content?.sessions;
       }
       if (!Array.isArray(sessions)) continue;
-      sessions.forEach((uuid) => typeof uuid === 'string' && uuids.add(uuid));
+      sessions.forEach((uuid) => typeof uuid === 'string' && resourceUuids.add(uuid));
     }
-    if (uuids.size === 0) return [];
+    if (resourceUuids.size === 0) return [];
 
-    const resources = await this.resourceRepository.findBy({ storyblokUuid: In([...uuids]) });
-    const synced = new Set(resources.map((resource) => resource.storyblokUuid));
-    const unsynced = [...uuids].filter((uuid) => !synced.has(uuid));
-    if (unsynced.length === 0) return resources;
+    const resources = await this.resourceRepository.findBy({
+      storyblokUuid: In([...resourceUuids]),
+    });
+    const existingResourceUuids = new Set(resources.map((resource) => resource.storyblokUuid));
+    const missingResourceUuids = [...resourceUuids].filter(
+      (uuid) => !existingResourceUuids.has(uuid),
+    );
+    if (missingResourceUuids.length === 0) return resources;
 
     const response = await apiCall({
-      url: `https://api.storyblok.com/v2/cdn/stories?by_uuids=${unsynced.join(',')}&token=${storyblokToken}`,
+      url: `https://api.storyblok.com/v2/cdn/stories?by_uuids=${missingResourceUuids.join(',')}&token=${storyblokToken}`,
       type: 'get',
     });
-    const stories: ISbStoryData[] = response?.data?.stories ?? [];
-    for (const story of stories) {
+    const missingResourceStories: ISbStoryData[] = response?.data?.stories ?? [];
+    for (const story of missingResourceStories) {
       if (!RESOURCE_COMPONENT_CATEGORIES[story.content.component]) continue;
       resources.push(
         (await this.updateOrCreateStoryData(
@@ -515,9 +519,9 @@ export class WebhooksService {
         )) as ResourceEntity,
       );
     }
-    if (resources.length < uuids.size) {
+    if (resources.length < resourceUuids.size) {
       this.logger.warn(
-        `Course ${storyData.uuid} lists pieces that aren't published resources; publish them, then the course again`,
+        `Course ${storyData.uuid} lists stories that aren't published resources; publish them, then the course again`,
       );
     }
     return resources;

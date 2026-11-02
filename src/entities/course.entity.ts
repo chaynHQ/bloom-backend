@@ -36,7 +36,7 @@ export class CourseEntity extends BaseBloomEntity {
   })
   storyblokUuid: string;
 
-  // A modular course's pieces, from its Storyblok `sessions` field. Empty for courses built from
+  // A modular course's resources, from its Storyblok `sessions` field. Empty for courses built from
   // weeks of sessions, which link through `session.courseId` instead.
   @ManyToMany(() => ResourceEntity, (resource) => resource.courses)
   @JoinTable({

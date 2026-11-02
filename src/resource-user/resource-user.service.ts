@@ -88,10 +88,10 @@ export class ResourceUserService {
     }
 
     const courseProgress = courseStoryblokUuid
-      ? await this.updateCourseProgress(user, resource, courseStoryblokUuid)
+      ? await this.updateCourseUserProgress(user, resource, courseStoryblokUuid)
       : [];
 
-    return this.formatResponse(resourceUser, resource, courseProgress);
+    return this.formatResourceUserResponse(resourceUser, resource, courseProgress);
   }
 
   public async setResourceUserCompleted(
@@ -128,13 +128,13 @@ export class ResourceUserService {
 
     // Course completion is one-way, so marking a resource incomplete never touches courses.
     const courseProgress = completed
-      ? await this.updateCourseProgress(user, resource, courseStoryblokUuid)
+      ? await this.updateCourseUserProgress(user, resource, courseStoryblokUuid)
       : [];
 
-    return this.formatResponse(resourceUser, resource, courseProgress);
+    return this.formatResourceUserResponse(resourceUser, resource, courseProgress);
   }
 
-  private formatResponse(
+  private formatResourceUserResponse(
     resourceUser: ResourceUserEntity,
     resource: ResourceEntity,
     courseProgress: CourseProgressChange[],
@@ -145,24 +145,24 @@ export class ResourceUserService {
     };
   }
 
-  // Starts the context course (when the resource is one of its pieces) and completes any started
-  // course this resource finishes. Never throws: course logic mustn't fail resource progress.
-  private async updateCourseProgress(
+  // Starts the context course (when it lists the resource) and completes any started course this
+  // resource finishes. Never throws: course logic mustn't fail resource progress.
+  private async updateCourseUserProgress(
     user: UserEntity,
     resource: ResourceEntity,
     courseStoryblokUuid?: string,
   ): Promise<CourseProgressChange[]> {
-    const changes = new Map<string, CourseProgressChange>();
-    const changeFor = (course: CourseEntity) => {
-      if (!changes.has(course.id)) {
-        changes.set(course.id, {
+    const courseProgressChanges = new Map<string, CourseProgressChange>();
+    const getCourseProgressChange = (course: CourseEntity) => {
+      if (!courseProgressChanges.has(course.id)) {
+        courseProgressChanges.set(course.id, {
           storyblokUuid: course.storyblokUuid,
           name: course.name,
           started: false,
           completed: false,
         });
       }
-      return changes.get(course.id);
+      return courseProgressChanges.get(course.id);
     };
 
     try {
@@ -176,20 +176,20 @@ export class ResourceUserService {
             userId: user.id,
             courseId: course.id,
           });
-          if (created) changeFor(course).started = true;
+          if (created) getCourseProgressChange(course).started = true;
         }
       }
 
-      const openCourseUsers = await this.courseUserRepository.find({
+      const incompleteCourseUsers = await this.courseUserRepository.find({
         where: { userId: user.id, completed: false, course: { resources: { id: resource.id } } },
         relations: { course: true },
       });
 
-      for (const courseUser of openCourseUsers) {
+      for (const courseUser of incompleteCourseUsers) {
         const { course } = courseUser;
-        if (!(await this.isCourseComplete(user.id, course.id))) continue;
-        if (await this.courseUserService.markCourseUserCompleted(courseUser.id)) {
-          changeFor(course).completed = true;
+        if (!(await this.checkCourseResourcesAreComplete(user.id, course.id))) continue;
+        if (await this.courseUserService.setCourseUserCompletedIfIncomplete(courseUser.id)) {
+          getCourseProgressChange(course).completed = true;
         }
       }
     } catch (error) {
@@ -198,38 +198,43 @@ export class ResourceUserService {
       );
     }
 
-    for (const courseId of changes.keys()) {
-      this.syncCourseProfiles(user, courseId);
+    for (const courseId of courseProgressChanges.keys()) {
+      this.updateServiceUserProfilesForCourse(user, courseId);
     }
 
-    return [...changes.values()];
+    return [...courseProgressChanges.values()];
   }
 
-  // As for sessions (`checkCourseIsComplete`): complete when every published piece linked to the
-  // course has a completed resource_user row.
-  private async isCourseComplete(userId: string, courseId: string): Promise<boolean> {
-    const publishedPieces = await this.resourceRepository.find({
+  // As for sessions (`checkCourseIsComplete`): complete when every published resource linked to
+  // the course has a completed resource_user row.
+  private async checkCourseResourcesAreComplete(
+    userId: string,
+    courseId: string,
+  ): Promise<boolean> {
+    const publishedResources = await this.resourceRepository.find({
       select: { id: true },
       where: { courses: { id: courseId }, status: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED },
     });
-    if (publishedPieces.length === 0) return false;
+    if (publishedResources.length === 0) return false;
 
     // resource_user has no unique index, so any completed row counts.
-    const completedRows = await this.resourceUserRepository.find({
+    const completedResourceUsers = await this.resourceUserRepository.find({
       select: { resourceId: true },
       where: {
         userId,
-        resourceId: In(publishedPieces.map((r) => r.id)),
+        resourceId: In(publishedResources.map((r) => r.id)),
         completedAt: Not(IsNull()),
       },
     });
-    const completedResourceIds = new Set(completedRows.map((row) => row.resourceId));
-    return publishedPieces.every((r) => completedResourceIds.has(r.id));
+    const completedResourceIds = new Set(
+      completedResourceUsers.map((resourceUser) => resourceUser.resourceId),
+    );
+    return publishedResources.every((r) => completedResourceIds.has(r.id));
   }
 
   // Mailchimp and Front need the course relation loaded. Not awaited, so a slow or failing sync
   // never delays or fails the resource response.
-  private syncCourseProfiles(user: UserEntity, courseId: string) {
+  private updateServiceUserProfilesForCourse(user: UserEntity, courseId: string) {
     this.courseUserService
       .getCourseUser({ userId: user.id, courseId })
       .then((courseUser) =>

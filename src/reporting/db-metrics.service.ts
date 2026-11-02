@@ -225,7 +225,7 @@ export class DbMetricsService {
     const [
       sessionRows,
       courseRows,
-      coursePieceRows,
+      courseResourceRows,
       resourceRows,
       newUsersByPartner,
       partnerGrantsByPartner,
@@ -269,8 +269,8 @@ export class DbMetricsService {
         .setParameters({ from, to })
         .groupBy('c.name')
         .getRawMany<{ courseName: string; started: string; completed: string }>(),
-      // Modular courses list pieces in place of sessions: progress on each piece by members who
-      // have started that course, wherever they did the piece.
+      // Modular courses list resources in place of sessions: progress on each resource by members
+      // who have started that course, wherever they did the resource.
       this.courseUserRepository
         .createQueryBuilder('cu')
         .innerJoin('cu.course', 'c')
@@ -328,7 +328,10 @@ export class DbMetricsService {
       this.queryTherapyByPartner(from, to),
     ]);
 
-    const courses = this.assembleCourseBreakdowns([...sessionRows, ...coursePieceRows], courseRows);
+    const courses = this.assembleCourseBreakdowns(
+      [...sessionRows, ...courseResourceRows],
+      courseRows,
+    );
     const resources = this.assembleResourceBreakdowns(resourceRows);
 
     return {

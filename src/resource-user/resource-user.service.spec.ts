@@ -13,10 +13,10 @@ import { mockCourse, mockResource, mockUserEntity } from 'test/utils/mockData';
 import { Repository } from 'typeorm';
 import { ResourceUserService } from './resource-user.service';
 
-const piece = (n: number): ResourceEntity => ({
+const mockCourseResource = (n: number): ResourceEntity => ({
   ...mockResource,
   id: `resourceId${n}`,
-  storyblokUuid: `pieceUuid${n}`,
+  storyblokUuid: `courseResourceUuid${n}`,
 });
 
 const modularCourse: CourseEntity = {
@@ -24,7 +24,7 @@ const modularCourse: CourseEntity = {
   id: 'modularCourseId',
   storyblokUuid: 'modularCourseUuid',
   name: 'Healing basics',
-  resources: [piece(1), piece(2)],
+  resources: [mockCourseResource(1), mockCourseResource(2)],
 };
 
 const openCourseUser = (course: CourseEntity): CourseUserEntity => ({
@@ -50,11 +50,11 @@ describe('ResourceUserService', () => {
   let courseUserService: CourseUserService;
   let serviceUserProfilesService: ServiceUserProfilesService;
 
-  // The piece being started or completed, the published pieces of the course, and which are completed.
+  // The resource being started or completed, the course's published resources, and which are completed.
   // The repositories stand in for the database's filtering by course and status.
   const setup = ({
-    resource = piece(1),
-    publishedPieces = [piece(1), piece(2)],
+    resource = mockCourseResource(1),
+    publishedResources = [mockCourseResource(1), mockCourseResource(2)],
     completedIds = [] as string[],
     courseUsers = [] as CourseUserEntity[],
     contextCourse = modularCourse as CourseEntity | null,
@@ -73,7 +73,7 @@ describe('ResourceUserService', () => {
       updatedAt: new Date(),
       ...row,
     }));
-    (resourceRepository.find as jest.Mock).mockResolvedValue(publishedPieces);
+    (resourceRepository.find as jest.Mock).mockResolvedValue(publishedResources);
     (resourceUserRepository.find as jest.Mock).mockResolvedValue(
       completedIds.map((resourceId) => ({ resourceId })),
     );
@@ -89,7 +89,7 @@ describe('ResourceUserService', () => {
     resourceService = createMock<ResourceService>();
     courseUserService = createMock<CourseUserService>({
       createCourseUserIfMissing: jest.fn().mockResolvedValue(true),
-      markCourseUserCompleted: jest.fn().mockResolvedValue(true),
+      setCourseUserCompletedIfIncomplete: jest.fn().mockResolvedValue(true),
       getCourseUser: jest.fn().mockResolvedValue(openCourseUser(modularCourse)),
     });
     serviceUserProfilesService = createMock<ServiceUserProfilesService>({
@@ -118,7 +118,7 @@ describe('ResourceUserService', () => {
 
       const response = await service.setResourceUserCompleted(
         mockUserEntity,
-        { storyblokUuid: 'pieceUuid1' },
+        { storyblokUuid: 'courseResourceUuid1' },
         true,
       );
 
@@ -128,7 +128,7 @@ describe('ResourceUserService', () => {
       expect(response.completed).toBe(true);
     });
 
-    it('completes a started course once every published piece is done', async () => {
+    it('completes a started course once every published resource is done', async () => {
       setup({
         completedIds: ['resourceId1', 'resourceId2'],
         courseUsers: [openCourseUser(modularCourse)],
@@ -136,7 +136,7 @@ describe('ResourceUserService', () => {
 
       const response = await service.setResourceUserCompleted(
         mockUserEntity,
-        { storyblokUuid: 'pieceUuid1' },
+        { storyblokUuid: 'courseResourceUuid1' },
         true,
       );
 
@@ -155,7 +155,7 @@ describe('ResourceUserService', () => {
           status: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
         },
       });
-      expect(courseUserService.markCourseUserCompleted).toHaveBeenCalledWith(
+      expect(courseUserService.setCourseUserCompletedIfIncomplete).toHaveBeenCalledWith(
         'courseUser-modularCourseId',
       );
       expect(response.courseProgress).toEqual([
@@ -174,16 +174,16 @@ describe('ResourceUserService', () => {
       expect(serviceUserProfilesService.updateServiceUserProfilesCourse).toHaveBeenCalled();
     });
 
-    it('does not complete a course while a piece is outstanding', async () => {
+    it('does not complete a course while a resource is outstanding', async () => {
       setup({ completedIds: ['resourceId1'], courseUsers: [openCourseUser(modularCourse)] });
 
       const response = await service.setResourceUserCompleted(
         mockUserEntity,
-        { storyblokUuid: 'pieceUuid1' },
+        { storyblokUuid: 'courseResourceUuid1' },
         true,
       );
 
-      expect(courseUserService.markCourseUserCompleted).not.toHaveBeenCalled();
+      expect(courseUserService.setCourseUserCompletedIfIncomplete).not.toHaveBeenCalled();
       expect(response.courseProgress).toBeUndefined();
     });
 
@@ -193,9 +193,13 @@ describe('ResourceUserService', () => {
         courseUsers: [openCourseUser(modularCourse)],
       });
 
-      await service.setResourceUserCompleted(mockUserEntity, { storyblokUuid: 'pieceUuid1' }, true);
+      await service.setResourceUserCompleted(
+        mockUserEntity,
+        { storyblokUuid: 'courseResourceUuid1' },
+        true,
+      );
 
-      expect(courseUserService.markCourseUserCompleted).toHaveBeenCalled();
+      expect(courseUserService.setCourseUserCompletedIfIncomplete).toHaveBeenCalled();
     });
 
     it('reports no change when another request already completed the course', async () => {
@@ -203,11 +207,11 @@ describe('ResourceUserService', () => {
         completedIds: ['resourceId1', 'resourceId2'],
         courseUsers: [openCourseUser(modularCourse)],
       });
-      (courseUserService.markCourseUserCompleted as jest.Mock).mockResolvedValue(false);
+      (courseUserService.setCourseUserCompletedIfIncomplete as jest.Mock).mockResolvedValue(false);
 
       const response = await service.setResourceUserCompleted(
         mockUserEntity,
-        { storyblokUuid: 'pieceUuid1' },
+        { storyblokUuid: 'courseResourceUuid1' },
         true,
       );
 
@@ -215,12 +219,16 @@ describe('ResourceUserService', () => {
       expect(courseUserService.getCourseUser).not.toHaveBeenCalled();
     });
 
-    it('never completes a course with no published pieces', async () => {
-      setup({ publishedPieces: [], courseUsers: [openCourseUser(modularCourse)] });
+    it('never completes a course with no published resources', async () => {
+      setup({ publishedResources: [], courseUsers: [openCourseUser(modularCourse)] });
 
-      await service.setResourceUserCompleted(mockUserEntity, { storyblokUuid: 'pieceUuid1' }, true);
+      await service.setResourceUserCompleted(
+        mockUserEntity,
+        { storyblokUuid: 'courseResourceUuid1' },
+        true,
+      );
 
-      expect(courseUserService.markCourseUserCompleted).not.toHaveBeenCalled();
+      expect(courseUserService.setCourseUserCompletedIfIncomplete).not.toHaveBeenCalled();
     });
 
     it('never touches courses when marking a resource incomplete', async () => {
@@ -228,7 +236,7 @@ describe('ResourceUserService', () => {
 
       const response = await service.setResourceUserCompleted(
         mockUserEntity,
-        { storyblokUuid: 'pieceUuid1', courseStoryblokUuid: 'modularCourseUuid' },
+        { storyblokUuid: 'courseResourceUuid1', courseStoryblokUuid: 'modularCourseUuid' },
         false,
       );
 
@@ -243,7 +251,7 @@ describe('ResourceUserService', () => {
 
       const response = await service.setResourceUserCompleted(
         mockUserEntity,
-        { storyblokUuid: 'pieceUuid1' },
+        { storyblokUuid: 'courseResourceUuid1' },
         true,
       );
 
@@ -253,11 +261,11 @@ describe('ResourceUserService', () => {
   });
 
   describe('createResourceUser', () => {
-    it('starts the context course when it lists the piece', async () => {
+    it('starts the context course when it lists the resource', async () => {
       setup();
 
       const response = await service.createResourceUser(mockUserEntity, {
-        storyblokUuid: 'pieceUuid1',
+        storyblokUuid: 'courseResourceUuid1',
         courseStoryblokUuid: 'modularCourseUuid',
       });
 
@@ -284,18 +292,18 @@ describe('ResourceUserService', () => {
       (courseUserService.createCourseUserIfMissing as jest.Mock).mockResolvedValue(false);
 
       const response = await service.createResourceUser(mockUserEntity, {
-        storyblokUuid: 'pieceUuid1',
+        storyblokUuid: 'courseResourceUuid1',
         courseStoryblokUuid: 'modularCourseUuid',
       });
 
       expect(response.courseProgress).toBeUndefined();
     });
 
-    it('does not start a course that does not list the piece', async () => {
+    it('does not start a course that does not list the resource', async () => {
       setup({ contextCourse: null });
 
       const response = await service.createResourceUser(mockUserEntity, {
-        storyblokUuid: 'pieceUuid1',
+        storyblokUuid: 'courseResourceUuid1',
         courseStoryblokUuid: mockCourse.storyblokUuid,
       });
 
@@ -303,14 +311,14 @@ describe('ResourceUserService', () => {
       expect(response.courseProgress).toBeUndefined();
     });
 
-    it('starts and completes a course whose pieces were all done elsewhere', async () => {
+    it('starts and completes a course whose resources were all done elsewhere', async () => {
       setup({
         completedIds: ['resourceId1', 'resourceId2'],
         courseUsers: [openCourseUser(modularCourse)],
       });
 
       const response = await service.createResourceUser(mockUserEntity, {
-        storyblokUuid: 'pieceUuid1',
+        storyblokUuid: 'courseResourceUuid1',
         courseStoryblokUuid: 'modularCourseUuid',
       });
 
@@ -327,7 +335,7 @@ describe('ResourceUserService', () => {
     it('has no course side effects without a course', async () => {
       setup();
 
-      await service.createResourceUser(mockUserEntity, { storyblokUuid: 'pieceUuid1' });
+      await service.createResourceUser(mockUserEntity, { storyblokUuid: 'courseResourceUuid1' });
 
       expect(courseRepository.findOneBy).not.toHaveBeenCalled();
       expect(courseUserRepository.find).not.toHaveBeenCalled();

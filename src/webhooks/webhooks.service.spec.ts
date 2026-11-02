@@ -434,7 +434,7 @@ describe('WebhooksService', () => {
         },
       });
 
-      const syncedPiece = (uuid: string) => ({
+      const existingResource = (uuid: string) => ({
         ...mockResource,
         id: `id-${uuid}`,
         storyblokUuid: uuid,
@@ -442,32 +442,40 @@ describe('WebhooksService', () => {
 
       it('links the course to the resources it lists', async () => {
         (apiCall as jest.Mock).mockResolvedValueOnce(
-          courseStory({ sessions: ['piece1', 'piece2'] }),
+          courseStory({ sessions: ['courseResource1', 'courseResource2'] }),
         );
         const findBySpy = jest
           .spyOn(mockedResourceRepository, 'findBy')
-          .mockResolvedValueOnce([syncedPiece('piece1'), syncedPiece('piece2')]);
+          .mockResolvedValueOnce([
+            existingResource('courseResource1'),
+            existingResource('courseResource2'),
+          ]);
 
         const course = (await service.handleStoryUpdated(courseBody)) as CourseEntity;
 
-        expect(findBySpy).toHaveBeenCalledWith({ storyblokUuid: In(['piece1', 'piece2']) });
-        expect(course.resources.map((r) => r.storyblokUuid)).toEqual(['piece1', 'piece2']);
+        expect(findBySpy).toHaveBeenCalledWith({
+          storyblokUuid: In(['courseResource1', 'courseResource2']),
+        });
+        expect(course.resources.map((r) => r.storyblokUuid)).toEqual([
+          'courseResource1',
+          'courseResource2',
+        ]);
         expect(apiCall).toHaveBeenCalledTimes(1);
       });
 
-      it('links the pieces listed in every language', async () => {
+      it('links the resources listed in every language', async () => {
         (apiCall as jest.Mock)
           .mockResolvedValueOnce(
-            courseStory({ sessions: ['piece1'], languages: ['default', 'tr', 'ar'] }),
+            courseStory({ sessions: ['courseResource1'], languages: ['default', 'tr', 'ar'] }),
           )
-          .mockResolvedValueOnce(courseStory({ sessions: ['piece1', 'piece2'] }))
-          .mockResolvedValueOnce(courseStory({ sessions: ['piece3'] }));
+          .mockResolvedValueOnce(courseStory({ sessions: ['courseResource1', 'courseResource2'] }))
+          .mockResolvedValueOnce(courseStory({ sessions: ['courseResource3'] }));
         const findBySpy = jest
           .spyOn(mockedResourceRepository, 'findBy')
           .mockResolvedValueOnce([
-            syncedPiece('piece1'),
-            syncedPiece('piece2'),
-            syncedPiece('piece3'),
+            existingResource('courseResource1'),
+            existingResource('courseResource2'),
+            existingResource('courseResource3'),
           ]);
 
         await service.handleStoryUpdated(courseBody);
@@ -479,13 +487,13 @@ describe('WebhooksService', () => {
           type: 'get',
         });
         expect(findBySpy).toHaveBeenCalledWith({
-          storyblokUuid: In(['piece1', 'piece2', 'piece3']),
+          storyblokUuid: In(['courseResource1', 'courseResource2', 'courseResource3']),
         });
       });
 
       it('changes nothing when a language fetch fails', async () => {
         (apiCall as jest.Mock)
-          .mockResolvedValueOnce(courseStory({ sessions: ['piece1'], languages: ['tr'] }))
+          .mockResolvedValueOnce(courseStory({ sessions: ['courseResource1'], languages: ['tr'] }))
           .mockRejectedValueOnce(new Error('rate limited'));
         const saveSpy = jest.spyOn(mockedCourseRepository, 'save');
 
@@ -494,13 +502,13 @@ describe('WebhooksService', () => {
         saveSpy.mockClear();
       });
 
-      it('creates the resource row for a listed piece that was never synced', async () => {
+      it('creates the row for a listed resource that was never synced', async () => {
         (apiCall as jest.Mock)
-          .mockResolvedValueOnce(courseStory({ sessions: ['piece1', 'resourceUuid2'] }))
+          .mockResolvedValueOnce(courseStory({ sessions: ['courseResource1', 'resourceUuid2'] }))
           .mockResolvedValueOnce({ data: { stories: [mockResourceStoryblokResult.data.story] } });
         jest
           .spyOn(mockedResourceRepository, 'findBy')
-          .mockResolvedValueOnce([syncedPiece('piece1')]);
+          .mockResolvedValueOnce([existingResource('courseResource1')]);
         jest.spyOn(mockedResourceRepository, 'findOneBy').mockResolvedValueOnce(undefined);
 
         const course = (await service.handleStoryUpdated(courseBody)) as CourseEntity;
@@ -509,7 +517,10 @@ describe('WebhooksService', () => {
           url: expect.stringContaining('cdn/stories?by_uuids=resourceUuid2&'),
           type: 'get',
         });
-        expect(course.resources.map((r) => r.storyblokUuid)).toEqual(['piece1', 'resourceUuid2']);
+        expect(course.resources.map((r) => r.storyblokUuid)).toEqual([
+          'courseResource1',
+          'resourceUuid2',
+        ]);
       });
 
       it('clears the links when the sessions field is emptied', async () => {

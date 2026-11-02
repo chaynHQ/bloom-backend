@@ -54,7 +54,7 @@ export class CourseUserService {
   }
 
   // One-way: returns whether this call changed the course from not completed to completed.
-  async markCourseUserCompleted(courseUserId: string): Promise<boolean> {
+  async setCourseUserCompletedIfIncomplete(courseUserId: string): Promise<boolean> {
     const result = await this.courseUserRepository.update(
       { id: courseUserId, completed: false },
       { completed: true, completedAt: new Date() },
