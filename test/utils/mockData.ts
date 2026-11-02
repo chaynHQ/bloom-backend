@@ -1,4 +1,4 @@
-import { ISbResult } from '@storyblok/js';
+import { ISbResult } from 'storyblok-js-client';
 import { add } from 'date-fns';
 import { UserRecord } from 'firebase-admin/auth';
 import { CoursePartnerEntity } from 'src/entities/course-partner.entity';

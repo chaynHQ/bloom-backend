@@ -41,7 +41,6 @@
     "@nestjs/throttler": "^6.7.1",
     "@nestjs/typeorm": "^12.0.2",
     "@nestjs/websockets": "^12.3.2",
-    "@storyblok/js": "^6.4.1",
     "axios": "^1.21.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
@@ -65,6 +64,7 @@
     "rollbar": "^4.2.0",
     "rxjs": "^7.8.2",
     "socket.io": "^4.8.4",
+    "storyblok-js-client": "^7.8.1",
     "typeorm": "^1.1.2",
     "uuid": "^14.0.3",
     "validator": "^13.15.35"
