@@ -1,6 +1,6 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { ISbStoryData } from '@storyblok/js';
+import { ISbStoryData } from 'storyblok-js-client';
 import { createHmac, timingSafeEqual } from 'crypto';
 import apiCall from 'src/api/apiCalls';
 import { getBookingDetails } from 'src/api/simplybook/simplybook-api';
