@@ -4,7 +4,7 @@ NestJS/TypeScript REST API for a trauma-healing support platform. PostgreSQL via
 
 ## Tech Stack
 
-- **Runtime:** Node.js 22.x, TypeScript
+- **Runtime:** Node.js 24.x, TypeScript
 - **Framework:** NestJS
 - **Database:** PostgreSQL 17 + TypeORM 0.3.x
 - **Package manager:** Yarn 1.x
@@ -34,7 +34,7 @@ yarn test:cov                      # with coverage
 yarn test:e2e                      # end-to-end
 
 # Run a specific test file
-yarn jest src/path/to/file.spec.ts --no-coverage
+yarn test src/path/to/file.spec.ts --no-coverage
 ```
 
 ## Database / Migrations

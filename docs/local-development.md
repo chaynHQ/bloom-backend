@@ -21,7 +21,7 @@ To test the backend:
 
 ## 1. Prerequisites
 
-- NodeJS v22.x
+- NodeJS v24.x
 - Yarn v1.x
 - Docker and / or PostgreSQL
 
