@@ -19,7 +19,7 @@ import { ServiceUserProfilesService } from 'src/service-user-profiles/service-us
 import { IUser } from 'src/user/user.interface';
 import { partiallyMaskEmail } from 'src/utils/pii-redaction';
 import { serializeSimplybookDtoToTherapySessionEntity } from 'src/utils/serialize';
-import { ILike, MoreThan, Repository } from 'typeorm';
+import { ILike, In, MoreThan, Repository } from 'typeorm';
 import { CoursePartnerService } from '../course-partner/course-partner.service';
 import {
   isProduction,
@@ -476,6 +476,53 @@ export class WebhooksService {
     }
   }
 
+  // A modular course is linked to every piece its translatable `sessions` field lists in any
+  // language, as a `weeks` course is to its sessions. A listed piece with no resource row yet gets
+  // one, as publishing it would have done.
+  private async getCourseResources(storyData: ISbStoryData): Promise<ResourceEntity[]> {
+    const uuids = new Set<string>();
+    const languages = new Set<string>(['default', ...(storyData.content.languages ?? [])]);
+    for (const language of languages) {
+      let sessions: unknown = storyData.content.sessions;
+      if (language !== 'default') {
+        const response = await apiCall({
+          url: `https://api.storyblok.com/v2/cdn/stories/${storyData.uuid}?find_by=uuid&language=${language}&token=${storyblokToken}`,
+          type: 'get',
+        });
+        sessions = response?.data?.story?.content?.sessions;
+      }
+      if (!Array.isArray(sessions)) continue;
+      sessions.forEach((uuid) => typeof uuid === 'string' && uuids.add(uuid));
+    }
+    if (uuids.size === 0) return [];
+
+    const resources = await this.resourceRepository.findBy({ storyblokUuid: In([...uuids]) });
+    const synced = new Set(resources.map((resource) => resource.storyblokUuid));
+    const unsynced = [...uuids].filter((uuid) => !synced.has(uuid));
+    if (unsynced.length === 0) return resources;
+
+    const response = await apiCall({
+      url: `https://api.storyblok.com/v2/cdn/stories?by_uuids=${unsynced.join(',')}&token=${storyblokToken}`,
+      type: 'get',
+    });
+    const stories: ISbStoryData[] = response?.data?.stories ?? [];
+    for (const story of stories) {
+      if (!RESOURCE_COMPONENT_CATEGORIES[story.content.component]) continue;
+      resources.push(
+        (await this.updateOrCreateStoryData(
+          story,
+          STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
+        )) as ResourceEntity,
+      );
+    }
+    if (resources.length < uuids.size) {
+      this.logger.warn(
+        `Course ${storyData.uuid} lists pieces that aren't published resources; publish them, then the course again`,
+      );
+    }
+    return resources;
+  }
+
   private async updateOrCreateStoryData(
     storyData: ISbStoryData,
     status: STORYBLOK_STORY_STATUS_ENUM,
@@ -513,12 +560,14 @@ export class WebhooksService {
       }
 
       if (storyPageComponent === STORYBLOK_PAGE_COMPONENTS.COURSE) {
+        // Fetched first, so a failed language fetch saves nothing.
+        const resources = await this.getCourseResources(storyData);
         const existingCourse = await this.courseRepository.findOneBy({
           storyblokUuid: storyData.uuid,
         });
         const data = existingCourse
-          ? { ...existingCourse, ...updatedStoryData }
-          : { ...newStoryData };
+          ? { ...existingCourse, ...updatedStoryData, resources }
+          : { ...newStoryData, resources };
 
         const course = await this.courseRepository.save(data);
 

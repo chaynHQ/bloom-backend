@@ -148,9 +148,11 @@ describe('DbMetricsService', () => {
         { courseName: 'Healing', sessionName: 'Safety', started: '6', completed: '4' },
       ]),
     );
-    (repos.courseUser.createQueryBuilder as unknown as jest.Mock).mockReturnValue(
-      qbStub([{ courseName: 'Foundations', started: '5', completed: '2' }]),
-    );
+    (repos.courseUser.createQueryBuilder as unknown as jest.Mock)
+      .mockReturnValueOnce(qbStub([{ courseName: 'Foundations', started: '5', completed: '2' }]))
+      .mockReturnValueOnce(
+        qbStub([{ courseName: 'Modular', sessionName: 'Breathing', started: '3', completed: '1' }]),
+      );
     (repos.resourceUser.createQueryBuilder as unknown as jest.Mock).mockReturnValue(
       qbStub([{ category: 'video', resourceName: 'Breathing', started: '9', completed: '6' }]),
     );
@@ -180,6 +182,11 @@ describe('DbMetricsService', () => {
       name: 'Intro',
       started: 9,
       completed: 5,
+    });
+    expect(breakdowns.courses.find((c) => c.name === 'Modular')).toMatchObject({
+      sessionsStarted: 3,
+      sessionsCompleted: 1,
+      sessions: [{ name: 'Breathing', started: 3, completed: 1 }],
     });
     expect(breakdowns.resources[0]).toMatchObject({
       category: 'video',

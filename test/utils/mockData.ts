@@ -123,6 +123,7 @@ export const mockCourse: CourseEntity = {
   status: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
   themes: [THEMES.SETTING_BOUNDARIES],
   name: 'course name',
+  resources: [],
   createdAt: new Date(100),
   updatedAt: new Date(100),
   session: [],
@@ -155,6 +156,7 @@ export const mockResource: ResourceEntity = {
   createdAt: new Date(100),
   updatedAt: new Date(100),
   resourceFeedback: [],
+  courses: [],
 };
 
 export const mockResource2: ResourceEntity = {
@@ -169,6 +171,7 @@ export const mockResource2: ResourceEntity = {
   updatedAt: new Date(100),
   resourceUser: [],
   resourceFeedback: [],
+  courses: [],
 };
 
 export const mockIFirebaseUser: IFirebaseUser = {

@@ -39,6 +39,29 @@ export class CourseUserService {
     });
   }
 
+  // Returns whether this call created the row. A start and a complete for the same course can
+  // arrive together, so the unique (userId, courseId) index decides which one creates it.
+  async createCourseUserIfMissing({ userId, courseId }: CourseUserDto): Promise<boolean> {
+    const result = await this.courseUserRepository
+      .createQueryBuilder()
+      .insert()
+      .into(CourseUserEntity)
+      .values({ userId, courseId, completed: false })
+      .orIgnore()
+      .returning('"courseUserId"')
+      .execute();
+    return result.raw.length > 0;
+  }
+
+  // One-way: returns whether this call changed the course from not completed to completed.
+  async markCourseUserCompleted(courseUserId: string): Promise<boolean> {
+    const result = await this.courseUserRepository.update(
+      { id: courseUserId, completed: false },
+      { completed: true, completedAt: new Date() },
+    );
+    return result.affected > 0;
+  }
+
   async setCourseUserCompleted(
     { userId, courseId }: CourseUserDto,
     completed: boolean,
