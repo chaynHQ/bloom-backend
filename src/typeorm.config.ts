@@ -74,7 +74,7 @@ import { BloomBackend1788885368027 } from './migrations/1788885368027-bloom-back
 import { BloomBackend1789025548195 } from './migrations/1789025548195-bloom-backend';
 import { databaseUrl } from './utils/constants';
 
-config();
+config({ quiet: true });
 const configService = new ConfigService();
 
 const isProduction = configService.get('NODE_ENV') === 'production';

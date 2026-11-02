@@ -360,27 +360,35 @@ export const EVENT_GROUPS: EventGroup[] = [
           { event: 'HEADER_ADMIN_CLICKED', label: 'admin' },
         ],
       },
+      // Drawer/secondary-header items were renamed: courses -> library, activities -> grounding.
+      // Same convention as the resource video/audio rename above — sum old + new names into one
+      // item so the line and its baseline stay continuous across the cutover. Drop the old names
+      // once no reporting window still spans the rename date.
       {
         label: 'Drawer',
         items: [
-          { event: 'DRAWER_COURSES_CLICKED', label: 'courses' },
+          { event: ['DRAWER_LIBRARY_CLICKED', 'DRAWER_COURSES_CLICKED'], label: 'library' },
           { event: 'DRAWER_THERAPY_CLICKED', label: 'therapy' },
           { event: 'DRAWER_CHAT_CLICKED', label: 'chat' },
           { event: 'DRAWER_NOTES_CLICKED', label: 'notes' },
-          { event: 'DRAWER_ACTIVITIES_CLICKED', label: 'activities' },
-          { event: 'DRAWER_GROUNDING_CLICKED', label: 'grounding' },
+          { event: ['DRAWER_GROUNDING_CLICKED', 'DRAWER_ACTIVITIES_CLICKED'], label: 'grounding' },
           { event: 'DRAWER_LOGIN_CLICKED', label: 'login' },
         ],
       },
       {
         label: 'Secondary header',
         items: [
-          { event: 'SECONDARY_HEADER_COURSES_CLICKED', label: 'courses' },
+          {
+            event: ['SECONDARY_HEADER_LIBRARY_CLICKED', 'SECONDARY_HEADER_COURSES_CLICKED'],
+            label: 'library',
+          },
           { event: 'SECONDARY_HEADER_THERAPY_CLICKED', label: 'therapy' },
           { event: 'SECONDARY_HEADER_CHAT_CLICKED', label: 'chat' },
           { event: 'SECONDARY_HEADER_NOTES_CLICKED', label: 'notes' },
-          { event: 'SECONDARY_HEADER_ACTIVITIES_CLICKED', label: 'activities' },
-          { event: 'SECONDARY_HEADER_GROUNDING_CLICKED', label: 'grounding' },
+          {
+            event: ['SECONDARY_HEADER_GROUNDING_CLICKED', 'SECONDARY_HEADER_ACTIVITIES_CLICKED'],
+            label: 'grounding',
+          },
         ],
       },
       {
