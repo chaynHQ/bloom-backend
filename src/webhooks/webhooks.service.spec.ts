@@ -52,7 +52,7 @@ import {
   mockTherapySessionRepositoryMethods,
   mockUserRepositoryMethods,
 } from 'test/utils/mockedServices';
-import { ILike, Repository } from 'typeorm';
+import { ILike, In, Repository } from 'typeorm';
 import { SimplybookNotificationType } from './dto/simplybook-webhook.dto';
 import { WebhooksService } from './webhooks.service';
 
@@ -399,6 +399,7 @@ describe('WebhooksService', () => {
         slug: mockCourseStoryblokResult.data.story.full_slug,
         name: mockCourseStoryblokResult.data.story.content.name,
         themes: [THEMES.SETTING_BOUNDARIES],
+        resources: [],
       };
 
       const course = (await service.handleStoryUpdated(body)) as CourseEntity;
@@ -415,6 +416,130 @@ describe('WebhooksService', () => {
       );
       courseFindOneRepoSpy.mockClear();
       courseSaveRepoSpy.mockClear();
+    });
+
+    describe('modular course resources', () => {
+      const courseBody = {
+        action: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
+        full_slug: mockCourseStoryblokResult.data.story.full_slug,
+        text: '',
+      };
+      const courseStory = (content: Record<string, unknown>) => ({
+        ...mockCourseStoryblokResult,
+        data: {
+          story: {
+            ...mockCourseStoryblokResult.data.story,
+            content: { ...mockCourseStoryblokResult.data.story.content, ...content },
+          },
+        },
+      });
+
+      const existingResource = (uuid: string) => ({
+        ...mockResource,
+        id: `id-${uuid}`,
+        storyblokUuid: uuid,
+      });
+
+      it('links the course to the resources it lists', async () => {
+        (apiCall as jest.Mock).mockResolvedValueOnce(
+          courseStory({ sessions: ['courseResource1', 'courseResource2'] }),
+        );
+        const findBySpy = jest
+          .spyOn(mockedResourceRepository, 'findBy')
+          .mockResolvedValueOnce([
+            existingResource('courseResource1'),
+            existingResource('courseResource2'),
+          ]);
+
+        const course = (await service.handleStoryUpdated(courseBody)) as CourseEntity;
+
+        expect(findBySpy).toHaveBeenCalledWith({
+          storyblokUuid: In(['courseResource1', 'courseResource2']),
+        });
+        expect(course.resources.map((r) => r.storyblokUuid)).toEqual([
+          'courseResource1',
+          'courseResource2',
+        ]);
+        expect(apiCall).toHaveBeenCalledTimes(1);
+      });
+
+      it('links the resources listed in every language', async () => {
+        (apiCall as jest.Mock)
+          .mockResolvedValueOnce(
+            courseStory({ sessions: ['courseResource1'], languages: ['default', 'tr', 'ar'] }),
+          )
+          .mockResolvedValueOnce(courseStory({ sessions: ['courseResource1', 'courseResource2'] }))
+          .mockResolvedValueOnce(courseStory({ sessions: ['courseResource3'] }));
+        const findBySpy = jest
+          .spyOn(mockedResourceRepository, 'findBy')
+          .mockResolvedValueOnce([
+            existingResource('courseResource1'),
+            existingResource('courseResource2'),
+            existingResource('courseResource3'),
+          ]);
+
+        await service.handleStoryUpdated(courseBody);
+
+        expect(apiCall).toHaveBeenCalledWith({
+          url: expect.stringContaining(
+            `cdn/stories/${mockCourseStoryblokResult.data.story.uuid}?find_by=uuid&language=tr`,
+          ),
+          type: 'get',
+        });
+        expect(findBySpy).toHaveBeenCalledWith({
+          storyblokUuid: In(['courseResource1', 'courseResource2', 'courseResource3']),
+        });
+      });
+
+      it('changes nothing when a language fetch fails', async () => {
+        (apiCall as jest.Mock)
+          .mockResolvedValueOnce(courseStory({ sessions: ['courseResource1'], languages: ['tr'] }))
+          .mockRejectedValueOnce(new Error('rate limited'));
+        const saveSpy = jest.spyOn(mockedCourseRepository, 'save');
+
+        await expect(service.handleStoryUpdated(courseBody)).rejects.toThrow('rate limited');
+        expect(saveSpy).not.toHaveBeenCalled();
+        saveSpy.mockClear();
+      });
+
+      it('creates the row for a listed resource that was never synced', async () => {
+        (apiCall as jest.Mock)
+          .mockResolvedValueOnce(courseStory({ sessions: ['courseResource1', 'resourceUuid2'] }))
+          .mockResolvedValueOnce({ data: { stories: [mockResourceStoryblokResult.data.story] } });
+        jest
+          .spyOn(mockedResourceRepository, 'findBy')
+          .mockResolvedValueOnce([existingResource('courseResource1')]);
+        jest.spyOn(mockedResourceRepository, 'findOneBy').mockResolvedValueOnce(undefined);
+
+        const course = (await service.handleStoryUpdated(courseBody)) as CourseEntity;
+
+        expect(apiCall).toHaveBeenCalledWith({
+          url: expect.stringContaining('cdn/stories?by_uuids=resourceUuid2&'),
+          type: 'get',
+        });
+        expect(course.resources.map((r) => r.storyblokUuid)).toEqual([
+          'courseResource1',
+          'resourceUuid2',
+        ]);
+      });
+
+      it('clears the links when the sessions field is emptied', async () => {
+        (apiCall as jest.Mock).mockResolvedValueOnce(courseStory({ sessions: [] }));
+
+        const course = (await service.handleStoryUpdated(courseBody)) as CourseEntity;
+
+        expect(course.resources).toEqual([]);
+      });
+
+      it('links nothing for a course without the sessions field', async () => {
+        (apiCall as jest.Mock).mockResolvedValueOnce(mockCourseStoryblokResult);
+        const findBySpy = jest.spyOn(mockedResourceRepository, 'findBy');
+
+        const course = (await service.handleStoryUpdated(courseBody)) as CourseEntity;
+
+        expect(course.resources).toEqual([]);
+        expect(findBySpy).not.toHaveBeenCalled();
+      });
     });
 
     it('should handle unpublished action for a resource', async () => {
