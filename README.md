@@ -44,6 +44,7 @@ Making an open-source contribution you have agreed to our [Code of Conduct](/COD
 
 - See [docs/local-development.md](docs/local-development.md) to get started.
 - New contributors should start with our [Contribution Guidelines](CONTRIBUTING.md).
+- See [docs/courses-sessions-and-resources.md](docs/courses-sessions-and-resources.md) for how courses, sessions and resources are synced and tracked.
 
 Happy coding! ⭐
 
@@ -53,7 +54,7 @@ Chayn is proudly open-source and built with volunteer contributions. We are grat
 
 **Please consider giving this repository a star ⭐ and follow our GitHub profile to help us grow our open-source community and find more contributors like you!**
 
-Support our mission further by [sponsoring us on GitHub](https://github.com/sponsors/chaynHQ), exploring [our volunteer programs](), and following us on [social media](https://linktr.ee/chayn).
+Support our mission further by [sponsoring us on GitHub](https://github.com/sponsors/chaynHQ), exploring [our volunteer programs](<>), and following us on [social media](https://linktr.ee/chayn).
 
 # Licence
 

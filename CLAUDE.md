@@ -55,9 +55,10 @@ src/
   auth/                  authentication
   user/                  user management
   partner/               partner orgs + access control
-  course/                courses & user progress
-  session/               therapy sessions & feedback
-  resource/              learning resources
+  course/, course-user/  courses & course progress
+  session/, session-user/ course sessions & session progress
+  resource/, resource-user/ library resources & resource progress
+  therapy-session/       therapy bookings
   subscription/          subscription management
   reporting/             analytics & Slack reporting
   webhooks/              inbound webhooks (Slack, Zapier, Mailchimp, SimplyBook)
@@ -71,6 +72,8 @@ src/
   main.ts                app entry point
   typeorm.config.ts      DB connection config
 ```
+
+How courses, sessions and resources are synced and tracked: `docs/courses-sessions-and-resources.md`.
 
 ## Key Integrations
 
