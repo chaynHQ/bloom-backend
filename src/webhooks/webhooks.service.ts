@@ -616,9 +616,8 @@ export class WebhooksService {
     }
   }
 
-  // Links a published partner story to its row, or creates the row inactive. Status, name and
-  // slug of an existing row are never changed: a super admin launches partners, and the slug is
-  // the key the frontend pairs stories by.
+  // Publishing a partner story never activates a partner: it creates the row inactive, or links an
+  // existing row without changing it. A super admin activates partners in the admin dashboard.
   private async updateOrCreatePartner(storyData: ISbStoryData) {
     const name = typeof storyData.content.name === 'string' ? storyData.content.name.trim() : '';
     const slug = storyData.slug;

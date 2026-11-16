@@ -74,6 +74,7 @@ src/
 ```
 
 How courses, sessions and resources are synced and tracked: `docs/courses-sessions-and-resources.md`.
+How partners are added and launched: `docs/partners.md`.
 
 ## Key Integrations
 
