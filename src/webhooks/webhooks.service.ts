@@ -8,6 +8,7 @@ import { SlackMessageClient } from 'src/api/slack/slack-api';
 import { ChatUserService } from 'src/chat-user/chat-user.service';
 import { CourseEntity } from 'src/entities/course.entity';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
+import { PartnerEntity } from 'src/entities/partner.entity';
 import { ResourceEntity } from 'src/entities/resource.entity';
 import { SessionEntity } from 'src/entities/session.entity';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
@@ -65,6 +66,7 @@ export class WebhooksService {
     private serviceUserProfilesService: ServiceUserProfilesService,
     private slackMessageClient: SlackMessageClient,
     private readonly chatUserService: ChatUserService,
+    @InjectRepository(PartnerEntity) private partnerRepository: Repository<PartnerEntity>,
   ) {}
 
   async updatePartnerAccessTherapy(
@@ -614,6 +616,67 @@ export class WebhooksService {
     }
   }
 
+  // Publishing a partner story never activates a partner: it creates the row inactive, or links an
+  // existing row without changing it. A super admin activates partners in the admin dashboard.
+  private async updateOrCreatePartner(storyData: ISbStoryData) {
+    const name = typeof storyData.content.name === 'string' ? storyData.content.name.trim() : '';
+    const slug = storyData.slug;
+    if (!name) {
+      this.logger.error(`Storyblok partner story ${storyData.uuid} (${slug}) skipped - no name`);
+      return undefined;
+    }
+
+    try {
+      const partner =
+        (await this.partnerRepository.findOneBy({ storyblokUuid: storyData.uuid })) ??
+        (await this.partnerRepository.findOneBy({ slug })) ??
+        (await this.partnerRepository
+          .createQueryBuilder('partner')
+          .where('LOWER(partner.name) = LOWER(:name)', { name })
+          .getOne());
+
+      if (!partner) {
+        const newPartner = await this.partnerRepository.save({
+          name,
+          slug,
+          storyblokUuid: storyData.uuid,
+          isActive: false,
+          therapySessionsPerCode: 0,
+        });
+        this.logger.log(`Storyblok partner created inactive - ${newPartner.slug}`);
+        return newPartner;
+      }
+
+      if (partner.slug !== slug) {
+        this.logger.warn(
+          `Storyblok partner story ${storyData.uuid} has slug ${slug} but its partner row has slug ${partner.slug}; the row is unchanged`,
+        );
+      }
+      if (partner.name !== name) {
+        this.logger.warn(
+          `Storyblok partner story ${storyData.uuid} has name ${name} but its partner row has name ${partner.name}; the row is unchanged`,
+        );
+      }
+      if (partner.storyblokUuid && partner.storyblokUuid !== storyData.uuid) {
+        this.logger.warn(
+          `Storyblok partner story ${storyData.uuid} matched partner ${partner.slug}, which is linked to story ${partner.storyblokUuid}; the row is unchanged`,
+        );
+      }
+      if (partner.storyblokUuid) return partner;
+
+      const linkedPartner = await this.partnerRepository.save({
+        ...partner,
+        storyblokUuid: storyData.uuid,
+      });
+      this.logger.log(`Storyblok partner linked - ${linkedPartner.slug}`);
+      return linkedPartner;
+    } catch (err) {
+      const error = `Storyblok webhook failed - error updating or creating partner story record ${storyData.uuid} - ${err?.message || 'unknown error'}`;
+      this.logger.error(error);
+      throw new HttpException(error, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
   async updateInactiveStoryStatus(storyblokUuid: string, status: STORYBLOK_STORY_STATUS_ENUM) {
     // Story is deleted so cant be fetched from storyblok to get story type
     // Try to find course with matching story_id first
@@ -723,6 +786,10 @@ export class WebhooksService {
     ) {
       // Story can't be retrieved from storyblok so we just update the status of existing records
       return this.updateInactiveStoryStatus(storyblokUuid, status);
+    }
+
+    if (story.content?.component === STORYBLOK_PAGE_COMPONENTS.PARTNER) {
+      return this.updateOrCreatePartner(story);
     }
 
     // Create or update the resource/course/session record in our database

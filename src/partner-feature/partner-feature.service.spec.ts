@@ -8,14 +8,20 @@ import { FeatureService } from 'src/feature/feature.service';
 import { PartnerService } from 'src/partner/partner.service';
 import { UserService } from 'src/user/user.service';
 import { FEATURES } from 'src/utils/constants';
-import { mockFeatureEntity, mockPartnerFeatureEntity } from 'test/utils/mockData';
+import {
+  mockAllPartnerEntities,
+  mockBumbleForFriendsPartnerEntity,
+  mockFeatureEntity,
+  mockPartnerEntity,
+  mockPartnerFeatureEntity,
+} from 'test/utils/mockData';
 import {
   mockFeatureServiceMethods,
   mockPartnerFeatureRepositoryMethods,
   mockPartnerRepositoryMethods,
   mockPartnerServiceMethods,
 } from 'test/utils/mockedServices';
-import { createQueryBuilderMock } from 'test/utils/mockUtils';
+import { createQueryBuilderMock, partnerLookupQueryBuilderMock } from 'test/utils/mockUtils';
 import { Repository } from 'typeorm';
 import { PartnerFeatureService } from './partner-feature.service';
 
@@ -106,6 +112,37 @@ describe('PartnerFeatureService', () => {
         .mockResolvedValueOnce(mockAutomaticAccessCodePartnerFeatureEntity as never);
       const response = await service.getAutomaticAccessCodeFeatureForPartner('Badoo');
       expect(response).toMatchObject(mockAutomaticAccessCodePartnerFeatureEntity);
+    });
+    it.each([
+      ['Bumble For Friends', mockBumbleForFriendsPartnerEntity],
+      ['bff', mockBumbleForFriendsPartnerEntity],
+      ['Bumble', mockPartnerEntity],
+    ])('finds the automatic access code of the partner named %s', async (partnerName, partner) => {
+      const lookupRepository = createMock<Repository<PartnerEntity>>({
+        createQueryBuilder: partnerLookupQueryBuilderMock(mockAllPartnerEntities) as never,
+      });
+      const partnerService = new PartnerService(
+        lookupRepository,
+        createMock(),
+        createMock(),
+        createMock(),
+      );
+      const lookupService = new PartnerFeatureService(
+        mockPartnerFeatureRepository,
+        partnerService,
+        mockFeatureService,
+      );
+      jest
+        .spyOn(mockFeatureService, 'getFeatureByName')
+        .mockResolvedValueOnce({ ...mockFeatureEntity, name: FEATURES.AUTOMATIC_ACCESS_CODE });
+
+      await lookupService.getAutomaticAccessCodeFeatureForPartner(partnerName);
+
+      expect(mockPartnerFeatureRepository.findOne).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { partnerId: partner.id, featureId: mockFeatureEntity.id },
+        }),
+      );
     });
     it('when supplied with incorrect partner name, it should throw', async () => {
       jest.spyOn(mockPartnerService, 'getPartner').mockResolvedValueOnce(undefined);

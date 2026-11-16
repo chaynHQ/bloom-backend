@@ -1,5 +1,6 @@
 /* eslint-disable */
 import { createMock, DeepMocked } from '@golevelup/ts-jest';
+import { HttpException, HttpStatus } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { sub } from 'date-fns';
@@ -12,6 +13,8 @@ import { ServiceUserProfilesService } from 'src/service-user-profiles/service-us
 import { GetUserDto } from 'src/user/dtos/get-user.dto';
 import {
   mockPartnerAccessEntity,
+  mockAltPartnerEntity,
+  mockBumbleForFriendsPartnerEntity,
   mockPartnerAccessEntityBase,
   mockUserEntity,
 } from 'test/utils/mockData';
@@ -20,14 +23,17 @@ import {
   mockPartnerRepositoryMethods,
   mockClsService,
 } from 'test/utils/mockedServices';
-import { Repository } from 'typeorm';
-import { createQueryBuilderMock } from '../../test/utils/mockUtils';
+import { EntityManager, Repository } from 'typeorm';
+import { FeatureEntity } from '../entities/feature.entity';
+import { PartnerFeatureEntity } from '../entities/partner-feature.entity';
+import { PartnerService } from '../partner/partner.service';
+import { createMockFeatureManager, createQueryBuilderMock } from '../../test/utils/mockUtils';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
 import { PartnerAccessCodeStatusEnum } from '../utils/constants';
 import { CreatePartnerAccessDto } from './dtos/create-partner-access.dto';
 import { GetPartnerAccessesDto } from './dtos/get-partner-access.dto';
 import { UpdatePartnerAccessDto } from './dtos/update-partner-access.dto';
-import { PartnerAccessService } from './partner-access.service';
+import { basePartnerAccess, PartnerAccessService } from './partner-access.service';
 import { Logger } from '../logger/logger';
 
 const partnerId = 'partnerId1';
@@ -176,6 +182,227 @@ describe('PartnerAccessService', () => {
       expect(repoFindOneBySpy).not.toHaveBeenCalled();
       repoFindOneBySpy.mockRestore();
       partnerAccessRepositorySpy.mockRestore();
+    });
+  });
+
+  describe('createPartnerAccess therapy limit', () => {
+    beforeEach(() => {
+      mockPartnerAccessRepository.findOneBy.mockResolvedValue(null);
+    });
+
+    // Badoo has a limit of 6; Bumble For Friends, launched, has a limit of 0
+    const withBadoo = () =>
+      mockPartnerRepository.findOneBy.mockResolvedValueOnce({
+        ...mockAltPartnerEntity,
+        id: partnerId,
+        isActive: true,
+      });
+    const withBumbleForFriends = () =>
+      mockPartnerRepository.findOneBy.mockResolvedValueOnce({
+        ...mockBumbleForFriendsPartnerEntity,
+        id: partnerId,
+        isActive: true,
+      });
+
+    const savedAccess = () => mockPartnerAccessRepository.create.mock.calls[0][0];
+
+    const statusOfRejection = (promise: Promise<unknown>) =>
+      promise.then(
+        () => 'resolved',
+        (error) => (error instanceof HttpException ? error.getStatus() : error),
+      );
+
+    it('limit 6, therapy with 6 sessions: stored exactly as sent', async () => {
+      withBadoo();
+      const dto = {
+        featureLiveChat: true,
+        featureTherapy: true,
+        therapySessionsRemaining: 6,
+        therapySessionsRedeemed: 0,
+      };
+
+      await service.createPartnerAccess(dto, partnerId, partnerAdminId, undefined, true);
+
+      expect(mockPartnerRepository.findOneBy).toHaveBeenCalledWith({ id: partnerId });
+      expect(savedAccess()).toEqual({
+        ...dto,
+        partnerAdminId,
+        partnerId,
+        accessCode: expect.any(String),
+      });
+      expect(mockPartnerAccessRepository.save).toHaveBeenCalled();
+    });
+
+    it('limit 6, no therapy: stored as sent', async () => {
+      withBadoo();
+      const dto = {
+        featureLiveChat: true,
+        featureTherapy: false,
+        therapySessionsRemaining: 0,
+        therapySessionsRedeemed: 0,
+      };
+
+      await service.createPartnerAccess(dto, partnerId, partnerAdminId, undefined, true);
+
+      expect(savedAccess()).toEqual({
+        ...dto,
+        partnerAdminId,
+        partnerId,
+        accessCode: expect.any(String),
+      });
+    });
+
+    it('limit 6, 7 sessions: 400', async () => {
+      withBadoo();
+
+      expect(
+        await statusOfRejection(
+          service.createPartnerAccess(
+            {
+              featureLiveChat: true,
+              featureTherapy: true,
+              therapySessionsRemaining: 7,
+              therapySessionsRedeemed: 0,
+            },
+            partnerId,
+            partnerAdminId,
+            undefined,
+            true,
+          ),
+        ),
+      ).toBe(HttpStatus.BAD_REQUEST);
+      expect(mockPartnerAccessRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('limit 0, therapy requested: 400', async () => {
+      withBumbleForFriends();
+
+      expect(
+        await statusOfRejection(
+          service.createPartnerAccess(
+            {
+              featureLiveChat: true,
+              featureTherapy: true,
+              therapySessionsRemaining: 0,
+              therapySessionsRedeemed: 0,
+            },
+            partnerId,
+            partnerAdminId,
+            undefined,
+            true,
+          ),
+        ),
+      ).toBe(HttpStatus.BAD_REQUEST);
+      expect(mockPartnerAccessRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('limit 0, sessions without therapy: 400', async () => {
+      withBumbleForFriends();
+
+      expect(
+        await statusOfRejection(
+          service.createPartnerAccess(
+            {
+              featureLiveChat: true,
+              featureTherapy: false,
+              therapySessionsRemaining: 1,
+              therapySessionsRedeemed: 0,
+            },
+            partnerId,
+            partnerAdminId,
+            undefined,
+            true,
+          ),
+        ),
+      ).toBe(HttpStatus.BAD_REQUEST);
+    });
+
+    it('automatic access code sign-up for a limit-0 partner still works', async () => {
+      withBumbleForFriends();
+
+      await service.createPartnerAccess(basePartnerAccess, partnerId, null, mockUserEntity.id);
+
+      expect(savedAccess()).toEqual({
+        ...basePartnerAccess,
+        userId: mockUserEntity.id,
+        partnerAdminId: null,
+        partnerId,
+        accessCode: null,
+      });
+      expect(mockPartnerAccessRepository.save).toHaveBeenCalled();
+    });
+
+    it('unknown partner: 400', async () => {
+      mockPartnerRepository.findOneBy.mockResolvedValueOnce(null);
+
+      expect(
+        await statusOfRejection(
+          service.createPartnerAccess(basePartnerAccess, 'unknownPartnerId', null, 'userId'),
+        ),
+      ).toBe(HttpStatus.BAD_REQUEST);
+    });
+  });
+
+  describe('validatePartnerAutomaticAccessCode', () => {
+    // Switches the code through PartnerService and signs up through the check, sharing one
+    // in-memory partner_feature table
+    const setUp = () => {
+      const manager = createMockFeatureManager();
+      const partner = { ...mockBumbleForFriendsPartnerEntity, isActive: true };
+      const partnerRepository = createMock<Repository<PartnerEntity>>({
+        manager: manager as unknown as EntityManager,
+        findOneBy: async () => ({ ...partner }) as PartnerEntity,
+        save: async (data) => data as PartnerEntity,
+        findOne: async () =>
+          ({
+            ...partner,
+            partnerFeature: manager.tables.get(PartnerFeatureEntity).map((pf) => ({
+              ...pf,
+              feature: manager.tables.get(FeatureEntity).find((f) => f.id === pf.featureId),
+            })),
+          }) as unknown as PartnerEntity,
+      });
+      const partnerService = new PartnerService(
+        partnerRepository,
+        createMock(),
+        createMock(),
+        createMock(),
+      );
+      const accessService = new PartnerAccessService(
+        mockPartnerAccessRepository,
+        partnerRepository,
+        mockServiceUserProfilesService,
+      );
+      const setAutomaticAccessCode = (automaticAccessCode: boolean) =>
+        partnerService.updatePartnerActiveStatus(partner.id, { automaticAccessCode });
+      const signUp = () =>
+        accessService.validatePartnerAutomaticAccessCode(partner.id).then(
+          () => 'allowed',
+          (error) => (error instanceof HttpException ? error.getStatus() : error),
+        );
+      return { setAutomaticAccessCode, signUp };
+    };
+
+    it('allows sign-up without a code while the automatic access code is on', async () => {
+      const { setAutomaticAccessCode, signUp } = setUp();
+      await setAutomaticAccessCode(true);
+      expect(await signUp()).toBe('allowed');
+    });
+
+    it('refuses sign-up without a code once it is switched off, and allows it when back on', async () => {
+      const { setAutomaticAccessCode, signUp } = setUp();
+      await setAutomaticAccessCode(true);
+
+      await setAutomaticAccessCode(false);
+      expect(await signUp()).toBe(HttpStatus.BAD_REQUEST);
+
+      await setAutomaticAccessCode(true);
+      expect(await signUp()).toBe('allowed');
+    });
+
+    it('refuses sign-up without a code for a partner that never had it', async () => {
+      const { signUp } = setUp();
+      expect(await signUp()).toBe(HttpStatus.BAD_REQUEST);
     });
   });
 
