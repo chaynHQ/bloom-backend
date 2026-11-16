@@ -8,6 +8,7 @@ import { SlackMessageClient } from 'src/api/slack/slack-api';
 import { ChatUserService } from 'src/chat-user/chat-user.service';
 import { CourseEntity } from 'src/entities/course.entity';
 import { PartnerAccessEntity } from 'src/entities/partner-access.entity';
+import { PartnerEntity } from 'src/entities/partner.entity';
 import { ResourceEntity } from 'src/entities/resource.entity';
 import { SessionEntity } from 'src/entities/session.entity';
 import { TherapySessionEntity } from 'src/entities/therapy-session.entity';
@@ -19,7 +20,7 @@ import { ServiceUserProfilesService } from 'src/service-user-profiles/service-us
 import { IUser } from 'src/user/user.interface';
 import { partiallyMaskEmail } from 'src/utils/pii-redaction';
 import { serializeSimplybookDtoToTherapySessionEntity } from 'src/utils/serialize';
-import { ILike, MoreThan, Repository } from 'typeorm';
+import { ILike, In, MoreThan, Repository } from 'typeorm';
 import { CoursePartnerService } from '../course-partner/course-partner.service';
 import {
   isProduction,
@@ -65,6 +66,7 @@ export class WebhooksService {
     private serviceUserProfilesService: ServiceUserProfilesService,
     private slackMessageClient: SlackMessageClient,
     private readonly chatUserService: ChatUserService,
+    @InjectRepository(PartnerEntity) private partnerRepository: Repository<PartnerEntity>,
   ) {}
 
   async updatePartnerAccessTherapy(
@@ -476,6 +478,57 @@ export class WebhooksService {
     }
   }
 
+  // A modular course is linked to every resource its translatable `sessions` field lists in any
+  // language, as a `weeks` course is to its sessions. A listed resource with no row yet gets one,
+  // as publishing it would have done.
+  private async getCourseResources(storyData: ISbStoryData): Promise<ResourceEntity[]> {
+    const resourceUuids = new Set<string>();
+    const languages = new Set<string>(['default', ...(storyData.content.languages ?? [])]);
+    for (const language of languages) {
+      let sessions: unknown = storyData.content.sessions;
+      if (language !== 'default') {
+        const response = await apiCall({
+          url: `https://api.storyblok.com/v2/cdn/stories/${storyData.uuid}?find_by=uuid&language=${language}&token=${storyblokToken}`,
+          type: 'get',
+        });
+        sessions = response?.data?.story?.content?.sessions;
+      }
+      if (!Array.isArray(sessions)) continue;
+      sessions.forEach((uuid) => typeof uuid === 'string' && resourceUuids.add(uuid));
+    }
+    if (resourceUuids.size === 0) return [];
+
+    const resources = await this.resourceRepository.findBy({
+      storyblokUuid: In([...resourceUuids]),
+    });
+    const existingResourceUuids = new Set(resources.map((resource) => resource.storyblokUuid));
+    const missingResourceUuids = [...resourceUuids].filter(
+      (uuid) => !existingResourceUuids.has(uuid),
+    );
+    if (missingResourceUuids.length === 0) return resources;
+
+    const response = await apiCall({
+      url: `https://api.storyblok.com/v2/cdn/stories?by_uuids=${missingResourceUuids.join(',')}&token=${storyblokToken}`,
+      type: 'get',
+    });
+    const missingResourceStories: ISbStoryData[] = response?.data?.stories ?? [];
+    for (const story of missingResourceStories) {
+      if (!RESOURCE_COMPONENT_CATEGORIES[story.content.component]) continue;
+      resources.push(
+        (await this.updateOrCreateStoryData(
+          story,
+          STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
+        )) as ResourceEntity,
+      );
+    }
+    if (resources.length < resourceUuids.size) {
+      this.logger.warn(
+        `Course ${storyData.uuid} lists stories that aren't published resources; publish them, then the course again`,
+      );
+    }
+    return resources;
+  }
+
   private async updateOrCreateStoryData(
     storyData: ISbStoryData,
     status: STORYBLOK_STORY_STATUS_ENUM,
@@ -513,12 +566,14 @@ export class WebhooksService {
       }
 
       if (storyPageComponent === STORYBLOK_PAGE_COMPONENTS.COURSE) {
+        // Fetched first, so a failed language fetch saves nothing.
+        const resources = await this.getCourseResources(storyData);
         const existingCourse = await this.courseRepository.findOneBy({
           storyblokUuid: storyData.uuid,
         });
         const data = existingCourse
-          ? { ...existingCourse, ...updatedStoryData }
-          : { ...newStoryData };
+          ? { ...existingCourse, ...updatedStoryData, resources }
+          : { ...newStoryData, resources };
 
         const course = await this.courseRepository.save(data);
 
@@ -556,6 +611,67 @@ export class WebhooksService {
       return undefined; // Story wasn't a course, session or resource story. No sync or updates completed
     } catch (err) {
       const error = `Storyblok webhook failed - error updating or creating ${status} ${storyPageComponent} story record ${storyData.uuid} - ${err?.message || 'unknown error'}`;
+      this.logger.error(error);
+      throw new HttpException(error, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  // Publishing a partner story never activates a partner: it creates the row inactive, or links an
+  // existing row without changing it. A super admin activates partners in the admin dashboard.
+  private async updateOrCreatePartner(storyData: ISbStoryData) {
+    const name = typeof storyData.content.name === 'string' ? storyData.content.name.trim() : '';
+    const slug = storyData.slug;
+    if (!name) {
+      this.logger.error(`Storyblok partner story ${storyData.uuid} (${slug}) skipped - no name`);
+      return undefined;
+    }
+
+    try {
+      const partner =
+        (await this.partnerRepository.findOneBy({ storyblokUuid: storyData.uuid })) ??
+        (await this.partnerRepository.findOneBy({ slug })) ??
+        (await this.partnerRepository
+          .createQueryBuilder('partner')
+          .where('LOWER(partner.name) = LOWER(:name)', { name })
+          .getOne());
+
+      if (!partner) {
+        const newPartner = await this.partnerRepository.save({
+          name,
+          slug,
+          storyblokUuid: storyData.uuid,
+          isActive: false,
+          therapySessionsPerCode: 0,
+        });
+        this.logger.log(`Storyblok partner created inactive - ${newPartner.slug}`);
+        return newPartner;
+      }
+
+      if (partner.slug !== slug) {
+        this.logger.warn(
+          `Storyblok partner story ${storyData.uuid} has slug ${slug} but its partner row has slug ${partner.slug}; the row is unchanged`,
+        );
+      }
+      if (partner.name !== name) {
+        this.logger.warn(
+          `Storyblok partner story ${storyData.uuid} has name ${name} but its partner row has name ${partner.name}; the row is unchanged`,
+        );
+      }
+      if (partner.storyblokUuid && partner.storyblokUuid !== storyData.uuid) {
+        this.logger.warn(
+          `Storyblok partner story ${storyData.uuid} matched partner ${partner.slug}, which is linked to story ${partner.storyblokUuid}; the row is unchanged`,
+        );
+      }
+      if (partner.storyblokUuid) return partner;
+
+      const linkedPartner = await this.partnerRepository.save({
+        ...partner,
+        storyblokUuid: storyData.uuid,
+      });
+      this.logger.log(`Storyblok partner linked - ${linkedPartner.slug}`);
+      return linkedPartner;
+    } catch (err) {
+      const error = `Storyblok webhook failed - error updating or creating partner story record ${storyData.uuid} - ${err?.message || 'unknown error'}`;
       this.logger.error(error);
       throw new HttpException(error, HttpStatus.INTERNAL_SERVER_ERROR);
     }
@@ -670,6 +786,10 @@ export class WebhooksService {
     ) {
       // Story can't be retrieved from storyblok so we just update the status of existing records
       return this.updateInactiveStoryStatus(storyblokUuid, status);
+    }
+
+    if (story.content?.component === STORYBLOK_PAGE_COMPONENTS.PARTNER) {
+      return this.updateOrCreatePartner(story);
     }
 
     // Create or update the resource/course/session record in our database

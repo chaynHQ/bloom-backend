@@ -39,6 +39,21 @@ export class PartnerAccessService {
     userId?: string,
     generateCode?: boolean,
   ): Promise<PartnerAccessEntity> {
+    const partner = await this.partnerRepository.findOneBy({ id: partnerId });
+    if (!partner) {
+      throw new HttpException('Partner does not exist', HttpStatus.BAD_REQUEST);
+    }
+    const limit = partner.therapySessionsPerCode;
+    if (createPartnerAccessDto.featureTherapy && limit === 0) {
+      throw new HttpException('Therapy is not available for this partner', HttpStatus.BAD_REQUEST);
+    }
+    if (createPartnerAccessDto.therapySessionsRemaining > limit) {
+      throw new HttpException(
+        `therapySessionsRemaining must not be more than ${limit} for this partner`,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
     const accessCode = generateCode ? await this.generateAccessCode(6) : null;
     const partnerAccess = this.partnerAccessRepository.create({
       ...createPartnerAccessDto,
@@ -116,7 +131,7 @@ export class PartnerAccessService {
     }
 
     const automaticAccessCodePartnerFeature = partner.partnerFeature.find(
-      (pf) => pf.feature.name === FEATURES.AUTOMATIC_ACCESS_CODE,
+      (pf) => pf.active && pf.feature.name === FEATURES.AUTOMATIC_ACCESS_CODE,
     );
 
     if (!automaticAccessCodePartnerFeature || !partner.partnerFeature) {

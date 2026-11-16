@@ -97,6 +97,7 @@ export class SessionUserService {
       courseId,
     });
 
+    const courseStarted = !courseUser;
     if (!courseUser) {
       courseUser = await this.courseUserService.createCourseUser({
         userId: user.id,
@@ -120,7 +121,7 @@ export class SessionUserService {
 
     this.serviceUserProfilesService.updateServiceUserProfilesCourse(updatedCourseUser, user.email);
 
-    return formatCourseUserObject(updatedCourseUser);
+    return { ...formatCourseUserObject(updatedCourseUser), courseStarted, courseCompleted: false };
   }
 
   public async setSessionUserCompleted(
@@ -144,6 +145,7 @@ export class SessionUserService {
       courseId,
     });
 
+    const courseStarted = !courseUser;
     if (!courseUser) {
       courseUser = await this.courseUserService.createCourseUser({
         userId: user.id,
@@ -189,12 +191,17 @@ export class SessionUserService {
       relations: { session: true },
     });
     this.logger.log(`course: ${course.name}`);
+    const wasCompleted = courseUser.completed;
     courseUser = await this.checkCourseIsComplete(courseUser, course);
     courseUser.course = course;
     const formattedResponse = formatCourseUserObjects([courseUser])[0];
 
     this.serviceUserProfilesService.updateServiceUserProfilesCourse(courseUser, user.email);
 
-    return formattedResponse;
+    return {
+      ...formattedResponse,
+      courseStarted,
+      courseCompleted: !wasCompleted && courseUser.completed,
+    };
   }
 }

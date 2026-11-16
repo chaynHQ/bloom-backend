@@ -37,6 +37,7 @@ export enum STORYBLOK_PAGE_COMPONENTS {
   MEET_THE_TEAM = 'meet_the_team',
   WELCOME = 'Welcome',
   PAGE = 'page',
+  PARTNER = 'partner',
 }
 
 export enum STORYBLOK_STORY_STATUS_ENUM {

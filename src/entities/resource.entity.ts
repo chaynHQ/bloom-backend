@@ -1,6 +1,7 @@
-import { Column, Entity, JoinTable, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, JoinTable, ManyToMany, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { RESOURCE_CATEGORIES, STORYBLOK_STORY_STATUS_ENUM, THEMES } from '../utils/constants';
 import { BaseBloomEntity } from './base.entity';
+import { CourseEntity } from './course.entity';
 import { ResourceFeedbackEntity } from './resource-feedback.entity';
 import { ResourceUserEntity } from './resource-user.entity';
 
@@ -56,4 +57,7 @@ export class ResourceEntity extends BaseBloomEntity {
   )
   @JoinTable({ name: 'resourceFeedback', joinColumn: { name: 'resourceFeedbackId' } })
   resourceFeedback: ResourceFeedbackEntity[];
+
+  @ManyToMany(() => CourseEntity, (course) => course.resources)
+  courses: CourseEntity[];
 }

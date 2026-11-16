@@ -13,7 +13,7 @@ import { UserEntity } from 'src/entities/user.entity';
 import { EVENT_NAME } from 'src/event-logger/event-logger.interface';
 import { Logger } from 'src/logger/logger';
 import { SIMPLYBOOK_ACTION_ENUM } from 'src/utils/constants';
-import { Between, IsNull, Not, Repository } from 'typeorm';
+import { Between, Brackets, IsNull, Not, Repository } from 'typeorm';
 import {
   DbBreakdowns,
   DbMetrics,
@@ -225,6 +225,7 @@ export class DbMetricsService {
     const [
       sessionRows,
       courseRows,
+      courseResourceRows,
       resourceRows,
       newUsersByPartner,
       partnerGrantsByPartner,
@@ -268,6 +269,37 @@ export class DbMetricsService {
         .setParameters({ from, to })
         .groupBy('c.name')
         .getRawMany<{ courseName: string; started: string; completed: string }>(),
+      // Modular courses list resources in place of sessions: progress on each resource by members
+      // who have started that course, wherever they did the resource.
+      this.courseUserRepository
+        .createQueryBuilder('cu')
+        .innerJoin('cu.course', 'c')
+        .innerJoin('c.resources', 'r')
+        .innerJoin(
+          ResourceUserEntity,
+          'ru',
+          'ru."userId" = cu."userId" AND ru."resourceId" = r."resourceId"',
+        )
+        .select('c.name', 'courseName')
+        .addSelect('r.name', 'sessionName')
+        .addSelect('COUNT(*) FILTER (WHERE ru."createdAt" BETWEEN :from AND :to)', 'started')
+        .addSelect('COUNT(*) FILTER (WHERE ru."completedAt" BETWEEN :from AND :to)', 'completed')
+        .where(
+          new Brackets((qb) =>
+            qb
+              .where('ru."createdAt" BETWEEN :from AND :to')
+              .orWhere('ru."completedAt" BETWEEN :from AND :to'),
+          ),
+        )
+        .setParameters({ from, to })
+        .groupBy('c.name')
+        .addGroupBy('r.name')
+        .getRawMany<{
+          courseName: string;
+          sessionName: string;
+          started: string;
+          completed: string;
+        }>(),
       this.resourceUserRepository
         .createQueryBuilder('ru')
         .innerJoin('ru.resource', 'r')
@@ -296,7 +328,10 @@ export class DbMetricsService {
       this.queryTherapyByPartner(from, to),
     ]);
 
-    const courses = this.assembleCourseBreakdowns(sessionRows, courseRows);
+    const courses = this.assembleCourseBreakdowns(
+      [...sessionRows, ...courseResourceRows],
+      courseRows,
+    );
     const resources = this.assembleResourceBreakdowns(resourceRows);
 
     return {

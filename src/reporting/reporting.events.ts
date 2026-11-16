@@ -102,6 +102,16 @@ export const EVENT_GROUPS: EventGroup[] = [
     lines: [
       { label: 'Course list viewed', items: [{ event: 'COURSE_LIST_VIEWED', label: 'views' }] },
       {
+        // Mirrors the DB coursesStarted / coursesCompleted, for consenting users only.
+        label: 'Course progress',
+        items: [
+          { event: 'COURSE_STARTED', label: 'started' },
+          { event: 'COURSE_COMPLETED', label: 'completed' },
+        ],
+        breakdownParam: 'customEvent:course_name',
+        paramLabel: 'course',
+      },
+      {
         label: 'Course overview viewed',
         items: [{ event: 'COURSE_OVERVIEW_VIEWED', label: 'views' }],
       },

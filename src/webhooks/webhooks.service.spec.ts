@@ -1,4 +1,5 @@
-import { createMock } from '@golevelup/ts-jest';
+import { createMock, DeepMocked } from '@golevelup/ts-jest';
+import { HttpStatus } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import apiCall from 'src/api/apiCalls';
@@ -27,7 +28,12 @@ import {
 import {
   mockCourse,
   mockCourseStoryblokResult,
+  mockAllPartnerEntities,
+  mockAltPartnerEntity,
+  mockBumbleForFriendsPartnerEntity,
+  mockFruitzPartnerEntity,
   mockPartnerAccessEntity,
+  mockPartnerEntity,
   mockResource,
   mockResource2,
   mockResourceStoryblokResult,
@@ -52,7 +58,8 @@ import {
   mockTherapySessionRepositoryMethods,
   mockUserRepositoryMethods,
 } from 'test/utils/mockedServices';
-import { ILike, Repository } from 'typeorm';
+import { createQueryBuilderMock, partnerLookupQueryBuilderMock } from 'test/utils/mockUtils';
+import { ILike, In, Repository } from 'typeorm';
 import { SimplybookNotificationType } from './dto/simplybook-webhook.dto';
 import { WebhooksService } from './webhooks.service';
 
@@ -102,9 +109,8 @@ describe('WebhooksService', () => {
   const mockedPartnerAccessRepository = createMock<Repository<PartnerAccessEntity>>(
     mockPartnerAccessRepositoryMethods,
   );
-  const mockedPartnerRepository = createMock<Repository<PartnerEntity>>(
-    mockPartnerRepositoryMethods,
-  );
+  let mockedPartnerRepository: DeepMocked<Repository<PartnerEntity>>;
+  let partnerService: PartnerService;
   const mockedCoursePartnerRepository = createMock<Repository<CoursePartnerEntity>>(
     mockCoursePartnerRepositoryMethods,
   );
@@ -115,6 +121,7 @@ describe('WebhooksService', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    mockedPartnerRepository = createMock<Repository<PartnerEntity>>(mockPartnerRepositoryMethods);
 
     (apiCall as jest.Mock).mockClear().mockResolvedValue(mockSessionStoryblokResult);
 
@@ -178,6 +185,7 @@ describe('WebhooksService', () => {
     }).compile();
 
     service = module.get<WebhooksService>(WebhooksService);
+    partnerService = module.get<PartnerService>(PartnerService);
   });
 
   it('should be defined', () => {
@@ -399,6 +407,7 @@ describe('WebhooksService', () => {
         slug: mockCourseStoryblokResult.data.story.full_slug,
         name: mockCourseStoryblokResult.data.story.content.name,
         themes: [THEMES.SETTING_BOUNDARIES],
+        resources: [],
       };
 
       const course = (await service.handleStoryUpdated(body)) as CourseEntity;
@@ -415,6 +424,130 @@ describe('WebhooksService', () => {
       );
       courseFindOneRepoSpy.mockClear();
       courseSaveRepoSpy.mockClear();
+    });
+
+    describe('modular course resources', () => {
+      const courseBody = {
+        action: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
+        full_slug: mockCourseStoryblokResult.data.story.full_slug,
+        text: '',
+      };
+      const courseStory = (content: Record<string, unknown>) => ({
+        ...mockCourseStoryblokResult,
+        data: {
+          story: {
+            ...mockCourseStoryblokResult.data.story,
+            content: { ...mockCourseStoryblokResult.data.story.content, ...content },
+          },
+        },
+      });
+
+      const existingResource = (uuid: string) => ({
+        ...mockResource,
+        id: `id-${uuid}`,
+        storyblokUuid: uuid,
+      });
+
+      it('links the course to the resources it lists', async () => {
+        (apiCall as jest.Mock).mockResolvedValueOnce(
+          courseStory({ sessions: ['courseResource1', 'courseResource2'] }),
+        );
+        const findBySpy = jest
+          .spyOn(mockedResourceRepository, 'findBy')
+          .mockResolvedValueOnce([
+            existingResource('courseResource1'),
+            existingResource('courseResource2'),
+          ]);
+
+        const course = (await service.handleStoryUpdated(courseBody)) as CourseEntity;
+
+        expect(findBySpy).toHaveBeenCalledWith({
+          storyblokUuid: In(['courseResource1', 'courseResource2']),
+        });
+        expect(course.resources.map((r) => r.storyblokUuid)).toEqual([
+          'courseResource1',
+          'courseResource2',
+        ]);
+        expect(apiCall).toHaveBeenCalledTimes(1);
+      });
+
+      it('links the resources listed in every language', async () => {
+        (apiCall as jest.Mock)
+          .mockResolvedValueOnce(
+            courseStory({ sessions: ['courseResource1'], languages: ['default', 'tr', 'ar'] }),
+          )
+          .mockResolvedValueOnce(courseStory({ sessions: ['courseResource1', 'courseResource2'] }))
+          .mockResolvedValueOnce(courseStory({ sessions: ['courseResource3'] }));
+        const findBySpy = jest
+          .spyOn(mockedResourceRepository, 'findBy')
+          .mockResolvedValueOnce([
+            existingResource('courseResource1'),
+            existingResource('courseResource2'),
+            existingResource('courseResource3'),
+          ]);
+
+        await service.handleStoryUpdated(courseBody);
+
+        expect(apiCall).toHaveBeenCalledWith({
+          url: expect.stringContaining(
+            `cdn/stories/${mockCourseStoryblokResult.data.story.uuid}?find_by=uuid&language=tr`,
+          ),
+          type: 'get',
+        });
+        expect(findBySpy).toHaveBeenCalledWith({
+          storyblokUuid: In(['courseResource1', 'courseResource2', 'courseResource3']),
+        });
+      });
+
+      it('changes nothing when a language fetch fails', async () => {
+        (apiCall as jest.Mock)
+          .mockResolvedValueOnce(courseStory({ sessions: ['courseResource1'], languages: ['tr'] }))
+          .mockRejectedValueOnce(new Error('rate limited'));
+        const saveSpy = jest.spyOn(mockedCourseRepository, 'save');
+
+        await expect(service.handleStoryUpdated(courseBody)).rejects.toThrow('rate limited');
+        expect(saveSpy).not.toHaveBeenCalled();
+        saveSpy.mockClear();
+      });
+
+      it('creates the row for a listed resource that was never synced', async () => {
+        (apiCall as jest.Mock)
+          .mockResolvedValueOnce(courseStory({ sessions: ['courseResource1', 'resourceUuid2'] }))
+          .mockResolvedValueOnce({ data: { stories: [mockResourceStoryblokResult.data.story] } });
+        jest
+          .spyOn(mockedResourceRepository, 'findBy')
+          .mockResolvedValueOnce([existingResource('courseResource1')]);
+        jest.spyOn(mockedResourceRepository, 'findOneBy').mockResolvedValueOnce(undefined);
+
+        const course = (await service.handleStoryUpdated(courseBody)) as CourseEntity;
+
+        expect(apiCall).toHaveBeenCalledWith({
+          url: expect.stringContaining('cdn/stories?by_uuids=resourceUuid2&'),
+          type: 'get',
+        });
+        expect(course.resources.map((r) => r.storyblokUuid)).toEqual([
+          'courseResource1',
+          'resourceUuid2',
+        ]);
+      });
+
+      it('clears the links when the sessions field is emptied', async () => {
+        (apiCall as jest.Mock).mockResolvedValueOnce(courseStory({ sessions: [] }));
+
+        const course = (await service.handleStoryUpdated(courseBody)) as CourseEntity;
+
+        expect(course.resources).toEqual([]);
+      });
+
+      it('links nothing for a course without the sessions field', async () => {
+        (apiCall as jest.Mock).mockResolvedValueOnce(mockCourseStoryblokResult);
+        const findBySpy = jest.spyOn(mockedResourceRepository, 'findBy');
+
+        const course = (await service.handleStoryUpdated(courseBody)) as CourseEntity;
+
+        expect(course.resources).toEqual([]);
+        expect(findBySpy).not.toHaveBeenCalled();
+      });
     });
 
     it('should handle unpublished action for a resource', async () => {
@@ -673,6 +806,242 @@ describe('WebhooksService', () => {
       );
 
       resourceSaveRepoSpy.mockClear();
+    });
+  });
+
+  describe('partner stories', () => {
+    const partnerStory = (
+      overrides: Partial<{ slug: string; name: string; uuid: string }> = {},
+    ) => {
+      const { slug = 'bff', name = 'Bumble For Friends', uuid = 'partnerStoryUuid' } = overrides;
+      return {
+        data: {
+          story: {
+            id: 999,
+            uuid,
+            name,
+            slug,
+            full_slug: `partners/${slug}`,
+            content: { _uid: 'p1', component: STORYBLOK_PAGE_COMPONENTS.PARTNER, name },
+          },
+        },
+      };
+    };
+
+    const publish = (story: ReturnType<typeof partnerStory>) => {
+      (apiCall as jest.Mock).mockResolvedValueOnce(story);
+      return service.handleStoryUpdated({
+        action: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
+        full_slug: story.data.story.full_slug,
+        text: '',
+      });
+    };
+
+    // Rows the partner repository finds by equality and by the name query
+    const usePartnerRows = (rows: Partial<PartnerEntity>[]) => {
+      mockedPartnerRepository.findOneBy.mockImplementation(
+        (async (where: Partial<PartnerEntity>) =>
+          rows.find((row) => Object.entries(where).every(([key, value]) => row[key] === value)) ??
+          null) as never,
+      );
+      mockedPartnerRepository.createQueryBuilder.mockImplementation(
+        partnerLookupQueryBuilderMock(rows as PartnerEntity[]) as never,
+      );
+    };
+
+    const logger = () =>
+      (service as unknown as { logger: { warn: jest.Mock; error: jest.Mock } }).logger;
+
+    beforeEach(() => {
+      jest.spyOn(logger(), 'warn').mockImplementation(() => undefined);
+      jest.spyOn(logger(), 'error').mockImplementation(() => undefined);
+    });
+
+    it('creates an unknown partner inactive, with a therapy limit of 0', async () => {
+      usePartnerRows([]);
+
+      await publish(partnerStory());
+
+      expect(mockedPartnerRepository.save).toHaveBeenCalledTimes(1);
+      expect(mockedPartnerRepository.save).toHaveBeenCalledWith({
+        name: 'Bumble For Friends',
+        slug: 'bff',
+        storyblokUuid: 'partnerStoryUuid',
+        isActive: false,
+        therapySessionsPerCode: 0,
+      });
+    });
+
+    it('links an existing row by slug, leaving it active', async () => {
+      const existing = { ...mockBumbleForFriendsPartnerEntity, isActive: true, name: 'Old Name' };
+      usePartnerRows([existing]);
+
+      await publish(partnerStory());
+
+      expect(mockedPartnerRepository.save).toHaveBeenCalledWith({
+        ...existing,
+        storyblokUuid: 'partnerStoryUuid',
+      });
+      expect(logger().warn).toHaveBeenCalledWith(expect.stringContaining('Old Name'));
+    });
+
+    it('links an existing row by name when no slug matches, keeping its slug', async () => {
+      // e.g. a row made by POST /v1/partner, which slugifies the name
+      usePartnerRows([{ ...mockBumbleForFriendsPartnerEntity, slug: 'bumble-for-friends' }]);
+
+      await publish(partnerStory({ name: 'BUMBLE FOR FRIENDS' }));
+
+      expect(mockedPartnerRepository.save).toHaveBeenCalledWith({
+        ...mockBumbleForFriendsPartnerEntity,
+        slug: 'bumble-for-friends',
+        storyblokUuid: 'partnerStoryUuid',
+      });
+      expect(logger().warn).toHaveBeenCalledWith(expect.stringContaining('slug bff'));
+    });
+
+    it('does not link Bumble to a Bumble For Friends story', async () => {
+      usePartnerRows([mockPartnerEntity, mockAltPartnerEntity, mockFruitzPartnerEntity]);
+
+      await publish(partnerStory());
+
+      expect(mockedPartnerRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({ slug: 'bff', isActive: false }),
+      );
+      expect(mockedPartnerRepository.save).not.toHaveBeenCalledWith(
+        expect.objectContaining({ id: expect.anything() }),
+      );
+    });
+
+    it('never renames or reactivates a row found by its Storyblok uuid', async () => {
+      // Bumble For Friends is inactive until a super admin launches it
+      usePartnerRows([{ ...mockBumbleForFriendsPartnerEntity, storyblokUuid: 'partnerStoryUuid' }]);
+
+      await publish(partnerStory({ slug: 'bumble-friends', name: 'Bumble Friends' }));
+
+      expect(mockedPartnerRepository.save).not.toHaveBeenCalled();
+      expect(logger().warn).toHaveBeenCalledWith(expect.stringContaining('slug bumble-friends'));
+      expect(logger().warn).toHaveBeenCalledWith(expect.stringContaining('name Bumble Friends'));
+    });
+
+    it('runs for a moved partner story too', async () => {
+      usePartnerRows([]);
+      const story = partnerStory();
+      (apiCall as jest.Mock).mockResolvedValueOnce(story);
+
+      await service.handleStoryUpdated({
+        action: STORYBLOK_STORY_STATUS_ENUM.MOVED,
+        full_slug: story.data.story.full_slug,
+        text: '',
+      });
+
+      expect(mockedPartnerRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({ slug: 'bff', isActive: false }),
+      );
+    });
+
+    it('leaves a row linked to a different story unchanged, logging it', async () => {
+      usePartnerRows([{ ...mockBumbleForFriendsPartnerEntity, storyblokUuid: 'otherStoryUuid' }]);
+
+      await publish(partnerStory());
+
+      expect(mockedPartnerRepository.save).not.toHaveBeenCalled();
+      expect(logger().warn).toHaveBeenCalledWith(expect.stringContaining('otherStoryUuid'));
+    });
+
+    it('fails the webhook with a 500 when the row cannot be saved', async () => {
+      usePartnerRows([]);
+      mockedPartnerRepository.save.mockRejectedValueOnce(new Error('duplicate key'));
+
+      await expect(publish(partnerStory())).rejects.toMatchObject({
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+      });
+      expect(logger().error).toHaveBeenCalledWith(expect.stringContaining('duplicate key'));
+    });
+
+    it('republishing a linked story changes nothing', async () => {
+      usePartnerRows([{ ...mockBumbleForFriendsPartnerEntity, storyblokUuid: 'partnerStoryUuid' }]);
+
+      await publish(partnerStory());
+
+      expect(mockedPartnerRepository.save).not.toHaveBeenCalled();
+      expect(logger().warn).not.toHaveBeenCalled();
+    });
+
+    it('skips a story with an empty name, logging an error', async () => {
+      usePartnerRows([]);
+
+      await publish(partnerStory({ name: '  ' }));
+
+      expect(mockedPartnerRepository.save).not.toHaveBeenCalled();
+      expect(logger().error).toHaveBeenCalled();
+    });
+
+    it.each([STORYBLOK_STORY_STATUS_ENUM.UNPUBLISHED, STORYBLOK_STORY_STATUS_ENUM.DELETED])(
+      '%s is a no-op',
+      async (action) => {
+        usePartnerRows([
+          { ...mockBumbleForFriendsPartnerEntity, storyblokUuid: 'partnerStoryUuid' },
+        ]);
+        mockedCourseRepository.findOneBy.mockResolvedValueOnce(null);
+        mockedSessionRepository.findOneBy.mockResolvedValueOnce(null);
+        mockedResourceRepository.findOneBy.mockResolvedValueOnce(null);
+        (apiCall as jest.Mock).mockResolvedValueOnce(partnerStory());
+
+        await expect(
+          service.handleStoryUpdated({
+            action,
+            full_slug: 'partners/bff',
+            text: '',
+          }),
+        ).resolves.toBeUndefined();
+
+        expect(mockedPartnerRepository.save).not.toHaveBeenCalled();
+        expect(mockedCourseRepository.save).not.toHaveBeenCalled();
+        expect(mockedSessionRepository.save).not.toHaveBeenCalled();
+        expect(mockedResourceRepository.save).not.toHaveBeenCalled();
+      },
+    );
+
+    it('a course tagged Public and Bumble For Friends links Bumble For Friends only, not Bumble', async () => {
+      mockedPartnerRepository.createQueryBuilder.mockImplementation(
+        partnerLookupQueryBuilderMock(mockAllPartnerEntities) as never,
+      );
+      mockedCoursePartnerRepository.createQueryBuilder.mockImplementationOnce(
+        createQueryBuilderMock({ getMany: jest.fn().mockResolvedValue([]) }) as never,
+      );
+      const coursePartnerService = new CoursePartnerService(
+        mockedCoursePartnerRepository,
+        partnerService,
+      );
+      mockedCoursePartnerService.updateCoursePartners.mockImplementationOnce((partners, courseId) =>
+        coursePartnerService.updateCoursePartners(partners, courseId),
+      );
+      const courseStory = {
+        ...mockCourseStoryblokResult,
+        data: {
+          story: {
+            ...mockCourseStoryblokResult.data.story,
+            content: {
+              ...mockCourseStoryblokResult.data.story.content,
+              included_for_partners: ['Public', 'Bumble For Friends'],
+            },
+          },
+        },
+      };
+      (apiCall as jest.Mock).mockResolvedValueOnce(courseStory);
+
+      const course = (await service.handleStoryUpdated({
+        action: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
+        full_slug: courseStory.data.story.full_slug,
+        text: '',
+      })) as CourseEntity;
+
+      expect(mockedCoursePartnerRepository.save).toHaveBeenCalledTimes(1);
+      expect(mockedCoursePartnerRepository.save).toHaveBeenCalledWith({
+        partnerId: mockBumbleForFriendsPartnerEntity.id,
+        courseId: course.id,
+        active: true,
+      });
     });
   });
 
