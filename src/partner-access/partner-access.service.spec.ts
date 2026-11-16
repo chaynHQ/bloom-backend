@@ -14,6 +14,7 @@ import { GetUserDto } from 'src/user/dtos/get-user.dto';
 import {
   mockPartnerAccessEntity,
   mockPartnerAccessEntityBase,
+  mockTestPartnerEntity,
   mockUserEntity,
 } from 'test/utils/mockData';
 import {
@@ -21,8 +22,11 @@ import {
   mockPartnerRepositoryMethods,
   mockClsService,
 } from 'test/utils/mockedServices';
-import { Repository } from 'typeorm';
-import { createQueryBuilderMock } from '../../test/utils/mockUtils';
+import { EntityManager, Repository } from 'typeorm';
+import { FeatureEntity } from '../entities/feature.entity';
+import { PartnerFeatureEntity } from '../entities/partner-feature.entity';
+import { PartnerService } from '../partner/partner.service';
+import { createMockFeatureManager, createQueryBuilderMock } from '../../test/utils/mockUtils';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
 import { PartnerAccessCodeStatusEnum } from '../utils/constants';
 import { CreatePartnerAccessDto } from './dtos/create-partner-access.dto';
@@ -330,6 +334,69 @@ describe('PartnerAccessService', () => {
           service.createPartnerAccess(basePartnerAccess, 'unknownPartnerId', null, 'userId'),
         ),
       ).toBe(HttpStatus.BAD_REQUEST);
+    });
+  });
+
+  describe('validatePartnerAutomaticAccessCode', () => {
+    // Switches the code through PartnerService and signs up through the check, sharing one
+    // in-memory partner_feature table
+    const setUp = () => {
+      const manager = createMockFeatureManager();
+      const partner = { ...mockTestPartnerEntity };
+      const partnerRepository = createMock<Repository<PartnerEntity>>({
+        manager: manager as unknown as EntityManager,
+        findOneBy: async () => ({ ...partner }) as PartnerEntity,
+        save: async (data) => data as PartnerEntity,
+        findOne: async () =>
+          ({
+            ...partner,
+            partnerFeature: manager.tables.get(PartnerFeatureEntity).map((pf) => ({
+              ...pf,
+              feature: manager.tables.get(FeatureEntity).find((f) => f.id === pf.featureId),
+            })),
+          }) as unknown as PartnerEntity,
+      });
+      const partnerService = new PartnerService(
+        partnerRepository,
+        createMock(),
+        createMock(),
+        createMock(),
+      );
+      const accessService = new PartnerAccessService(
+        mockPartnerAccessRepository,
+        partnerRepository,
+        mockServiceUserProfilesService,
+      );
+      const setAutomaticAccessCode = (automaticAccessCode: boolean) =>
+        partnerService.updatePartnerActiveStatus(partner.id, { automaticAccessCode });
+      const signUp = () =>
+        accessService.validatePartnerAutomaticAccessCode(partner.id).then(
+          () => 'allowed',
+          (error) => (error instanceof HttpException ? error.getStatus() : error),
+        );
+      return { setAutomaticAccessCode, signUp };
+    };
+
+    it('allows sign-up without a code while the automatic access code is on', async () => {
+      const { setAutomaticAccessCode, signUp } = setUp();
+      await setAutomaticAccessCode(true);
+      expect(await signUp()).toBe('allowed');
+    });
+
+    it('refuses sign-up without a code once it is switched off, and allows it when back on', async () => {
+      const { setAutomaticAccessCode, signUp } = setUp();
+      await setAutomaticAccessCode(true);
+
+      await setAutomaticAccessCode(false);
+      expect(await signUp()).toBe(HttpStatus.BAD_REQUEST);
+
+      await setAutomaticAccessCode(true);
+      expect(await signUp()).toBe('allowed');
+    });
+
+    it('refuses sign-up without a code for a partner that never had it', async () => {
+      const { signUp } = setUp();
+      expect(await signUp()).toBe(HttpStatus.BAD_REQUEST);
     });
   });
 

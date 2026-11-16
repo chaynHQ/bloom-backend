@@ -131,7 +131,7 @@ export class PartnerAccessService {
     }
 
     const automaticAccessCodePartnerFeature = partner.partnerFeature.find(
-      (pf) => pf.feature.name === FEATURES.AUTOMATIC_ACCESS_CODE,
+      (pf) => pf.active && pf.feature.name === FEATURES.AUTOMATIC_ACCESS_CODE,
     );
 
     if (!automaticAccessCodePartnerFeature || !partner.partnerFeature) {

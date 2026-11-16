@@ -158,7 +158,6 @@ export class PartnerService {
     if (partnerFeature) {
       await manager.save(PartnerFeatureEntity, { ...partnerFeature, active });
     } else if (active) {
-      // Sign-up without a code checks only that this row exists, so "off" never creates one
       await manager.save(
         PartnerFeatureEntity,
         manager.create(PartnerFeatureEntity, { partnerId, featureId: feature.id, active }),

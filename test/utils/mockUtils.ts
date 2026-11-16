@@ -1,3 +1,6 @@
+import { FeatureEntity } from 'src/entities/feature.entity';
+import { PartnerFeatureEntity } from 'src/entities/partner-feature.entity';
+
 export const createQueryBuilderMock = (modifications?: Record<string, jest.Mock>) =>
   jest.fn(() => ({
     where: jest.fn().mockReturnThis(),
@@ -51,3 +54,35 @@ export const partnerLookupQueryBuilderMock = <T extends { name: string; slug: st
     };
     return queryBuilder;
   });
+
+type Row = { id?: string } & Record<string, unknown>;
+
+// An entity manager over in-memory feature and partner_feature tables
+export const createMockFeatureManager = () => {
+  const tables = new Map<unknown, Row[]>([
+    [FeatureEntity, []],
+    [PartnerFeatureEntity, []],
+  ]);
+  const matches = (row: Row, where: Row) =>
+    Object.entries(where).every(([key, value]) => row[key] === value);
+
+  const manager = {
+    tables,
+    findOneBy: jest.fn(
+      async (entity, where: Row) => tables.get(entity).find((row) => matches(row, where)) ?? null,
+    ),
+    create: jest.fn((_entity, data: Row) => ({ ...data })),
+    save: jest.fn(async (entity, data: Row) => {
+      const table = tables.get(entity);
+      const index = table.findIndex((row) => row.id === data.id);
+      if (data.id && index !== -1) {
+        table[index] = { ...table[index], ...data };
+        return table[index];
+      }
+      const row = { ...data, id: `${table.length + 1}` };
+      table.push(row);
+      return row;
+    }),
+  };
+  return manager;
+};
