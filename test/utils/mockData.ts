@@ -307,16 +307,58 @@ export const mockSimplybookBookingDetails: SimplybookBookingDetails = {
 
 export const mockPartnerEntity = {
   name: 'Bumble',
+  slug: 'bumble',
   id: 'partnerId',
   partnerFeature: [],
   isActive: true,
+  therapySessionsPerCode: 6,
 } as PartnerEntity;
 
 export const mockAltPartnerEntity = {
   name: 'Badoo',
+  slug: 'badoo',
   id: 'partnerAltId',
   partnerFeature: [],
+  therapySessionsPerCode: 6,
 } as PartnerEntity;
+
+// The test partners: names that contain each other and differ from their slugs
+export const mockTestPartnerEntity = {
+  name: 'Test Partner',
+  slug: 'test-partner',
+  id: 'testPartnerId',
+  storyblokUuid: null,
+  partnerFeature: [],
+  isActive: true,
+  therapySessionsPerCode: 0,
+} as PartnerEntity;
+
+export const mockTestPartnerPlusEntity = {
+  name: 'Test Partner Plus',
+  slug: 'test-partner-plus',
+  id: 'testPartnerPlusId',
+  storyblokUuid: null,
+  partnerFeature: [],
+  isActive: true,
+  therapySessionsPerCode: 6,
+} as PartnerEntity;
+
+export const mockRetiredPartnerEntity = {
+  name: 'Retired Partner',
+  slug: 'retired-partner',
+  id: 'retiredPartnerId',
+  storyblokUuid: null,
+  partnerFeature: [],
+  isActive: false,
+  therapySessionsPerCode: 0,
+} as PartnerEntity;
+
+export const mockLookupPartners = [
+  mockPartnerEntity,
+  mockTestPartnerEntity,
+  mockTestPartnerPlusEntity,
+  mockRetiredPartnerEntity,
+];
 
 export const mockPartnerAccessEntityBase = {
   id: 'randomId',

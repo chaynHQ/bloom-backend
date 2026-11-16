@@ -1,4 +1,4 @@
-import { createMock } from '@golevelup/ts-jest';
+import { createMock, DeepMocked } from '@golevelup/ts-jest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import apiCall from 'src/api/apiCalls';
@@ -27,7 +27,10 @@ import {
 import {
   mockCourse,
   mockCourseStoryblokResult,
+  mockLookupPartners,
   mockPartnerAccessEntity,
+  mockRetiredPartnerEntity,
+  mockTestPartnerEntity,
   mockResource,
   mockResource2,
   mockResourceStoryblokResult,
@@ -52,6 +55,7 @@ import {
   mockTherapySessionRepositoryMethods,
   mockUserRepositoryMethods,
 } from 'test/utils/mockedServices';
+import { createQueryBuilderMock, partnerLookupQueryBuilderMock } from 'test/utils/mockUtils';
 import { ILike, In, Repository } from 'typeorm';
 import { SimplybookNotificationType } from './dto/simplybook-webhook.dto';
 import { WebhooksService } from './webhooks.service';
@@ -102,9 +106,8 @@ describe('WebhooksService', () => {
   const mockedPartnerAccessRepository = createMock<Repository<PartnerAccessEntity>>(
     mockPartnerAccessRepositoryMethods,
   );
-  const mockedPartnerRepository = createMock<Repository<PartnerEntity>>(
-    mockPartnerRepositoryMethods,
-  );
+  let mockedPartnerRepository: DeepMocked<Repository<PartnerEntity>>;
+  let partnerService: PartnerService;
   const mockedCoursePartnerRepository = createMock<Repository<CoursePartnerEntity>>(
     mockCoursePartnerRepositoryMethods,
   );
@@ -115,6 +118,7 @@ describe('WebhooksService', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    mockedPartnerRepository = createMock<Repository<PartnerEntity>>(mockPartnerRepositoryMethods);
 
     (apiCall as jest.Mock).mockClear().mockResolvedValue(mockSessionStoryblokResult);
 
@@ -178,6 +182,7 @@ describe('WebhooksService', () => {
     }).compile();
 
     service = module.get<WebhooksService>(WebhooksService);
+    partnerService = module.get<PartnerService>(PartnerService);
   });
 
   it('should be defined', () => {
@@ -798,6 +803,200 @@ describe('WebhooksService', () => {
       );
 
       resourceSaveRepoSpy.mockClear();
+    });
+  });
+
+  describe('partner stories', () => {
+    const partnerStory = (
+      overrides: Partial<{ slug: string; name: string; uuid: string }> = {},
+    ) => {
+      const { slug = 'test-partner', name = 'Test Partner', uuid = 'partnerStoryUuid' } = overrides;
+      return {
+        data: {
+          story: {
+            id: 999,
+            uuid,
+            name,
+            slug,
+            full_slug: `partners/${slug}`,
+            content: { _uid: 'p1', component: STORYBLOK_PAGE_COMPONENTS.PARTNER, name },
+          },
+        },
+      };
+    };
+
+    const publish = (story: ReturnType<typeof partnerStory>) => {
+      (apiCall as jest.Mock).mockResolvedValueOnce(story);
+      return service.handleStoryUpdated({
+        action: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
+        full_slug: story.data.story.full_slug,
+        text: '',
+      });
+    };
+
+    // Rows the partner repository finds by equality and by the name query
+    const usePartnerRows = (rows: Partial<PartnerEntity>[]) => {
+      mockedPartnerRepository.findOneBy.mockImplementation(
+        (async (where: Partial<PartnerEntity>) =>
+          rows.find((row) => Object.entries(where).every(([key, value]) => row[key] === value)) ??
+          null) as never,
+      );
+      mockedPartnerRepository.createQueryBuilder.mockImplementation(
+        partnerLookupQueryBuilderMock(rows as PartnerEntity[]) as never,
+      );
+    };
+
+    const logger = () =>
+      (service as unknown as { logger: { warn: jest.Mock; error: jest.Mock } }).logger;
+
+    beforeEach(() => {
+      jest.spyOn(logger(), 'warn').mockImplementation(() => undefined);
+      jest.spyOn(logger(), 'error').mockImplementation(() => undefined);
+    });
+
+    it('creates an unknown partner inactive, with a therapy limit of 0', async () => {
+      usePartnerRows([]);
+
+      await publish(partnerStory());
+
+      expect(mockedPartnerRepository.save).toHaveBeenCalledTimes(1);
+      expect(mockedPartnerRepository.save).toHaveBeenCalledWith({
+        name: 'Test Partner',
+        slug: 'test-partner',
+        storyblokUuid: 'partnerStoryUuid',
+        isActive: false,
+        therapySessionsPerCode: 0,
+      });
+    });
+
+    it('links an existing row by slug, leaving it active', async () => {
+      usePartnerRows([{ ...mockTestPartnerEntity, name: 'Old Name', storyblokUuid: null }]);
+
+      await publish(partnerStory());
+
+      expect(mockedPartnerRepository.save).toHaveBeenCalledWith({
+        ...mockTestPartnerEntity,
+        name: 'Old Name',
+        storyblokUuid: 'partnerStoryUuid',
+      });
+      expect(logger().warn).toHaveBeenCalledWith(expect.stringContaining('Old Name'));
+    });
+
+    it('links an existing row by name when no slug matches, keeping its slug', async () => {
+      usePartnerRows([{ ...mockTestPartnerEntity, slug: 'tp', storyblokUuid: null }]);
+
+      await publish(partnerStory({ name: 'TEST PARTNER' }));
+
+      expect(mockedPartnerRepository.save).toHaveBeenCalledWith({
+        ...mockTestPartnerEntity,
+        slug: 'tp',
+        storyblokUuid: 'partnerStoryUuid',
+      });
+      expect(logger().warn).toHaveBeenCalledWith(expect.stringContaining('tp'));
+    });
+
+    it('does not link Test Partner Plus to a Test Partner story', async () => {
+      usePartnerRows(mockLookupPartners.filter((p) => p.id !== mockTestPartnerEntity.id));
+
+      await publish(partnerStory());
+
+      expect(mockedPartnerRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({ slug: 'test-partner', isActive: false }),
+      );
+      expect(mockedPartnerRepository.save).not.toHaveBeenCalledWith(
+        expect.objectContaining({ id: expect.anything() }),
+      );
+    });
+
+    it('never renames or reactivates a row found by its Storyblok uuid', async () => {
+      const linked = { ...mockRetiredPartnerEntity, storyblokUuid: 'partnerStoryUuid' };
+      usePartnerRows([linked]);
+
+      await publish(partnerStory({ slug: 'renamed-partner', name: 'Renamed Partner' }));
+
+      expect(mockedPartnerRepository.save).not.toHaveBeenCalled();
+      expect(logger().warn).toHaveBeenCalledWith(expect.stringContaining('renamed-partner'));
+      expect(logger().warn).toHaveBeenCalledWith(expect.stringContaining('Renamed Partner'));
+    });
+
+    it('republishing a linked story changes nothing', async () => {
+      usePartnerRows([{ ...mockTestPartnerEntity, storyblokUuid: 'partnerStoryUuid' }]);
+
+      await publish(partnerStory());
+
+      expect(mockedPartnerRepository.save).not.toHaveBeenCalled();
+      expect(logger().warn).not.toHaveBeenCalled();
+    });
+
+    it('skips a story with an empty name, logging an error', async () => {
+      usePartnerRows([]);
+
+      await publish(partnerStory({ name: '  ' }));
+
+      expect(mockedPartnerRepository.save).not.toHaveBeenCalled();
+      expect(logger().error).toHaveBeenCalled();
+    });
+
+    it.each([STORYBLOK_STORY_STATUS_ENUM.UNPUBLISHED, STORYBLOK_STORY_STATUS_ENUM.DELETED])(
+      '%s is a no-op',
+      async (action) => {
+        usePartnerRows([{ ...mockTestPartnerEntity, storyblokUuid: 'partnerStoryUuid' }]);
+        mockedCourseRepository.findOneBy.mockResolvedValueOnce(null);
+        mockedSessionRepository.findOneBy.mockResolvedValueOnce(null);
+        mockedResourceRepository.findOneBy.mockResolvedValueOnce(null);
+        (apiCall as jest.Mock).mockResolvedValueOnce(partnerStory());
+
+        await expect(
+          service.handleStoryUpdated({ action, full_slug: 'partners/test-partner', text: '' }),
+        ).resolves.toBeUndefined();
+
+        expect(mockedPartnerRepository.save).not.toHaveBeenCalled();
+        expect(mockedCourseRepository.save).not.toHaveBeenCalled();
+        expect(mockedSessionRepository.save).not.toHaveBeenCalled();
+        expect(mockedResourceRepository.save).not.toHaveBeenCalled();
+      },
+    );
+
+    it('a course tagged Public and Test Partner links Test Partner only', async () => {
+      mockedPartnerRepository.createQueryBuilder.mockImplementation(
+        partnerLookupQueryBuilderMock(mockLookupPartners) as never,
+      );
+      mockedCoursePartnerRepository.createQueryBuilder.mockImplementationOnce(
+        createQueryBuilderMock({ getMany: jest.fn().mockResolvedValue([]) }) as never,
+      );
+      const coursePartnerService = new CoursePartnerService(
+        mockedCoursePartnerRepository,
+        partnerService,
+      );
+      mockedCoursePartnerService.updateCoursePartners.mockImplementationOnce((partners, courseId) =>
+        coursePartnerService.updateCoursePartners(partners, courseId),
+      );
+      const courseStory = {
+        ...mockCourseStoryblokResult,
+        data: {
+          story: {
+            ...mockCourseStoryblokResult.data.story,
+            content: {
+              ...mockCourseStoryblokResult.data.story.content,
+              included_for_partners: ['Public', 'Test Partner'],
+            },
+          },
+        },
+      };
+      (apiCall as jest.Mock).mockResolvedValueOnce(courseStory);
+
+      const course = (await service.handleStoryUpdated({
+        action: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
+        full_slug: courseStory.data.story.full_slug,
+        text: '',
+      })) as CourseEntity;
+
+      expect(mockedCoursePartnerRepository.save).toHaveBeenCalledTimes(1);
+      expect(mockedCoursePartnerRepository.save).toHaveBeenCalledWith({
+        partnerId: mockTestPartnerEntity.id,
+        courseId: course.id,
+        active: true,
+      });
     });
   });
 

@@ -1,5 +1,6 @@
 /* eslint-disable */
 import { createMock, DeepMocked } from '@golevelup/ts-jest';
+import { HttpException, HttpStatus } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { sub } from 'date-fns';
@@ -27,7 +28,7 @@ import { PartnerAccessCodeStatusEnum } from '../utils/constants';
 import { CreatePartnerAccessDto } from './dtos/create-partner-access.dto';
 import { GetPartnerAccessesDto } from './dtos/get-partner-access.dto';
 import { UpdatePartnerAccessDto } from './dtos/update-partner-access.dto';
-import { PartnerAccessService } from './partner-access.service';
+import { basePartnerAccess, PartnerAccessService } from './partner-access.service';
 import { Logger } from '../logger/logger';
 
 const partnerId = 'partnerId1';
@@ -176,6 +177,159 @@ describe('PartnerAccessService', () => {
       expect(repoFindOneBySpy).not.toHaveBeenCalled();
       repoFindOneBySpy.mockRestore();
       partnerAccessRepositorySpy.mockRestore();
+    });
+  });
+
+  describe('createPartnerAccess therapy limit', () => {
+    beforeEach(() => {
+      mockPartnerAccessRepository.findOneBy.mockResolvedValue(null);
+    });
+
+    const partnerWithLimit = (therapySessionsPerCode: number) =>
+      mockPartnerRepository.findOneBy.mockResolvedValueOnce({
+        id: partnerId,
+        name: 'Partner',
+        slug: 'partner',
+        isActive: true,
+        therapySessionsPerCode,
+      } as PartnerEntity);
+
+    const savedAccess = () => mockPartnerAccessRepository.create.mock.calls[0][0];
+
+    const statusOfRejection = (promise: Promise<unknown>) =>
+      promise.then(
+        () => 'resolved',
+        (error) => (error instanceof HttpException ? error.getStatus() : error),
+      );
+
+    it('limit 6, therapy with 6 sessions: stored exactly as sent', async () => {
+      partnerWithLimit(6);
+      const dto = {
+        featureLiveChat: true,
+        featureTherapy: true,
+        therapySessionsRemaining: 6,
+        therapySessionsRedeemed: 0,
+      };
+
+      await service.createPartnerAccess(dto, partnerId, partnerAdminId, undefined, true);
+
+      expect(mockPartnerRepository.findOneBy).toHaveBeenCalledWith({ id: partnerId });
+      expect(savedAccess()).toEqual({
+        ...dto,
+        partnerAdminId,
+        partnerId,
+        accessCode: expect.any(String),
+      });
+      expect(mockPartnerAccessRepository.save).toHaveBeenCalled();
+    });
+
+    it('limit 6, no therapy: stored as sent', async () => {
+      partnerWithLimit(6);
+      const dto = {
+        featureLiveChat: true,
+        featureTherapy: false,
+        therapySessionsRemaining: 0,
+        therapySessionsRedeemed: 0,
+      };
+
+      await service.createPartnerAccess(dto, partnerId, partnerAdminId, undefined, true);
+
+      expect(savedAccess()).toEqual({
+        ...dto,
+        partnerAdminId,
+        partnerId,
+        accessCode: expect.any(String),
+      });
+    });
+
+    it('limit 6, 7 sessions: 400', async () => {
+      partnerWithLimit(6);
+
+      expect(
+        await statusOfRejection(
+          service.createPartnerAccess(
+            {
+              featureLiveChat: true,
+              featureTherapy: true,
+              therapySessionsRemaining: 7,
+              therapySessionsRedeemed: 0,
+            },
+            partnerId,
+            partnerAdminId,
+            undefined,
+            true,
+          ),
+        ),
+      ).toBe(HttpStatus.BAD_REQUEST);
+      expect(mockPartnerAccessRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('limit 0, therapy requested: 400', async () => {
+      partnerWithLimit(0);
+
+      expect(
+        await statusOfRejection(
+          service.createPartnerAccess(
+            {
+              featureLiveChat: true,
+              featureTherapy: true,
+              therapySessionsRemaining: 0,
+              therapySessionsRedeemed: 0,
+            },
+            partnerId,
+            partnerAdminId,
+            undefined,
+            true,
+          ),
+        ),
+      ).toBe(HttpStatus.BAD_REQUEST);
+      expect(mockPartnerAccessRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('limit 0, sessions without therapy: 400', async () => {
+      partnerWithLimit(0);
+
+      expect(
+        await statusOfRejection(
+          service.createPartnerAccess(
+            {
+              featureLiveChat: true,
+              featureTherapy: false,
+              therapySessionsRemaining: 1,
+              therapySessionsRedeemed: 0,
+            },
+            partnerId,
+            partnerAdminId,
+            undefined,
+            true,
+          ),
+        ),
+      ).toBe(HttpStatus.BAD_REQUEST);
+    });
+
+    it('automatic access code sign-up for a limit-0 partner still works', async () => {
+      partnerWithLimit(0);
+
+      await service.createPartnerAccess(basePartnerAccess, partnerId, null, mockUserEntity.id);
+
+      expect(savedAccess()).toEqual({
+        ...basePartnerAccess,
+        userId: mockUserEntity.id,
+        partnerAdminId: null,
+        partnerId,
+        accessCode: null,
+      });
+      expect(mockPartnerAccessRepository.save).toHaveBeenCalled();
+    });
+
+    it('unknown partner: 400', async () => {
+      mockPartnerRepository.findOneBy.mockResolvedValueOnce(null);
+
+      expect(
+        await statusOfRejection(
+          service.createPartnerAccess(basePartnerAccess, 'unknownPartnerId', null, 'userId'),
+        ),
+      ).toBe(HttpStatus.BAD_REQUEST);
     });
   });
 

@@ -14,8 +14,6 @@ export class CreatePartnerAccessDto {
 
   @IsInt()
   @Min(0)
-  // We should programatically set this per partner set up in the future
-  @Max(6)
   @IsDefined()
   @ApiProperty({ type: Number })
   therapySessionsRemaining: number;
