@@ -193,10 +193,12 @@ describe('WebhooksService', () => {
   });
 
   describe('handleStoryUpdated', () => {
-    it('when story does not exist, it returns with a 404', async () => {
+    it('when story does not exist, it returns with a 404 after one retry', async () => {
+      service.storyNotFoundRetryDelayMs = 0;
+      (apiCall as jest.Mock).mockRejectedValueOnce({ status: 404 });
       (apiCall as jest.Mock).mockRejectedValueOnce({ status: 404 });
 
-      expect.assertions(1);
+      expect.assertions(2);
 
       const body = {
         action: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
@@ -204,8 +206,38 @@ describe('WebhooksService', () => {
         text: '',
       };
 
-      return expect(service.handleStoryUpdated(body)).rejects.toThrow(
+      await expect(service.handleStoryUpdated(body)).rejects.toThrow(
         `Storyblok webhook failed - story not found in storyblok for story ${mockSession.slug}`,
+      );
+      expect(apiCall).toHaveBeenCalledTimes(2);
+    });
+
+    it('retries a newly published story the CDN does not serve yet', async () => {
+      service.storyNotFoundRetryDelayMs = 0;
+      (apiCall as jest.Mock).mockRejectedValueOnce({ status: 404 });
+      (apiCall as jest.Mock).mockResolvedValueOnce({
+        data: {
+          story: {
+            uuid: 'bffStoryUuid',
+            slug: 'bff',
+            full_slug: 'partners/bff',
+            content: { component: STORYBLOK_PAGE_COMPONENTS.PARTNER, name: 'Bumble For Friends' },
+          },
+        },
+      });
+      mockedPartnerRepository.findOneBy.mockResolvedValue(null);
+      mockedPartnerRepository.createQueryBuilder.mockImplementation(
+        partnerLookupQueryBuilderMock([]) as never,
+      );
+
+      await service.handleStoryUpdated({
+        action: STORYBLOK_STORY_STATUS_ENUM.PUBLISHED,
+        full_slug: 'partners/bff',
+        text: '',
+      });
+
+      expect(mockedPartnerRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({ slug: 'bff', isActive: false }),
       );
     });
 

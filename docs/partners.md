@@ -22,7 +22,7 @@ Never deactivate a partner to hide it: deactivating also deactivates every partn
 
 ## Syncing from Storyblok
 
-When a `partner` story is published or moved, `updateOrCreatePartner` (`src/webhooks/webhooks.service.ts`) finds the row by `storyblokUuid`, then `slug`, then exact name, ignoring case, and saves the story's uuid on it. If nothing matches, it creates the row inactive. It never changes an existing row's `isActive`, `name` or `slug`; a difference is only logged, and a developer changes the row if it's really needed. Unpublishing or deleting a partner story does nothing.
+When a `partner` story is published or moved, `updateOrCreatePartner` (`src/webhooks/webhooks.service.ts`) finds the row by `storyblokUuid`, then `slug`, then exact name, ignoring case, and saves the story's uuid on it. If nothing matches, it creates the row inactive. It never changes an existing row's `isActive`, `name` or `slug`; a difference is only logged, and a developer changes the row if it's really needed. Unpublishing or deleting a partner story does nothing. Storyblok can send the webhook before its CDN serves a newly published story, so a 404 is retried once after 3 seconds; if it still fails, publish the story again.
 
 ## Settings (`PATCH /v1/partner/:id`, super admin)
 

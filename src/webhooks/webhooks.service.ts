@@ -52,6 +52,7 @@ const RESOURCE_COMPONENT_CATEGORIES: Partial<
 @Injectable()
 export class WebhooksService {
   private readonly logger = new Logger('WebhooksService');
+  storyNotFoundRetryDelayMs = 3000;
 
   constructor(
     @InjectRepository(PartnerAccessEntity)
@@ -755,9 +756,15 @@ export class WebhooksService {
     }
 
     try {
-      const response = await apiCall({
-        url: `https://api.storyblok.com/v2/cdn/stories/${story_slug}?token=${storyblokToken}`,
-        type: 'get',
+      const url = `https://api.storyblok.com/v2/cdn/stories/${story_slug}?token=${storyblokToken}`;
+      const response = await apiCall({ url, type: 'get' }).catch(async (err) => {
+        // Storyblok can send the publish webhook before its CDN serves a new story
+        const isPublishOrMove =
+          status === STORYBLOK_STORY_STATUS_ENUM.PUBLISHED ||
+          status === STORYBLOK_STORY_STATUS_ENUM.MOVED;
+        if (err.status !== 404 || !isPublishOrMove) throw err;
+        await new Promise((resolve) => setTimeout(resolve, this.storyNotFoundRetryDelayMs));
+        return apiCall({ url, type: 'get' });
       });
       if (response?.data?.story) {
         story = response.data.story as ISbStoryData;
