@@ -1,6 +1,6 @@
 # Partners
 
-A partner is an organisation whose members use Bloom through it, such as Bumble or Badoo. Members join with an access code from a partner admin, or without one if the partner has an automatic access code. The frontend's [partner-onboarding-plan.md](https://github.com/chaynHQ/bloom-frontend/blob/develop/docs/partner-onboarding-plan.md) covers branding, welcome pages and the plan behind this.
+A partner is an organisation whose members use Bloom through it, such as Bumble or Badoo. Members join with an access code from a partner admin, or without one if the partner has an automatic access code. Branding lives in Storyblok, not here: the frontend's [docs/partners.md](https://github.com/chaynHQ/bloom-frontend/blob/develop/docs/partners.md) covers the `partner` content type, welcome pages, image generation and the content team's steps.
 
 ## How a partner is added
 
@@ -18,7 +18,7 @@ Never deactivate a partner to hide it: deactivating also deactivates every partn
 | `partner_admin`   | A user who creates codes for a partner         | `partnerId`, `userId`, `active`                                                 |
 | `partner_access`  | An access code, assigned to a member once used | `featureTherapy`, `therapySessionsRemaining`, `featureLiveChat`, `active`       |
 
-`slug` is the partner's permanent key: the frontend pairs it with the `partners/<slug>` and `welcome/<slug>` stories. It comes from the story's slug, which the content team sets when creating the story; Storyblok fills it from the story name unless they change it. It can't change once the story is published. Partners are only created this way: there's no API for creating one. The old branding columns (`logo`, `website`, `footerLine1`…) are unused and will be dropped.
+`slug` is the partner's permanent key: the frontend pairs it with the `partners/<slug>` and `welcome/<slug>` stories. It comes from the story's slug, which the content team sets when creating the story; Storyblok fills it from the story name unless they change it. It can't change once the story is published. Partners are only created this way: there's no API for creating one.
 
 ## Syncing from Storyblok
 
