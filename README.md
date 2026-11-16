@@ -45,6 +45,7 @@ Making an open-source contribution you have agreed to our [Code of Conduct](/COD
 - See [docs/local-development.md](docs/local-development.md) to get started.
 - New contributors should start with our [Contribution Guidelines](CONTRIBUTING.md).
 - See [docs/courses-sessions-and-resources.md](docs/courses-sessions-and-resources.md) for how courses, sessions and resources are synced and tracked.
+- See [docs/partners.md](docs/partners.md) for how partners are added, synced from Storyblok and launched.
 
 Happy coding! ⭐
 
