@@ -333,6 +333,30 @@ describe('PartnerService', () => {
       expect(mockManager.tables.get(PartnerFeatureEntity)).toEqual([]);
     });
 
+    it('applies active, therapySessionsPerCode and automaticAccessCode sent together', async () => {
+      const cascade = mockCascadeQueryBuilders();
+      mockPartnerAdminRepository.findBy.mockResolvedValue([{ id: 'admin1' }] as never);
+      mockPartnerAccessRepository.findBy.mockResolvedValue([{ id: 'access1' }] as never);
+
+      const response = await service.updatePartnerActiveStatus(mockPartnerEntity.id, {
+        active: false,
+        therapySessionsPerCode: 3,
+        automaticAccessCode: true,
+      });
+
+      expect(mockPartnerRepository.save).toHaveBeenCalledWith({
+        ...mockPartnerEntity,
+        isActive: false,
+        therapySessionsPerCode: 3,
+      });
+      expect(response).toMatchObject({ isActive: false, therapySessionsPerCode: 3 });
+      expect(mockManager.tables.get(PartnerFeatureEntity)).toEqual([
+        expect.objectContaining({ partnerId: mockPartnerEntity.id, active: true }),
+      ]);
+      expect(cascade.adminSet()).toEqual([{ active: false }]);
+      expect(cascade.accessSet()).toEqual([{ active: false }]);
+    });
+
     it('does not save automaticAccessCode onto the partner', async () => {
       await service.updatePartnerActiveStatus(mockPartnerEntity.id, {
         automaticAccessCode: true,

@@ -1,4 +1,5 @@
 import { createMock, DeepMocked } from '@golevelup/ts-jest';
+import { HttpStatus } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import apiCall from 'src/api/apiCalls';
@@ -917,6 +918,41 @@ describe('WebhooksService', () => {
       expect(mockedPartnerRepository.save).not.toHaveBeenCalled();
       expect(logger().warn).toHaveBeenCalledWith(expect.stringContaining('renamed-partner'));
       expect(logger().warn).toHaveBeenCalledWith(expect.stringContaining('Renamed Partner'));
+    });
+
+    it('runs for a moved partner story too', async () => {
+      usePartnerRows([]);
+      const story = partnerStory();
+      (apiCall as jest.Mock).mockResolvedValueOnce(story);
+
+      await service.handleStoryUpdated({
+        action: STORYBLOK_STORY_STATUS_ENUM.MOVED,
+        full_slug: story.data.story.full_slug,
+        text: '',
+      });
+
+      expect(mockedPartnerRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({ slug: 'test-partner', isActive: false }),
+      );
+    });
+
+    it('leaves a row linked to a different story unchanged, logging it', async () => {
+      usePartnerRows([{ ...mockTestPartnerEntity, storyblokUuid: 'otherStoryUuid' }]);
+
+      await publish(partnerStory());
+
+      expect(mockedPartnerRepository.save).not.toHaveBeenCalled();
+      expect(logger().warn).toHaveBeenCalledWith(expect.stringContaining('otherStoryUuid'));
+    });
+
+    it('fails the webhook with a 500 when the row cannot be saved', async () => {
+      usePartnerRows([]);
+      mockedPartnerRepository.save.mockRejectedValueOnce(new Error('duplicate key'));
+
+      await expect(publish(partnerStory())).rejects.toMatchObject({
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+      });
+      expect(logger().error).toHaveBeenCalledWith(expect.stringContaining('duplicate key'));
     });
 
     it('republishing a linked story changes nothing', async () => {
