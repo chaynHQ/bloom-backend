@@ -322,42 +322,33 @@ export const mockAltPartnerEntity = {
   therapySessionsPerCode: 6,
 } as PartnerEntity;
 
-// The test partners: names that contain each other and differ from their slugs
-export const mockTestPartnerEntity = {
-  name: 'Test Partner',
-  slug: 'test-partner',
-  id: 'testPartnerId',
-  storyblokUuid: null,
-  partnerFeature: [],
-  isActive: true,
-  therapySessionsPerCode: 0,
-} as PartnerEntity;
-
-export const mockTestPartnerPlusEntity = {
-  name: 'Test Partner Plus',
-  slug: 'test-partner-plus',
-  id: 'testPartnerPlusId',
+export const mockFruitzPartnerEntity = {
+  name: 'Fruitz',
+  slug: 'fruitz',
+  id: 'fruitzPartnerId',
   storyblokUuid: null,
   partnerFeature: [],
   isActive: true,
   therapySessionsPerCode: 6,
 } as PartnerEntity;
 
-export const mockRetiredPartnerEntity = {
-  name: 'Retired Partner',
-  slug: 'retired-partner',
-  id: 'retiredPartnerId',
+// Its slug differs from its name and "Bumble" is inside both. New partners start inactive with a
+// therapy limit of 0; specs that need it launched override isActive.
+export const mockBumbleForFriendsPartnerEntity = {
+  name: 'Bumble For Friends',
+  slug: 'bumble-for-friends',
+  id: 'bumbleForFriendsPartnerId',
   storyblokUuid: null,
   partnerFeature: [],
   isActive: false,
   therapySessionsPerCode: 0,
 } as PartnerEntity;
 
-export const mockLookupPartners = [
+export const mockAllPartnerEntities = [
   mockPartnerEntity,
-  mockTestPartnerEntity,
-  mockTestPartnerPlusEntity,
-  mockRetiredPartnerEntity,
+  mockAltPartnerEntity,
+  mockFruitzPartnerEntity,
+  mockBumbleForFriendsPartnerEntity,
 ];
 
 export const mockPartnerAccessEntityBase = {

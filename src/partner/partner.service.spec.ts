@@ -11,11 +11,11 @@ import {
 } from 'test/utils/mockUtils';
 import { EntityManager, In, Repository } from 'typeorm';
 import {
-  mockLookupPartners,
+  mockAllPartnerEntities,
+  mockAltPartnerEntity,
+  mockBumbleForFriendsPartnerEntity,
+  mockFruitzPartnerEntity,
   mockPartnerEntity,
-  mockRetiredPartnerEntity,
-  mockTestPartnerEntity,
-  mockTestPartnerPlusEntity,
 } from '../../test/utils/mockData';
 import { mockPartnerRepositoryMethods } from '../../test/utils/mockedServices';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
@@ -69,11 +69,11 @@ describe('PartnerService', () => {
       expect(response).toMatchObject(createPartnerDto);
     });
     it('sets the slug from the name', async () => {
-      const response = await service.createPartner({ name: 'Test Partner' });
+      const response = await service.createPartner({ name: 'Bumble For Friends' });
       expect(mockPartnerRepository.save).toHaveBeenCalledWith(
-        expect.objectContaining({ name: 'Test Partner', slug: 'test-partner' }),
+        expect.objectContaining({ name: 'Bumble For Friends', slug: 'bumble-for-friends' }),
       );
-      expect(response).toMatchObject({ name: 'Test Partner', slug: 'test-partner' });
+      expect(response).toMatchObject({ name: 'Bumble For Friends', slug: 'bumble-for-friends' });
     });
     it('rejects a name with no letters or digits to make a slug from', async () => {
       await expect(service.createPartner({ name: '!!!' })).rejects.toThrow();
@@ -96,36 +96,42 @@ describe('PartnerService', () => {
   ])('%s', (_name, lookup) => {
     beforeEach(() => {
       mockPartnerRepository.createQueryBuilder.mockImplementation(
-        partnerLookupQueryBuilderMock(mockLookupPartners) as never,
+        partnerLookupQueryBuilderMock(mockAllPartnerEntities) as never,
       );
     });
 
-    it.each(['bumble', 'Bumble', 'BUMBLE'])('%s finds Bumble', async (value) => {
-      expect((await lookup(service, value))?.id).toBe(mockPartnerEntity.id);
-    });
-
-    it.each(['test-partner', 'Test Partner', 'TEST PARTNER'])(
-      '%s finds Test Partner, not Test Partner Plus',
+    it.each(['bumble', 'Bumble', 'BUMBLE'])(
+      '%s finds Bumble, not Bumble For Friends',
       async (value) => {
-        expect((await lookup(service, value))?.id).toBe(mockTestPartnerEntity.id);
+        expect((await lookup(service, value))?.id).toBe(mockPartnerEntity.id);
       },
     );
 
-    it('test-partner-plus and Test Partner Plus find Test Partner Plus', async () => {
-      expect((await lookup(service, 'test-partner-plus'))?.id).toBe(mockTestPartnerPlusEntity.id);
-      expect((await lookup(service, 'Test Partner Plus'))?.id).toBe(mockTestPartnerPlusEntity.id);
+    it.each(['bumble-for-friends', 'Bumble For Friends', 'BUMBLE FOR FRIENDS'])(
+      '%s finds Bumble For Friends',
+      async (value) => {
+        expect((await lookup(service, value))?.id).toBe(mockBumbleForFriendsPartnerEntity.id);
+      },
+    );
+
+    it('badoo and fruitz find their partners', async () => {
+      expect((await lookup(service, 'badoo'))?.id).toBe(mockAltPartnerEntity.id);
+      expect((await lookup(service, 'Fruitz'))?.id).toBe(mockFruitzPartnerEntity.id);
     });
 
-    it.each(['umble', 'B_mble', 'Bum%', '%', 'Test'])('%s finds nothing', async (value) => {
-      expect(await lookup(service, value)).toBeNull();
-    });
+    it.each(['umble', 'B_mble', 'Bum%', '%', 'Bumble For', 'friends'])(
+      '%s finds nothing',
+      async (value) => {
+        expect(await lookup(service, value)).toBeNull();
+      },
+    );
   });
 
   describe('getActivePartners', () => {
     it('returns only the id, name and slug of active partners', async () => {
       mockPartnerRepository.find.mockResolvedValueOnce([
         mockPartnerEntity,
-        mockTestPartnerEntity,
+        mockFruitzPartnerEntity,
       ] as never);
 
       const response = await service.getActivePartners();
@@ -135,7 +141,7 @@ describe('PartnerService', () => {
       );
       expect(response).toEqual([
         { id: mockPartnerEntity.id, name: 'Bumble', slug: 'bumble' },
-        { id: mockTestPartnerEntity.id, name: 'Test Partner', slug: 'test-partner' },
+        { id: mockFruitzPartnerEntity.id, name: 'Fruitz', slug: 'fruitz' },
       ]);
     });
   });
@@ -146,30 +152,30 @@ describe('PartnerService', () => {
     it('adds automaticAccessCode from the active AUTOMATIC_ACCESS_CODE partner feature', async () => {
       mockPartnerRepository.find.mockResolvedValueOnce([
         {
-          ...mockTestPartnerEntity,
+          ...mockBumbleForFriendsPartnerEntity,
           storyblokUuid: 'storyUuid',
           partnerFeature: [{ active: true, feature: automaticAccessCodeFeature }],
         },
         {
-          ...mockTestPartnerPlusEntity,
+          ...mockAltPartnerEntity,
           partnerFeature: [{ active: false, feature: automaticAccessCodeFeature }],
         },
-        { ...mockRetiredPartnerEntity, partnerFeature: [] },
+        { ...mockFruitzPartnerEntity, partnerFeature: [] },
       ] as never);
 
       const response = await service.getPartners();
 
       expect(response).toEqual([
         expect.objectContaining({
-          id: mockTestPartnerEntity.id,
-          name: 'Test Partner',
-          slug: 'test-partner',
+          id: mockBumbleForFriendsPartnerEntity.id,
+          name: 'Bumble For Friends',
+          slug: 'bumble-for-friends',
           storyblokUuid: 'storyUuid',
           therapySessionsPerCode: 0,
           automaticAccessCode: true,
         }),
-        expect.objectContaining({ slug: 'test-partner-plus', automaticAccessCode: false }),
-        expect.objectContaining({ slug: 'retired-partner', automaticAccessCode: false }),
+        expect.objectContaining({ slug: 'badoo', automaticAccessCode: false }),
+        expect.objectContaining({ slug: 'fruitz', automaticAccessCode: false }),
       ]);
       expect(response[0]).not.toHaveProperty('partnerFeature');
     });
@@ -282,7 +288,7 @@ describe('PartnerService', () => {
     });
 
     it('{ automaticAccessCode: true } creates the row; false sets it inactive; true again reuses it', async () => {
-      await service.updatePartnerActiveStatus(mockTestPartnerEntity.id, {
+      await service.updatePartnerActiveStatus(mockBumbleForFriendsPartnerEntity.id, {
         automaticAccessCode: true,
       });
 
@@ -291,18 +297,18 @@ describe('PartnerService', () => {
       expect(features).toEqual([expect.objectContaining({ name: FEATURES.AUTOMATIC_ACCESS_CODE })]);
       expect(partnerFeatures).toEqual([
         expect.objectContaining({
-          partnerId: mockTestPartnerEntity.id,
+          partnerId: mockBumbleForFriendsPartnerEntity.id,
           featureId: features[0].id,
           active: true,
         }),
       ]);
 
-      await service.updatePartnerActiveStatus(mockTestPartnerEntity.id, {
+      await service.updatePartnerActiveStatus(mockBumbleForFriendsPartnerEntity.id, {
         automaticAccessCode: false,
       });
       expect(partnerFeatures).toEqual([expect.objectContaining({ active: false })]);
 
-      await service.updatePartnerActiveStatus(mockTestPartnerEntity.id, {
+      await service.updatePartnerActiveStatus(mockBumbleForFriendsPartnerEntity.id, {
         automaticAccessCode: true,
       });
       expect(features).toHaveLength(1);
@@ -315,7 +321,7 @@ describe('PartnerService', () => {
         .get(FeatureEntity)
         .push({ id: 'existingFeatureId', name: FEATURES.AUTOMATIC_ACCESS_CODE });
 
-      await service.updatePartnerActiveStatus(mockTestPartnerEntity.id, {
+      await service.updatePartnerActiveStatus(mockBumbleForFriendsPartnerEntity.id, {
         automaticAccessCode: true,
       });
 
@@ -326,7 +332,7 @@ describe('PartnerService', () => {
     });
 
     it('{ automaticAccessCode: false } with no row creates nothing', async () => {
-      await service.updatePartnerActiveStatus(mockTestPartnerEntity.id, {
+      await service.updatePartnerActiveStatus(mockBumbleForFriendsPartnerEntity.id, {
         automaticAccessCode: false,
       });
 

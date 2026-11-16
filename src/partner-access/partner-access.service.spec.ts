@@ -13,8 +13,9 @@ import { ServiceUserProfilesService } from 'src/service-user-profiles/service-us
 import { GetUserDto } from 'src/user/dtos/get-user.dto';
 import {
   mockPartnerAccessEntity,
+  mockAltPartnerEntity,
+  mockBumbleForFriendsPartnerEntity,
   mockPartnerAccessEntityBase,
-  mockTestPartnerEntity,
   mockUserEntity,
 } from 'test/utils/mockData';
 import {
@@ -189,14 +190,19 @@ describe('PartnerAccessService', () => {
       mockPartnerAccessRepository.findOneBy.mockResolvedValue(null);
     });
 
-    const partnerWithLimit = (therapySessionsPerCode: number) =>
+    // Badoo has a limit of 6; Bumble For Friends, launched, has a limit of 0
+    const withBadoo = () =>
       mockPartnerRepository.findOneBy.mockResolvedValueOnce({
+        ...mockAltPartnerEntity,
         id: partnerId,
-        name: 'Partner',
-        slug: 'partner',
         isActive: true,
-        therapySessionsPerCode,
-      } as PartnerEntity);
+      });
+    const withBumbleForFriends = () =>
+      mockPartnerRepository.findOneBy.mockResolvedValueOnce({
+        ...mockBumbleForFriendsPartnerEntity,
+        id: partnerId,
+        isActive: true,
+      });
 
     const savedAccess = () => mockPartnerAccessRepository.create.mock.calls[0][0];
 
@@ -207,7 +213,7 @@ describe('PartnerAccessService', () => {
       );
 
     it('limit 6, therapy with 6 sessions: stored exactly as sent', async () => {
-      partnerWithLimit(6);
+      withBadoo();
       const dto = {
         featureLiveChat: true,
         featureTherapy: true,
@@ -228,7 +234,7 @@ describe('PartnerAccessService', () => {
     });
 
     it('limit 6, no therapy: stored as sent', async () => {
-      partnerWithLimit(6);
+      withBadoo();
       const dto = {
         featureLiveChat: true,
         featureTherapy: false,
@@ -247,7 +253,7 @@ describe('PartnerAccessService', () => {
     });
 
     it('limit 6, 7 sessions: 400', async () => {
-      partnerWithLimit(6);
+      withBadoo();
 
       expect(
         await statusOfRejection(
@@ -269,7 +275,7 @@ describe('PartnerAccessService', () => {
     });
 
     it('limit 0, therapy requested: 400', async () => {
-      partnerWithLimit(0);
+      withBumbleForFriends();
 
       expect(
         await statusOfRejection(
@@ -291,7 +297,7 @@ describe('PartnerAccessService', () => {
     });
 
     it('limit 0, sessions without therapy: 400', async () => {
-      partnerWithLimit(0);
+      withBumbleForFriends();
 
       expect(
         await statusOfRejection(
@@ -312,7 +318,7 @@ describe('PartnerAccessService', () => {
     });
 
     it('automatic access code sign-up for a limit-0 partner still works', async () => {
-      partnerWithLimit(0);
+      withBumbleForFriends();
 
       await service.createPartnerAccess(basePartnerAccess, partnerId, null, mockUserEntity.id);
 
@@ -342,7 +348,7 @@ describe('PartnerAccessService', () => {
     // in-memory partner_feature table
     const setUp = () => {
       const manager = createMockFeatureManager();
-      const partner = { ...mockTestPartnerEntity };
+      const partner = { ...mockBumbleForFriendsPartnerEntity, isActive: true };
       const partnerRepository = createMock<Repository<PartnerEntity>>({
         manager: manager as unknown as EntityManager,
         findOneBy: async () => ({ ...partner }) as PartnerEntity,

@@ -4,9 +4,9 @@ describe('slugify', () => {
   it.each([
     ['Bumble', 'bumble'],
     ['Badoo', 'badoo'],
-    ['Test Partner', 'test-partner'],
-    ['Test Partner Plus', 'test-partner-plus'],
-    ['  Retired  Partner! ', 'retired-partner'],
+    ['Fruitz', 'fruitz'],
+    ['Bumble For Friends', 'bumble-for-friends'],
+    ['  Bumble  For Friends! ', 'bumble-for-friends'],
     ['B_mble & Co.', 'b-mble-co'],
     ['Partner 2', 'partner-2'],
     ['!!!', ''],

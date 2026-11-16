@@ -28,10 +28,12 @@ import {
 import {
   mockCourse,
   mockCourseStoryblokResult,
-  mockLookupPartners,
+  mockAllPartnerEntities,
+  mockAltPartnerEntity,
+  mockBumbleForFriendsPartnerEntity,
+  mockFruitzPartnerEntity,
   mockPartnerAccessEntity,
-  mockRetiredPartnerEntity,
-  mockTestPartnerEntity,
+  mockPartnerEntity,
   mockResource,
   mockResource2,
   mockResourceStoryblokResult,
@@ -811,7 +813,11 @@ describe('WebhooksService', () => {
     const partnerStory = (
       overrides: Partial<{ slug: string; name: string; uuid: string }> = {},
     ) => {
-      const { slug = 'test-partner', name = 'Test Partner', uuid = 'partnerStoryUuid' } = overrides;
+      const {
+        slug = 'bumble-for-friends',
+        name = 'Bumble For Friends',
+        uuid = 'partnerStoryUuid',
+      } = overrides;
       return {
         data: {
           story: {
@@ -862,8 +868,8 @@ describe('WebhooksService', () => {
 
       expect(mockedPartnerRepository.save).toHaveBeenCalledTimes(1);
       expect(mockedPartnerRepository.save).toHaveBeenCalledWith({
-        name: 'Test Partner',
-        slug: 'test-partner',
+        name: 'Bumble For Friends',
+        slug: 'bumble-for-friends',
         storyblokUuid: 'partnerStoryUuid',
         isActive: false,
         therapySessionsPerCode: 0,
@@ -871,38 +877,38 @@ describe('WebhooksService', () => {
     });
 
     it('links an existing row by slug, leaving it active', async () => {
-      usePartnerRows([{ ...mockTestPartnerEntity, name: 'Old Name', storyblokUuid: null }]);
+      const existing = { ...mockBumbleForFriendsPartnerEntity, isActive: true, name: 'Old Name' };
+      usePartnerRows([existing]);
 
       await publish(partnerStory());
 
       expect(mockedPartnerRepository.save).toHaveBeenCalledWith({
-        ...mockTestPartnerEntity,
-        name: 'Old Name',
+        ...existing,
         storyblokUuid: 'partnerStoryUuid',
       });
       expect(logger().warn).toHaveBeenCalledWith(expect.stringContaining('Old Name'));
     });
 
     it('links an existing row by name when no slug matches, keeping its slug', async () => {
-      usePartnerRows([{ ...mockTestPartnerEntity, slug: 'tp', storyblokUuid: null }]);
+      usePartnerRows([{ ...mockBumbleForFriendsPartnerEntity, slug: 'bff' }]);
 
-      await publish(partnerStory({ name: 'TEST PARTNER' }));
+      await publish(partnerStory({ name: 'BUMBLE FOR FRIENDS' }));
 
       expect(mockedPartnerRepository.save).toHaveBeenCalledWith({
-        ...mockTestPartnerEntity,
-        slug: 'tp',
+        ...mockBumbleForFriendsPartnerEntity,
+        slug: 'bff',
         storyblokUuid: 'partnerStoryUuid',
       });
-      expect(logger().warn).toHaveBeenCalledWith(expect.stringContaining('tp'));
+      expect(logger().warn).toHaveBeenCalledWith(expect.stringContaining('slug bff'));
     });
 
-    it('does not link Test Partner Plus to a Test Partner story', async () => {
-      usePartnerRows(mockLookupPartners.filter((p) => p.id !== mockTestPartnerEntity.id));
+    it('does not link Bumble to a Bumble For Friends story', async () => {
+      usePartnerRows([mockPartnerEntity, mockAltPartnerEntity, mockFruitzPartnerEntity]);
 
       await publish(partnerStory());
 
       expect(mockedPartnerRepository.save).toHaveBeenCalledWith(
-        expect.objectContaining({ slug: 'test-partner', isActive: false }),
+        expect.objectContaining({ slug: 'bumble-for-friends', isActive: false }),
       );
       expect(mockedPartnerRepository.save).not.toHaveBeenCalledWith(
         expect.objectContaining({ id: expect.anything() }),
@@ -910,14 +916,14 @@ describe('WebhooksService', () => {
     });
 
     it('never renames or reactivates a row found by its Storyblok uuid', async () => {
-      const linked = { ...mockRetiredPartnerEntity, storyblokUuid: 'partnerStoryUuid' };
-      usePartnerRows([linked]);
+      // Bumble For Friends is inactive until a super admin launches it
+      usePartnerRows([{ ...mockBumbleForFriendsPartnerEntity, storyblokUuid: 'partnerStoryUuid' }]);
 
-      await publish(partnerStory({ slug: 'renamed-partner', name: 'Renamed Partner' }));
+      await publish(partnerStory({ slug: 'bumble-friends', name: 'Bumble Friends' }));
 
       expect(mockedPartnerRepository.save).not.toHaveBeenCalled();
-      expect(logger().warn).toHaveBeenCalledWith(expect.stringContaining('renamed-partner'));
-      expect(logger().warn).toHaveBeenCalledWith(expect.stringContaining('Renamed Partner'));
+      expect(logger().warn).toHaveBeenCalledWith(expect.stringContaining('slug bumble-friends'));
+      expect(logger().warn).toHaveBeenCalledWith(expect.stringContaining('name Bumble Friends'));
     });
 
     it('runs for a moved partner story too', async () => {
@@ -932,12 +938,12 @@ describe('WebhooksService', () => {
       });
 
       expect(mockedPartnerRepository.save).toHaveBeenCalledWith(
-        expect.objectContaining({ slug: 'test-partner', isActive: false }),
+        expect.objectContaining({ slug: 'bumble-for-friends', isActive: false }),
       );
     });
 
     it('leaves a row linked to a different story unchanged, logging it', async () => {
-      usePartnerRows([{ ...mockTestPartnerEntity, storyblokUuid: 'otherStoryUuid' }]);
+      usePartnerRows([{ ...mockBumbleForFriendsPartnerEntity, storyblokUuid: 'otherStoryUuid' }]);
 
       await publish(partnerStory());
 
@@ -956,7 +962,7 @@ describe('WebhooksService', () => {
     });
 
     it('republishing a linked story changes nothing', async () => {
-      usePartnerRows([{ ...mockTestPartnerEntity, storyblokUuid: 'partnerStoryUuid' }]);
+      usePartnerRows([{ ...mockBumbleForFriendsPartnerEntity, storyblokUuid: 'partnerStoryUuid' }]);
 
       await publish(partnerStory());
 
@@ -976,14 +982,20 @@ describe('WebhooksService', () => {
     it.each([STORYBLOK_STORY_STATUS_ENUM.UNPUBLISHED, STORYBLOK_STORY_STATUS_ENUM.DELETED])(
       '%s is a no-op',
       async (action) => {
-        usePartnerRows([{ ...mockTestPartnerEntity, storyblokUuid: 'partnerStoryUuid' }]);
+        usePartnerRows([
+          { ...mockBumbleForFriendsPartnerEntity, storyblokUuid: 'partnerStoryUuid' },
+        ]);
         mockedCourseRepository.findOneBy.mockResolvedValueOnce(null);
         mockedSessionRepository.findOneBy.mockResolvedValueOnce(null);
         mockedResourceRepository.findOneBy.mockResolvedValueOnce(null);
         (apiCall as jest.Mock).mockResolvedValueOnce(partnerStory());
 
         await expect(
-          service.handleStoryUpdated({ action, full_slug: 'partners/test-partner', text: '' }),
+          service.handleStoryUpdated({
+            action,
+            full_slug: 'partners/bumble-for-friends',
+            text: '',
+          }),
         ).resolves.toBeUndefined();
 
         expect(mockedPartnerRepository.save).not.toHaveBeenCalled();
@@ -993,9 +1005,9 @@ describe('WebhooksService', () => {
       },
     );
 
-    it('a course tagged Public and Test Partner links Test Partner only', async () => {
+    it('a course tagged Public and Bumble For Friends links Bumble For Friends only, not Bumble', async () => {
       mockedPartnerRepository.createQueryBuilder.mockImplementation(
-        partnerLookupQueryBuilderMock(mockLookupPartners) as never,
+        partnerLookupQueryBuilderMock(mockAllPartnerEntities) as never,
       );
       mockedCoursePartnerRepository.createQueryBuilder.mockImplementationOnce(
         createQueryBuilderMock({ getMany: jest.fn().mockResolvedValue([]) }) as never,
@@ -1014,7 +1026,7 @@ describe('WebhooksService', () => {
             ...mockCourseStoryblokResult.data.story,
             content: {
               ...mockCourseStoryblokResult.data.story.content,
-              included_for_partners: ['Public', 'Test Partner'],
+              included_for_partners: ['Public', 'Bumble For Friends'],
             },
           },
         },
@@ -1029,7 +1041,7 @@ describe('WebhooksService', () => {
 
       expect(mockedCoursePartnerRepository.save).toHaveBeenCalledTimes(1);
       expect(mockedCoursePartnerRepository.save).toHaveBeenCalledWith({
-        partnerId: mockTestPartnerEntity.id,
+        partnerId: mockBumbleForFriendsPartnerEntity.id,
         courseId: course.id,
         active: true,
       });

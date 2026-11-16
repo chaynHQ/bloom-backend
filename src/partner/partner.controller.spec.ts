@@ -3,7 +3,7 @@ import { RequestMethod } from '@nestjs/common';
 import { METHOD_METADATA, PATH_METADATA } from '@nestjs/common/constants';
 import { Test, TestingModule } from '@nestjs/testing';
 import { FEATURES } from 'src/utils/constants';
-import { mockTestPartnerEntity } from 'test/utils/mockData';
+import { mockBumbleForFriendsPartnerEntity } from 'test/utils/mockData';
 import { SuperAdminAuthGuard } from '../partner-admin/super-admin-auth.guard';
 import { PartnerController } from './partner.controller';
 import { PartnerService } from './partner.service';
@@ -47,7 +47,7 @@ describe('PartnerController', () => {
   });
 
   it('GET active returns the active partners from the service', async () => {
-    const activePartners = [{ id: 'testPartnerId', name: 'Test Partner', slug: 'test-partner' }];
+    const activePartners = [{ id: 'partnerId', name: 'Bumble', slug: 'bumble' }];
     mockPartnerService.getActivePartners.mockResolvedValueOnce(activePartners);
 
     expect(await controller.getActivePartners()).toEqual(activePartners);
@@ -55,7 +55,7 @@ describe('PartnerController', () => {
 
   it('GET :name looks up by the value sent and returns slug and therapySessionsPerCode', async () => {
     mockPartnerService.getPartnerWithPartnerFeaturesByName.mockResolvedValueOnce({
-      ...mockTestPartnerEntity,
+      ...mockBumbleForFriendsPartnerEntity,
       partnerFeature: [
         {
           id: 'pf1',
@@ -66,16 +66,16 @@ describe('PartnerController', () => {
       ],
     } as never);
 
-    const response = await controller.getPartner({ name: 'test-partner' });
+    const response = await controller.getPartner({ name: 'bumble-for-friends' });
 
     expect(mockPartnerService.getPartnerWithPartnerFeaturesByName).toHaveBeenCalledWith(
-      'test-partner',
+      'bumble-for-friends',
     );
     expect(response).toMatchObject({
-      id: mockTestPartnerEntity.id,
-      name: 'Test Partner',
-      slug: 'test-partner',
-      isActive: true,
+      id: mockBumbleForFriendsPartnerEntity.id,
+      name: 'Bumble For Friends',
+      slug: 'bumble-for-friends',
+      isActive: false,
       therapySessionsPerCode: 0,
       partnerFeature: [
         {
@@ -90,10 +90,13 @@ describe('PartnerController', () => {
   it('PATCH :id passes the update to the service', async () => {
     const update = { active: false, therapySessionsPerCode: 3, automaticAccessCode: true };
 
-    await controller.updatePartnerActiveStatus({ id: mockTestPartnerEntity.id }, update);
+    await controller.updatePartnerActiveStatus(
+      { id: mockBumbleForFriendsPartnerEntity.id },
+      update,
+    );
 
     expect(mockPartnerService.updatePartnerActiveStatus).toHaveBeenCalledWith(
-      mockTestPartnerEntity.id,
+      mockBumbleForFriendsPartnerEntity.id,
       update,
     );
   });
