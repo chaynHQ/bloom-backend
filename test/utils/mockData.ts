@@ -307,16 +307,49 @@ export const mockSimplybookBookingDetails: SimplybookBookingDetails = {
 
 export const mockPartnerEntity = {
   name: 'Bumble',
+  slug: 'bumble',
   id: 'partnerId',
   partnerFeature: [],
   isActive: true,
+  therapySessionsPerCode: 6,
 } as PartnerEntity;
 
 export const mockAltPartnerEntity = {
   name: 'Badoo',
+  slug: 'badoo',
   id: 'partnerAltId',
   partnerFeature: [],
+  therapySessionsPerCode: 6,
 } as PartnerEntity;
+
+export const mockFruitzPartnerEntity = {
+  name: 'Fruitz',
+  slug: 'fruitz',
+  id: 'fruitzPartnerId',
+  storyblokUuid: null,
+  partnerFeature: [],
+  isActive: true,
+  therapySessionsPerCode: 6,
+} as PartnerEntity;
+
+// Its slug differs from its name and "Bumble" is inside both. New partners start inactive with a
+// therapy limit of 0; specs that need it launched override isActive.
+export const mockBumbleForFriendsPartnerEntity = {
+  name: 'Bumble For Friends',
+  slug: 'bff',
+  id: 'bumbleForFriendsPartnerId',
+  storyblokUuid: null,
+  partnerFeature: [],
+  isActive: false,
+  therapySessionsPerCode: 0,
+} as PartnerEntity;
+
+export const mockAllPartnerEntities = [
+  mockPartnerEntity,
+  mockAltPartnerEntity,
+  mockFruitzPartnerEntity,
+  mockBumbleForFriendsPartnerEntity,
+];
 
 export const mockPartnerAccessEntityBase = {
   id: 'randomId',
