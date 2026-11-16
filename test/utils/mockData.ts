@@ -336,7 +336,7 @@ export const mockFruitzPartnerEntity = {
 // therapy limit of 0; specs that need it launched override isActive.
 export const mockBumbleForFriendsPartnerEntity = {
   name: 'Bumble For Friends',
-  slug: 'bumble-for-friends',
+  slug: 'bff',
   id: 'bumbleForFriendsPartnerId',
   storyblokUuid: null,
   partnerFeature: [],

@@ -66,15 +66,13 @@ describe('PartnerController', () => {
       ],
     } as never);
 
-    const response = await controller.getPartner({ name: 'bumble-for-friends' });
+    const response = await controller.getPartner({ name: 'bff' });
 
-    expect(mockPartnerService.getPartnerWithPartnerFeaturesByName).toHaveBeenCalledWith(
-      'bumble-for-friends',
-    );
+    expect(mockPartnerService.getPartnerWithPartnerFeaturesByName).toHaveBeenCalledWith('bff');
     expect(response).toMatchObject({
       id: mockBumbleForFriendsPartnerEntity.id,
       name: 'Bumble For Friends',
-      slug: 'bumble-for-friends',
+      slug: 'bff',
       isActive: false,
       therapySessionsPerCode: 0,
       partnerFeature: [

@@ -107,7 +107,7 @@ describe('PartnerService', () => {
       },
     );
 
-    it.each(['bumble-for-friends', 'Bumble For Friends', 'BUMBLE FOR FRIENDS'])(
+    it.each(['bff', 'BFF', 'Bumble For Friends', 'BUMBLE FOR FRIENDS'])(
       '%s finds Bumble For Friends',
       async (value) => {
         expect((await lookup(service, value))?.id).toBe(mockBumbleForFriendsPartnerEntity.id);
@@ -119,7 +119,7 @@ describe('PartnerService', () => {
       expect((await lookup(service, 'Fruitz'))?.id).toBe(mockFruitzPartnerEntity.id);
     });
 
-    it.each(['umble', 'B_mble', 'Bum%', '%', 'Bumble For', 'friends'])(
+    it.each(['umble', 'B_mble', 'Bum%', '%', 'Bumble For', 'friends', 'bumble-for-friends'])(
       '%s finds nothing',
       async (value) => {
         expect(await lookup(service, value)).toBeNull();
@@ -169,7 +169,7 @@ describe('PartnerService', () => {
         expect.objectContaining({
           id: mockBumbleForFriendsPartnerEntity.id,
           name: 'Bumble For Friends',
-          slug: 'bumble-for-friends',
+          slug: 'bff',
           storyblokUuid: 'storyUuid',
           therapySessionsPerCode: 0,
           automaticAccessCode: true,

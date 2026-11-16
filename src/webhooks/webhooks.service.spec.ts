@@ -813,11 +813,7 @@ describe('WebhooksService', () => {
     const partnerStory = (
       overrides: Partial<{ slug: string; name: string; uuid: string }> = {},
     ) => {
-      const {
-        slug = 'bumble-for-friends',
-        name = 'Bumble For Friends',
-        uuid = 'partnerStoryUuid',
-      } = overrides;
+      const { slug = 'bff', name = 'Bumble For Friends', uuid = 'partnerStoryUuid' } = overrides;
       return {
         data: {
           story: {
@@ -869,7 +865,7 @@ describe('WebhooksService', () => {
       expect(mockedPartnerRepository.save).toHaveBeenCalledTimes(1);
       expect(mockedPartnerRepository.save).toHaveBeenCalledWith({
         name: 'Bumble For Friends',
-        slug: 'bumble-for-friends',
+        slug: 'bff',
         storyblokUuid: 'partnerStoryUuid',
         isActive: false,
         therapySessionsPerCode: 0,
@@ -890,13 +886,14 @@ describe('WebhooksService', () => {
     });
 
     it('links an existing row by name when no slug matches, keeping its slug', async () => {
-      usePartnerRows([{ ...mockBumbleForFriendsPartnerEntity, slug: 'bff' }]);
+      // e.g. a row made by POST /v1/partner, which slugifies the name
+      usePartnerRows([{ ...mockBumbleForFriendsPartnerEntity, slug: 'bumble-for-friends' }]);
 
       await publish(partnerStory({ name: 'BUMBLE FOR FRIENDS' }));
 
       expect(mockedPartnerRepository.save).toHaveBeenCalledWith({
         ...mockBumbleForFriendsPartnerEntity,
-        slug: 'bff',
+        slug: 'bumble-for-friends',
         storyblokUuid: 'partnerStoryUuid',
       });
       expect(logger().warn).toHaveBeenCalledWith(expect.stringContaining('slug bff'));
@@ -908,7 +905,7 @@ describe('WebhooksService', () => {
       await publish(partnerStory());
 
       expect(mockedPartnerRepository.save).toHaveBeenCalledWith(
-        expect.objectContaining({ slug: 'bumble-for-friends', isActive: false }),
+        expect.objectContaining({ slug: 'bff', isActive: false }),
       );
       expect(mockedPartnerRepository.save).not.toHaveBeenCalledWith(
         expect.objectContaining({ id: expect.anything() }),
@@ -938,7 +935,7 @@ describe('WebhooksService', () => {
       });
 
       expect(mockedPartnerRepository.save).toHaveBeenCalledWith(
-        expect.objectContaining({ slug: 'bumble-for-friends', isActive: false }),
+        expect.objectContaining({ slug: 'bff', isActive: false }),
       );
     });
 
@@ -993,7 +990,7 @@ describe('WebhooksService', () => {
         await expect(
           service.handleStoryUpdated({
             action,
-            full_slug: 'partners/bumble-for-friends',
+            full_slug: 'partners/bff',
             text: '',
           }),
         ).resolves.toBeUndefined();

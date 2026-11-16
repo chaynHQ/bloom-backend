@@ -115,7 +115,7 @@ describe('PartnerFeatureService', () => {
     });
     it.each([
       ['Bumble For Friends', mockBumbleForFriendsPartnerEntity],
-      ['bumble-for-friends', mockBumbleForFriendsPartnerEntity],
+      ['bff', mockBumbleForFriendsPartnerEntity],
       ['Bumble', mockPartnerEntity],
     ])('finds the automatic access code of the partner named %s', async (partnerName, partner) => {
       const lookupRepository = createMock<Repository<PartnerEntity>>({
