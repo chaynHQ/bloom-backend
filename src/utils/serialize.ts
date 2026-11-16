@@ -136,7 +136,9 @@ export const formatPartnerObject = (partnerObject: PartnerEntity): GetPartnerDto
   return {
     name: partnerObject.name,
     id: partnerObject.id,
+    slug: partnerObject.slug,
     isActive: partnerObject.isActive,
+    therapySessionsPerCode: partnerObject.therapySessionsPerCode,
     partnerFeature: partnerObject.partnerFeature
       ? partnerObject.partnerFeature.map<GetPartnerFeatureResponseDto>((pf) => {
           return {
