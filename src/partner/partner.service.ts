@@ -8,10 +8,8 @@ import { UserEntity } from 'src/entities/user.entity';
 import { FEATURES } from 'src/utils/constants';
 import { In, Repository } from 'typeorm';
 import { PartnerEntity } from '../entities/partner.entity';
-import { CreatePartnerDto } from './dtos/create-partner.dto';
 import { ActivePartnerDto, GetPartnerAdminViewDto } from './dtos/get-partner.dto';
 import { UpdatePartnerDto } from './dtos/update-partner.dto';
-import { slugify } from './slugify';
 
 const PARTNER_LOOKUP = 'LOWER(partner.name) = LOWER(:value) OR partner.slug = LOWER(:value)';
 
@@ -25,25 +23,6 @@ export class PartnerService {
     private partnerAdminRepository: Repository<PartnerAdminEntity>,
     @InjectRepository(UserEntity) private userRepository: Repository<UserEntity>,
   ) {}
-
-  async createPartner(createPartnerDto: CreatePartnerDto): Promise<PartnerEntity> {
-    const slug = slugify(createPartnerDto.name);
-    if (!slug) {
-      throw new HttpException(
-        'Partner name must contain a letter or digit',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-    try {
-      const partnerObject = this.partnerRepository.create({ ...createPartnerDto, slug });
-      return await this.partnerRepository.save(partnerObject);
-    } catch (error) {
-      if (error.code === '23505') {
-        throw new HttpException(error.detail, HttpStatus.BAD_REQUEST);
-      }
-      throw error;
-    }
-  }
 
   async getPartners(): Promise<GetPartnerAdminViewDto[]> {
     const partners = await this.partnerRepository.find({

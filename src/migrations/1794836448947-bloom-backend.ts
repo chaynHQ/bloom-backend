@@ -7,8 +7,8 @@ export class BloomBackend1794836448947 implements MigrationInterface {
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`ALTER TABLE "partner" ADD "slug" character varying`);
-    // Same as slugify() in src/partner/slugify.ts. If two names slugify alike, the unique
-    // constraint below fails the migration rather than guessing.
+    // Lowercase, runs of other characters to one hyphen, trimmed. If two names give the same
+    // slug, the unique constraint below fails the migration rather than guessing.
     await queryRunner.query(
       `UPDATE "partner" SET "slug" = trim(both '-' from regexp_replace(lower("name"), '[^a-z0-9]+', '-', 'g'))`,
     );

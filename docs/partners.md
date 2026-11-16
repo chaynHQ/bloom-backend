@@ -18,7 +18,7 @@ Never deactivate a partner to hide it: deactivating also deactivates every partn
 | `partner_admin`   | A user who creates codes for a partner         | `partnerId`, `userId`, `active`                                                 |
 | `partner_access`  | An access code, assigned to a member once used | `featureTherapy`, `therapySessionsRemaining`, `featureLiveChat`, `active`       |
 
-`slug` is the partner's permanent key: the frontend pairs it with the `partners/<slug>` and `welcome/<slug>` stories. It comes from the story slug, or from the name for a partner created through the API (`slugify`, `src/partner/slugify.ts`). The old branding columns (`logo`, `website`, `footerLine1`…) are unused and will be dropped.
+`slug` is the partner's permanent key: the frontend pairs it with the `partners/<slug>` and `welcome/<slug>` stories. It comes from the story's slug, which the content team sets when creating the story; Storyblok fills it from the story name unless they change it. It can't change once the story is published. Partners are only created this way: there's no API for creating one. The old branding columns (`logo`, `website`, `footerLine1`…) are unused and will be dropped.
 
 ## Syncing from Storyblok
 

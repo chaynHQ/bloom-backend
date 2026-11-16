@@ -1,10 +1,8 @@
-import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { formatPartnerObject } from 'src/utils/serialize';
-import { PartnerEntity } from '../entities/partner.entity';
 import { SuperAdminAuthGuard } from '../partner-admin/super-admin-auth.guard';
 import { ControllerDecorator } from '../utils/controller.decorator';
-import { CreatePartnerDto } from './dtos/create-partner.dto';
 import { ActivePartnerDto, GetPartnerAdminViewDto, GetPartnerDto } from './dtos/get-partner.dto';
 import { PartnerIdParamDto, PartnerParamDto } from './dtos/partner-param.dto';
 import { UpdatePartnerDto } from './dtos/update-partner.dto';
@@ -15,15 +13,6 @@ import { PartnerService } from './partner.service';
 @Controller('/v1/partner')
 export class PartnerController {
   constructor(private partnerService: PartnerService) {}
-
-  @ApiBearerAuth('access-token')
-  @ApiOperation({ description: 'Creates basic profile data for a partner' })
-  @UseGuards(SuperAdminAuthGuard)
-  @Post()
-  @ApiBody({ type: CreatePartnerDto })
-  async createPartner(@Body() createPartnerDto: CreatePartnerDto): Promise<PartnerEntity> {
-    return this.partnerService.createPartner(createPartnerDto);
-  }
 
   @ApiBearerAuth('access-token')
   @ApiOperation({ description: 'Returns profile data for all partners' })

@@ -24,10 +24,6 @@ import { PartnerEntity } from '../entities/partner.entity';
 import { UserEntity } from '../entities/user.entity';
 import { PartnerService } from './partner.service';
 
-const createPartnerDto = {
-  name: mockPartnerEntity.name,
-};
-
 describe('PartnerService', () => {
   let service: PartnerService;
   let mockPartnerRepository: DeepMocked<Repository<PartnerEntity>>;
@@ -61,30 +57,6 @@ describe('PartnerService', () => {
 
   it('should be defined', () => {
     expect(service).toBeDefined();
-  });
-
-  describe('createPartner', () => {
-    it('when supplied with correct data should return new partner', async () => {
-      const response = await service.createPartner(createPartnerDto);
-      expect(response).toMatchObject(createPartnerDto);
-    });
-    it('sets the slug from the name', async () => {
-      const response = await service.createPartner({ name: 'Bumble For Friends' });
-      expect(mockPartnerRepository.save).toHaveBeenCalledWith(
-        expect.objectContaining({ name: 'Bumble For Friends', slug: 'bumble-for-friends' }),
-      );
-      expect(response).toMatchObject({ name: 'Bumble For Friends', slug: 'bumble-for-friends' });
-    });
-    it('rejects a name with no letters or digits to make a slug from', async () => {
-      await expect(service.createPartner({ name: '!!!' })).rejects.toThrow();
-      expect(mockPartnerRepository.save).not.toHaveBeenCalled();
-    });
-    it('when supplied with a name that already exists, it should throw error', async () => {
-      jest.spyOn(mockPartnerRepository, 'create').mockImplementationOnce(() => {
-        throw { code: '23505' };
-      });
-      await expect(service.createPartner(createPartnerDto)).rejects.toThrow();
-    });
   });
 
   describe.each([
