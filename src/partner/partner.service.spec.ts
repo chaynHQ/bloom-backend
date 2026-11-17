@@ -100,10 +100,10 @@ describe('PartnerService', () => {
   });
 
   describe('getActivePartners', () => {
-    it('returns only the id, name and slug of active partners', async () => {
+    it('returns only the id, name, slug and parentId of active partners', async () => {
       mockPartnerRepository.find.mockResolvedValueOnce([
-        mockPartnerEntity,
-        mockFruitzPartnerEntity,
+        { ...mockPartnerEntity, parentId: null },
+        { ...mockFruitzPartnerEntity, parentId: null },
       ] as never);
 
       const response = await service.getActivePartners();
@@ -112,8 +112,19 @@ describe('PartnerService', () => {
         expect.objectContaining({ where: { isActive: true } }),
       );
       expect(response).toEqual([
-        { id: mockPartnerEntity.id, name: 'Bumble', slug: 'bumble' },
-        { id: mockFruitzPartnerEntity.id, name: 'Fruitz', slug: 'fruitz' },
+        { id: mockPartnerEntity.id, name: 'Bumble', slug: 'bumble', parentId: null },
+        { id: mockFruitzPartnerEntity.id, name: 'Fruitz', slug: 'fruitz', parentId: null },
+      ]);
+    });
+    it('includes a sub-brand’s parent', async () => {
+      mockPartnerRepository.find.mockResolvedValueOnce([
+        { ...mockPartnerEntity, parentId: null },
+        { ...mockBumbleForFriendsPartnerEntity, isActive: true, parentId: mockPartnerEntity.id },
+      ] as never);
+
+      expect(await service.getActivePartners()).toEqual([
+        expect.objectContaining({ slug: 'bumble', parentId: null }),
+        expect.objectContaining({ slug: 'bff', parentId: mockPartnerEntity.id }),
       ]);
     });
   });
@@ -341,6 +352,91 @@ describe('PartnerService', () => {
       });
 
       expect(mockPartnerRepository.save).toHaveBeenCalledWith(mockPartnerEntity);
+    });
+
+    describe('parentId', () => {
+      const bffId = mockBumbleForFriendsPartnerEntity.id;
+
+      beforeEach(() => {
+        mockPartnerRepository.existsBy.mockResolvedValue(false);
+        mockPartnerRepository.findOneBy.mockImplementation(
+          (async ({ id }: { id: string }) =>
+            [mockPartnerEntity, mockAltPartnerEntity, mockBumbleForFriendsPartnerEntity].find(
+              (partner) => partner.id === id,
+            ) ?? null) as never,
+        );
+      });
+
+      it('sets a parent, leaving the rest of the partner alone', async () => {
+        await service.updatePartnerActiveStatus(bffId, { parentId: mockPartnerEntity.id });
+
+        expect(mockPartnerRepository.save).toHaveBeenCalledWith({
+          ...mockBumbleForFriendsPartnerEntity,
+          parentId: mockPartnerEntity.id,
+        });
+        expectNoCascade();
+      });
+
+      it('clears the parent with null', async () => {
+        mockPartnerRepository.findOneBy.mockResolvedValueOnce({
+          ...mockBumbleForFriendsPartnerEntity,
+          parentId: mockPartnerEntity.id,
+        } as never);
+
+        await service.updatePartnerActiveStatus(bffId, { parentId: null });
+
+        expect(mockPartnerRepository.save).toHaveBeenCalledWith({
+          ...mockBumbleForFriendsPartnerEntity,
+          parentId: null,
+        });
+        expect(mockPartnerRepository.existsBy).not.toHaveBeenCalled();
+      });
+
+      it('leaves the parent unchanged when it isn’t sent', async () => {
+        await service.updatePartnerActiveStatus(bffId, { therapySessionsPerCode: 2 });
+
+        expect(mockPartnerRepository.save).toHaveBeenCalledWith(
+          expect.not.objectContaining({ parentId: expect.anything() }),
+        );
+      });
+
+      const expectRejected = async (parentId: string, message: string) => {
+        await expect(service.updatePartnerActiveStatus(bffId, { parentId })).rejects.toThrow(
+          message,
+        );
+        expect(mockPartnerRepository.save).not.toHaveBeenCalled();
+      };
+
+      it('rejects the partner itself as its parent', async () => {
+        await expectRejected(bffId, 'its own parent');
+      });
+
+      it('rejects a parent that does not exist', async () => {
+        await expectRejected('missingId', 'does not exist');
+      });
+
+      it('rejects a sub-brand as the parent', async () => {
+        mockPartnerRepository.findOneBy.mockImplementation((async ({ id }: { id: string }) =>
+          id === mockAltPartnerEntity.id
+            ? { ...mockAltPartnerEntity, parentId: mockPartnerEntity.id }
+            : mockBumbleForFriendsPartnerEntity) as never);
+
+        await expectRejected(mockAltPartnerEntity.id, 'itself a sub-brand');
+      });
+
+      it('rejects a parent for a partner that has sub-brands', async () => {
+        mockPartnerRepository.existsBy.mockResolvedValue(true);
+
+        await expect(
+          service.updatePartnerActiveStatus(mockPartnerEntity.id, {
+            parentId: mockAltPartnerEntity.id,
+          }),
+        ).rejects.toThrow('has sub-brands');
+        expect(mockPartnerRepository.existsBy).toHaveBeenCalledWith({
+          parentId: mockPartnerEntity.id,
+        });
+        expect(mockPartnerRepository.save).not.toHaveBeenCalled();
+      });
     });
 
     it('when supplied with incorrect partner id should throw', async () => {

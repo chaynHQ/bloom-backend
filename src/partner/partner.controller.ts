@@ -24,7 +24,9 @@ export class PartnerController {
 
   // Declared before GET :name so "active" isn't read as a partner name
   @Get('active')
-  @ApiOperation({ description: 'Returns the id, name and slug of active partners (public)' })
+  @ApiOperation({
+    description: 'Returns the id, name, slug and parentId of active partners (public)',
+  })
   async getActivePartners(): Promise<ActivePartnerDto[]> {
     return this.partnerService.getActivePartners();
   }
@@ -44,7 +46,7 @@ export class PartnerController {
   @Patch(':id')
   @ApiOperation({
     description:
-      'Updates a partner: active status (cascades to partner admins and accesses only when it changes), therapy sessions per code, automatic access code',
+      'Updates a partner: active status (cascades to partner admins and accesses only when it changes), therapy sessions per code, automatic access code, parent partner',
   })
   @ApiBody({ type: UpdatePartnerDto })
   async updatePartnerActiveStatus(

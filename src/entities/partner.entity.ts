@@ -1,4 +1,4 @@
-import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { BaseBloomEntity } from '../entities/base.entity';
 import { PartnerAccessEntity } from '../entities/partner-access.entity';
 import { PartnerAdminEntity } from '../entities/partner-admin.entity';
@@ -24,6 +24,14 @@ export class PartnerEntity extends BaseBloomEntity {
 
   @Column({ type: 'int', default: 0 })
   therapySessionsPerCode: number;
+
+  // A sub-brand's parent partner, such as Bumble for Bumble For Friends
+  @Column({ type: 'uuid', nullable: true })
+  parentId: string | null;
+
+  @ManyToOne(() => PartnerEntity, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'parentId' })
+  parent: PartnerEntity | null;
 
   @OneToMany(() => PartnerAdminEntity, (partnerAdminEntity) => partnerAdminEntity.partner, {
     cascade: true,

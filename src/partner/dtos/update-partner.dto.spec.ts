@@ -19,6 +19,12 @@ describe('UpdatePartnerDto', () => {
     expect(await errorsFor({ automaticAccessCode: 'true' })).toEqual(['automaticAccessCode']);
   });
 
+  it('accepts a uuid or null parentId and rejects anything else', async () => {
+    expect(await errorsFor({ parentId: '3323df46-a006-4fed-9160-f1901b1037ee' })).toEqual([]);
+    expect(await errorsFor({ parentId: null })).toEqual([]);
+    expect(await errorsFor({ parentId: 'bumble' })).toEqual(['parentId']);
+  });
+
   it('accepts an empty body', async () => {
     expect(await errorsFor({})).toEqual([]);
   });
