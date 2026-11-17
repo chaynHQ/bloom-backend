@@ -4,8 +4,8 @@ A partner is an organisation whose members use Bloom through it, such as Bumble 
 
 ## How a partner is added
 
-1. **The content team publishes `partners/<slug>` in Storyblok.** The Storyblok webhook creates the `partner` row: **inactive**, therapy limit 0, no automatic access code. Publishing never activates a partner, so a published story is safe before launch.
-2. **A super admin launches it in the admin dashboard.** They set the therapy limit, automatic access code and, for a sub-brand, its parent, create partner admins, and activate the partner. Only this makes it live.
+1. **The content team publishes `partners/<slug>` in Storyblok.** Staging and production share one Storyblok space, so each backend's webhook creates the `partner` row in its own database: **inactive**, therapy limit 0, no automatic access code. Publishing never activates a partner, so publishing during staging setup is safe: production stays off until a super admin activates the partner there.
+2. **A super admin launches it in each environment's admin dashboard,** staging first. They set the therapy limit, automatic access code and, for a sub-brand, its parent, create partner admins, and activate the partner. Only this makes it live, with a published `welcome/<slug>` story in production.
 
 Never deactivate a partner to hide it: deactivating also deactivates every partner admin and every member's access.
 
@@ -22,7 +22,7 @@ Never deactivate a partner to hide it: deactivating also deactivates every partn
 
 ## Syncing from Storyblok
 
-When a `partner` story is published or moved, `updateOrCreatePartner` (`src/webhooks/webhooks.service.ts`) finds the row by `storyblokUuid`, then `slug`, then exact name, ignoring case, and saves the story's uuid on it. If nothing matches, it creates the row inactive. It never changes an existing row's `isActive`, `name` or `slug`; a difference is only logged, and a developer changes the row if it's really needed. Unpublishing or deleting a partner story does nothing.
+When a `partner` story is published or moved, `updateOrCreatePartner` (`src/webhooks/webhooks.service.ts`) finds the row by `storyblokUuid`, then `slug`, then exact name, ignoring case, and saves the story's uuid on it. If nothing matches, it creates the row inactive. It never changes an existing row's `isActive`, `name` or `slug`; a difference is only logged, and a developer changes the row if it's really needed. Unpublishing or deleting a partner story does nothing. If a webhook was missed, for example because it was blocked, publishing the story again creates or links the row: the sync is safe to repeat.
 
 ## Settings (`PATCH /v1/partner/:id`, super admin)
 
