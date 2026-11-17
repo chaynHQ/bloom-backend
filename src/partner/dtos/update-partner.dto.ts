@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsBoolean, IsInt, IsOptional, Max, Min } from 'class-validator';
+import { IsBoolean, IsInt, IsOptional, IsUUID, Max, Min } from 'class-validator';
 
 export class UpdatePartnerDto {
   @IsOptional()
@@ -18,4 +18,10 @@ export class UpdatePartnerDto {
   @IsBoolean()
   @ApiProperty({ type: Boolean, required: false })
   automaticAccessCode?: boolean;
+
+  // null clears it
+  @IsOptional()
+  @IsUUID()
+  @ApiProperty({ type: String, format: 'uuid', required: false, nullable: true })
+  parentId?: string | null;
 }

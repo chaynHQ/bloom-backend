@@ -47,7 +47,7 @@ describe('PartnerController', () => {
   });
 
   it('GET active returns the active partners from the service', async () => {
-    const activePartners = [{ id: 'partnerId', name: 'Bumble', slug: 'bumble' }];
+    const activePartners = [{ id: 'partnerId', name: 'Bumble', slug: 'bumble', parentId: null }];
     mockPartnerService.getActivePartners.mockResolvedValueOnce(activePartners);
 
     expect(await controller.getActivePartners()).toEqual(activePartners);
