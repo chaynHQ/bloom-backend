@@ -42,12 +42,7 @@ export class PartnerService {
       select: { id: true, name: true, slug: true, parentId: true },
       order: { name: 'ASC' },
     });
-    return partners.map(({ id, name, slug, parentId }) => ({
-      id,
-      name,
-      slug,
-      parentId: parentId ?? null,
-    }));
+    return partners.map(({ id, name, slug, parentId }) => ({ id, name, slug, parentId }));
   }
 
   // Matches a display name (as in Storyblok's included_for_partners) or a slug

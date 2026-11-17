@@ -102,8 +102,8 @@ describe('PartnerService', () => {
   describe('getActivePartners', () => {
     it('returns only the id, name, slug and parentId of active partners', async () => {
       mockPartnerRepository.find.mockResolvedValueOnce([
-        mockPartnerEntity,
-        mockFruitzPartnerEntity,
+        { ...mockPartnerEntity, parentId: null },
+        { ...mockFruitzPartnerEntity, parentId: null },
       ] as never);
 
       const response = await service.getActivePartners();
@@ -118,7 +118,7 @@ describe('PartnerService', () => {
     });
     it('includes a sub-brand’s parent', async () => {
       mockPartnerRepository.find.mockResolvedValueOnce([
-        mockPartnerEntity,
+        { ...mockPartnerEntity, parentId: null },
         { ...mockBumbleForFriendsPartnerEntity, isActive: true, parentId: mockPartnerEntity.id },
       ] as never);
 
