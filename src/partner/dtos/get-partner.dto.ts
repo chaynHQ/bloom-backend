@@ -20,6 +20,7 @@ export class ActivePartnerDto {
   id: string;
   name: string;
   slug: string;
+  parentId: string | null;
 }
 
 export class GetPartnerAdminViewDto {
@@ -30,6 +31,7 @@ export class GetPartnerAdminViewDto {
   isActive: boolean;
   therapySessionsPerCode: number;
   automaticAccessCode: boolean;
+  parentId: string | null;
   createdAt: Date;
   updatedAt: Date;
 }

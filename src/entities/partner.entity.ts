@@ -25,8 +25,7 @@ export class PartnerEntity extends BaseBloomEntity {
   @Column({ type: 'int', default: 0 })
   therapySessionsPerCode: number;
 
-  // The partner whose brand this one is part of, such as Bumble for Bumble For Friends. Synced from
-  // the partner story's `parent`, so reports can roll a brand's partners up together.
+  // A sub-brand's parent partner, such as Bumble for Bumble For Friends
   @Column({ type: 'uuid', nullable: true })
   parentId: string | null;
 

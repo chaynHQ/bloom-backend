@@ -1,7 +1,5 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-// A sub-brand's parent partner, synced from the partner story's `parent` (Bumble For Friends ->
-// Bumble), so reports can roll a brand up. Deleting the parent leaves the sub-brand standalone.
 export class BloomBackend1794927985780 implements MigrationInterface {
   name = 'BloomBackend1794927985780';
 

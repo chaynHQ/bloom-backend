@@ -618,32 +618,6 @@ export class WebhooksService {
 
   // Publishing a partner story never activates a partner: it creates the row inactive, or links an
   // existing row without changing it. A super admin activates partners in the admin dashboard.
-  // The story's `parent` holds the parent's display name, from the `partners` datasource.
-  private async findParentPartnerId(storyData: ISbStoryData): Promise<string | null> {
-    const parent =
-      typeof storyData.content.parent === 'string' ? storyData.content.parent.trim() : '';
-    if (!parent) return null;
-
-    const parentPartner = await this.partnerRepository
-      .createQueryBuilder('partner')
-      .where('LOWER(partner.name) = LOWER(:value) OR partner.slug = LOWER(:value)', {
-        value: parent,
-      })
-      .getOne();
-
-    if (!parentPartner) {
-      this.logger.warn(
-        `Storyblok partner story ${storyData.uuid} (${storyData.slug}) has parent ${parent}, which has no partner row; publish the parent's story, then this one again`,
-      );
-      return null;
-    }
-    if (parentPartner.slug === storyData.slug || parentPartner.storyblokUuid === storyData.uuid) {
-      this.logger.warn(`Storyblok partner story ${storyData.uuid} is its own parent; ignored`);
-      return null;
-    }
-    return parentPartner.id;
-  }
-
   private async updateOrCreatePartner(storyData: ISbStoryData) {
     const name = typeof storyData.content.name === 'string' ? storyData.content.name.trim() : '';
     const slug = storyData.slug;
@@ -653,7 +627,6 @@ export class WebhooksService {
     }
 
     try {
-      const parentId = await this.findParentPartnerId(storyData);
       const partner =
         (await this.partnerRepository.findOneBy({ storyblokUuid: storyData.uuid })) ??
         (await this.partnerRepository.findOneBy({ slug })) ??
@@ -669,7 +642,6 @@ export class WebhooksService {
           storyblokUuid: storyData.uuid,
           isActive: false,
           therapySessionsPerCode: 0,
-          parentId,
         });
         this.logger.log(`Storyblok partner created inactive - ${newPartner.slug}`);
         return newPartner;
@@ -689,20 +661,15 @@ export class WebhooksService {
         this.logger.warn(
           `Storyblok partner story ${storyData.uuid} matched partner ${partner.slug}, which is linked to story ${partner.storyblokUuid}; the row is unchanged`,
         );
-        return partner;
       }
-      // Unlike name and slug, the parent follows the story, so it can be set or cleared later.
-      if (partner.storyblokUuid && (partner.parentId ?? null) === parentId) return partner;
+      if (partner.storyblokUuid) return partner;
 
-      const savedPartner = await this.partnerRepository.save({
+      const linkedPartner = await this.partnerRepository.save({
         ...partner,
         storyblokUuid: storyData.uuid,
-        parentId,
       });
-      this.logger.log(
-        `Storyblok partner ${partner.storyblokUuid ? 'parent updated' : 'linked'} - ${savedPartner.slug}`,
-      );
-      return savedPartner;
+      this.logger.log(`Storyblok partner linked - ${linkedPartner.slug}`);
+      return linkedPartner;
     } catch (err) {
       const error = `Storyblok webhook failed - error updating or creating partner story record ${storyData.uuid} - ${err?.message || 'unknown error'}`;
       this.logger.error(error);

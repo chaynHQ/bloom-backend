@@ -811,14 +811,9 @@ describe('WebhooksService', () => {
 
   describe('partner stories', () => {
     const partnerStory = (
-      overrides: Partial<{ slug: string; name: string; uuid: string; parent: string }> = {},
+      overrides: Partial<{ slug: string; name: string; uuid: string }> = {},
     ) => {
-      const {
-        slug = 'bff',
-        name = 'Bumble For Friends',
-        uuid = 'partnerStoryUuid',
-        parent,
-      } = overrides;
+      const { slug = 'bff', name = 'Bumble For Friends', uuid = 'partnerStoryUuid' } = overrides;
       return {
         data: {
           story: {
@@ -827,7 +822,7 @@ describe('WebhooksService', () => {
             name,
             slug,
             full_slug: `partners/${slug}`,
-            content: { _uid: 'p1', component: STORYBLOK_PAGE_COMPONENTS.PARTNER, name, parent },
+            content: { _uid: 'p1', component: STORYBLOK_PAGE_COMPONENTS.PARTNER, name },
           },
         },
       };
@@ -874,7 +869,6 @@ describe('WebhooksService', () => {
         storyblokUuid: 'partnerStoryUuid',
         isActive: false,
         therapySessionsPerCode: 0,
-        parentId: null,
       });
     });
 
@@ -887,7 +881,6 @@ describe('WebhooksService', () => {
       expect(mockedPartnerRepository.save).toHaveBeenCalledWith({
         ...existing,
         storyblokUuid: 'partnerStoryUuid',
-        parentId: null,
       });
       expect(logger().warn).toHaveBeenCalledWith(expect.stringContaining('Old Name'));
     });
@@ -902,7 +895,6 @@ describe('WebhooksService', () => {
         ...mockBumbleForFriendsPartnerEntity,
         slug: 'bumble-for-friends',
         storyblokUuid: 'partnerStoryUuid',
-        parentId: null,
       });
       expect(logger().warn).toHaveBeenCalledWith(expect.stringContaining('slug bff'));
     });
@@ -929,75 +921,6 @@ describe('WebhooksService', () => {
       expect(mockedPartnerRepository.save).not.toHaveBeenCalled();
       expect(logger().warn).toHaveBeenCalledWith(expect.stringContaining('slug bumble-friends'));
       expect(logger().warn).toHaveBeenCalledWith(expect.stringContaining('name Bumble Friends'));
-    });
-
-    describe('parent', () => {
-      const linkedBff = { ...mockBumbleForFriendsPartnerEntity, storyblokUuid: 'partnerStoryUuid' };
-
-      it('creates a sub-brand pointing at its parent, found by display name', async () => {
-        usePartnerRows([mockPartnerEntity, mockAltPartnerEntity]);
-
-        await publish(partnerStory({ parent: 'Bumble' }));
-
-        expect(mockedPartnerRepository.save).toHaveBeenCalledWith(
-          expect.objectContaining({ slug: 'bff', parentId: mockPartnerEntity.id }),
-        );
-      });
-
-      it('sets the parent on a linked row, leaving its name, slug and status alone', async () => {
-        usePartnerRows([mockPartnerEntity, linkedBff]);
-
-        await publish(partnerStory({ parent: 'Bumble' }));
-
-        expect(mockedPartnerRepository.save).toHaveBeenCalledWith({
-          ...linkedBff,
-          parentId: mockPartnerEntity.id,
-        });
-      });
-
-      it('clears the parent when the story no longer has one', async () => {
-        usePartnerRows([mockPartnerEntity, { ...linkedBff, parentId: mockPartnerEntity.id }]);
-
-        await publish(partnerStory());
-
-        expect(mockedPartnerRepository.save).toHaveBeenCalledWith({ ...linkedBff, parentId: null });
-      });
-
-      it('does not save a linked row whose parent is unchanged', async () => {
-        usePartnerRows([mockPartnerEntity, { ...linkedBff, parentId: mockPartnerEntity.id }]);
-
-        await publish(partnerStory({ parent: 'Bumble' }));
-
-        expect(mockedPartnerRepository.save).not.toHaveBeenCalled();
-      });
-
-      it('leaves the parent empty, with a warning, when the parent has no row yet', async () => {
-        usePartnerRows([]);
-
-        await publish(partnerStory({ parent: 'Bumble' }));
-
-        expect(mockedPartnerRepository.save).toHaveBeenCalledWith(
-          expect.objectContaining({ slug: 'bff', parentId: null }),
-        );
-        expect(logger().warn).toHaveBeenCalledWith(expect.stringContaining('parent Bumble'));
-      });
-
-      it('ignores a story naming itself as its parent', async () => {
-        usePartnerRows([linkedBff]);
-
-        await publish(partnerStory({ parent: 'Bumble For Friends' }));
-
-        expect(mockedPartnerRepository.save).not.toHaveBeenCalled();
-        expect(logger().warn).toHaveBeenCalledWith(expect.stringContaining('its own parent'));
-      });
-
-      it('does not set a parent on a row linked to a different story', async () => {
-        usePartnerRows([mockPartnerEntity, { ...linkedBff, storyblokUuid: 'otherStoryUuid' }]);
-
-        await publish(partnerStory({ parent: 'Bumble' }));
-
-        expect(mockedPartnerRepository.save).not.toHaveBeenCalled();
-      });
     });
 
     it('runs for a moved partner story too', async () => {
