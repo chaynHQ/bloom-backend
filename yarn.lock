@@ -2,10 +2,10 @@
 # yarn lockfile v1
 
 
-"@angular-devkit/core@22.2.6":
-  version "22.2.6"
-  resolved "https://registry.yarnpkg.com/@angular-devkit/core/-/core-22.2.6.tgz#ca6342bf505001033f3c2f2bfcd47bf0829a734d"
-  integrity sha512-OtFUe9fLXpHsqO6gCSbTWIaTO64MCrESRVigs9SAW4EzIagCAhgB0Y8GflTjmKGLvJjilBFJFd0JSIzNxLyifA==
+"@angular-devkit/core@22.2.7":
+  version "22.2.7"
+  resolved "https://registry.yarnpkg.com/@angular-devkit/core/-/core-22.2.7.tgz#a3a0388b083a660ed0b2f46ced10f803fcc4c4e3"
+  integrity sha512-cchZAMsV4d76RDZBlWzPhYxM/Hb6bmq71oUngdrwehMbBbdQu3W9C2tGlvxuPxbRKru9ZlUa14YVXQ0+QnhFtw==
   dependencies:
     ajv "8.20.0"
     ajv-formats "3.0.1"
@@ -14,21 +14,21 @@
     rxjs "7.8.2"
     source-map "0.8.0"
 
-"@angular-devkit/schematics-cli@22.2.6":
-  version "22.2.6"
-  resolved "https://registry.yarnpkg.com/@angular-devkit/schematics-cli/-/schematics-cli-22.2.6.tgz#4820e055eacbf0deec84d26d3f3d31f322460e91"
-  integrity sha512-+/zAu8jAdB5Hd6a4hYwurdwalC9wv2ElyDeDPyWZf4b8vZRdIaZwoYvrK91ArQGWn9Y3DrV3i0fpxHY38L91Pg==
+"@angular-devkit/schematics-cli@22.2.7":
+  version "22.2.7"
+  resolved "https://registry.yarnpkg.com/@angular-devkit/schematics-cli/-/schematics-cli-22.2.7.tgz#e40c747a295e029294bcec1da76f5c227635ae30"
+  integrity sha512-9Od0E8TiYTQWm/03QjYWnsryZA8ZSjTf/k5z61nPd/jgloVNvSW8kxC7/YMw+RoXh2idMzjiJxraKxg+gJxzPw==
   dependencies:
-    "@angular-devkit/core" "22.2.6"
-    "@angular-devkit/schematics" "22.2.6"
+    "@angular-devkit/core" "22.2.7"
+    "@angular-devkit/schematics" "22.2.7"
     "@inquirer/prompts" "8.7.2"
 
-"@angular-devkit/schematics@22.2.6":
-  version "22.2.6"
-  resolved "https://registry.yarnpkg.com/@angular-devkit/schematics/-/schematics-22.2.6.tgz#36830110420883d71410ded884c8ccd028b0bf3e"
-  integrity sha512-XACkbAmAhBGDfxr8Uny2k0ErDwLpauseccNWdIFs4fiisGTqiCByzkH60/4xTmbV3FTj8bQ6cXYIhhaqe0MK1g==
+"@angular-devkit/schematics@22.2.7":
+  version "22.2.7"
+  resolved "https://registry.yarnpkg.com/@angular-devkit/schematics/-/schematics-22.2.7.tgz#1cd4f88c24f568bfef5d0d78ed8996098dc823c2"
+  integrity sha512-a1h7xNqBLQVo1e5eCyOU3axSbA9AFU6nnSH5QhlNhggfMeZde+eBrueSt25xsewoxlKO8EvkVT3+knMUkDYiGQ==
   dependencies:
-    "@angular-devkit/core" "22.2.6"
+    "@angular-devkit/core" "22.2.7"
     jsonc-parser "3.3.1"
     magic-string "1.4.1"
     ora "9.4.1"
@@ -1547,22 +1547,22 @@
   resolved "https://registry.yarnpkg.com/@nestjs/axios/-/axios-12.0.2.tgz#f3c492f23991474bd50187867511d1b3d9e85cee"
   integrity sha512-zBdwBX2N9Q0heK4A4F81p2gjOkzgEPFESCW2nCzKRAh6o68TqMPI/ST3iGHusnviSCijt8xt9qqhBUiPopBxCA==
 
-"@nestjs/cli@^12.0.12":
-  version "12.0.13"
-  resolved "https://registry.yarnpkg.com/@nestjs/cli/-/cli-12.0.13.tgz#b5d5a5f5cbfec91d8aa69484a90fffea61faa8b8"
-  integrity sha512-dfb9zbM4VRUQnkjt0IyhYWxiScDq/4j8m6Y5f6PKvg6LK47XbzBeWKCBdqVFQV85uAHdJiMa8nyemAu0xvujRQ==
+"@nestjs/cli@^12.0.15":
+  version "12.0.15"
+  resolved "https://registry.yarnpkg.com/@nestjs/cli/-/cli-12.0.15.tgz#53e51e8352d22fc4ac2b659454c14d81d7d932f7"
+  integrity sha512-oNZ70g6wtE8X82PflsW2xfW50u4XiJQwq6u4HafrgP9eVnSw6m+WqnX4/7K6ehaod5E0+WFrczjT19rx5SHlhA==
   dependencies:
-    "@angular-devkit/core" "22.2.6"
-    "@angular-devkit/schematics" "22.2.6"
-    "@angular-devkit/schematics-cli" "22.2.6"
+    "@angular-devkit/core" "22.2.7"
+    "@angular-devkit/schematics" "22.2.7"
+    "@angular-devkit/schematics-cli" "22.2.7"
     "@inquirer/prompts" "8.7.5"
     "@nestjs/schematics" "^12.0.13"
     ansis "4.5.0"
     chokidar "5.0.0"
     cli-table3 "0.6.5"
-    commander "15.0.0"
+    commander "15.1.0"
     jsonc-parser "3.3.1"
-    minimatch "11.0.5"
+    minimatch "11.0.9"
     node-emoji "2.2.0"
     ora "9.4.1"
     tsconfig-paths "4.2.0"
@@ -1632,13 +1632,13 @@
   dependencies:
     cron "4.4.0"
 
-"@nestjs/schematics@^12.0.12", "@nestjs/schematics@^12.0.13":
-  version "12.0.13"
-  resolved "https://registry.yarnpkg.com/@nestjs/schematics/-/schematics-12.0.13.tgz#86006b2368f361bb939ec01280fb8c706172ccd7"
-  integrity sha512-Z9Xtp67fO5NuU7FgB/u44peK3XQnrL4qLxkf1dp6fqUk9l3ATBQneRNrWaC8e+HaimX8olxq2mH2ZXhhfalDhQ==
+"@nestjs/schematics@^12.0.13", "@nestjs/schematics@^12.0.16":
+  version "12.0.16"
+  resolved "https://registry.yarnpkg.com/@nestjs/schematics/-/schematics-12.0.16.tgz#88d3e0d28721212c8364d92f1ec860115503e19b"
+  integrity sha512-7K+8NlvmXVd/x0nY4h7myrJdl4C31x58xAsHELYXEIc6AJqiL+FOj+MgyCvZm8CcfD6uoI1wRXI0w0xdW4rUHA==
   dependencies:
-    "@angular-devkit/core" "22.2.6"
-    "@angular-devkit/schematics" "22.2.6"
+    "@angular-devkit/core" "22.2.7"
+    "@angular-devkit/schematics" "22.2.7"
     comment-json "5.0.0"
     jsonc-parser "3.3.1"
     pluralize "8.0.0"
@@ -1661,10 +1661,10 @@
   resolved "https://registry.yarnpkg.com/@nestjs/terminus/-/terminus-12.1.0.tgz#ec04ea49d9f3bf40d930d90925391c6efc13b228"
   integrity sha512-bag1KT1Pk2KpDhXh6fhf3F7IpRGs8IMSdPaD1+9hclP3hSAIkCYN/YUhkAY+2G7OuoUmyDuKVb7MgNw+L5ZBbQ==
 
-"@nestjs/testing@^12.4.0":
-  version "12.5.0"
-  resolved "https://registry.yarnpkg.com/@nestjs/testing/-/testing-12.5.0.tgz#d73fbb68df58f99f02819078b33b59e9063a82bc"
-  integrity sha512-4zppUy+q+dmqdQBm/Q9KyTDeq0hsa/we6E0VtSaT1Dnewo/FkbcczCrrtivuIWIuZ7KNJ0U8UGYCgozFZJ2+zQ==
+"@nestjs/testing@^12.6.0":
+  version "12.6.0"
+  resolved "https://registry.yarnpkg.com/@nestjs/testing/-/testing-12.6.0.tgz#a6968e52bc3505044b320ca315dcd16f76990b36"
+  integrity sha512-84whoYLvjORtUb/qD2QIYUsXHRUu654cmrbmzHFVrb38Vbox2wPQiQvu9LDtPdwEFiiMHUb5LIdWSolNvFa9ag==
   dependencies:
     tslib "2.9.1"
 
@@ -3388,10 +3388,10 @@ combined-stream@^1.0.8:
   dependencies:
     delayed-stream "~1.0.0"
 
-commander@15.0.0:
-  version "15.0.0"
-  resolved "https://registry.yarnpkg.com/commander/-/commander-15.0.0.tgz#96f3961f12adac1799ef3fbd8bc61d40572d1b11"
-  integrity sha512-z67u4ZhzCL/Tydu1lJARtEZYWbWaN7oYLHbsuzocr6y4N6WZAagG3RQ4FW61V1/0+jImpj293XfrcYnd1qxtPg==
+commander@15.1.0:
+  version "15.1.0"
+  resolved "https://registry.yarnpkg.com/commander/-/commander-15.1.0.tgz#397e6a353fda8e9d4e1eb9e3c0c28644cfd69406"
+  integrity sha512-cgnQ88TRrWcC7pVq46RzJVRMktu3W2RcbnoidnfBsl1bmDCBwJS/udcIZpKoCrbAYYaCqsz1yZCVIgbIaU3ddQ==
 
 comment-json@5.0.0:
   version "5.0.0"
@@ -5543,10 +5543,10 @@ minimalistic-assert@^1.0.1:
   resolved "https://registry.yarnpkg.com/minimalistic-assert/-/minimalistic-assert-1.0.1.tgz#2e194de044626d4a10e7f7fbc00ce73e83e4d5c7"
   integrity sha512-UtJcAD4yEaGtjPezWuO9wC4nwUnVH/8/Im3yEHQP4b67cXlD/Qr9hdITCU1xDbSEXg2XKNaP8jsReV7vQd00/A==
 
-minimatch@11.0.5:
-  version "11.0.5"
-  resolved "https://registry.yarnpkg.com/minimatch/-/minimatch-11.0.5.tgz#29589e94fc4d84193b2a31b082b0ec67b5ea1d42"
-  integrity sha512-snPlVppFcYWfLLFQGhDxUyBcHNtMlWmn3jtj7pEaO+DP8pqL0IvAzXhMYmn1z9ASNtgmwLBdFxSf4tMUB0OTKA==
+minimatch@11.0.9, minimatch@^11.0.1, minimatch@^11.0.5:
+  version "11.0.9"
+  resolved "https://registry.yarnpkg.com/minimatch/-/minimatch-11.0.9.tgz#00d0088671fa0d872ba1e2578f5abf3be0fe878e"
+  integrity sha512-KCFkfyjqerNlSstjlhIGNXIKZGA/6O4V4RlhZ+Dsr621SPPw0mzlypE9D9ZOoPiVefHID+j7/XuMMlqfD/F60Q==
   dependencies:
     "@isaacs/nonrecursive-glob-match" "^1.1.0"
     brace-expansion "^5.0.12"
@@ -5557,14 +5557,6 @@ minimatch@^10.2.2:
   integrity sha512-vpLQEs+VLCr1nU0BXS07maYoFwlDAH0gngQuuttxIwutDFEMHq2blX+8vpgxDdK3J1PwjCJiep77OitTZ4Ll1A==
   dependencies:
     brace-expansion "^5.0.8"
-
-minimatch@^11.0.1, minimatch@^11.0.5:
-  version "11.0.8"
-  resolved "https://registry.yarnpkg.com/minimatch/-/minimatch-11.0.8.tgz#715fc3509cd7f76ed9af2f702a98411b1b0288c8"
-  integrity sha512-nFQuYSTVrGvysVBps5Ih+0BdnYFN/Cj3C816r6+p7yK+FHrVLGE4O4N9AFwykrlNlvM2HYt+Rad1Uiro6h88Ig==
-  dependencies:
-    "@isaacs/nonrecursive-glob-match" "^1.1.0"
-    brace-expansion "^5.0.12"
 
 minimatch@^9.0.4:
   version "9.0.9"
